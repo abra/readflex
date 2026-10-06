@@ -9,6 +9,22 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'add_to_collection_cubit.dart';
 
+// Destination rows keep a 4dp inset for their ink and end with a 48dp slot
+// whose 20dp check lands on the gutter, matching the Collections picker's
+// menu column; the list subtracts both from the 24dp sheet gutter.
+const double _destinationRowInset = AppSpacing.xs;
+const EdgeInsetsDirectional _destinationListPadding =
+    EdgeInsetsDirectional.only(
+      start: AppSpacing.xl - _destinationRowInset,
+      end: AppSpacing.xl - _destinationRowInset - AppSizes.iconActionOutset,
+    );
+// Dividers and messages inside that list sit on the 24dp gutter.
+const EdgeInsetsDirectional _destinationLinePadding =
+    EdgeInsetsDirectional.only(
+      start: _destinationRowInset,
+      end: _destinationRowInset + AppSizes.iconActionOutset,
+    );
+
 Future<bool?> showAddToCollectionSheet({
   required BuildContext context,
   required AddToCollectionCubit cubit,
@@ -277,6 +293,10 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
                       onDismissAttempt: _requestClose,
                       child: AnimatedSwitcher(
                         duration: context.motion(AppMotion.short),
+                        // The default switcher layout centres the shorter
+                        // form inside the destination step's frame; the step
+                        // must fill it so its command sits on the footer line.
+                        layoutBuilder: _fillStepLayout,
                         child: _confirmingDiscard
                             ? _DiscardDraftStep(
                                 key: const ValueKey(
@@ -299,11 +319,15 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
                                 bodyPadding: const EdgeInsets.only(
                                   bottom: AppSpacing.lg,
                                 ),
+                                footer: _CreateCollectionAction(
+                                  state: state,
+                                  controller: _nameController,
+                                  onCreate: _createAndAdd,
+                                ),
                                 child: _CreateCollectionContent(
                                   state: state,
                                   controller: _nameController,
                                   onCreate: _createAndAdd,
-                                  onCancel: () => _showCreation(false),
                                 ),
                               ),
                       ),
@@ -343,9 +367,9 @@ class _DiscardDraftStep extends StatelessWidget {
       closeLabel: l10n.commonClose,
       constrainBody: true,
       footer: AppSheetActions(
-        primaryLabel: l10n.libraryKeepEditing,
+        primaryLabel: l10n.commonKeepEditing,
         onPrimary: onKeepEditing,
-        secondaryLabel: l10n.libraryDiscardChanges,
+        secondaryLabel: l10n.commonDiscardChanges,
         onSecondary: onDiscard,
         destructiveSecondary: true,
       ),
@@ -397,9 +421,7 @@ class _CollectionContent extends StatelessWidget {
               shrinkWrap: true,
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
-                  ),
+                  padding: _destinationListPadding,
                   sliver: SliverMainAxisGroup(
                     slivers: [
                       SliverToBoxAdapter(
@@ -412,13 +434,16 @@ class _CollectionContent extends StatelessWidget {
                                 state.errorCode ==
                                     AddToCollectionErrorCode
                                         .updateFavouritesFailed) ...[
-                              Text(
-                                _addToCollectionErrorMessage(
-                                  l10n,
-                                  state.errorCode!,
-                                ),
-                                style: text.bodyMedium.copyWith(
-                                  color: colors.error,
+                              Padding(
+                                padding: _destinationLinePadding,
+                                child: Text(
+                                  _addToCollectionErrorMessage(
+                                    l10n,
+                                    state.errorCode!,
+                                  ),
+                                  style: text.bodyMedium.copyWith(
+                                    color: colors.error,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: AppSpacing.md),
@@ -433,12 +458,13 @@ class _CollectionContent extends StatelessWidget {
                               enabled: !state.isBusy,
                               onPressed: onFavouritesPressed,
                             ),
-                            const Divider(),
+                            const _DestinationDivider(),
                             if (state.collections.isEmpty)
                               Padding(
-                                padding: const EdgeInsets.only(
-                                  top: AppSpacing.lg,
-                                  bottom: AppSpacing.lg,
+                                padding: _destinationLinePadding.add(
+                                  const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.lg,
+                                  ),
                                 ),
                                 child: Text(
                                   l10n.libraryCreateCollectionPrompt(
@@ -455,7 +481,8 @@ class _CollectionContent extends StatelessWidget {
                       if (state.collections.isNotEmpty)
                         SliverList.separated(
                           itemCount: state.collections.length,
-                          separatorBuilder: (_, _) => const Divider(),
+                          separatorBuilder: (_, _) =>
+                              const _DestinationDivider(),
                           itemBuilder: (context, index) {
                             final collection = state.collections[index];
                             return _CollectionRow(
@@ -498,80 +525,95 @@ class _CreateCollectionContent extends StatelessWidget {
     required this.state,
     required this.controller,
     required this.onCreate,
-    required this.onCancel,
   });
   final AddToCollectionState state;
   final TextEditingController controller;
   final VoidCallback onCreate;
-  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: 2,
-          child: state.isBusy ? const LinearProgressIndicator() : null,
-        ),
-        Expanded(
-          child: ScrollEdgeFadeStack(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    controller: controller,
-                    enabled: !state.isBusy,
-                    textInputAction: TextInputAction.done,
-                    decoration: InputDecoration(
-                      hintText: l10n.libraryNewCollectionName,
-                    ),
-                    onSubmitted: (_) {
-                      if (!state.isBusy && controller.text.trim().isNotEmpty) {
-                        onCreate();
-                      }
-                    },
-                  ),
-                  if (state.errorCode != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: AppSpacing.sm),
-                      child: Text(
-                        _addToCollectionErrorMessage(l10n, state.errorCode!),
-                        style: context.text.bodySmall.copyWith(
-                          color: context.colors.error,
-                        ),
-                      ),
-                    ),
-                ],
+    return ScrollEdgeFadeStack(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: controller,
+              enabled: !state.isBusy,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                hintText: l10n.libraryNewCollectionName,
               ),
+              onSubmitted: (_) {
+                if (!state.isBusy && controller.text.trim().isNotEmpty) {
+                  onCreate();
+                }
+              },
             ),
-          ),
+            if (state.errorCode != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.sm),
+                child: Text(
+                  _addToCollectionErrorMessage(l10n, state.errorCode!),
+                  style: context.text.bodySmall.copyWith(
+                    color: context.colors.error,
+                  ),
+                ),
+              ),
+          ],
         ),
-        const SizedBox(height: AppSpacing.md),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: ValueListenableBuilder<TextEditingValue>(
-            valueListenable: controller,
-            builder: (context, value, _) => AppSheetActions(
-              primaryLabel: l10n.libraryCreateAndAdd,
-              onPrimary: state.isBusy || value.text.trim().isEmpty
-                  ? null
-                  : onCreate,
-              secondaryLabel: l10n.commonCancel,
-              onSecondary: state.isBusy ? null : onCancel,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
+/// Single footer command of the name form; leaving is the header's job
+/// (Back/Close). The write shows as a spinner in the button rather than a
+/// progress strip over the field.
+class _CreateCollectionAction extends StatelessWidget {
+  const _CreateCollectionAction({
+    required this.state,
+    required this.controller,
+    required this.onCreate,
+  });
+
+  final AddToCollectionState state;
+  final TextEditingController controller;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) => FilledButton(
+        onPressed: state.isBusy || value.text.trim().isEmpty ? null : onCreate,
+        child: AppBusyButtonLabel(l10n.libraryCreateAndAdd, busy: state.isBusy),
+      ),
+    );
+  }
+}
+
+class _DestinationDivider extends StatelessWidget {
+  const _DestinationDivider();
+
+  @override
+  Widget build(BuildContext context) =>
+      const Padding(padding: _destinationLinePadding, child: Divider());
+}
+
 // Guarded only while a write is in flight: the attempt is simply ignored.
 void _ignoreDismissAttempt() {}
+
+// AnimatedSwitcher layout that stretches every step to the switcher's bounds
+// instead of centring it (see AnimatedSwitcher.defaultLayoutBuilder).
+Widget _fillStepLayout(Widget? currentChild, List<Widget> previousChildren) =>
+    Stack(
+      fit: StackFit.expand,
+      children: [...previousChildren, ?currentChild],
+    );
 
 String _addToCollectionErrorMessage(
   ReadflexLocalizations l10n,
@@ -624,7 +666,7 @@ class _CollectionRow extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(
             vertical: AppSpacing.md,
-            horizontal: AppSpacing.xs,
+            horizontal: _destinationRowInset,
           ),
           child: Row(
             children: [
@@ -647,17 +689,23 @@ class _CollectionRow extends StatelessWidget {
                 '$sourceCount',
                 style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              // Keep counts aligned whether or not membership is marked.
-              SizedBox.square(
-                dimension: AppIconSize.sm,
-                child: included
-                    ? Icon(
-                        AppIcons.check,
-                        size: AppIconSize.sm,
-                        color: context.actionForeground,
-                      )
-                    : null,
+              const SizedBox(width: AppSpacing.md),
+              // A 48dp slot like the picker's menu column keeps counts
+              // aligned across both sheets, marked or not.
+              SizedBox(
+                width: AppSizes.buttonHeight,
+                child: Center(
+                  child: SizedBox.square(
+                    dimension: AppIconSize.sm,
+                    child: included
+                        ? Icon(
+                            AppIcons.check,
+                            size: AppIconSize.sm,
+                            color: context.actionForeground,
+                          )
+                        : null,
+                  ),
+                ),
               ),
             ],
           ),

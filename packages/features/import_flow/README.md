@@ -61,10 +61,14 @@ Helpers exported from `import_flow.dart`:
 ## Architecture
 
 Multi-step animated sheet driven by `ImportFlowCubit` — menu → uploading →
-done / failure. Menu and URL entry share a stable preferred body height (272dp
-at normal text scale), with more space for larger system text. Status steps
-(uploading, done, failure) add the shared header row and its 8dp gap (56dp) on
-top of that same content box, so progress content keeps its room.
+done / failure. Menu, URL entry and the status steps (uploading, done, failure) share one
+preferred body height (272dp at normal text scale, more for larger system
+text): starting an import never grows the sheet. Status content is the icon
+block above an action row; while a book copies, that row holds the progress
+bar and its phase label, and Done or Retry take the same row afterwards, so
+the icon keeps one position across the three states and the status steps never
+grow. Failure shows a single full-width Retry (Choose file / Edit link); leaving
+is the header Close's job, so no Cancel sits beside it.
 The **Before uploading** consent step uses that height as its minimum and grows
 only when its content needs more room, up to the available viewport. Compact
 consent and the menu keep the same top edge throughout forward/back transitions,
@@ -75,6 +79,10 @@ needs to scroll; on very short viewports the complete form scrolls so all contro
 remain reachable. Necessary height changes for longer localized text animate.
 The shared form footer stays at the bottom without adding padding below buttons.
 The confirmation row retains a 48dp checkbox target without extra vertical padding.
+The paragraph and legal links sit on the 24dp sheet gutter; the checkbox row
+extends into it by `AppSizes.checkboxOutset` so the 18dp glyph lands on the
+same edge, and the label follows the target directly (the target's own inset
+past the glyph is the visible gap). The row mirrors in RTL.
 The drag handle dismisses the sheet downward; there is no collapsed consent
 state that the user must expand to read. The legal sentence uses a single rich
 text paragraph with independently tappable, underlined links and link semantics.
@@ -97,10 +105,15 @@ scroll between them. Hints sit 8dp above the footer; remaining body space stays
 between the reserved validation area and the hints, with a minimum 8dp gap.
 When a keyboard or large text leaves too little height for that layout, the
 complete form scrolls instead.
-The input reserves space for its localized validation messages so showing or
-clearing an error does not move the hints or buttons. The reserved area follows
-the available width and text scale and is excluded from accessibility until
-an error is shown.
+Validation errors and the offline hint render 8dp below the field on the 24dp
+gutter, in line with the hint bullets, not through the decorator's helper/error
+slot; an error still turns the field border red through an empty
+`InputDecoration.error`, which adds no subtext row, so the field height is the
+same with and without an error. The area reserves space for every localized
+message so showing or clearing one does not move the hints or buttons. It
+follows the available width and text scale, is excluded from accessibility
+until a message is shown, and announces errors (not the offline hint) as a
+live region.
 Clipboard errors use compact localized copy to avoid reserving a paragraph of
 empty space at large text sizes. No validation message is clipped or ellipsized.
 It uses finite minimum height without intrinsic measurement or unbounded flex
@@ -135,7 +148,6 @@ reads the platform clipboard and keeps its controller aligned with cubit state.
 After failure, **Choose file** reopens the book picker; cancelling the picker
 leaves the failure visible. For articles, **Edit link** returns to the previously
 submitted URL without making another request. Saving again remains explicit.
-Failure actions stack only when their localized labels cannot fit side by side.
 Book import has one progress bar, a static book icon and a readable filename.
 Preparing is indeterminate until copying starts; copying shows byte progress;
 finishing returns to indeterminate while persistence completes. Reaching 100%

@@ -349,7 +349,7 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
 
     return PositionedDirectional(
       top: 0,
-      end: AppSpacing.md,
+      end: AppSpacing.lg,
       bottom: 0,
       child: SafeArea(
         top: false,
@@ -562,7 +562,7 @@ class _ReaderPageBookmarkIndicator extends StatelessWidget {
 
     return PositionedDirectional(
       top: topOffset,
-      end: AppSpacing.md,
+      end: AppSpacing.lg,
       child: IgnorePointer(
         child: AnimatedOpacity(
           opacity: visible ? 1 : 0,
@@ -684,7 +684,7 @@ class _ReaderTopChrome extends StatelessWidget {
                   height: _kReaderTopChromeHeight,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
+                      horizontal: AppSpacing.lg,
                     ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {

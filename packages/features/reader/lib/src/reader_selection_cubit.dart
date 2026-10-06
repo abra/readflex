@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:reader_webview/reader_webview.dart';
+import 'package:shared/shared.dart';
 
 /// Current in-WebView text selection, mirrored into Flutter so the context
 /// panel can drive its show/hide animation and pass position metadata to
@@ -24,7 +25,7 @@ class ReaderSelectionState extends Equatable {
     this.scrollOffset,
     this.progress,
     this.chapterTitle,
-    this.containedHighlightIds = const [],
+    this.highlightMerge,
     this.hasSelection = false,
     this.isAdjusting = false,
   });
@@ -67,8 +68,9 @@ class ReaderSelectionState extends Equatable {
   /// Visible chapter title at selection time.
   final String? chapterTitle;
 
-  /// Saved highlights fully contained in the selection, including equal ranges.
-  final List<String> containedHighlightIds;
+  /// Saved highlights sharing text with the selection, merged into one range;
+  /// `null` when the selection touches no saved highlight.
+  final HighlightMergeTarget? highlightMerge;
 
   final bool hasSelection;
   final bool isAdjusting;
@@ -89,7 +91,7 @@ class ReaderSelectionState extends Equatable {
     Object? scrollOffset = _absent,
     Object? progress = _absent,
     Object? chapterTitle = _absent,
-    Object? containedHighlightIds = _absent,
+    Object? highlightMerge = _absent,
     bool? hasSelection,
     bool? isAdjusting,
   }) => ReaderSelectionState(
@@ -124,9 +126,9 @@ class ReaderSelectionState extends Equatable {
     chapterTitle: chapterTitle == _absent
         ? this.chapterTitle
         : chapterTitle as String?,
-    containedHighlightIds: containedHighlightIds == _absent
-        ? this.containedHighlightIds
-        : containedHighlightIds as List<String>,
+    highlightMerge: highlightMerge == _absent
+        ? this.highlightMerge
+        : highlightMerge as HighlightMergeTarget?,
     hasSelection: hasSelection ?? this.hasSelection,
     isAdjusting: isAdjusting ?? this.isAdjusting,
   );
@@ -146,7 +148,7 @@ class ReaderSelectionState extends Equatable {
     scrollOffset,
     progress,
     chapterTitle,
-    containedHighlightIds,
+    highlightMerge,
     hasSelection,
     isAdjusting,
   ];
@@ -172,7 +174,7 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
     double? scrollOffset,
     double? progress,
     String? chapterTitle,
-    List<String> containedHighlightIds = const [],
+    HighlightMergeTarget? highlightMerge,
   }) {
     emit(
       ReaderSelectionState(
@@ -189,7 +191,7 @@ class ReaderSelectionCubit extends Cubit<ReaderSelectionState> {
         scrollOffset: scrollOffset,
         progress: progress,
         chapterTitle: chapterTitle,
-        containedHighlightIds: containedHighlightIds,
+        highlightMerge: highlightMerge,
         hasSelection: true,
         isAdjusting: state.isAdjusting,
       ),

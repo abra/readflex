@@ -35,12 +35,6 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get libraryDiscardChangesBody => 'لم يتم حفظ تغييرات هذه المجموعة.';
 
   @override
-  String get libraryDiscardChanges => 'تجاهل';
-
-  @override
-  String get libraryKeepEditing => 'متابعة التحرير';
-
-  @override
   String get readerSelectionStart => 'بداية التحديد';
 
   @override
@@ -264,6 +258,9 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get commonDelete => 'حذف';
+
+  @override
+  String get commonKeep => 'الاحتفاظ';
 
   @override
   String get commonRetry => 'إعادة المحاولة';

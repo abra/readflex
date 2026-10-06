@@ -35,12 +35,6 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get libraryDiscardChangesBody => 'このコレクションの変更は保存されていません。';
 
   @override
-  String get libraryDiscardChanges => '破棄';
-
-  @override
-  String get libraryKeepEditing => '編集を続ける';
-
-  @override
   String get readerSelectionStart => '選択範囲の始点';
 
   @override
@@ -259,6 +253,9 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get commonDelete => '削除';
+
+  @override
+  String get commonKeep => '残す';
 
   @override
   String get commonRetry => '再試行';

@@ -2,6 +2,13 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:reader_webview/reader_webview.dart';
+import 'package:shared/shared.dart';
+
+const _merge = HighlightMergeTarget(
+  cfiRange: 'union-cfi',
+  text: 'a merged passage',
+  highlightIds: ['h-left', 'h-right'],
+);
 
 void main() {
   group('ReaderSelectionCubit', () {
@@ -19,7 +26,7 @@ void main() {
       expect(cubit.state.scrollOffset, isNull);
       expect(cubit.state.progress, isNull);
       expect(cubit.state.chapterTitle, isNull);
-      expect(cubit.state.containedHighlightIds, isEmpty);
+      expect(cubit.state.highlightMerge, isNull);
     });
 
     group('select', () {
@@ -44,7 +51,7 @@ void main() {
           pageNumber: 42,
           progress: 0.36,
           chapterTitle: 'Chapter 3',
-          containedHighlightIds: const ['h-small'],
+          highlightMerge: _merge,
         ),
         expect: () => [
           isA<ReaderSelectionState>()
@@ -91,11 +98,7 @@ void main() {
               .having((s) => s.scrollOffset, 'scrollOffset', isNull)
               .having((s) => s.progress, 'progress', 0.36)
               .having((s) => s.chapterTitle, 'chapterTitle', 'Chapter 3')
-              .having(
-                (s) => s.containedHighlightIds,
-                'containedHighlightIds',
-                ['h-small'],
-              ),
+              .having((s) => s.highlightMerge, 'highlightMerge', _merge),
         ],
       );
 
@@ -206,7 +209,7 @@ void main() {
           normalizedCfiRange: 'normalized-cfi',
           progress: 0.1,
           chapterTitle: 'One',
-          containedHighlightIds: ['h-small'],
+          highlightMerge: _merge,
           position: ReaderSelectionPosition(
             left: 0.1,
             top: 0.2,
@@ -226,7 +229,7 @@ void main() {
         expect(copy.normalizedCfiRange, 'normalized-cfi');
         expect(copy.progress, 0.1);
         expect(copy.chapterTitle, 'One');
-        expect(copy.containedHighlightIds, ['h-small']);
+        expect(copy.highlightMerge, _merge);
         expect(
           copy.position,
           const ReaderSelectionPosition(
@@ -238,6 +241,15 @@ void main() {
         );
         expect(copy.hasSelection, isTrue);
         expect(copy.pageNumber, 5);
+      });
+
+      test('copyWith can clear the merge plan and states differ by it', () {
+        const merged = ReaderSelectionState(
+          selectedText: 'a',
+          highlightMerge: _merge,
+        );
+        expect(merged.copyWith(highlightMerge: null).highlightMerge, isNull);
+        expect(merged, isNot(const ReaderSelectionState(selectedText: 'a')));
       });
     });
   });

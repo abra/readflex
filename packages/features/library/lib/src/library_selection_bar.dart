@@ -5,8 +5,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_selection_cubit.dart';
 
-const _actionInset =
-    AppSpacing.lg - (AppSizes.buttonHeight - AppIconSize.sm) / 2;
+const _actionInset = AppSpacing.lg - AppSizes.iconActionOutset;
 
 /// Scaffold reserves this bar's height so bulk actions never cover sources.
 class LibrarySelectionBar extends StatelessWidget {
@@ -75,10 +74,7 @@ class LibrarySelectionBar extends StatelessWidget {
                           AppIcons.collectionAdd,
                           size: AppIconSize.sm,
                         ),
-                        label: Text(
-                          l10n.libraryAddToCollection,
-                          textAlign: TextAlign.center,
-                        ),
+                        label: AppButtonLabel(l10n.libraryAddToCollection),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md),

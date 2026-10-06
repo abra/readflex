@@ -36,12 +36,6 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
       'Изменения этой коллекции ещё не сохранены.';
 
   @override
-  String get libraryDiscardChanges => 'Отменить изменения';
-
-  @override
-  String get libraryKeepEditing => 'Продолжить';
-
-  @override
   String get readerSelectionStart => 'Начало выделения';
 
   @override
@@ -265,6 +259,9 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get commonDelete => 'Удалить';
+
+  @override
+  String get commonKeep => 'Оставить';
 
   @override
   String get commonRetry => 'Повторить';

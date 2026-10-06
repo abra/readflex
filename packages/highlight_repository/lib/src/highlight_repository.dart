@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/highlight_to_domain.dart';
 import 'mappers/highlight_to_storage.dart';
+import 'merge_highlight_notes.dart';
 
 const _uuid = Uuid();
 
@@ -77,6 +78,15 @@ class HighlightRepository {
     }
   }
 
+  /// Saves a text highlight, absorbing [replaceHighlightIds].
+  ///
+  /// The reader passes every saved highlight sharing text with the new range
+  /// (in document order), so one piece of text never belongs to two
+  /// highlights. Absorbed rows of other sources or kinds are ignored. Their
+  /// notes are kept: non-empty notes are joined in document order, then
+  /// [note] is appended, skipping exact repeats. A row with the same anchor
+  /// and text is recoloured in place, keeping its identity and review history;
+  /// every other absorbed row is deleted in the same transaction.
   Future<Highlight> addHighlight({
     required String sourceId,
     required SourceType sourceType,
@@ -92,9 +102,12 @@ class HighlightRepository {
   }) async {
     try {
       return await _db.transaction(() async {
+        final order = {
+          for (final (index, id) in replaceHighlightIds.indexed) id: index,
+        };
         final candidates = replaceHighlightIds.isEmpty
             ? <HighlightsTableData>[]
-            : (await _dao.highlightsByIds(replaceHighlightIds.toSet().toList()))
+            : (await _dao.highlightsByIds(order.keys.toList()))
                   .where(
                     (row) =>
                         row.sourceId == sourceId &&
@@ -102,6 +115,12 @@ class HighlightRepository {
                         row.kind == HighlightKind.text.name,
                   )
                   .toList();
+        // The DAO returns storage order; notes join in the reader's order.
+        candidates.sort((a, b) => order[a.id]!.compareTo(order[b.id]!));
+        final mergedNote = mergeHighlightNotes([
+          for (final row in candidates) row.note,
+          note,
+        ]);
         final sameRange = cfiRange == null || cfiRange.isEmpty
             ? null
             : candidates
@@ -117,19 +136,21 @@ class HighlightRepository {
         await _db.reviewItemsDao.deleteItemsByIds(removedIds);
         await _dao.deleteHighlightsByIds(removedIds);
 
-        // Re-selecting the exact anchor changes its color, not its identity
-        // or review history. Only fully absorbed, different ranges are replaced.
+        // Re-selecting the exact anchor, or a part of it, changes its colour,
+        // not its identity or review history.
         if (sameRange != null) {
           await _dao.updateHighlight(
             HighlightsTableCompanion(
               id: Value(sameRange.id),
               color: Value(color.name),
-              note: note == null ? const Value.absent() : Value(note),
+              note: mergedNote == sameRange.note
+                  ? const Value.absent()
+                  : Value(mergedNote),
             ),
           );
           return sameRange.toDomainModel().copyWith(
             color: color,
-            note: note ?? sameRange.note,
+            note: mergedNote,
           );
         }
 
@@ -138,7 +159,7 @@ class HighlightRepository {
           sourceId: sourceId,
           sourceType: sourceType,
           text: text,
-          note: note,
+          note: mergedNote,
           cfiRange: cfiRange,
           pageNumber: pageNumber,
           scrollOffset: scrollOffset,

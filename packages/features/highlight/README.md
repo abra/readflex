@@ -28,8 +28,13 @@ typedef HighlightColorResolver = Color Function(HighlightColor color);
 composition root (`routing.dart`). It implements `ColorHighlightTextAction` so
 the reader can show its compact color row without importing this feature.
 For a new selection, choosing a color only changes the draft/preview. Pressing
-Highlight calls `onExecuteWithColor` and persists the exact range with that
-color, replacing fully contained highlights when supplied by the reader.
+Highlight calls `onExecuteWithColor` and persists the range with that color.
+One piece of text belongs to one highlight: when the reader reports a
+`highlightMerge` (the selection shares at least one character with saved
+highlights), the action saves that union and absorbs every listed highlight;
+their notes are kept by the repository. A selection inside a saved highlight,
+or equal to it, recolours that highlight in place. Highlights that only touch
+the selection are left alone.
 Dismissing the popup does not save. Direct `onExecute` calls default to yellow.
 Changing the color of an already saved highlight is a separate Reader edit.
 The localized label comes from `labelFor(context)` and the icon is
@@ -60,7 +65,19 @@ with the explicit Close action and the shared 8dp header/body gap, a
 `SelectionPreviewCard` whose direction follows the selected text and whose
 tint is the selected swatch, one `AppColorSwatchButton` per `HighlightColor`
 (48dp target, selected ring and luminance-chosen check, disabled while
-saving), the note field and a filled Save.
+saving), the note field and a filled Save whose `AppBusyButtonLabel` swaps in
+the spinner without changing the button's size.
+
+Each body row owns the 24dp gutter: the preview card and the note field sit on
+it, and the swatch row is outset by the target's inset around the painted
+circle (`(48 - 32) / 2`) with `spaceBetween`, so the first and last circles
+align with the card and field edges in LTR and RTL.
+
+A typed note turns Close, scrim, drag and system Back into a discard step
+shaped like Import's: header Back and Close, `AppSheetActions` in the footer
+slot (filled Keep editing, outlined error-colored Discard). Close on that step
+keeps the decision visible; Back returns to the note. There is no localized
+body copy for a highlight note yet, so the step has no paragraph.
 
 ## Dependencies
 
@@ -68,7 +85,7 @@ saving), the note field and a filled Save.
 - `shared` — `TextAction`, `TextSelectionContext`
 - `domain_models` — `HighlightColor`, `SourceType`
 - `component_library` — `ActionBottomSheetLayout`, `SelectionPreviewCard`,
-  `AppColorSwatchButton`, `ButtonLoadingIndicator`, `showAppBottomSheet`,
-  `AppColorsExt`
+  `AppColorSwatchButton`, `AppSheetActions`, `AppBusyButtonLabel`,
+  `showAppBottomSheet`, `AppColorsExt`
 - `intl` — bidi detection for the preview direction
 - `flutter_bloc`, `equatable`

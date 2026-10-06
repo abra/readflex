@@ -1052,8 +1052,12 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
     }
     _lastHighlightsRef = source;
     _lastHighlightsTheme = theme;
+    // Paint order, bottom first: where highlights saved before merging
+    // existed still overlap, the newest is drawn on top and answers taps.
+    final ordered = [...source]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     return _cachedReaderHighlights = [
-      for (final h in source)
+      for (final h in ordered)
         ReaderHighlight(
           id: h.id,
           text: h.text,
@@ -1322,7 +1326,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           position: selection.position,
           progress: currentState.document?.readingProgress,
           chapterTitle: currentState.chapterTitle,
-          containedHighlightIds: selection.containedHighlightIds,
+          highlightMerge: highlightMergeTargetFor(selection.highlightMerge),
         );
         if (kDebugMode) {
           debugPrint('[reader-selection-ui] context panel state selected');

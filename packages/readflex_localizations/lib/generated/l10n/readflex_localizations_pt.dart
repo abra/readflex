@@ -36,12 +36,6 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
       'As alterações desta coleção não foram salvas.';
 
   @override
-  String get libraryDiscardChanges => 'Descartar';
-
-  @override
-  String get libraryKeepEditing => 'Continuar editando';
-
-  @override
   String get readerSelectionStart => 'Início da seleção';
 
   @override
@@ -264,6 +258,9 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
 
   @override
   String get commonDelete => 'Excluir';
+
+  @override
+  String get commonKeep => 'Manter';
 
   @override
   String get commonRetry => 'Tentar novamente';

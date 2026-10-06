@@ -36,12 +36,6 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
       'इस संग्रह के बदलाव अभी सहेजे नहीं गए हैं।';
 
   @override
-  String get libraryDiscardChanges => 'छोड़ें';
-
-  @override
-  String get libraryKeepEditing => 'संपादन जारी रखें';
-
-  @override
   String get readerSelectionStart => 'चयन की शुरुआत';
 
   @override
@@ -264,6 +258,9 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get commonDelete => 'हटाएं';
+
+  @override
+  String get commonKeep => 'रखें';
 
   @override
   String get commonRetry => 'फिर कोशिश करें';

@@ -14,7 +14,7 @@ can serve them over localhost.
 | Symbol                   | Kind      | Purpose                                                              |
 |--------------------------|-----------|----------------------------------------------------------------------|
 | `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, search, highlight-tap and bookmark events; accepts imperative calls (goToCfi, pageLeft/pageRight, nextPage, changeStyle, addAnnotation, toggleBookmark). |
-| `ArticleHtmlReaderWebView` | Widget  | Loads the vertical article shell, fetches saved `content.html` from `/article/<dir>/content.html`, emits progress/TOC/document-feature/search/bookmark/external-link events, and accepts `goToPercent`, `goToHref`, `goToCfi`, `changeStyle`, `startSearch`, `cancelSearch`, `clearSearch`, `toggleBookmarkHere`, and `setArticleBookmarks`. |
+| `ArticleHtmlReaderWebView` | Widget  | Loads the vertical article shell, fetches saved `content.html` from `/article/<dir>/content.html`, emits progress/TOC/document-feature/search/bookmark/external-link events, and accepts `goToPercent`, `goToHref`, `goToCfi` (saved highlights, bookmarks), `goToSearchResult` (active search match), `changeStyle`, `startSearch`, `cancelSearch`, `clearSearch`, `toggleBookmarkHere`, and `setArticleBookmarks`. |
 | `AssetExtractor`         | Utility   | Copies book/article reader assets and reading fonts from rootBundle. Version/build plus asset revision controls replacement; matching existing files are skipped and missing files are retried. DEV bootstrap forces extraction. |
 | `BookMetadataExtractor`  | Utility   | Spawns a timeout-bounded `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Malformed bridge payloads fail promptly; an invalid optional cover does not discard valid metadata. Used by the import flow. |
 | Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderImageAreaSelection`, `ReaderHighlight`, `ReaderBookmark`, `ReaderBookmarkChange`, `FoliateStyle` — DTOs exchanged with JS. |
@@ -262,11 +262,24 @@ collapses the native selection while focus moves to the Flutter action popup.
 
 Selecting inside or across a saved text highlight never opens its edit menu or
 clears the native range. Only an ordinary tap without an active text selection
-opens the saved-highlight editor. Books and articles report fully contained
-highlight IDs (including equal ranges) using DOM boundaries, not rectangle hit
-tests; partial intersections and adjacent highlights are excluded. Articles
-reuse their rendered ranges. No highlight is deleted by selecting, previewing,
-translating or cancelling; replacement occurs only on explicit Highlight save.
+opens the saved-highlight editor. One piece of text belongs to one highlight, so
+every selection payload carries `highlightMerge`: the union of the selection and
+every saved highlight sharing at least one character with it (touching ranges
+are excluded), computed by `planHighlightMerge` in `readflex_range.js` from DOM
+boundaries, never rectangle hit tests. The union grows until no further saved
+highlight intersects it, so a chain of legacy overlaps is absorbed whole; ids are
+in document order. When the union equals a saved highlight's range the payload
+reuses that highlight's own anchor and text, so saving recolours it in place.
+Otherwise books send `view.getCFI` of the union with text that keeps paragraph
+breaks (`rangeTextWithBlockBreaks`), and articles send a fresh article anchor
+with normalized text, matching how their anchors resolve. Articles reuse their
+rendered ranges. The colour preview shows the merged range. No highlight is
+deleted by selecting, previewing, translating or cancelling; absorption occurs
+only on explicit Highlight save.
+Both widgets take `highlights` in paint order, bottom first; the reader sends
+them oldest first, so where highlights saved before merging still overlap, the
+newest is drawn on top and answers taps (articles via `Highlight.priority`,
+books via overlay insertion order).
 Browser tests exercise both touch event paths, both book pagination axes,
 forward/backward range changes, inline nodes, repeated occurrences and tap editing.
 
@@ -537,23 +550,37 @@ amber fill without an outline; other book matches retain a softer cyan tint.
 Arrow navigation repaints only the previous and current match, preserves saved
 highlights and does not create a native text selection. Tests cover repeated
 words, redraw after resizing, light/dark pages, paginated/scrolled layouts and
-stale navigation after a new result or search reset. Articles tint every match
+stale navigation after a new result or search reset. Articles paint every match
 through the non-mutating highlighter (CSS highlight set or SVG fallback, capped
-at 1000 rendered matches, appended incrementally per search slice) and wrap only
-the active match in `mark.readflex-search-match`; the active match's live range
-is re-resolved after unwrapping. Colours live in `readflex_shell_constants.js`
+at 1000 rendered matches, appended incrementally per search slice). The active
+match is painted alone as `readflex-search-active` and dropped from the inactive
+set, so the two tints never stack. Overlap is decided by explicit priority, never
+registration order (WebKit's highlight registry does not iterate in insertion
+order): saved highlights take their list position, search matches, the active
+match and the colour preview sit above them. `ArticleHighlighter` sets
+`Highlight.priority` on the CSS path and keeps SVG overlay groups in ascending
+priority in the fallback, re-adding only out-of-order groups once per `batch`. Nothing wraps or splits article text after load: rewriting it
+would collapse the live ranges of saved highlights under the match and clone the
+sentence elements a match crosses (duplicate ids). `goToSearchResult` is the only
+entry that activates a match; `goToCfi` serves saved highlights and bookmarks,
+clears any active match and leaves the highlight in its own colour. Both centre
+the resolved text rather than its root element, so a highlight anchored to a long
+block lands on screen; text taller than the viewport starts below the top chrome.
+`test_browser/article_highlight_navigation.test.mjs` covers both renderers.
+Colours live in `readflex_shell_constants.js`
 and are exposed as `--rf-search-match-color`, `--rf-search-match-opacity`,
 `--rf-search-active-color` and `--rf-search-active-opacity`. Flutter sends
 nothing for them today; to override, put `:root { --rf-search-active-color: …; }`
 in `FoliateStyle.customCSS`. The book reads them as CSS `var()` fallbacks on
 the SVG fill; the article resolves them once per search start or style change
-into the match rule and the active marker background.
+into the match and active-match rules (and the element-tint fallback used when
+an active match cannot be resolved to a text range).
 `searchOverlayBottomFraction` describes the Flutter search panel's occlusion,
 not padding. Both reader widgets synchronize it on readiness and when it changes,
 including renderer recovery. `readflex_search_occlusion.js` projects covered
 active-match fragments onto an inert amber line above that band without changing
 scroll position, pagination or native selection. Books reuse the active SVG
-annotation's viewport rectangles; articles use the exact match element. Scroll
+annotation's viewport rectangles; articles use the active match range. Scroll
 and resize work is coalesced into one animation frame, stays inside the WebView,
 and is detached when the overlay is disabled. Browser tests cover both engines,
 hidden/visible matches, pagination stability, coalescing and disposal; root

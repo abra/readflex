@@ -157,6 +157,29 @@ source quote and translated sentence for native screenshot inspection.
 - **Swatch inks come from `AppColorsExt`** -- a check drawn over a highlight or
   theme sample picks `onLightSwatch`/`onDarkSwatch` by the sample's luminance;
   raw `Colors.black`/`Colors.white` are not allowed in feature code.
+- **Content sits on the gutter; interactive surfaces extend into it.** A row,
+  option tile or swatch keeps the inner inset its ink or selection pill needs
+  (4/8/12dp), and the owning surface subtracts that inset from its own edge
+  padding, so text and icons land exactly on the 16dp screen/drawer or 24dp
+  sheet gutter while the pill bleeds into the gutter. The same rule places
+  icon actions: a 48dp target is outset by `AppSizes.iconActionOutset` so its
+  20dp glyph meets the gutter, and a Material `Checkbox` by
+  `AppSizes.checkboxOutset`. Never shrink a target, and never fake an outset
+  with negative padding, `Transform` or `OverflowBox`; move the padding to the
+  widget that owns the surface. Text buttons inside a content column follow
+  the same rule: the column stops padding the button and the button's own
+  16dp padding becomes the ink bleed, so the label aligns with the text above.
+- **Busy commands keep their size.** `AppBusyButtonLabel` replaces a button's
+  label with the spinner while a write is in flight; `AppSheetActions(busy:)`
+  and `ErrorState(busy:)` use it, and single `FilledButton`s pass it as their
+  child instead of swapping children.
+- **Icon glyph colour follows the action's role, not the surface.** Inline
+  delete/remove in a row: `onSurfaceVariant`; undo: `context.actionForeground`;
+  overflow "more": `onSurfaceVariant`, or `selectedControlForeground` on a
+  selected row; a bulk destructive command in a selection bar: `error`.
+- **Floating action buttons are themed.** `floatingActionButtonTheme` provides
+  the primary circular style; call sites pass only `onPressed`, `tooltip`,
+  `heroTag` and the child.
 
 ## Reusable UI API
 
@@ -170,8 +193,9 @@ Reusable presentation-only widgets used across features:
 | `AppDrillInRow`                     | Row that opens a nested step: accent leading icon, `bodyMedium` title, muted subtitle, directional chevron, 48dp minimum, muted and ripple-free when disabled |
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
 | `AppButtonLabel`                    | Bounded label for localized button text        |
+| `AppBusyButtonLabel`                | Button child that swaps the label for a live-region spinner without changing the button size |
 | `AppSheetDismissGuard`              | Per-step scrim/drag guard inside `showAppBottomSheet` flows |
-| `AppSheetActions`                   | Primary/secondary sheet commands with adaptive stacking and stable busy geometry; `destructiveSecondary` for confirmations |
+| `AppSheetActions`                   | Primary/secondary sheet commands with adaptive stacking and stable busy geometry; `destructiveSecondary` for confirmations; `stacks`/`stackedExtent` let a fixed-height step reserve the second row ahead of layout |
 | `AppSourceQuote`                    | Quoted source phrase with a leading rule that follows the quote's own direction |
 | `AppLexicalMetadataRow`             | Muted reading / IPA pronunciation / part-of-speech line under a headword; IPA stays LTR in the phonetic font, wraps when narrow |
 | `AppColorSwatchButton`              | Round color sample in a 48dp circular-ink target; selected ring plus a check inked by swatch luminance |
@@ -265,11 +289,26 @@ download.
 ### Confirmations
 
 `AppSheetActions` follows a safe-default model: the filled primary is the
-non-destructive choice (Cancel, Keep editing) and the destructive command is
-the outlined secondary in the error color (`destructiveSecondary: true`).
-Delete collection, delete source and discard-changes confirmations all use
-this pairing, so the most prominent button never destroys data. Cancel on a
-destructive confirmation cancels that operation; it does not close the flow.
+non-destructive choice (Keep editing, Keep) and the destructive
+command is the outlined secondary in the error color
+(`destructiveSecondary: true`). Delete collection, delete items and
+discard-changes confirmations all use this pairing, so the most prominent
+button never destroys data. The safe action is named for what it keeps
+("Keep", "Keep editing"), never "Cancel": that word is reserved
+for leaving a surface, so one label never has two meanings.
+
+### Command Footers
+
+- A sheet step whose header has Close (or Back) shows **one** full-width
+  filled command: Save, Continue, Create and add, Done, Retry. Leaving is the
+  header's job, so no Cancel sits beside the command. A draft is still
+  protected by `AppSheetDismissGuard`.
+- A pair appears only for a confirmation (above) or a genuine alternative
+  action with its own outcome, such as Skip beside Save when a new highlight
+  can be kept without a note.
+- Secondary commands are outlined on a transparent background; the
+  destructive variant swaps in the error color. A disabled filled primary keeps
+  Material's muted fill, so it never reads as an enabled secondary.
 
 ### Placement by Role
 
@@ -290,7 +329,10 @@ and [Apple touch guidance](https://developer.apple.com/design/tips/).
 | Search suffix, stepper, segmented choice | Use the control's internal layout; do not move its buttons to the outer screen gutter |
 | Reader toolbar group | Equal 48dp slots and circular feedback inside the toolbar gutter, including the custom bookmark glyph |
 | Related text/control | Use the existing 4/8/12dp tokens for local relationships, with 16/24dp between groups; do not add blank space merely to match another sheet's height |
-| Footer commands | 16dp visual space below the last command, plus the route's `max(16dp, bottom safe inset)`; keyboard lift is applied once |
+| Option rows and swatches (language, font, collection, theme) | Content on the gutter; the row's 4/8dp ink inset bleeds into the gutter (see Rules) |
+| Text button in a content column (Read more, Delete collection) | Label on the content gutter; the button's 16dp padding is the ink bleed |
+| Bottom context strip of the reader | Shares the toolbar's 24dp glyphs; it is part of the bottom chrome family |
+| Footer commands | 24dp between the last body line and the commands (`defaultBodyPadding` bottom 16 + `defaultFooterPadding` top 8), 16dp below the last command, plus the route's `max(16dp, bottom safe inset)`; keyboard lift is applied once. Sheets that own their viewport reuse the same constants |
 
 Measure glyph bounds, background bounds and hit bounds separately. Targets
 must stay inside their parent and must not overlap a neighboring row action.
@@ -318,6 +360,10 @@ with large text. Root Library goldens check the painted press feedback.
   system inset. The footer gap is 32dp with no system inset and 50dp with a 34dp
   inset; above the keyboard it is 32dp. This prevents nested collection forms
   from placing Save/Cancel against the home indicator or keyboard.
+- `AppSheetDismissGuard` registers with the route's `AppSheetDismissRegistry`;
+  holders are ordered and the latest wins, so a step change that mounts the
+  next guard before the previous one is disposed keeps the sheet guarded
+  whichever post-frame callback runs first.
 - `BottomSheetHeader` uses `titleMedium`, a minimum 48dp row and a heading
   semantics node. Adding Close does not change the title baseline. Long titles
   wrap; trailing actions wrap independently when needed.

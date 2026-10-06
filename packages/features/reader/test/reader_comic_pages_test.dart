@@ -79,6 +79,59 @@ void main() {
     }
   }
 
+  for (final rtl in [false, true]) {
+    testWidgets('tiles sit on the 16dp gutter, 12dp apart, rtl=$rtl', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          supportedLocales: ReadflexSupportedLocales.locales,
+          home: Scaffold(
+            body: ReaderComicPages(
+              items: items.take(6).toList(),
+              currentIndex: 0,
+              pageProgressionRtl: rtl,
+              loadThumbnail: (_) async => null,
+              onSelected: (_) {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final l10n = tester.element(find.byType(ReaderComicPages)).l10n;
+      expect(
+        tester.widget<GridView>(find.byType(GridView)).padding,
+        const EdgeInsets.all(AppSpacing.lg),
+      );
+      Rect tile(int page) => tester.getRect(
+        find
+            .ancestor(
+              of: find.text(l10n.readerPageNumber(page)),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      final first = tile(1);
+      final second = tile(2);
+      expect(rtl ? 390 - first.right : first.left, AppSpacing.lg);
+      expect(first.top, AppSpacing.lg);
+      expect(
+        rtl ? first.left - second.right : second.left - first.right,
+        AppSpacing.md,
+      );
+      expect(rtl ? second.left : 390 - second.right, AppSpacing.lg);
+      expect(tile(3).top - first.bottom, AppSpacing.md);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
   testWidgets('an asynchronously loaded TOC still reveals the saved page', (
     tester,
   ) async {

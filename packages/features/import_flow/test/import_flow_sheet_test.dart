@@ -1728,6 +1728,85 @@ void main() {
     expect(find.byType(AppDrillInRow), findsNWidgets(2));
   });
 
+  for (final size in const [Size(390, 844), Size(320, 568)]) {
+    testWidgets('status steps keep the menu height without scrolling at '
+        '${size.width}x${size.height}', (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final imported = Completer<Book?>();
+      void Function(double)? reportProgress;
+      await tester.pumpWidget(
+        _TestHost(
+          onOpen: (context) => showImportFlowSheet(
+            context,
+            onPickBookFile: () async => File('/tmp/Test.epub'),
+            onImportBook: (file, {onProgress}) {
+              reportProgress = onProgress;
+              return imported.future;
+            },
+            onImportArticle: (_, {onStage}) async => null,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final menuSheet = tester.getRect(find.byType(BottomSheet));
+
+      await tester.tap(find.text('Upload Book'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      reportProgress?.call(0.45);
+      await tester.pump();
+
+      double contentScrollExtent() => Scrollable.of(
+        tester.element(find.byKey(const ValueKey('importFlowStatusIcon'))),
+      ).position.maxScrollExtent;
+
+      expect(tester.getRect(find.byType(BottomSheet)), menuSheet);
+      expect(contentScrollExtent(), 0);
+      final bar = tester.getRect(find.byType(LinearProgressIndicator));
+      final filename = tester.getRect(find.text('Test.epub'));
+      expect(bar.top, greaterThan(filename.bottom));
+      expect(bar.bottom, lessThan(menuSheet.bottom));
+      expect(find.text('45%'), findsOneWidget);
+
+      final uploadingIcon = tester.getRect(
+        find.byKey(const ValueKey('importFlowStatusIcon')),
+      );
+
+      imported.complete(null);
+      await tester.pumpAndSettle();
+      expect(find.text('Choose file'), findsOneWidget);
+      // Retry is the only command, so the failure step never grows past the
+      // menu, even with the wide test font.
+      expect(tester.getRect(find.byType(BottomSheet)), menuSheet);
+      expect(contentScrollExtent(), 0);
+      // The wide test font wraps the reserved phase label taller than the
+      // button row, so only the root UI suite (production fonts) pins the
+      // icon's exact rect across uploading and failure.
+      final failureIcon = tester.getRect(
+        find.byKey(const ValueKey('importFlowStatusIcon')),
+      );
+      expect(failureIcon.size, uploadingIcon.size);
+      expect(failureIcon.center.dx, closeTo(uploadingIcon.center.dx, 0.1));
+      expect(find.byType(FilledButton), findsOneWidget);
+      expect(find.byType(OutlinedButton), findsNothing);
+      expect(find.text('Cancel'), findsNothing);
+      final chooseFile = tester.getRect(
+        find.widgetWithText(FilledButton, 'Choose file'),
+      );
+      // Retry takes the row the progress bar occupied, below the status block.
+      expect(
+        chooseFile.top,
+        greaterThan(tester.getRect(find.text('Test.epub')).bottom),
+      );
+      expect(chooseFile.left, menuSheet.left + AppSpacing.xl);
+      expect(chooseFile.right, menuSheet.right - AppSpacing.xl);
+      expect(chooseFile.bottom, closeTo(bar.bottom, 48));
+    });
+  }
+
   testWidgets('status steps keep the flow header and gate Close on work', (
     tester,
   ) async {
@@ -1764,10 +1843,7 @@ void main() {
     expect(find.byType(BottomSheetHeader), findsOneWidget);
     expect(find.text('Add to Library'), findsOneWidget);
     expect(closeButton().onPressed, isNull);
-    expect(
-      tester.getRect(find.byType(BottomSheet)).height,
-      closeTo(menuSheet.height + AppSizes.buttonHeight + AppSpacing.sm, 1),
-    );
+    expect(tester.getRect(find.byType(BottomSheet)), menuSheet);
 
     imported.complete(null);
     await tester.pumpAndSettle();
@@ -1944,6 +2020,194 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(BottomSheet), findsNothing);
   });
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    final rtl = locale.languageCode == 'ar';
+
+    testWidgets('terms checkbox glyph and label sit on the sheet gutter: '
+        '$locale', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      late ReadflexLocalizations l10n;
+      await tester.pumpWidget(
+        _TestHost(
+          locale: locale,
+          onOpen: (context) {
+            l10n = context.l10n;
+            return showImportFlowSheet(
+              context,
+              onPickBookFile: () async => null,
+              onImportBook: (_, {onProgress}) async => null,
+              onImportArticle: (_, {onStage}) async => null,
+              isBookImportTermsAccepted: () => false,
+              acceptBookImportTerms: () async {},
+            );
+          },
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.importUploadBook));
+      await tester.pumpAndSettle();
+
+      final sheet = tester.getRect(find.byType(BottomSheet));
+      final paragraph = tester.getRect(find.text(l10n.importBookTermsBody));
+      final checkbox = tester.getRect(find.byType(Checkbox));
+      final label = tester.getRect(find.text(l10n.importBookTermsConfirm));
+      final row = tester.getRect(
+        find
+            .ancestor(
+              of: find.byType(Checkbox),
+              matching: find.byType(InkWell),
+            )
+            .first,
+      );
+      // The 18dp glyph sits centered in the 48dp target.
+      final glyph = checkbox.deflate(AppSizes.checkboxOutset);
+      expect(checkbox.size, const Size.square(AppSizes.buttonHeight));
+      expect(row.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
+      expect(row.top, greaterThanOrEqualTo(sheet.top));
+      if (rtl) {
+        expect(paragraph.right, sheet.right - AppSpacing.xl);
+        expect(glyph.right, paragraph.right);
+        // The visible gap is the target's own inset past the glyph.
+        expect(label.right, checkbox.left);
+        expect(glyph.left - label.right, AppSizes.checkboxOutset);
+        expect(label.left, sheet.left + AppSpacing.xl);
+      } else {
+        expect(paragraph.left, sheet.left + AppSpacing.xl);
+        expect(glyph.left, paragraph.left);
+        expect(label.left, checkbox.right);
+        expect(label.left - glyph.right, AppSizes.checkboxOutset);
+        expect(label.right, sheet.right - AppSpacing.xl);
+      }
+      final semantics = tester.ensureSemantics();
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      semantics.dispose();
+      await tester.tap(find.text(l10n.importBookTermsConfirm));
+      await tester.pump();
+      expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, isTrue);
+    });
+
+    testWidgets('URL feedback starts on the gutter and keeps the field '
+        'height: $locale', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final isOfflineController = StreamController<bool>.broadcast();
+      addTearDown(isOfflineController.close);
+      late ReadflexLocalizations l10n;
+      await tester.pumpWidget(
+        _TestHost(
+          locale: locale,
+          onOpen: (context) {
+            l10n = context.l10n;
+            return showImportFlowSheet(
+              context,
+              onPickBookFile: () async => null,
+              onImportBook: (_, {onProgress}) async => null,
+              onImportArticle: (_, {onStage}) async => null,
+              isOfflineStream: isOfflineController.stream,
+            );
+          },
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.importSaveArticle));
+      await tester.pumpAndSettle();
+      final semantics = tester.ensureSemantics();
+      try {
+        final sheet = tester.getRect(find.byType(BottomSheet));
+        double startInset(Rect rect) =>
+            rtl ? sheet.right - rect.right : rect.left - sheet.left;
+        final field = find.byType(TextField);
+        final fieldBefore = tester.getRect(field);
+        final hintRow = tester.getRect(
+          find
+              .ancestor(
+                of: find.text(l10n.importArticleHintClean),
+                matching: find.byType(Row),
+              )
+              .first,
+        );
+        expect(startInset(hintRow), AppSpacing.xl);
+        expect(tester.widget<TextField>(field).decoration!.error, isNull);
+        final theme = Theme.of(tester.element(field));
+        InputBorder paintedBorder() {
+          // The decorator's border container carries the resolved border.
+          final container = find.byWidgetPredicate(
+            (widget) => widget.runtimeType.toString() == '_BorderContainer',
+          );
+          return (tester.widget(container) as dynamic).border as InputBorder;
+        }
+
+        expect(
+          paintedBorder().borderSide.color,
+          isNot(theme.colorScheme.error),
+        );
+
+        await tester.enterText(field, '');
+        tester.widget<TextField>(field).onSubmitted!('');
+        await tester.pumpAndSettle();
+        final error = find.text(l10n.importArticleUrlRequired);
+        expect(error, findsOneWidget);
+        expect(startInset(tester.getRect(error)), AppSpacing.xl);
+        expect(
+          tester.getRect(error).top,
+          greaterThanOrEqualTo(fieldBefore.bottom + AppSpacing.xs),
+        );
+        expect(tester.getRect(error).bottom, lessThanOrEqualTo(hintRow.top));
+        expect(tester.getRect(field), fieldBefore);
+        expect(tester.widget<TextField>(field).decoration!.error, isNotNull);
+        expect(paintedBorder().borderSide.color, theme.colorScheme.error);
+        expect(
+          tester.widget<Text>(error).style?.color,
+          theme.colorScheme.error,
+        );
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(l10n.importArticleUrlRequired),
+          ),
+          isSemantics(
+            label: l10n.importArticleUrlRequired,
+            isLiveRegion: true,
+          ),
+        );
+
+        await tester.enterText(field, 'https://example.com/a');
+        await tester.pumpAndSettle();
+        expect(error, findsNothing);
+        expect(tester.getRect(field), fieldBefore);
+        expect(tester.widget<TextField>(field).decoration!.error, isNull);
+
+        isOfflineController.add(true);
+        await tester.pump();
+        await tester.pump();
+        final hint = find.text(l10n.importOfflineHint);
+        expect(hint, findsOneWidget);
+        expect(startInset(tester.getRect(hint)), AppSpacing.xl);
+        expect(tester.getRect(field), fieldBefore);
+        expect(
+          tester.widget<Text>(hint).style?.color,
+          theme.colorScheme.onSurfaceVariant,
+        );
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(l10n.importOfflineHint)),
+          isSemantics(
+            label: l10n.importOfflineHint,
+            isLiveRegion: false,
+          ),
+        );
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    });
+  }
 }
 
 Future<void> _openArticleForm(WidgetTester tester) async {

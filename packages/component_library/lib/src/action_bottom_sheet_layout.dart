@@ -28,21 +28,11 @@ class ActionBottomSheetLayout extends StatelessWidget {
       AppSpacing.xl,
       0,
     ),
-    this.bodyPadding = const EdgeInsets.fromLTRB(
-      AppSpacing.xl,
-      0,
-      AppSpacing.xl,
-      AppSpacing.lg,
-    ),
+    this.bodyPadding = defaultBodyPadding,
     this.headerSpacing = AppSpacing.sm,
     this.constrainBody = false,
     this.footer,
-    this.footerPadding = const EdgeInsets.fromLTRB(
-      AppSpacing.xl,
-      AppSpacing.sm,
-      AppSpacing.xl,
-      AppSpacing.lg,
-    ),
+    this.footerPadding = defaultFooterPadding,
     super.key,
   }) : _scrollable = false,
        headerBottom = null,
@@ -60,12 +50,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
     this.onBack,
     this.backLabel,
     this.headerBottom,
-    this.bodyPadding = const EdgeInsets.fromLTRB(
-      AppSpacing.xl,
-      0,
-      AppSpacing.xl,
-      AppSpacing.lg,
-    ),
+    this.bodyPadding = defaultBodyPadding,
     super.key,
   }) : _scrollable = true,
        constrainBody = true,
@@ -73,6 +58,24 @@ class ActionBottomSheetLayout extends StatelessWidget {
        headerSpacing = AppSpacing.sm,
        footer = null,
        footerPadding = EdgeInsets.zero;
+
+  /// Sheet gutter (24dp) with the 16dp visual bottom inset. Sheets that own
+  /// their viewport reuse this so content and commands keep one rhythm.
+  static const EdgeInsets defaultBodyPadding = EdgeInsets.fromLTRB(
+    AppSpacing.xl,
+    0,
+    AppSpacing.xl,
+    AppSpacing.lg,
+  );
+
+  /// 8dp above the commands, 16dp below; with [defaultBodyPadding] the gap
+  /// between the last body line and the commands is 24dp.
+  static const EdgeInsets defaultFooterPadding = EdgeInsets.fromLTRB(
+    AppSpacing.xl,
+    AppSpacing.sm,
+    AppSpacing.xl,
+    AppSpacing.lg,
+  );
 
   final bool _scrollable;
 

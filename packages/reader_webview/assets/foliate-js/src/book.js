@@ -42,7 +42,7 @@ const traceTextSelection = (stage, details = {}) => {
 import './view.js'
 import { FootnoteHandler } from './footnotes.js'
 import { Overlayer } from './overlayer.js'
-import { rangeContainsRange } from './readflex_range.js'
+import { planHighlightMerge, rangeTextWithBlockBreaks } from './readflex_range.js'
 import {
   attachGestures as readflexAttachGestures,
   registerGesture as readflexRegisterGesture,
@@ -1144,9 +1144,10 @@ const _collapseWhitespace = (text) =>
 
 const buildRangeContextText = range => buildSelectionContext(range).contextText;
 
-const containedHighlightIdsForRange = (view, index, doc, range) => {
+// Saved text highlights of one section with their live ranges in `doc`.
+const savedHighlightRanges = (view, index, doc) => {
   const annotations = globalThis.reader?.annotations?.get(index) ?? [];
-  const ids = [];
+  const entries = [];
   for (const annotation of annotations) {
     if (annotation?.type !== 'highlight' || !annotation.id) continue;
     if (annotation.id === READFLEX_SELECTION_PREVIEW_HIGHLIGHT_ID) continue;
@@ -1155,28 +1156,47 @@ const containedHighlightIdsForRange = (view, index, doc, range) => {
     if (value.startsWith(READFLEX_SELECTION_PREVIEW_HIGHLIGHT_VALUE_PREFIX)) {
       continue;
     }
-    let resolved;
     try {
-      resolved = view.resolveNavigation(value);
-    } catch {
-      continue;
-    }
-    if (resolved?.index !== index || !resolved.anchor) continue;
-    try {
-      const annotationRange = typeof resolved.anchor === 'function'
+      const resolved = view.resolveNavigation(value);
+      if (resolved?.index !== index || !resolved.anchor) continue;
+      const range = typeof resolved.anchor === 'function'
         ? resolved.anchor(doc)
         : resolved.anchor;
-      if (
-        annotationRange &&
-        rangeContainsRange(range, annotationRange)
-      ) {
-        ids.push(annotation.id);
-      }
+      if (range) entries.push({ id: annotation.id, range, value, annotation });
     } catch {
       continue;
     }
   }
-  return ids;
+  return entries;
+};
+
+// What saving this selection as a highlight replaces: every saved highlight
+// sharing text with it, merged into one CFI range. When the union is a saved
+// highlight's own range, its CFI and text are reused so saving recolours it
+// instead of creating a twin.
+const highlightMergeForRange = (view, index, doc, range, selectedText) => {
+  const plan = planHighlightMerge(range, savedHighlightRanges(view, index, doc));
+  if (!plan) return null;
+  const highlightIds = plan.absorbed.map(entry => entry.id);
+  if (plan.sameAs) {
+    const text = plan.sameAs.annotation.text;
+    return {
+      cfi: plan.sameAs.value,
+      text: typeof text === 'string' && text ? text : rangeTextWithBlockBreaks(plan.range),
+      highlightIds,
+    };
+  }
+  let cfi;
+  try {
+    cfi = view.getCFI(index, plan.range);
+  } catch {
+    return null;
+  }
+  if (!cfi) return null;
+  const text = sameTextRange(plan.range, range)
+    ? selectedText
+    : rangeTextWithBlockBreaks(plan.range);
+  return { cfi, text, highlightIds };
 };
 
 const sameTextRange = (a, b) => a && b && (
@@ -1218,12 +1238,7 @@ const textSelectionPayloadForRange = (view, doc, index, range) => {
     contextText: normalizedContext.contextText,
     markedContextText: textContext.markedContextText,
     normalizedMarkedContextText: normalizedContext.markedContextText,
-    containedHighlightIds: containedHighlightIdsForRange(
-      view,
-      index,
-      doc,
-      range,
-    ),
+    highlightMerge: highlightMergeForRange(view, index, doc, range, text),
   };
 };
 

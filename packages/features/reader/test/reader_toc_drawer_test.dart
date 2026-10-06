@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_bloc.dart';
+import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_screen.dart';
 import 'package:reader_webview/reader_webview.dart';
 
@@ -57,6 +58,7 @@ void main() {
     bool rtl = false,
     bool disableAnimations = false,
     double scale = 1,
+    BookFormat format = BookFormat.epub,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -81,7 +83,7 @@ void main() {
                 ReaderTocDrawerDriver(
                   loadThumbnail: (_) async => null,
                   visible: visible,
-                  format: BookFormat.epub,
+                  format: format,
                   pageProgressionRtl: false,
                   readerTheme: ReaderThemePreset.paper.data,
                   onClose: () {},
@@ -160,6 +162,119 @@ void main() {
   });
 
   for (final rtl in [false, true]) {
+    testWidgets(
+      'highlight filters start on the search gutter with 32dp swatches '
+      'rtl=$rtl',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await load(tester, withHighlight: true);
+        await pump(tester, rtl: rtl);
+        final l10n = tester.element(find.byType(Scaffold)).l10n;
+        await openTab(tester, l10n.readerHighlights);
+        final width = tester.getSize(find.byType(Scaffold)).width;
+        final field = tester.getRect(find.byType(SearchField));
+        final chip = tester.getRect(find.byType(AppFilterChip));
+        expect(rtl ? width - chip.right : chip.left, AppSpacing.lg);
+        expect(rtl ? chip.right : chip.left, rtl ? field.right : field.left);
+        // 8dp above and below the 48dp targets, after the field's own 16.
+        expect(chip.height, AppSizes.chipTapTarget);
+        expect(chip.top - field.bottom, AppSpacing.lg + AppSpacing.sm);
+        final list = tester.getRect(
+          find.ancestor(
+            of: find.byType(ReaderHighlightListTile),
+            matching: find.byType(ListView),
+          ),
+        );
+        expect(list.top - chip.bottom, AppSpacing.sm);
+        final yellow = find.byTooltip(l10n.highlightColorYellow);
+        expect(
+          tester.getSize(yellow),
+          const Size.square(AppSizes.buttonHeight),
+        );
+        expect(
+          tester.getSize(
+            find.descendant(
+              of: yellow,
+              matching: find.byType(AnimatedContainer),
+            ),
+          ),
+          const Size.square(AppSizes.chipHeight),
+        );
+        expect(
+          tester.getRect(yellow).center.dy,
+          moreOrLessEquals(chip.center.dy, epsilon: 0.5),
+        );
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        semantics.dispose();
+      },
+    );
+
+    testWidgets('scrollable tabs start on the 16dp gutter rtl=$rtl', (
+      tester,
+    ) async {
+      await load(tester);
+      // Wide surface: the three tabs share the width.
+      await pump(tester, rtl: rtl);
+      expect(tester.widget<TabBar>(find.byType(TabBar)).isScrollable, isFalse);
+      expect(
+        tester.widget<TabBar>(find.byType(TabBar)).tabAlignment,
+        TabAlignment.fill,
+      );
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await pump(tester, rtl: rtl, scale: 2);
+      final tabBar = tester.widget<TabBar>(find.byType(TabBar));
+      expect(tabBar.isScrollable, isTrue);
+      expect(tabBar.tabAlignment, TabAlignment.start);
+      final l10n = tester.element(find.byType(Scaffold)).l10n;
+      final icon = tester.getRect(
+        find.descendant(
+          of: find.byType(TabBar),
+          matching: find.byIcon(AppIcons.toc),
+        ),
+      );
+      final title = tester.getRect(find.text(l10n.readerContents));
+      expect(rtl ? 390 - icon.right : icon.left, AppSpacing.lg);
+      expect(rtl ? 390 - title.right : title.left, AppSpacing.lg);
+    });
+
+    testWidgets('comic pages grid starts on the drawer gutter rtl=$rtl', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await load(tester);
+      bloc.add(
+        ReaderTocUpdated(
+          items: List.generate(
+            4,
+            (i) => ReaderTocItem(label: 'page-$i.jpg', href: '$i', level: 0),
+          ),
+        ),
+      );
+      await pump(tester, rtl: rtl, format: BookFormat.cbz);
+      final l10n = tester.element(find.byType(Scaffold)).l10n;
+      final title = tester.getRect(find.text(l10n.readerContents));
+      // The grid follows page progression (LTR here), so page 1 is the
+      // leftmost tile in both app directions.
+      final first = tester.getRect(
+        find
+            .ancestor(
+              of: find.text(l10n.readerPageNumber(1)),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(first.left, AppSpacing.lg);
+      expect(rtl ? 390 - title.right : title.left, AppSpacing.lg);
+      final tabs = tester.getRect(find.byType(TabBar));
+      expect(first.top - tabs.bottom, AppSpacing.lg);
+    });
+
     testWidgets('chapter rows indent from the app leading edge rtl=$rtl', (
       tester,
     ) async {

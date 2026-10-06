@@ -139,6 +139,25 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('bottom chrome keeps the 16dp content gutter', (tester) async {
+    await pump(tester);
+    // The top chrome asserts the same gutter in reader_top_chrome_test.dart.
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Padding &&
+            widget.padding ==
+                const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.sm,
+                  AppSpacing.lg,
+                  0,
+                ),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('toolbar actions are shared plain icon buttons', (tester) async {
     final semantics = tester.ensureSemantics();
     await pump(tester);
@@ -301,7 +320,7 @@ void main() {
       expect(find.byType(PositionedDirectional), findsOneWidget);
       final rect = tester.getRect(indicator);
       final width = tester.getSize(find.byType(Scaffold)).width;
-      expect(rtl ? rect.left : width - rect.right, AppSpacing.md);
+      expect(rtl ? rect.left : width - rect.right, AppSpacing.lg);
       final glyph = tester.widget<CustomPaint>(
         find.descendant(of: indicator, matching: find.byType(CustomPaint)),
       );

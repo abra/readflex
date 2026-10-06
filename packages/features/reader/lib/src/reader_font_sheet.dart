@@ -5,6 +5,10 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_appearance_cubit.dart';
 
+/// Options keep an 8dp ink inset like the Library Language sheet; the body
+/// gutter gives it back so text and check land on the 24dp sheet gutter.
+const double _optionInkInset = AppSpacing.sm;
+
 /// Font selection within the appearance route, sharing its source override.
 class ReaderFontSheet extends StatelessWidget {
   const ReaderFontSheet({
@@ -28,6 +32,12 @@ class ReaderFontSheet extends StatelessWidget {
       backLabel: context.l10n.commonBack,
       onClose: onClose,
       closeLabel: context.l10n.commonClose,
+      bodyPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl - _optionInkInset,
+        0,
+        AppSpacing.xl - _optionInkInset,
+        AppSpacing.lg,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -83,7 +93,7 @@ class _FontOption extends StatelessWidget {
           onTap: onPressed,
           child: Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
+              horizontal: _optionInkInset,
               vertical: AppSpacing.sm,
             ),
             child: Column(

@@ -514,4 +514,123 @@ void main() {
       },
     );
   });
+
+  group('merging overlapping highlights', () {
+    Future<Highlight> add(String text, String cfi, {String? note}) =>
+        repo.addHighlight(
+          sourceId: 's1',
+          sourceType: SourceType.article,
+          text: text,
+          cfiRange: cfi,
+          note: note,
+        );
+
+    test('absorbs every intersecting highlight into one row', () async {
+      final left = await add('power bank', 'left');
+      final right = await add('keeps devices', 'right');
+      final untouched = await add('running all day', 'elsewhere');
+
+      final merged = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.article,
+        text: 'power bank keeps devices',
+        cfiRange: 'union',
+        color: HighlightColor.green,
+        replaceHighlightIds: [left.id, right.id],
+      );
+
+      final saved = await repo.getHighlightsBySource('s1');
+      expect(
+        saved.map((h) => h.id),
+        unorderedEquals([merged.id, untouched.id]),
+      );
+      expect(merged.text, 'power bank keeps devices');
+      expect(merged.cfiRange, 'union');
+      expect(merged.color, HighlightColor.green);
+      expect(merged.note, isNull);
+    });
+
+    test('keeps absorbed notes in document order, not storage order', () async {
+      // Created right-to-left: storage order is the reverse of the text.
+      final right = await add('devices', 'right', note: 'Second in text');
+      final left = await add('power', 'left', note: 'First in text');
+
+      final merged = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.article,
+        text: 'power bank keeps devices',
+        cfiRange: 'union',
+        replaceHighlightIds: [left.id, right.id],
+      );
+
+      expect(merged.note, 'First in text\n\nSecond in text');
+      expect((await repo.getHighlightById(merged.id))!.note, merged.note);
+    });
+
+    test('appends a new note once and drops blank or repeated ones', () async {
+      final first = await add('power', 'first', note: '  Shared  ');
+      final blank = await add('bank', 'blank', note: '   ');
+      final repeat = await add('keeps', 'repeat', note: 'Shared');
+
+      final merged = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.article,
+        text: 'power bank keeps',
+        cfiRange: 'union',
+        note: 'Fresh thought',
+        replaceHighlightIds: [first.id, blank.id, repeat.id],
+      );
+
+      expect(merged.note, 'Shared\n\nFresh thought');
+    });
+
+    test(
+      'a selection inside a highlight recolours it and keeps nested notes',
+      () async {
+        final outer = await add(
+          'power bank keeps devices',
+          'outer',
+          note: 'Outer note',
+        );
+        // A legacy nested twin from before merging existed.
+        final inner = await add('bank', 'inner', note: 'Inner note');
+        await db.reviewItemsDao.upsertItem(
+          ReviewItemsTableCompanion.insert(
+            itemId: outer.id,
+            itemType: ReviewableType.highlight.name,
+            sourceId: const Value('s1'),
+          ),
+        );
+        final review = await db.reviewItemsDao.byItemId(outer.id);
+
+        final saved = await repo.addHighlight(
+          sourceId: 's1',
+          sourceType: SourceType.article,
+          text: outer.text,
+          cfiRange: outer.cfiRange,
+          color: HighlightColor.blue,
+          replaceHighlightIds: [outer.id, inner.id],
+        );
+
+        expect(saved.id, outer.id, reason: 'identity survives a recolour');
+        expect(saved.color, HighlightColor.blue);
+        expect(saved.note, 'Outer note\n\nInner note');
+        expect(await repo.getHighlightsBySource('s1'), [saved]);
+        expect(await db.reviewItemsDao.byItemId(outer.id), review);
+      },
+    );
+
+    test('a recolour without notes to merge writes no note', () async {
+      final saved = await add('power', 'same', note: 'Kept as is');
+      final recoloured = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.article,
+        text: saved.text,
+        cfiRange: saved.cfiRange,
+        color: HighlightColor.pink,
+        replaceHighlightIds: [saved.id],
+      );
+      expect(recoloured, saved.copyWith(color: HighlightColor.pink));
+    });
+  });
 }

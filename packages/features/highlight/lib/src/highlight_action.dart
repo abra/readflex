@@ -42,28 +42,33 @@ class HighlightAction extends ColorHighlightTextAction {
     TextSelectionContext selection,
     HighlightColor color,
   ) async {
-    final anchor = _highlightTraceAnchor(selection.cfiRange);
+    // One piece of text belongs to one highlight: a selection sharing text
+    // with saved highlights saves their union and absorbs them (notes kept).
+    final merge = selection.highlightMerge;
+    final text = merge?.text ?? selection.selectedText;
+    final cfiRange = merge?.cfiRange ?? selection.cfiRange;
+    final anchor = _highlightTraceAnchor(cfiRange);
     if (kDebugMode) {
       debugPrint(
         '[reader-highlight] repository-add-start '
         'source=${selection.sourceId} '
-        'text="${_highlightTraceText(selection.selectedText)}" '
+        'text="${_highlightTraceText(text)}" '
         'anchor=$anchor '
         'color=${color.name} '
-        'replace=${selection.containedHighlightIds.length}',
+        'merge=${merge?.highlightIds.length ?? 0}',
       );
     }
     final highlight = await highlightRepository.addHighlight(
       sourceId: selection.sourceId,
       sourceType: selection.sourceType,
-      text: selection.selectedText,
+      text: text,
       color: color,
-      cfiRange: selection.cfiRange,
+      cfiRange: cfiRange,
       pageNumber: selection.pageNumber,
       scrollOffset: selection.scrollOffset,
       progress: selection.progress,
       chapterTitle: selection.chapterTitle,
-      replaceHighlightIds: selection.containedHighlightIds,
+      replaceHighlightIds: merge?.highlightIds ?? const [],
     );
     if (kDebugMode) {
       debugPrint(

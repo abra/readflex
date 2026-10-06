@@ -71,4 +71,72 @@ void main() {
     expect(dismissed, 1);
     expect(pageTaps, 0);
   });
+
+  for (final side in ['left', 'right']) {
+    testWidgets('popup clamps inside the $side safe inset', (tester) async {
+      tester.view.physicalSize = const Size(844, 390);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      const cutout = 44.0;
+      final left = side == 'left';
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          supportedLocales: ReadflexSupportedLocales.locales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              padding: EdgeInsets.only(
+                left: left ? cutout : 0,
+                right: left ? 0 : cutout,
+              ),
+            ),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: Stack(
+              children: [
+                Positioned.fill(
+                  child: ReaderSavedHighlightPopup(
+                    position: ReaderSelectionPosition(
+                      left: left ? 0 : .95,
+                      top: .5,
+                      right: left ? .05 : 1,
+                      bottom: .55,
+                    ),
+                    selectedColor: HighlightColor.yellow,
+                    readerTheme: ReaderThemePreset.paper.data,
+                    panelColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    destructiveColor: Colors.red,
+                    dividerColor: Colors.grey,
+                    onDismiss: () {},
+                    onColorChanged: (_) {},
+                    onDelete: () {},
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final popup = tester.getRect(
+        find
+            .ancestor(
+              of: find.byType(ReaderHighlightControls),
+              matching: find.byType(Positioned),
+            )
+            .first,
+      );
+      // 16dp inset measured from the safe area, not the raw stack edge.
+      if (left) {
+        expect(popup.left, cutout + AppSpacing.lg);
+      } else {
+        expect(popup.right, 844 - cutout - AppSpacing.lg);
+      }
+      expect(popup.width, greaterThan(0));
+    });
+  }
 }

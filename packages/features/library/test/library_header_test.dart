@@ -277,4 +277,128 @@ void main() {
       );
     });
   }
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    testWidgets('Display glyph ends on the 16dp gutter with the search field '
+        '($locale)', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = TextEditingController();
+      final focus = FocusNode();
+      addTearDown(controller.dispose);
+      addTearDown(focus.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          locale: locale,
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          supportedLocales: ReadflexSupportedLocales.locales,
+          home: Scaffold(
+            body: LibraryHeader(
+              state: LibraryState(),
+              isOffline: true,
+              searchController: controller,
+              searchFocusNode: focus,
+              onSearchChanged: (_) {},
+              onFilterChanged: (_) {},
+              onCollectionScopePressed: () {},
+              onCollectionScopeCleared: () {},
+            ),
+          ),
+        ),
+      );
+      final rtl = locale.languageCode == 'ar';
+      final button = find.byKey(const ValueKey('libraryHeaderDisplayButton'));
+      final target = tester.getRect(button);
+      final glyph = tester.getRect(
+        find.descendant(
+          of: button,
+          matching: find.byIcon(AppIcons.moreVertical),
+        ),
+      );
+      final search = tester.getRect(find.byType(SearchField));
+      final strings = tester.element(find.byType(LibraryHeader)).l10n;
+      final title = tester.getRect(find.text(strings.libraryTitle));
+      final badge = tester.getRect(find.text('0'));
+      final offline = tester.getRect(find.byIcon(AppIcons.offline));
+
+      expect(target.size, const Size.square(48));
+      expect(search.left, AppSpacing.lg);
+      expect(search.right, 390 - AppSpacing.lg);
+      if (rtl) {
+        expect(glyph.left, closeTo(AppSpacing.lg, .01));
+        expect(
+          target.left,
+          closeTo(AppSpacing.lg - AppSizes.iconActionOutset, .01),
+        );
+        expect(title.right, closeTo(390 - AppSpacing.lg, .01));
+        expect(offline.right, lessThan(title.left - AppSpacing.sm + .01));
+      } else {
+        expect(glyph.right, closeTo(390 - AppSpacing.lg, .01));
+        expect(
+          target.right,
+          closeTo(390 - AppSpacing.lg + AppSizes.iconActionOutset, .01),
+        );
+        expect(title.left, closeTo(AppSpacing.lg, .01));
+        expect(offline.left, greaterThan(title.right + AppSpacing.sm - .01));
+      }
+      // The count badge keeps its 8dp gap to the target.
+      final badgeBox = tester.getRect(
+        find
+            .ancestor(of: find.text('0'), matching: find.byType(Container))
+            .first,
+      );
+      expect(
+        rtl ? badgeBox.left - target.right : target.left - badgeBox.right,
+        closeTo(AppSpacing.sm, .01),
+      );
+      expect(badge.height, greaterThan(0));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final selected in [false, true]) {
+    testWidgets('collection badge ink is bounded to the 32dp body inside a '
+        '48dp target (selected=$selected)', (tester) async {
+      await pumpHeader(
+        tester,
+        scope: selected ? LibraryCollectionScope.favourites() : null,
+      );
+      final strings = tester.element(find.byType(LibraryHeader)).l10n;
+      final semantics = tester.ensureSemantics();
+      try {
+        final target = find.bySemanticsLabel(strings.libraryCollectionsTitle);
+        expect(tester.getSize(target).height, AppSizes.chipTapTarget);
+        expect(
+          tester.getSize(target).width,
+          greaterThanOrEqualTo(AppSizes.chipTapTarget),
+        );
+        final ink = find.descendant(of: target, matching: find.byType(InkWell));
+        final inkRect = tester.getRect(ink);
+        final fill = tester.getRect(
+          find.byKey(const ValueKey('library-collection-fill')),
+        );
+        expect(inkRect.height, AppSizes.chipHeight);
+        expect(inkRect.top, fill.top);
+        expect(inkRect.bottom, fill.bottom);
+        if (!selected) {
+          expect(inkRect, fill);
+        } else {
+          expect(inkRect.left, fill.left);
+          final label = tester.widget<Text>(find.text('Favs'));
+          final labelSmall = Theme.of(
+            tester.element(find.text('Favs')),
+          ).textTheme.labelSmall!;
+          expect(label.style!.fontSize, labelSmall.fontSize);
+          expect(label.style!.fontWeight, FontWeight.w500);
+        }
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      } finally {
+        semantics.dispose();
+      }
+    });
+  }
 }

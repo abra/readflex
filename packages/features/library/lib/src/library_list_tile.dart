@@ -10,10 +10,11 @@ const double _kArticleIconAlpha = 0.4;
 const double _kListCoverWidth = 60;
 const double _kListCoverHeight = 90;
 const double _kCoverToTextGap = AppSpacing.md + AppSpacing.xxs;
-const double _kListRowHorizontalPadding = AppSpacing.xs;
+// Content sits on the screen gutter; the selection tint is full-bleed.
+const double _kListRowHorizontalPadding = AppSpacing.lg;
 const double _kListRowVerticalPadding = AppSpacing.md;
 const double _kListSelectionCheckInset = AppSpacing.xs;
-const double _kListSelectionBackgroundInset = _kListRowHorizontalPadding;
+const double _kListSelectionBackgroundInset = AppSpacing.xs;
 
 /// List-mode row for a library source.
 ///
@@ -252,12 +253,9 @@ class _ListRowShell extends StatelessWidget {
                     _kListRowVerticalPadding - _kListSelectionBackgroundInset,
                 height:
                     _kListCoverHeight + (_kListSelectionBackgroundInset * 2),
-                child: DecoratedBox(
+                child: ColoredBox(
                   key: const ValueKey('libraryListSelectionBackground'),
-                  decoration: BoxDecoration(
-                    color: rowTint,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
+                  color: rowTint,
                 ),
               ),
             Container(
@@ -360,13 +358,11 @@ class _ListRowShell extends StatelessWidget {
               // Paint the separator above this row's cover shadow. A bottom
               // divider on the previous row can be covered by the next row's
               // shadow because list children paint in order.
-              Positioned(
-                left: 0,
-                right: 0,
+              const Positioned(
+                left: _kListRowHorizontalPadding,
+                right: _kListRowHorizontalPadding,
                 top: 0,
-                child: const Divider(
-                  key: ValueKey('libraryListRowTopDivider'),
-                ),
+                child: Divider(key: ValueKey('libraryListRowTopDivider')),
               ),
           ],
         ),

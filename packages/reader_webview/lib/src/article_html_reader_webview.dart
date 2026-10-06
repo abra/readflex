@@ -61,6 +61,9 @@ class ArticleHtmlReaderWebView extends StatefulWidget {
   /// Changes the edge indicator only, not article layout or scroll position.
   final double searchOverlayBottomFraction;
   final List<ReaderBookmark> bookmarks;
+
+  /// Saved highlights in paint order, bottom first: where two overlap, the
+  /// later one is drawn on top and receives taps.
   final List<ReaderHighlight> highlights;
   final VoidCallback? onReady;
   final VoidCallback? onLoading;
@@ -426,6 +429,8 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
     );
   }
 
+  /// Scrolls to a saved highlight or bookmark anchor. The target keeps its
+  /// own rendering; only [goToSearchResult] marks the active search match.
   void goToCfi(String cfi) {
     final escaped = jsonEncode(cfi);
     _evaluateArticleCommand(
@@ -434,8 +439,13 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
     );
   }
 
+  /// Scrolls to a search result and paints it as the active match.
   void goToSearchResult(String cfi) {
-    goToCfi(cfi);
+    final escaped = jsonEncode(cfi);
+    _evaluateArticleCommand(
+      label: 'goToSearchResult',
+      expression: 'window.goToSearchResult($escaped)',
+    );
   }
 
   void goToBookmark({

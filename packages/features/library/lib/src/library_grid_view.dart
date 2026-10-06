@@ -39,11 +39,11 @@ class LibraryGridView extends StatelessWidget {
                 .clamp(1, 6);
         return GridView.builder(
           controller: scrollController,
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             AppSpacing.lg,
-            0,
+            kLibraryContentTopPadding,
             AppSpacing.lg,
-            kLibraryContentBottomPadding,
+            libraryContentBottomPadding(context),
           ),
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),

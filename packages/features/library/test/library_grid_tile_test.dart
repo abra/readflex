@@ -156,7 +156,7 @@ void main() {
     },
   );
 
-  testWidgets('grid cover frame is symmetrically inset inside tap target', (
+  testWidgets('grid cover frame fills its tap target without an inset', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -179,10 +179,7 @@ void main() {
 
     final tileRect = tester.getRect(find.byType(GestureDetector));
     final coverFrameRect = tester.getRect(find.byType(AppSourceCoverFrame));
-    expect(coverFrameRect.left, tileRect.left + AppSpacing.xxs);
-    expect(coverFrameRect.top, tileRect.top + AppSpacing.xxs);
-    expect(coverFrameRect.right, tileRect.right - AppSpacing.xxs);
-    expect(coverFrameRect.bottom, tileRect.bottom - AppSpacing.xxs);
+    expect(coverFrameRect, tileRect);
   });
 
   testWidgets('article grid tile shows WEB badge instead of ARTICLE', (

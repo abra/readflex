@@ -44,58 +44,67 @@ class LibraryHeader extends StatelessWidget {
     final colors = context.colors;
     final l10n = context.l10n;
 
+    // Each row owns its gutters: the title row ends 2dp from the edge so the
+    // Display action's 48dp target bleeds into the gutter and its 20dp glyph
+    // lands on the 16dp content edge like the search field and chips.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        0,
-      ),
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        l10n.libraryTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.text.headlineMedium.copyWith(
-                          color: colors.onSurface,
+          Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: AppSpacing.lg,
+              end: AppSpacing.lg - AppSizes.iconActionOutset,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          l10n.libraryTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.headlineMedium.copyWith(
+                            color: colors.onSurface,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    _LibraryOfflineStatus(visible: isOffline),
-                  ],
+                      const SizedBox(width: AppSpacing.sm),
+                      _LibraryOfflineStatus(visible: isOffline),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              _LibraryItemCountBadge(count: state.totalCount),
-              const SizedBox(width: AppSpacing.sm),
-              const _DisplayMenuButton(),
-            ],
+                const SizedBox(width: AppSpacing.md),
+                _LibraryItemCountBadge(count: state.totalCount),
+                const SizedBox(width: AppSpacing.sm),
+                const _DisplayMenuButton(),
+              ],
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          SearchField(
-            hintText: l10n.librarySearchHint,
-            clearButtonSemanticsLabel: l10n.commonClearSearch,
-            controller: searchController,
-            focusNode: searchFocusNode,
-            onChanged: onSearchChanged,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: SearchField(
+              hintText: l10n.librarySearchHint,
+              clearButtonSemanticsLabel: l10n.commonClearSearch,
+              controller: searchController,
+              focusNode: searchFocusNode,
+              onChanged: onSearchChanged,
+            ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _FilterAndCollectionRow(
-            state: state,
-            onFilterChanged: onFilterChanged,
-            onCollectionScopePressed: onCollectionScopePressed,
-            onCollectionScopeCleared: onCollectionScopeCleared,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: _FilterAndCollectionRow(
+              state: state,
+              onFilterChanged: onFilterChanged,
+              onCollectionScopePressed: onCollectionScopePressed,
+              onCollectionScopeCleared: onCollectionScopeCleared,
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
         ],
       ),
     );
@@ -269,49 +278,66 @@ class _CollectionScopeButton extends StatelessWidget {
                       child: Tooltip(
                         message: label ?? context.l10n.libraryCollectionsTitle,
                         excludeFromSemantics: true,
-                        child: InkWell(
+                        // Like AppFilterChip: the outer box keeps the 48dp
+                        // target while the ink stays on the 32dp painted body.
+                        child: GestureDetector(
                           onTap: onPressed,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          behavior: HitTestBehavior.opaque,
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(
                               minWidth: AppSizes.chipTapTarget,
                               minHeight: AppSizes.chipTapTarget,
                             ),
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: selected
-                                    ? AppSpacing.sm
-                                    : (AppSizes.chipHeight - AppIconSize.sm) /
-                                          2,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: selected
-                                    ? MainAxisAlignment.center
-                                    : MainAxisAlignment.end,
-                                children: [
-                                  Icon(
-                                    selected
-                                        ? _iconFor(scope!.type)
-                                        : AppIcons.collection,
-                                    size: AppIconSize.sm,
-                                    color: foreground,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              widthFactor: 1,
+                              child: InkWell(
+                                onTap: onPressed,
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.sm,
+                                ),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minWidth: AppSizes.chipHeight,
+                                    minHeight: AppSizes.chipHeight,
                                   ),
-                                  if (label != null) ...[
-                                    const SizedBox(width: AppSpacing.xs),
-                                    Flexible(
-                                      child: Text(
-                                        badgeLabel!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: context.text.labelSmall.copyWith(
-                                          fontWeight: FontWeight.w600,
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: selected
+                                          ? AppSpacing.sm
+                                          : (AppSizes.chipHeight -
+                                                    AppIconSize.sm) /
+                                                2,
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          selected
+                                              ? _iconFor(scope!.type)
+                                              : AppIcons.collection,
+                                          size: AppIconSize.sm,
                                           color: foreground,
                                         ),
-                                      ),
+                                        if (label != null) ...[
+                                          const SizedBox(width: AppSpacing.xs),
+                                          Flexible(
+                                            child: Text(
+                                              badgeLabel!,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: context.text.labelSmall
+                                                  .copyWith(
+                                                    fontWeight: FontWeight.w500,
+                                                    color: foreground,
+                                                  ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
-                                  ],
-                                ],
+                                  ),
+                                ),
                               ),
                             ),
                           ),

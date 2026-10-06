@@ -18,12 +18,18 @@ const _selection = TextSelectionContext(
   chapterTitle: 'Chapter 4',
 );
 
-const _selectionWithContainedHighlight = TextSelectionContext(
-  selectedText: 'Important longer passage',
+const _selectionOverlappingHighlights = TextSelectionContext(
+  selectedText: 'longer passage that',
   sourceId: 'book-1',
   sourceType: SourceType.book,
-  cfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:30)',
-  containedHighlightIds: ['h-small'],
+  cfiRange: 'epubcfi(/6/4!/4/2,/1:10,/1:29)',
+  progress: 0.42,
+  chapterTitle: 'Chapter 4',
+  highlightMerge: HighlightMergeTarget(
+    cfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:40)',
+    text: 'Important longer passage that matters',
+    highlightIds: ['h-left', 'h-right'],
+  ),
 );
 
 void main() {
@@ -94,7 +100,7 @@ void main() {
       expect(repository.highlights.single.color, HighlightColor.green);
     });
 
-    testWidgets('replaces highlights contained by the new selection', (
+    testWidgets('saves the merged range and absorbs overlapping highlights', (
       tester,
     ) async {
       late BuildContext buildContext;
@@ -109,10 +115,39 @@ void main() {
         ),
       );
 
-      await action.onExecute(buildContext, _selectionWithContainedHighlight);
+      await action.onExecuteWithColor(
+        buildContext,
+        _selectionOverlappingHighlights,
+        HighlightColor.blue,
+      );
 
-      expect(repository.replacedHighlightIds, ['h-small']);
-      expect(repository.highlights.single.text, 'Important longer passage');
+      expect(repository.replacedHighlightIds, ['h-left', 'h-right']);
+      final saved = repository.highlights.single;
+      expect(saved.text, 'Important longer passage that matters');
+      expect(saved.cfiRange, 'epubcfi(/6/4!/4/2,/1:0,/1:40)');
+      expect(saved.color, HighlightColor.blue);
+      // Location metadata still describes where the user selected.
+      expect(saved.progress, 0.42);
+      expect(saved.chapterTitle, 'Chapter 4');
+    });
+
+    testWidgets('a plain selection replaces nothing', (tester) async {
+      late BuildContext buildContext;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              buildContext = context;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      await action.onExecute(buildContext, _selection);
+
+      expect(repository.replacedHighlightIds, isEmpty);
+      expect(repository.highlights.single.cfiRange, 'epubcfi(/6/4)');
     });
   });
 }

@@ -33,10 +33,12 @@ void main() {
     WidgetTester tester, {
     TextSelectionContext selection = _selection,
     HighlightColorResolver? resolveColor,
+    Locale locale = const Locale('en'),
   }) async {
     late BuildContext hostContext;
     await tester.pumpWidget(
       MaterialApp(
+        locale: locale,
         supportedLocales: ReadflexSupportedLocales.locales,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         theme: AppTheme.light(),
@@ -305,5 +307,117 @@ void main() {
       expect(save.hitTestable(), findsOneWidget);
       expect(tester.getRect(save).bottom, lessThanOrEqualTo(844 - 380));
     });
+
+    testWidgets('discard step has Back and Close in the header and the '
+        'commands in the footer', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await openSheet(tester);
+      final saveBottom = tester
+          .getRect(find.widgetWithText(FilledButton, 'Save'))
+          .bottom;
+      await typeNote(tester);
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+
+      final title = find.text('Discard changes?');
+      expect(title, findsOneWidget);
+      expect(find.byTooltip('Back'), findsOneWidget);
+      expect(find.byTooltip('Close'), findsOneWidget);
+      final keep = find.widgetWithText(FilledButton, 'Keep editing');
+      final discard = find.widgetWithText(OutlinedButton, 'Discard');
+      expect(keep, findsOneWidget);
+      expect(discard, findsOneWidget);
+      final colors = Theme.of(tester.element(discard)).colorScheme;
+      final style = tester.widget<OutlinedButton>(discard).style!;
+      expect(style.foregroundColor!.resolve({}), colors.error);
+      expect(style.side!.resolve({})!.color, colors.error);
+      // Footer slot: the command group ends where the form's Save ends
+      // (the wide test font stacks the pair, Keep editing first).
+      expect(tester.getRect(discard).bottom, saveBottom);
+      expect(tester.getRect(keep).bottom, lessThanOrEqualTo(saveBottom));
+      expect(
+        tester.getRect(keep).top,
+        greaterThan(tester.getRect(title).bottom),
+      );
+      final sheet = tester.getRect(find.byType(BottomSheet));
+      expect(tester.getRect(discard).left, sheet.left + AppSpacing.xl);
+      expect(tester.getRect(keep).right, sheet.right - AppSpacing.xl);
+
+      // Close keeps the decision visible; Back returns to the note.
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      expect(title, findsOneWidget);
+      expect(find.byType(HighlightSheet), findsOneWidget);
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      expect(find.text('Worth rereading'), findsOneWidget);
+    });
+  });
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    testWidgets('swatch circles sit on the gutter with the preview and the '
+        'note field: $locale', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await openSheet(tester, locale: locale);
+
+      final sheet = tester.getRect(find.byType(BottomSheet));
+      final preview = tester.getRect(find.byType(SelectionPreviewCard));
+      final field = tester.getRect(find.byType(TextField));
+      for (final rect in [preview, field]) {
+        expect(rect.left, sheet.left + AppSpacing.xl);
+        expect(rect.right, sheet.right - AppSpacing.xl);
+      }
+      final swatches = find.byType(AppColorSwatchButton);
+      final targets = [
+        for (final element in swatches.evaluate())
+          tester.getRect(find.byWidget(element.widget)),
+      ]..sort((a, b) => a.left.compareTo(b.left));
+      // The painted circle (chipHeight) sits centered in the 48dp target.
+      const inset = (AppSizes.buttonHeight - AppSizes.chipHeight) / 2;
+      expect(targets.first.left + inset, preview.left);
+      expect(targets.last.right - inset, preview.right);
+      for (var i = 0; i < targets.length; i++) {
+        expect(targets[i].size, const Size.square(AppSizes.buttonHeight));
+        if (i > 0) {
+          expect(targets[i].left, greaterThanOrEqualTo(targets[i - 1].right));
+        }
+      }
+      // The reading-order first swatch leads from the start edge.
+      final yellow = tester.getRect(
+        find.byKey(const ValueKey('highlightColorSemantics-yellow')),
+      );
+      expect(
+        yellow,
+        locale.languageCode == 'ar' ? targets.last : targets.first,
+      );
+    });
+  }
+
+  testWidgets('Save keeps its size and shows the spinner while saving', (
+    tester,
+  ) async {
+    repository.awaitGate = Completer<void>();
+    await openSheet(tester);
+    final save = find.byType(FilledButton);
+    final idle = tester.getSize(save);
+    await tester.tap(save);
+    await tester.pump();
+
+    expect(tester.getSize(save), idle);
+    expect(
+      find.descendant(of: save, matching: find.byType(AppBusyButtonLabel)),
+      findsOneWidget,
+    );
+    expect(find.byType(ButtonLoadingIndicator), findsOneWidget);
+    expect(find.text('Save').hitTestable(), findsNothing);
+    expect(tester.widget<FilledButton>(save).onPressed, isNull);
+
+    repository.awaitGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(HighlightSheet), findsNothing);
   });
 }

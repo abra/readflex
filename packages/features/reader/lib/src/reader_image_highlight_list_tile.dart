@@ -6,6 +6,9 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_drawer_layout.dart';
 import 'reader_highlight_color.dart';
+import 'reader_highlight_expand_button.dart';
+
+const _gutter = EdgeInsetsDirectional.only(start: AppSpacing.lg);
 
 /// Image areas are visual bookmarks, not quotes with clipboard actions.
 ///
@@ -65,9 +68,11 @@ class ReaderImageHighlightListTile extends StatelessWidget {
           hint: canNavigate ? l10n.readerGoToPassage : null,
           child: InkWell(
             onTap: canNavigate ? onNavigate : null,
+            // The body owns the leading gutter so Read more can bleed its
+            // ink into it.
             child: Padding(
               padding: EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.lg,
+                0,
                 AppSpacing.lg,
                 removed ? readerDrawerActionEndPadding : AppSpacing.lg,
                 AppSpacing.lg,
@@ -79,63 +84,66 @@ class ReaderImageHighlightListTile extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Row(
-                          children: [
-                            DecoratedBox(
-                              decoration: BoxDecoration(
-                                border: BorderDirectional(
-                                  start: BorderSide(
-                                    width: 3,
-                                    color: readerHighlightColor(
-                                      highlight.color,
-                                      readerTheme,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsetsDirectional.only(
-                                  start: AppSpacing.sm,
-                                ),
-                                child: SizedBox(
-                                  width: 96,
-                                  height: 96,
-                                  child:
-                                      preview ??
-                                      Icon(
-                                        AppIcons.book,
-                                        size: AppIconSize.md,
-                                        color: mutedColor,
+                        Padding(
+                          padding: _gutter,
+                          child: Row(
+                            children: [
+                              DecoratedBox(
+                                decoration: BoxDecoration(
+                                  border: BorderDirectional(
+                                    start: BorderSide(
+                                      width: 3,
+                                      color: readerHighlightColor(
+                                        highlight.color,
+                                        readerTheme,
                                       ),
+                                    ),
+                                  ),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsetsDirectional.only(
+                                    start: AppSpacing.sm,
+                                  ),
+                                  child: SizedBox(
+                                    width: 96,
+                                    height: 96,
+                                    child:
+                                        preview ??
+                                        Icon(
+                                          AppIcons.book,
+                                          size: AppIconSize.md,
+                                          color: mutedColor,
+                                        ),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: AppSpacing.md),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    page,
-                                    style: context.text.bodyMedium.copyWith(
-                                      color: removed ? mutedColor : null,
-                                    ),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  if (status != null) ...[
-                                    const SizedBox(height: AppSpacing.xs),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
                                     Text(
-                                      status,
-                                      style: context.text.bodySmall.copyWith(
-                                        color: mutedColor,
+                                      page,
+                                      style: context.text.bodyMedium.copyWith(
+                                        color: removed ? mutedColor : null,
                                       ),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
+                                    if (status != null) ...[
+                                      const SizedBox(height: AppSpacing.xs),
+                                      Text(
+                                        status,
+                                        style: context.text.bodySmall.copyWith(
+                                          color: mutedColor,
+                                        ),
+                                      ),
+                                    ],
                                   ],
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                         if (note != null && note.isNotEmpty) ...[
                           const SizedBox(height: AppSpacing.md),
@@ -144,36 +152,42 @@ class ReaderImageHighlightListTile extends StatelessWidget {
                               final style = context.text.bodyMedium.copyWith(
                                 color: removed ? mutedColor : null,
                               );
-                              final painter = TextPainter(
-                                text: TextSpan(text: note, style: style),
-                                textDirection: noteDirection,
-                                textScaler: MediaQuery.textScalerOf(context),
-                                locale: Localizations.localeOf(context),
-                                maxLines: 3,
-                              )..layout(maxWidth: constraints.maxWidth);
+                              final painter =
+                                  TextPainter(
+                                    text: TextSpan(text: note, style: style),
+                                    textDirection: noteDirection,
+                                    textScaler: MediaQuery.textScalerOf(
+                                      context,
+                                    ),
+                                    locale: Localizations.localeOf(context),
+                                    maxLines: 3,
+                                  )..layout(
+                                    maxWidth:
+                                        (constraints.maxWidth - AppSpacing.lg)
+                                            .clamp(0, double.infinity),
+                                  );
                               final canExpand =
                                   !removed && painter.didExceedMaxLines;
                               painter.dispose();
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    note,
-                                    style: style,
-                                    textDirection: noteDirection,
-                                    maxLines: expanded ? null : 3,
-                                    overflow: expanded
-                                        ? null
-                                        : TextOverflow.ellipsis,
+                                  Padding(
+                                    padding: _gutter,
+                                    child: Text(
+                                      note,
+                                      style: style,
+                                      textDirection: noteDirection,
+                                      maxLines: expanded ? null : 3,
+                                      overflow: expanded
+                                          ? null
+                                          : TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   if (canExpand)
-                                    TextButton(
+                                    ReaderHighlightExpandButton(
+                                      expanded: expanded,
                                       onPressed: onExpanded,
-                                      child: Text(
-                                        expanded
-                                            ? l10n.readerCollapseHighlight
-                                            : l10n.readerExpandHighlight,
-                                      ),
                                     ),
                                 ],
                               );

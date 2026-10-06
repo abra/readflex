@@ -13,6 +13,20 @@ const double _textSizeControlWidth = _marginsControlWidth;
 const double _themeSwatchHeight = 36;
 const double _textScaleEpsilon = 0.001;
 
+/// The theme swatches keep a 4dp ink inset around their samples. The body
+/// gutter is reduced by that inset so the sample borders land on 24dp, and
+/// every other section adds it back. This is the only place that owns it.
+const double _swatchInkInset = AppSpacing.xs;
+const EdgeInsets _appearanceBodyPadding = EdgeInsets.fromLTRB(
+  AppSpacing.xl - _swatchInkInset,
+  0,
+  AppSpacing.xl - _swatchInkInset,
+  AppSpacing.lg,
+);
+const EdgeInsets _sectionGutterInset = EdgeInsets.symmetric(
+  horizontal: _swatchInkInset,
+);
+
 Future<void> showReaderAppearanceSheet(
   BuildContext context, {
   bool showPageTurnControls = true,
@@ -177,6 +191,7 @@ class _AppearanceSettings extends StatelessWidget {
       headerTrailing: const _ResetAppearanceButton(),
       closeLabel: context.l10n.commonClose,
       onClose: () => Navigator.of(context).pop(),
+      bodyPadding: _appearanceBodyPadding,
       child: _LayeredAppearanceControls(
         showPageTurnControls: showPageTurnControls,
         onFont: onFont,
@@ -226,17 +241,35 @@ class _LayeredAppearanceControls extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppSettingsSection(
-          title: context.l10n.readerTheme,
-          child: const _ThemeSwatchLevel(),
-        ),
+        const _ThemeSection(),
         const SizedBox(height: AppSpacing.lg),
-        _FontPickerRow(onPressed: onFont),
+        Padding(
+          padding: _sectionGutterInset,
+          child: _FontPickerRow(onPressed: onFont),
+        ),
         const SizedBox(height: AppSpacing.sm),
-        _ReaderLayoutSettingsPanel(
-          showPageTurnControls: showPageTurnControls,
+        Padding(
+          padding: _sectionGutterInset,
+          child: _ReaderLayoutSettingsPanel(
+            showPageTurnControls: showPageTurnControls,
+          ),
         ),
       ],
+    );
+  }
+}
+
+/// Theme label on the 24dp gutter; the swatch grid bleeds its ink inset past
+/// it, so only the title takes the gutter inset.
+class _ThemeSection extends StatelessWidget {
+  const _ThemeSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSettingsSection(
+      title: context.l10n.readerTheme,
+      titlePadding: _sectionGutterInset,
+      child: const _ThemeSwatchLevel(),
     );
   }
 }
@@ -336,7 +369,7 @@ class _ThemeSwatchButton extends StatelessWidget {
           child: ConstrainedBox(
             constraints: const BoxConstraints(minHeight: AppSizes.buttonHeight),
             child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.xs),
+              padding: const EdgeInsets.all(_swatchInkInset),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

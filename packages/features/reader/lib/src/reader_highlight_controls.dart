@@ -91,6 +91,9 @@ class ReaderHighlightControls extends StatelessWidget {
 }
 
 /// Shared swatch semantics and hit target for selection tools and filters.
+///
+/// [size] is the painted circle: 24dp in the compact popups, 32dp when the
+/// swatch sits beside a filter chip. The 48dp target never changes.
 class ReaderHighlightColorButton extends StatelessWidget {
   const ReaderHighlightColorButton({
     required this.color,
@@ -98,6 +101,7 @@ class ReaderHighlightColorButton extends StatelessWidget {
     required this.selected,
     required this.enabled,
     required this.onPressed,
+    this.size = AppIconSize.md,
     super.key,
   });
 
@@ -106,6 +110,7 @@ class ReaderHighlightColorButton extends StatelessWidget {
   final bool selected;
   final bool enabled;
   final VoidCallback onPressed;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +119,7 @@ class ReaderHighlightColorButton extends StatelessWidget {
       color: readerHighlightColor(color, readerTheme),
       selected: selected,
       tooltip: name,
-      size: AppIconSize.md,
+      size: size,
       onPressed: enabled ? onPressed : null,
     );
   }

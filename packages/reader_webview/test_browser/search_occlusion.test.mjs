@@ -64,7 +64,7 @@ test('indicator coalesces scroll work, is inert when disabled and detaches on di
     assert.deepEqual(result, { idle: 0, active: 1, disabled: 0, disposed: 0, pointerEvents: 'none', rendered: 50, markers: 0 })
 })
 
-test('article overlay follows the exact active word without changing scroll or document layout', async t => {
+test('article overlay follows the exact active word without changing scroll, layout or text', async t => {
     const { page, routes, articleUrl } = await createHarness(t)
     await page.setViewportSize({ width: 390, height: 844 })
     routes.set('/article-content', Array.from({ length: 40 }, (_, i) =>
@@ -76,8 +76,8 @@ test('article overlay follows the exact active word without changing scroll or d
     await page.evaluate(() => {
         const results = window.bridgeCalls.filter(([name, event]) => name === 'onSearch' && event.type === 'results')
             .flatMap(([, event]) => event.items)
-        window.goToCfi(results[31].cfi)
-        const rect = document.querySelector('mark.readflex-search-match').getBoundingClientRect()
+        window.goToSearchResult(results[31].cfi)
+        const rect = [...CSS.highlights.get('readflex-search-active')][0].getBoundingClientRect()
         scrollBy(0, rect.top - (innerHeight - 50))
     })
     await settle(page)
@@ -85,7 +85,7 @@ test('article overlay follows the exact active word without changing scroll or d
     await page.evaluate(() => window.setSearchOverlayInset(0.2))
     await page.waitForSelector(marker)
     const bounds = await page.evaluate(() => {
-        const word = document.querySelector('mark.readflex-search-match').getBoundingClientRect()
+        const word = [...CSS.highlights.get('readflex-search-active')][0].getBoundingClientRect()
         const bar = document.querySelector('[data-readflex-search-occlusion] > rect').getBoundingClientRect()
         return { word: { left: word.left, width: word.width }, bar: { left: bar.left, width: bar.width, bottom: bar.bottom }, edge: innerHeight * 0.8 }
     })

@@ -28,13 +28,17 @@ Comic/image-page
 highlights are anchored by a zero-based `pageIndex` plus normalized rectangle
 coordinates. Both kinds share optional `note` and `HighlightColor`.
 
-`addHighlight` accepts `replaceHighlightIds` from the reader's DOM containment
-check. Saving a wider selection replaces fully absorbed text highlights and
-their review rows in one transaction, scoped to the same source and source type.
-Partial overlaps are not replacement candidates. An equal anchor and text among
-those candidates updates the existing color instead of creating a duplicate;
-its ID, note (unless explicitly supplied), metadata and review state survive.
-Selecting or translating text alone never invokes this replacement path.
+`addHighlight` accepts `replaceHighlightIds`: every saved highlight the new
+range absorbs, in document order, as reported by the reader's merge plan (any
+shared character, including partial overlaps; touching ranges are excluded).
+Absorbed rows and their review rows are removed in one transaction, scoped to
+the same source and source type. Their notes are not lost: non-empty notes are
+joined in document order with a blank line, an explicit `note` is appended,
+and exact repeats are kept once (`mergeHighlightNotes`). An equal anchor and
+text among the candidates (a selection inside or equal to that highlight)
+updates it in place instead of creating a duplicate; its ID, metadata and
+review state survive and its note becomes the merged note. Selecting or
+translating text alone never invokes this path.
 
 Editors should use the field-specific methods: one SQL UPDATE, no read/modify/
 write of stale fields and no schema change. Patches preserve anchors, metadata,

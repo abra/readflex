@@ -48,7 +48,10 @@ left-to-right in the phonetic font and the backend's part-of-speech tag is
 shown as sent, because definitions are monolingual and there is no dictionary
 POS catalog. Definitions are `bodyLarge` with a localized number
 (`dictionaryDefinitionNumber`) in a tabular-figure column that scales with the
-user's text size; examples stay muted `bodyMedium`. Further lexical entries
+user's text size; examples stay muted `bodyMedium` and share the definition's
+text column, so both start on the same edge in LTR and RTL. Definitions are
+separated by 12dp with no trailing padding after the last one, so a successful
+result ends 16dp above the sheet inset like the other states. Further lexical entries
 remain separate below an **In this context** label; definitions and examples
 retain their existing ordering and per-entry Copy action.
 

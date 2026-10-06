@@ -100,9 +100,14 @@ void main() {
     );
   });
 
-  testWidgets('uses the shared error state inside a 16dp gutter', (
-    tester,
-  ) async {
+  testWidgets('centres the shared error state at the 16dp gutter with the '
+      'diagnostics below', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    // Large text makes the body wrap so its edges show the gutter.
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await tester.pumpWidget(screen(() async {}));
     final state = find.byType(ErrorState);
     expect(state, findsOneWidget);
@@ -114,10 +119,63 @@ void main() {
     final title = tester.widget<Text>(find.text(l10n.appInitializationFailed));
     expect(title.style!.fontSize, context.text.titleMedium.fontSize);
     expect(title.textAlign, TextAlign.center);
-    final scroll = tester.widget<SingleChildScrollView>(
-      find.byType(SingleChildScrollView),
+
+    // The state applies the gutter once: text wraps at 16, not 32.
+    final body = tester.getRect(find.text(l10n.appInitializationFailedBody));
+    expect(body.left, AppSpacing.lg);
+    expect(body.right, 390 - AppSpacing.lg);
+    final tile = tester.getRect(find.byType(ExpansionTile));
+    expect(tile.left, AppSpacing.lg);
+    expect(tile.right, 390 - AppSpacing.lg);
+    // Centred in the space above the diagnostics tile.
+    final column = tester.getRect(
+      find.descendant(of: state, matching: find.byType(Column)).first,
     );
-    expect(scroll.padding, const EdgeInsets.all(AppSpacing.lg));
+    final above = column.top;
+    final below = tile.top - AppSpacing.lg - column.bottom;
+    expect(above, greaterThan(0));
+    expect(above, closeTo(below, 1));
+    expect(find.byType(SingleChildScrollView), findsNothing);
+  });
+
+  testWidgets('expanded diagnostics scroll the page instead of clipping', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      InitializationFailedScreen(
+        error: StateError('boom'),
+        stackTrace: StackTrace.fromString(
+          List.filled(
+            80,
+            '#0 frame (package:readflex/app.dart:1:1)',
+          ).join('\n'),
+        ),
+        onRetryInitialization: () async {},
+      ),
+    );
+    final scrollable = find.byType(Scrollable).first;
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      0,
+    );
+    await tester.tap(find.text('Technical details'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      greaterThan(0),
+    );
+    final position = tester.state<ScrollableState>(scrollable).position;
+    position.jumpTo(position.maxScrollExtent);
+    await tester.pump();
+    // The end of the trace is reachable inside the viewport.
+    expect(
+      tester.getRect(find.textContaining('boom')).bottom,
+      lessThanOrEqualTo(844),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('busy retry keeps its geometry and shows progress', (
@@ -147,5 +205,16 @@ void main() {
     expect(find.byType(EmptyState), findsOneWidget);
     expect(find.byIcon(AppIcons.error), findsOneWidget);
     expect(find.byType(FilledButton), findsNothing);
+    final column = tester.getRect(
+      find
+          .descendant(
+            of: find.byType(EmptyState),
+            matching: find.byType(Column),
+          )
+          .first,
+    );
+    final tile = tester.getRect(find.byType(ExpansionTile));
+    expect(tile.left, AppSpacing.lg);
+    expect(column.top, closeTo(tile.top - AppSpacing.lg - column.bottom, 1));
   });
 }

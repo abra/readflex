@@ -69,7 +69,14 @@ class ReaderSearchNavigationBar extends StatelessWidget {
           SizedBox(
             height: _navigationRowHeight(context),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              // The trailing Close target extends into the gutter so its glyph
+              // ends on 16 like the return row's percentage.
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.sm,
+                0,
+                AppSpacing.lg - AppSizes.iconActionOutset,
+                0,
+              ),
               child: Row(
                 children: [
                   Expanded(

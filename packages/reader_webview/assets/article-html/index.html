@@ -213,20 +213,12 @@
 
     /* The rgba values are resolved by the shell from the shared search
        variables (readflex_shell_constants.js), which customCSS may override. */
+    /* Fallback when the active match cannot be resolved to a text range:
+       tint the whole element. A resolved match is painted by the shell's
+       non-mutating highlighter instead. */
     .readflex-search-active {
       background: var(--rf-search-active-background, rgb(255 179 0 / 36%));
       border-radius: var(--rf-search-highlight-radius);
-    }
-
-    mark.readflex-search-match {
-      background: var(--rf-search-active-background, rgb(255 179 0 / 36%));
-      border-radius: var(--rf-search-highlight-radius);
-      color: inherit;
-      padding-inline: 0.05em;
-    }
-
-    .readflex-search-active,
-    mark.readflex-search-match {
       -webkit-box-decoration-break: clone;
       box-decoration-break: clone;
     }
@@ -237,7 +229,7 @@
   <script type="module">
     import { articleContentFragment } from '../foliate-js/src/readflex_content_security.js'
     import { ArticleHighlighter } from '../foliate-js/src/readflex_article_highlighter.js'
-    import { rangeContainsRange } from '../foliate-js/src/readflex_range.js'
+    import { planHighlightMerge } from '../foliate-js/src/readflex_range.js'
     import { installArticleSelection } from '../foliate-js/src/readflex_article_selection.js'
     import { selectionViewportPosition } from '../foliate-js/src/readflex_selection_navigation.js'
     import { SearchOcclusionIndicator } from '../foliate-js/src/readflex_search_occlusion.js'
@@ -263,6 +255,14 @@
       const selectionClickSuppressMs = READFLEX_SELECTION_CLICK_SUPPRESS_MS
       const contextWindowChars = 200
       const searchMatchHighlightName = 'readflex-search-matches'
+      const searchActiveHighlightName = 'readflex-search-active'
+      // Paint order where highlights overlap, higher on top. Saved highlights
+      // take their list position (Flutter sends them oldest first); search
+      // tints and the colour preview always stay above them.
+      const overlayPriorityBase = 1 << 28
+      const searchMatchPriority = overlayPriorityBase
+      const searchActivePriority = overlayPriorityBase + 1
+      const selectionPreviewPriority = overlayPriorityBase + 2
       const searchMatchRenderLimit = 1000
 
       const params = new URLSearchParams(location.search)
@@ -350,14 +350,14 @@
       let bookmarksByExact = new Map()
       let activeSearch = null
       let activeSearchElement = null
-      let activeSearchMarker = null
+      let activeSearchRange = null
       let activeSearchCfi = null
       let searchMatchRanges = []
       let searchMatchDrawOptions = null
+      let activeSearchDrawOptions = null
       const searchOcclusion = new SearchOcclusionIndicator({
         resizeTarget: content,
-        getRects: () => activeSearchMarker?.isConnected
-          ? Array.from(activeSearchMarker.getClientRects()) : [],
+        getRects: () => activeSearchRects(),
       })
       window.setSearchOverlayInset = fraction => searchOcclusion.setBottomInset(fraction)
       window.addEventListener('pagehide', () => searchOcclusion.destroy(), { once: true })
@@ -492,17 +492,21 @@
         const match = resolvedSearchTint(false)
         const rgba = ({ color, opacity }) =>
           `rgba(${parseHexColor(color).join(', ')}, ${opacity})`
-        searchMatchDrawOptions = {
-          color: match.color,
-          opacity: match.opacity,
+        const drawOptions = ({ color, opacity }) => ({
+          color,
+          opacity,
           padding: SEARCH_HIGHLIGHT_PADDING,
           radius: SEARCH_HIGHLIGHT_RADIUS,
-        }
+        })
+        searchMatchDrawOptions = drawOptions(match)
+        activeSearchDrawOptions = drawOptions(active)
         searchTintStyle.textContent = [
           `:root { --rf-search-active-background: ${rgba(active)}; }`,
           `::highlight(${searchMatchHighlightName}) { background-color: ${rgba(match)}; }`,
+          `::highlight(${searchActiveHighlightName}) { background-color: ${rgba(active)}; }`,
         ].join('\n')
         if (searchMatchRanges.length) renderSearchMatches()
+        renderActiveSearchMatch()
       }
 
       function normalizeText(value) {
@@ -780,6 +784,39 @@
         }
       }
 
+      // What saving this selection as a highlight replaces: every saved
+      // highlight sharing text with it, merged into one anchored union. When
+      // the union is a saved highlight's own range, its anchor and text are
+      // reused so saving recolours it instead of creating a twin.
+      function articleHighlightMerge(range) {
+        const plan = planHighlightMerge(
+          range,
+          Array.from(renderedArticleHighlights.values(), saved => ({
+            id: saved.annotation.id,
+            range: saved.range,
+            annotation: saved.annotation,
+          })),
+        )
+        if (!plan) return null
+        const highlightIds = plan.absorbed.map(entry => entry.id)
+        const sameAs = plan.sameAs?.annotation
+        if (sameAs?.cfiRange) {
+          return {
+            cfi: sameAs.cfiRange,
+            text: normalizeText(sameAs.text) || normalizeText(plan.range.toString()),
+            highlightIds,
+          }
+        }
+        // Anchors match normalized textContent, so the stored text must too.
+        const text = normalizeText(plan.range.toString())
+        const cfi = encodePosition(selectionAnchor(plan.range, text))
+        if (!cfi) {
+          traceSelection('article-highlight-merge-unanchored', { highlightIds })
+          return null
+        }
+        return { cfi, text, highlightIds }
+      }
+
       function selectionPosition(range) {
         const rects = Array.from(range.getClientRects())
           .filter(rect => rect.width > 0 && rect.height > 0)
@@ -801,12 +838,6 @@
         if (!range || !selectedText) return null
         const textContext = selectionTextContext(range, selectedText)
         const cfi = encodePosition(selectionAnchor(range, selectedText))
-        const containedHighlightIds = []
-        for (const saved of renderedArticleHighlights.values()) {
-          if (rangeContainsRange(range, saved.range)) {
-            containedHighlightIds.push(saved.annotation.id)
-          }
-        }
         return {
           text: selectedText,
           normalizedText: selectedText,
@@ -818,7 +849,7 @@
           normalizedCfi: cfi,
           pos: selectionViewportPosition(range),
           scrollOffset: window.scrollY,
-          containedHighlightIds,
+          highlightMerge: articleHighlightMerge(range),
           footnote: false,
         }
       }
@@ -1070,6 +1101,23 @@
       function scrollElementToCenter(element) {
         const rect = element.getBoundingClientRect()
         const target = window.scrollY + rect.top - (window.innerHeight - rect.height) / 2
+        window.scrollTo({ top: Math.max(0, target), behavior: 'auto' })
+      }
+
+      // Centres the text itself, not its root: a highlight anchored to a long
+      // block would otherwise land wherever the block's middle is. Text taller
+      // than the viewport starts below the top chrome instead.
+      function scrollRangeToCenter(range, fallback) {
+        const rect = range.getBoundingClientRect()
+        if (!(rect.width > 0 || rect.height > 0)) {
+          scrollElementToCenter(fallback)
+          return
+        }
+        const topInset = cssPx('--rf-top-margin') + cssPx('--rf-safe-area-top') + 8
+        const fits = rect.height <= window.innerHeight - 2 * topInset
+        const target = fits
+          ? window.scrollY + rect.top - (window.innerHeight - rect.height) / 2
+          : window.scrollY + rect.top - topInset
         window.scrollTo({ top: Math.max(0, target), behavior: 'auto' })
       }
 
@@ -1329,37 +1377,38 @@
         })
       }
 
-      function clearActiveSearchElement() {
-        searchOcclusion.hide()
+      // Returns whether a match was active, so callers repaint the inactive
+      // tint once instead of per release.
+      function releaseActiveSearchMatch() {
+        const hadActive = Boolean(activeSearchElement)
         activeSearchElement?.classList?.remove('readflex-search-active')
+        if (activeSearchRange) articleHighlighter.delete(searchActiveHighlightName)
         activeSearchElement = null
-        const previousCfi = activeSearchCfi
+        activeSearchRange = null
         activeSearchCfi = null
-        if (activeSearchMarker) {
-          const parent = activeSearchMarker.parentNode
-          if (parent) {
-            while (activeSearchMarker.firstChild) {
-              parent.insertBefore(activeSearchMarker.firstChild, activeSearchMarker)
-            }
-            activeSearchMarker.remove()
-            parent.normalize()
-          }
-          activeSearchMarker = null
-        }
-        // Wrapping the active match collapsed its live range; resolve it again.
-        const entry = previousCfi
-          ? searchMatchRanges.find(item => item.cfi === previousCfi)
-          : null
-        if (entry) {
-          entry.range = matchRangeForAnchor(entry.element, entry.anchor)
-          renderSearchMatches()
-        }
+        return hadActive
       }
 
-      // Inactive matches use the non-mutating highlighter, like book overlays.
+      function clearActiveSearchElement() {
+        searchOcclusion.hide()
+        // The released match regains its inactive tint.
+        if (releaseActiveSearchMatch()) renderSearchMatches()
+      }
+
+      // Every match uses the non-mutating highlighter, like book overlays. The
+      // active one is drawn alone so its tint never stacks on the inactive one.
       function renderSearchMatches() {
-        const ranges = searchMatchRanges.map(entry => entry.range)
-        articleHighlighter.setMany(searchMatchHighlightName, ranges, searchMatchDrawOptions)
+        if (!searchMatchRanges.length) return
+        const ranges = []
+        for (const entry of searchMatchRanges) {
+          if (entry.cfi !== activeSearchCfi) ranges.push(entry.range)
+        }
+        articleHighlighter.setMany(
+          searchMatchHighlightName,
+          ranges,
+          searchMatchDrawOptions,
+          searchMatchPriority,
+        )
       }
 
       function clearSearchMatches() {
@@ -1542,7 +1591,7 @@
 
         const rules = []
         const skipped = []
-        for (const annotation of articleHighlights) {
+        articleHighlighter.batch(() => articleHighlights.forEach((annotation, priority) => {
           const anchor = decodePosition(annotation?.cfiRange)
           const range = rangeForArticleAnchor(anchor)
           if (!annotation?.id || !range) {
@@ -1558,13 +1607,13 @@
               matchText: anchor?.matchText ?? null,
               matchIndex: anchor?.matchIndex ?? null,
             })
-            continue
+            return
           }
           const name = articleHighlightName(annotation.id)
-          articleHighlighter.set(name, range, highlightDrawOptions(annotation))
+          articleHighlighter.set(name, range, highlightDrawOptions(annotation), priority)
           renderedArticleHighlights.set(annotation.id, { name, range, annotation })
           rules.push(articleHighlightRule(name, annotation))
-        }
+        }))
         articleHighlightStyle.textContent = rules.join('\n')
         const result = {
           received: articleHighlights.length,
@@ -1588,7 +1637,7 @@
         const range = rangeForArticleAnchor(anchor)
         if (!range) return
         const name = 'readflex-article-selection-preview'
-        articleHighlighter.set(name, range, highlightDrawOptions(options))
+        articleHighlighter.set(name, range, highlightDrawOptions(options), selectionPreviewPriority)
         selectionHighlightPreview = { name, range, options }
         selectionPreviewStyle.textContent = articleHighlightRule(name, options)
       }
@@ -1611,32 +1660,42 @@
         return null
       }
 
-      function markSearchMatch(element, anchor) {
-        const range = matchRangeForAnchor(element, anchor)
-        if (!range) return false
-        const marker = document.createElement('mark')
-        marker.className = 'readflex-search-match'
-        try {
-          marker.append(range.extractContents())
-          range.insertNode(marker)
-          activeSearchMarker = marker
-          return true
-        } catch (_) {
-          marker.remove()
-          return false
-        }
-      }
-
-      function setActiveSearchElement(element, anchor = null, cfi = null) {
-        clearActiveSearchElement()
-        if (!element) return
-        activeSearchElement = element
-        activeSearchCfi = cfi
-        if (markSearchMatch(element, anchor)) {
-          searchOcclusion.invalidate()
+      // The active match is painted like every other match and never wraps
+      // the text: rewriting the DOM collapses the live ranges of saved
+      // highlights under it and clones the sentence elements a match crosses.
+      function setActiveSearchMatch(element, range, cfi) {
+        const hadActive = releaseActiveSearchMatch()
+        if (!element) {
+          if (hadActive) renderSearchMatches()
           return
         }
-        element.classList.add('readflex-search-active')
+        activeSearchElement = element
+        activeSearchCfi = cfi
+        if (range) {
+          activeSearchRange = range
+          renderActiveSearchMatch()
+        } else {
+          element.classList.add('readflex-search-active')
+        }
+        if (hadActive || range) renderSearchMatches()
+        searchOcclusion.invalidate()
+      }
+
+      function renderActiveSearchMatch() {
+        if (!activeSearchRange || !activeSearchDrawOptions) return
+        articleHighlighter.set(
+          searchActiveHighlightName,
+          activeSearchRange,
+          activeSearchDrawOptions,
+          searchActivePriority,
+        )
+      }
+
+      function activeSearchRects() {
+        if (activeSearchRange) return Array.from(activeSearchRange.getClientRects())
+        return activeSearchElement?.isConnected
+          ? Array.from(activeSearchElement.getClientRects())
+          : []
       }
 
       function cancelSearch(requestId = null) {
@@ -1648,8 +1707,9 @@
 
       function clearSearch() {
         cancelSearch()
-        clearActiveSearchElement()
+        // Matches first: the released active match then has nothing to rejoin.
         clearSearchMatches()
+        clearActiveSearchElement()
       }
 
       function startSearch(requestId, query) {
@@ -1705,8 +1765,11 @@
           if (searchMatchRanges.length !== renderedCount) {
             articleHighlighter.append(
               searchMatchHighlightName,
-              searchMatchRanges.slice(renderedCount).map(entry => entry.range),
+              searchMatchRanges.slice(renderedCount)
+                .filter(entry => entry.cfi !== activeSearchCfi)
+                .map(entry => entry.range),
               searchMatchDrawOptions,
+              searchMatchPriority,
             )
             renderedCount = searchMatchRanges.length
           }
@@ -1837,20 +1900,41 @@
         schedulePosition('anchor', true)
       }
 
-      window.goToCfi = value => {
+      // Resolves an anchor, scrolls its text into view and returns what was
+      // found. Shared by plain and search navigation.
+      function navigateToAnchor(value) {
         cancelProgressRestore()
         articleSelection.allowScroll()
         const decoded = decodePosition(value)
         const target = sentenceElementForAnchor(decoded)
-        if (!target) return
+        if (!target) return null
+        const range = Number.isFinite(Number(decoded?.matchIndex))
+          ? (searchMatchRanges.find(entry => entry.cfi === value)?.range ??
+            matchRangeForAnchor(target, decoded))
+          : null
         restoringUntil = performance.now() + scrollRestoreSuppressMs
-        scrollElementToCenter(target)
-        activeSentenceKey = target.id
-        if (Number.isFinite(Number(decoded?.matchIndex))) {
-          setActiveSearchElement(target, decoded, value)
-        } else {
-          clearActiveSearchElement()
-        }
+        if (range) scrollRangeToCenter(range, target)
+        else scrollElementToCenter(target)
+        const startElement = range?.startContainer?.nodeType === Node.ELEMENT_NODE
+          ? range.startContainer
+          : range?.startContainer?.parentElement
+        activeSentenceKey = startElement?.closest?.('[data-rf-sentence]')?.id || target.id
+        return { target, range }
+      }
+
+      // Saved highlights and bookmarks: navigation only. A highlight keeps its
+      // own colour; only goToSearchResult marks a match as the active result.
+      window.goToCfi = value => {
+        const found = navigateToAnchor(value)
+        if (!found) return
+        clearActiveSearchElement()
+        schedulePosition('anchor', true)
+      }
+
+      window.goToSearchResult = value => {
+        const found = navigateToAnchor(value)
+        if (!found) return
+        setActiveSearchMatch(found.target, found.range, value)
         schedulePosition('anchor', true)
       }
 

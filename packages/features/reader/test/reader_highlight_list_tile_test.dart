@@ -238,6 +238,89 @@ void main() {
     },
   );
 
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    final rtl = locale.languageCode == 'ar';
+    testWidgets(
+      'Read more starts on the note gutter with ink past it $locale',
+      (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          highlight().copyWith(note: 'Short note'),
+          locale: locale,
+        );
+        final width = tester.getSize(find.byType(Scaffold)).width;
+        double leading(Rect rect) => rtl ? width - rect.right : rect.left;
+        final l10n = tester.element(find.byType(ReaderHighlightListTile)).l10n;
+        final quote = tester.getRect(find.text(longText));
+        final note = tester.getRect(find.text('Short note'));
+        final label = tester.getRect(find.text(l10n.readerExpandHighlight));
+        final button = tester.getRect(find.byType(TextButton));
+        // The quote keeps its 12dp bar inset (the 3dp bar paints inside it)
+        // after the 16dp gutter.
+        expect(leading(quote), AppSpacing.lg + AppSpacing.md);
+        expect(leading(note), AppSpacing.lg);
+        expect(leading(label), AppSpacing.lg);
+        expect(leading(button), 0);
+        expect(button.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
+        expect(
+          find.descendant(
+            of: find.byType(TextButton),
+            matching: find.byType(AppButtonLabel),
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.byType(TextButton));
+        await tester.pumpAndSettle();
+        expect(
+          leading(tester.getRect(find.text(l10n.readerCollapseHighlight))),
+          AppSpacing.lg,
+        );
+      },
+    );
+
+    testWidgets('image note Read more starts on the note gutter $locale', (
+      tester,
+    ) async {
+      final noteText = List.filled(
+        12,
+        'A longer comment about this panel.',
+      ).join(' ');
+      final image = highlight(text: 'Page highlight', cfi: null).copyWith(
+        kind: HighlightKind.imageArea,
+        note: noteText,
+        imageArea: const HighlightImageArea(
+          pageIndex: 0,
+          x: 0,
+          y: 0,
+          width: 1,
+          height: 1,
+        ),
+      );
+      await pump(tester, image, locale: locale);
+      final width = tester.getSize(find.byType(Scaffold)).width;
+      double leading(Rect rect) => rtl ? width - rect.right : rect.left;
+      final l10n = tester.element(find.byType(ReaderHighlightListTile)).l10n;
+      final note = tester.getRect(find.text(noteText));
+      final label = tester.getRect(find.text(l10n.readerExpandHighlight));
+      final button = tester.getRect(find.byType(TextButton));
+      final page = tester.getRect(find.text(l10n.readerPageNumber(1)));
+      expect(leading(note), AppSpacing.lg);
+      expect(leading(label), AppSpacing.lg);
+      expect(leading(button), 0);
+      // 8dp bar inset + 96dp preview + 12dp after the 16dp gutter.
+      expect(leading(page), AppSpacing.lg + AppSpacing.sm + 96 + AppSpacing.md);
+      expect(
+        find.descendant(
+          of: find.byType(TextButton),
+          matching: find.byType(AppButtonLabel),
+        ),
+        findsOneWidget,
+      );
+    });
+  }
+
   testWidgets('image-area without a note uses a localized page label', (
     tester,
   ) async {

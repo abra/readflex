@@ -9,7 +9,6 @@ import 'library_source_semantics.dart';
 /// Alpha for the format badge background (dark overlay on cover art).
 const double _kBadgeBackgroundAlpha = 0.55;
 
-const double _kGridCoverInset = AppSpacing.xxs;
 const double _kFormatBadgeTextReserve = 24.0;
 const double _kProgressOverlayReserve = 16.0;
 const double _kProgressOverlayInset = AppSpacing.xxs;
@@ -171,107 +170,104 @@ class _GridTileShell extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         behavior: HitTestBehavior.opaque,
-        child: Padding(
-          padding: const EdgeInsets.all(_kGridCoverInset),
-          child: AnimatedScale(
-            // Subtle press-in cue when selected — same idea as iOS Photos
-            // multi-select: tile shrinks slightly so the unselected siblings
-            // visually "stay in place" when a checkmark appears.
-            scale: isSelected ? 0.92 : 1.0,
-            duration: context.motion(AppMotion.quick),
-            curve: Curves.easeOut,
-            child: AppSourceCoverFrame(
-              cover: cover,
-              overlays: [
-                if (formatLabel != null)
-                  PositionedDirectional(
-                    top: AppSpacing.xs,
-                    start: AppSpacing.xs,
-                    child: _FormatBadge(label: formatLabel!),
+        child: AnimatedScale(
+          // Subtle press-in cue when selected — same idea as iOS Photos
+          // multi-select: tile shrinks slightly so the unselected siblings
+          // visually "stay in place" when a checkmark appears.
+          scale: isSelected ? 0.92 : 1.0,
+          duration: context.motion(AppMotion.quick),
+          curve: Curves.easeOut,
+          child: AppSourceCoverFrame(
+            cover: cover,
+            overlays: [
+              if (formatLabel != null)
+                PositionedDirectional(
+                  top: AppSpacing.xs,
+                  start: AppSpacing.xs,
+                  child: _FormatBadge(label: formatLabel!),
+                ),
+              if (isFinished)
+                const PositionedDirectional(
+                  top: AppSpacing.xs,
+                  end: AppSpacing.xs,
+                  child: _FinishedBadge(),
+                ),
+              if (isSelected)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(
+                        appSourceCoverRadius,
+                      ),
+                      border: Border.all(color: selectionColor, width: 3),
+                      color: selectionTint,
+                    ),
                   ),
-                if (isFinished)
-                  const PositionedDirectional(
-                    top: AppSpacing.xs,
-                    end: AppSpacing.xs,
-                    child: _FinishedBadge(),
-                  ),
-                if (isSelected)
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(
-                          appSourceCoverRadius,
+                ),
+              if (isSelected)
+                PositionedDirectional(
+                  top: AppSpacing.xs,
+                  end: AppSpacing.xs,
+                  child: _SelectionCheck(color: selectionColor),
+                ),
+              if (showProgress && !isFinished) ...[
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(
+                          appSourceCoverRadius - 2,
                         ),
-                        border: Border.all(color: selectionColor, width: 3),
-                        color: selectionTint,
+                        bottomRight: Radius.circular(
+                          appSourceCoverRadius - 2,
+                        ),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        stops: const [0.0, 0.20],
+                        colors: [
+                          appSourceCoverScrimColor,
+                          appSourceCoverScrimColor.withValues(alpha: 0),
+                        ],
                       ),
                     ),
                   ),
-                if (isSelected)
-                  PositionedDirectional(
-                    top: AppSpacing.xs,
-                    end: AppSpacing.xs,
-                    child: _SelectionCheck(color: selectionColor),
-                  ),
-                if (showProgress && !isFinished) ...[
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(
-                            appSourceCoverRadius - 2,
-                          ),
-                          bottomRight: Radius.circular(
-                            appSourceCoverRadius - 2,
-                          ),
-                        ),
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          stops: const [0.0, 0.20],
-                          colors: [
-                            appSourceCoverScrimColor,
-                            appSourceCoverScrimColor.withValues(alpha: 0),
+                ),
+                Positioned(
+                  left: _kProgressOverlayInset,
+                  right: _kProgressOverlayInset,
+                  bottom: _kProgressOverlayInset,
+                  child: LayoutBuilder(
+                    builder: (_, constraints) => ClipRRect(
+                      borderRadius: BorderRadius.circular(AppRadius.full),
+                      child: SizedBox(
+                        key: const Key('libraryGridProgressBar'),
+                        height: 3,
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ColoredBox(
+                                color: Colors.white.withValues(alpha: 0.50),
+                              ),
+                            ),
+                            AnimatedContainer(
+                              key: const Key('libraryGridProgressFill'),
+                              duration: context.motion(AppMotion.short),
+                              curve: _kProgressFillAnimationCurve,
+                              width:
+                                  constraints.maxWidth *
+                                  progress.clamp(0.0, 1.0).toDouble(),
+                              color: Colors.white.withValues(alpha: 0.9),
+                            ),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  Positioned(
-                    left: _kProgressOverlayInset,
-                    right: _kProgressOverlayInset,
-                    bottom: _kProgressOverlayInset,
-                    child: LayoutBuilder(
-                      builder: (_, constraints) => ClipRRect(
-                        borderRadius: BorderRadius.circular(AppRadius.full),
-                        child: SizedBox(
-                          key: const Key('libraryGridProgressBar'),
-                          height: 3,
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: ColoredBox(
-                                  color: Colors.white.withValues(alpha: 0.50),
-                                ),
-                              ),
-                              AnimatedContainer(
-                                key: const Key('libraryGridProgressFill'),
-                                duration: context.motion(AppMotion.short),
-                                curve: _kProgressFillAnimationCurve,
-                                width:
-                                    constraints.maxWidth *
-                                    progress.clamp(0.0, 1.0).toDouble(),
-                                color: Colors.white.withValues(alpha: 0.9),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),

@@ -88,19 +88,23 @@ class _AppSheetDismissGuardState extends State<AppSheetDismissGuard> {
 class AppSheetDismissRegistry extends ValueNotifier<VoidCallback?> {
   AppSheetDismissRegistry() : super(null);
 
-  Object? _owner;
+  // Insertion-ordered so the most recently held guard wins. A step change
+  // mounts the next guard before the previous one is disposed, and their
+  // post-frame hold/release calls arrive in either order; releasing one
+  // owner never clears another's hold.
+  final _holders = <Object, VoidCallback>{};
   bool _disposed = false;
 
   void hold(Object owner, VoidCallback onDismissAttempt) {
     if (_disposed) return;
-    _owner = owner;
+    _holders.remove(owner);
+    _holders[owner] = onDismissAttempt;
     value = onDismissAttempt;
   }
 
   void release(Object owner) {
-    if (_disposed || !identical(_owner, owner)) return;
-    _owner = null;
-    value = null;
+    if (_disposed || _holders.remove(owner) == null) return;
+    value = _holders.isEmpty ? null : _holders.values.last;
   }
 
   bool get guarded => value != null;

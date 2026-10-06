@@ -7,8 +7,6 @@
   "commonDiscardChanges": "Discard",
   "commonKeepEditing": "Keep editing",
   "libraryDiscardChangesBody": "Your changes to this collection have not been saved.",
-  "libraryDiscardChanges": "Discard",
-  "libraryKeepEditing": "Keep editing",
   "@librarySelectedCount": {
     "placeholders": {
       "count": {
@@ -127,6 +125,10 @@
   "commonCancel": "Cancel",
   "commonSave": "Save",
   "commonDelete": "Delete",
+  "commonKeep": "Keep",
+  "@commonKeep": {
+    "description": "Safe action of a delete confirmation; the sheet title names what is kept, so the label stays one short word"
+  },
   "commonRetry": "Retry",
   "commonClose": "Close",
   "commonBack": "Back",

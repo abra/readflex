@@ -121,7 +121,7 @@ class _ReaderImagePageProgressOverlayState
     return Positioned(
       left: 0,
       right: 0,
-      bottom: _appBottomSafeInset(context) + AppSpacing.md,
+      bottom: appBottomSafeInset(context) + AppSpacing.md,
       child: IgnorePointer(
         key: const ValueKey('readerImagePageProgressOverlayIgnorePointer'),
         child: AnimatedOpacity(
@@ -194,9 +194,4 @@ class _ImagePageProgressOverlayPill extends StatelessWidget {
       ),
     );
   }
-}
-
-double _appBottomSafeInset(BuildContext context) {
-  return MediaQuery.viewInsetsOf(context).bottom +
-      MediaQuery.paddingOf(context).bottom;
 }

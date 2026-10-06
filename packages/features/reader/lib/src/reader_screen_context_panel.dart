@@ -50,7 +50,7 @@ TextSelectionContext _withLiveReaderSelection(
     progress: current.progress,
     chapterTitle: current.chapterTitle,
     sourceLanguageHint: current.sourceLanguageHint,
-    containedHighlightIds: live.containedHighlightIds,
+    highlightMerge: highlightMergeTargetFor(live.highlightMerge),
   );
 }
 
@@ -270,7 +270,7 @@ class _ContextPanelDriver extends StatelessWidget {
       progress: sel.progress,
       chapterTitle: sel.chapterTitle,
       sourceLanguageHint: sourceLanguageHint,
-      containedHighlightIds: sel.containedHighlightIds,
+      highlightMerge: sel.highlightMerge,
     );
     final highlightAction = _highlightActionFor(textActions);
     final fallbackActions = textActions
@@ -285,7 +285,9 @@ class _ContextPanelDriver extends StatelessWidget {
     }
 
     void showHighlightPreview(HighlightColor color) {
-      final cfiRange = sel.cfiRange;
+      // Preview what saving produces: the merged range when the selection
+      // shares text with saved highlights.
+      final cfiRange = sel.highlightMerge?.cfiRange ?? sel.cfiRange;
       if (cfiRange == null || cfiRange.isEmpty) return;
       final cssColor = readerHighlightCssColor(color, readerTheme);
       final opacity = readerHighlightOpacity(readerTheme);
@@ -426,8 +428,11 @@ Highlight? _focusedHighlightById(List<Highlight> highlights, String? id) {
   return null;
 }
 
+/// Popups clamp inside the horizontal safe area plus the 16dp inset, so a
+/// landscape cutout never covers them.
 double _highlightPopupLeft({
   required BoxConstraints constraints,
+  required EdgeInsets mediaPadding,
   required double horizontalInset,
   required double width,
   required ReaderSelectionPosition? position,
@@ -435,13 +440,21 @@ double _highlightPopupLeft({
   final centerX = position == null
       ? constraints.maxWidth / 2
       : ((position.left + position.right) / 2) * constraints.maxWidth;
-  final minLeft = horizontalInset;
-  final maxLeft = (constraints.maxWidth - width - horizontalInset).clamp(
-    minLeft,
-    constraints.maxWidth,
-  );
+  final minLeft = mediaPadding.left + horizontalInset;
+  final maxLeft =
+      (constraints.maxWidth - mediaPadding.right - width - horizontalInset)
+          .clamp(minLeft, constraints.maxWidth);
   return (centerX - width / 2).clamp(minLeft, maxLeft).toDouble();
 }
+
+/// Width left for a popup once the horizontal safe area is excluded.
+double _highlightPopupSafeWidth(
+  BoxConstraints constraints,
+  EdgeInsets mediaPadding,
+) => (constraints.maxWidth - mediaPadding.horizontal).clamp(
+  0.0,
+  constraints.maxWidth,
+);
 
 double _highlightPopupTop({
   required BoxConstraints constraints,
@@ -664,15 +677,15 @@ class _ImageHighlightSelectionPopupState
     return LayoutBuilder(
       builder: (context, constraints) {
         final mediaPadding = MediaQuery.paddingOf(context);
-        final horizontalInset = _highlightPopupHorizontalInset(
-          constraints.maxWidth,
-        );
+        final safeWidth = _highlightPopupSafeWidth(constraints, mediaPadding);
+        final horizontalInset = _highlightPopupHorizontalInset(safeWidth);
         final width = _highlightPopupWidth(
-          constraints.maxWidth,
+          safeWidth,
           horizontalInset,
         );
         final left = _highlightPopupLeft(
           constraints: constraints,
+          mediaPadding: mediaPadding,
           horizontalInset: horizontalInset,
           width: width,
           position: widget.selectionPosition,
@@ -778,16 +791,16 @@ class ReaderSavedHighlightPopup extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final mediaPadding = MediaQuery.paddingOf(context);
-        final horizontalInset = _highlightPopupHorizontalInset(
-          constraints.maxWidth,
-        );
+        final safeWidth = _highlightPopupSafeWidth(constraints, mediaPadding);
+        final horizontalInset = _highlightPopupHorizontalInset(safeWidth);
         final width = _highlightPopupWidth(
-          constraints.maxWidth,
+          safeWidth,
           horizontalInset,
           actionCount: onEditNote == null ? 1 : 2,
         );
         final left = _highlightPopupLeft(
           constraints: constraints,
+          mediaPadding: mediaPadding,
           horizontalInset: horizontalInset,
           width: width,
           position: position,
@@ -937,7 +950,7 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
         'text="${_readerHighlightTraceText(selection.selectedText)}" '
         'anchor=${_readerHighlightTraceAnchor(selection.cfiRange)} '
         'color=${_selectedColor.name} '
-        'replace=${selection.containedHighlightIds.length}',
+        'merge=${selection.highlightMerge?.highlightIds.length ?? 0}',
       );
       await widget.action.onExecuteWithColor(
         context,
@@ -976,15 +989,15 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final mediaPadding = MediaQuery.paddingOf(context);
-        final horizontalInset = _highlightPopupHorizontalInset(
-          constraints.maxWidth,
-        );
+        final safeWidth = _highlightPopupSafeWidth(constraints, mediaPadding);
+        final horizontalInset = _highlightPopupHorizontalInset(safeWidth);
         final width = _highlightPopupWidth(
-          constraints.maxWidth,
+          safeWidth,
           horizontalInset,
         );
         final left = _highlightPopupLeft(
           constraints: constraints,
+          mediaPadding: mediaPadding,
           horizontalInset: horizontalInset,
           width: width,
           position: widget.selectionPosition,

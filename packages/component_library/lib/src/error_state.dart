@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'app_busy_button_label.dart';
 import 'app_button_label.dart';
-import 'button_loading_indicator.dart';
 import 'state_icon_frame.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_spacing.dart';
@@ -44,24 +44,7 @@ class ErrorState extends StatelessWidget {
     final text = context.text;
     final retry = FilledButton(
       onPressed: busy ? null : onRetry,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Visibility(
-            visible: !busy,
-            maintainSize: true,
-            maintainAnimation: true,
-            maintainState: true,
-            child: AppButtonLabel(retryLabel),
-          ),
-          if (busy)
-            Semantics(
-              label: retryLabel,
-              liveRegion: true,
-              child: const ButtonLoadingIndicator(),
-            ),
-        ],
-      ),
+      child: AppBusyButtonLabel(retryLabel, busy: busy),
     );
     return Center(
       child: Padding(

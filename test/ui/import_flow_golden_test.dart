@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -164,22 +165,22 @@ void main() {
       imported.complete(null);
       await tester.pumpAndSettle();
       _expectReadableActions(tester);
+      // Retry is the only command; the header Close leaves the flow.
       final choose = tester.getRect(
         find.widgetWithText(FilledButton, l10n.importChooseFile),
       );
-      final cancel = tester.getRect(
-        find.widgetWithText(OutlinedButton, l10n.commonCancel),
+      // Wide profiles cap the sheet content; the header spans that content.
+      expect(
+        choose.width,
+        tester.getRect(find.byType(BottomSheetHeader)).width -
+            2 * AppSpacing.xl,
       );
-      if (name == 'largeText') {
-        expect(cancel.top, greaterThan(choose.bottom));
-      } else if (name == 'phone') {
-        expect(choose.top, cancel.top);
-      }
+      expect(find.byType(OutlinedButton), findsNothing);
       await snapshot('book-failure');
       await tapLabel(l10n.importChooseFile);
       expect(pickerCalls, 2);
       expect(find.text(l10n.importBookImportFailed), findsOneWidget);
-      await tapLabel(l10n.commonCancel);
+      await tapUi(tester, find.byTooltip(l10n.commonClose));
 
       final urls = <String>[];
       unawaited(
@@ -264,6 +265,7 @@ void main() {
 
 void _expectReadableActions(WidgetTester tester) {
   for (final type in [FilledButton, OutlinedButton]) {
+    if (find.byType(type).evaluate().isEmpty) continue;
     final button = find.byType(type).last;
     final text = find.descendant(of: button, matching: find.byType(Text));
     expect(

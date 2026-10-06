@@ -72,45 +72,57 @@ class _InitializationFailedScreenState
             final text = context.text;
             final l10n = context.l10n;
 
+            // The state applies its own 16dp gutter and sits centred in the
+            // viewport; the whole page still scrolls when diagnostics expand.
             return SafeArea(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    if (widget.onRetryInitialization != null)
-                      ValueListenableBuilder<bool>(
-                        valueListenable: _inProgress,
-                        builder: (context, inProgress, _) => ErrorState(
-                          icon: AppIcons.error,
-                          title: l10n.appInitializationFailed,
-                          message: l10n.appInitializationFailedBody,
-                          // One label keeps the busy geometry stable.
-                          retryLabel: l10n.appRetry,
-                          onRetry: _retryInitialization,
-                          busy: inProgress,
+              child: CustomScrollView(
+                slivers: [
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: widget.onRetryInitialization != null
+                              ? ValueListenableBuilder<bool>(
+                                  valueListenable: _inProgress,
+                                  builder: (context, inProgress, _) =>
+                                      ErrorState(
+                                        icon: AppIcons.error,
+                                        title: l10n.appInitializationFailed,
+                                        message:
+                                            l10n.appInitializationFailedBody,
+                                        // One label keeps the busy geometry
+                                        // stable.
+                                        retryLabel: l10n.appRetry,
+                                        onRetry: _retryInitialization,
+                                        busy: inProgress,
+                                      ),
+                                )
+                              // No recovery callback: same frame, without a
+                              // command.
+                              : EmptyState(
+                                  icon: AppIcons.error,
+                                  message: l10n.appInitializationFailed,
+                                  subtitle: l10n.appInitializationFailedBody,
+                                ),
                         ),
-                      )
-                    else
-                      // No recovery callback: same frame, without a command.
-                      EmptyState(
-                        icon: AppIcons.error,
-                        message: l10n.appInitializationFailed,
-                        subtitle: l10n.appInitializationFailedBody,
-                      ),
-                    const SizedBox(height: AppSpacing.lg),
-                    if (kDebugMode)
-                      ExpansionTile(
-                        title: Text(l10n.appTechnicalDetails),
-                        children: [
-                          SelectableText(
-                            '${widget.error}\n${widget.stackTrace}',
-                            style: text.bodySmall,
+                        if (kDebugMode)
+                          Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: ExpansionTile(
+                              title: Text(l10n.appTechnicalDetails),
+                              children: [
+                                SelectableText(
+                                  '${widget.error}\n${widget.stackTrace}',
+                                  style: text.bodySmall,
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
-                  ],
-                ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             );
           },

@@ -79,7 +79,8 @@ class BookReaderWebView extends StatefulWidget {
   /// Only the search edge indicator uses it; pagination remains unchanged.
   final double searchOverlayBottomFraction;
 
-  /// Highlights to render as annotations on load.
+  /// Highlights to render as annotations, in paint order, bottom first:
+  /// where two overlap, the later one is drawn on top and receives taps.
   final List<ReaderHighlight> highlights;
 
   /// Bookmarks to render as foliate-js bookmark annotations on load.

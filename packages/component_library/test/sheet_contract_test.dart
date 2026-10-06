@@ -502,4 +502,58 @@ void main() {
       expect(tester.takeException(), isNull);
     }
   });
+
+  testWidgets('AppSheetActions.stacks predicts the stacked layout', (
+    tester,
+  ) async {
+    const short = ('Save', 'Cancel');
+    const long = ('Choose a different file', 'Cancel');
+    for (final (labels, width, expected) in [
+      (short, 342.0, false),
+      (long, 200.0, true),
+    ]) {
+      late BuildContext host;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: width,
+                child: Builder(
+                  builder: (context) {
+                    host = context;
+                    return AppSheetActions(
+                      primaryLabel: labels.$1,
+                      onPrimary: () {},
+                      secondaryLabel: labels.$2,
+                      onSecondary: () {},
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      final predicted = AppSheetActions.stacks(
+        host,
+        maxWidth: width,
+        primaryLabel: labels.$1,
+        secondaryLabel: labels.$2,
+      );
+      expect(predicted, expected);
+      final primary = tester.getRect(find.byType(FilledButton));
+      final secondary = tester.getRect(find.byType(OutlinedButton));
+      expect(primary.top != secondary.top, predicted);
+      if (predicted) {
+        expect(secondary.top - primary.bottom, AppSpacing.sm);
+        expect(secondary.height, AppSizes.buttonHeight);
+      }
+    }
+    expect(
+      AppSheetActions.stackedExtent,
+      AppSizes.buttonHeight + AppSpacing.sm,
+    );
+  });
 }

@@ -130,8 +130,12 @@ context and details scroll. The controls remain reachable after scrolling to the
 end of a long result, including when they stack on narrow/large-text screens.
 Opening a source-language recovery menu does not move the result viewport.
 The two language menus size to their labels, retain 48px minimum tap targets and
-adapt to system text scaling. They are unfilled text controls: primary in light
-mode, primary-fixed-dim in dark mode so labels keep at least 4.5:1 contrast. They show
+adapt to system text scaling. They are `TextButton`s on the shared text-button
+theme (shape, foreground and transparent background come from the theme, so
+labels keep at least 4.5:1 contrast); only the compact `bodySmall` label style,
+height and 2dp ink inset are picker-specific. The source picker drops its
+leading inset and start-aligns its content so the label starts on the 24dp
+content edge with the title; the target picker keeps symmetric ink. They show
 source, direction arrow and target;
 there is no duplicate direction caption or visible From/To label. Those roles
 remain available to assistive technologies. Controls stack with a downward

@@ -165,18 +165,6 @@ abstract class ReadflexLocalizations {
   /// **'Your changes to this collection have not been saved.'**
   String get libraryDiscardChangesBody;
 
-  /// No description provided for @libraryDiscardChanges.
-  ///
-  /// In en, this message translates to:
-  /// **'Discard'**
-  String get libraryDiscardChanges;
-
-  /// No description provided for @libraryKeepEditing.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep editing'**
-  String get libraryKeepEditing;
-
   /// No description provided for @readerSelectionStart.
   ///
   /// In en, this message translates to:
@@ -590,6 +578,12 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Delete'**
   String get commonDelete;
+
+  /// Safe action of a delete confirmation; the sheet title names what is kept, so the label stays one short word
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get commonKeep;
 
   /// No description provided for @commonRetry.
   ///

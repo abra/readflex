@@ -51,7 +51,7 @@ abstract class TextAction {
 | `scrollOffset`                    | `double?`    | Legacy optional scroll position                 |
 | `progress`                        | `double?`    | Normalized source progress at selection time    |
 | `chapterTitle`                    | `String?`    | Visible chapter title at selection time         |
-| `containedHighlightIds`           | `List<String>` | Existing highlights contained by the selection |
+| `highlightMerge`                  | `HighlightMergeTarget?` | Union with saved highlights sharing text with the selection: anchor, text and absorbed ids in document order; `null` when none |
 
 ---
 
@@ -87,13 +87,15 @@ class HighlightAction extends ColorHighlightTextAction {
     TextSelectionContext selection,
     HighlightColor color,
   ) async {
+    // One piece of text belongs to one highlight: save the union.
+    final merge = selection.highlightMerge;
     await highlightRepository.addHighlight(
       sourceId: selection.sourceId,
       sourceType: selection.sourceType,
-      text: selection.selectedText,
-      cfiRange: selection.cfiRange,
+      text: merge?.text ?? selection.selectedText,
+      cfiRange: merge?.cfiRange ?? selection.cfiRange,
       color: color,
-      replaceHighlightIds: selection.containedHighlightIds,
+      replaceHighlightIds: merge?.highlightIds ?? const [],
     );
   }
 }

@@ -486,7 +486,7 @@ class ReaderSelection {
     this.normalizedCfiRange,
     this.position,
     this.scrollOffset,
-    this.containedHighlightIds = const [],
+    this.highlightMerge,
   });
 
   final String text;
@@ -518,8 +518,9 @@ class ReaderSelection {
   /// Legacy optional scroll position.
   final double? scrollOffset;
 
-  /// Saved highlights fully contained in the selection, including equal ranges.
-  final List<String> containedHighlightIds;
+  /// Saved highlights sharing text with the selection, merged into one range;
+  /// `null` when the selection touches no saved highlight.
+  final ReaderHighlightMerge? highlightMerge;
 
   factory ReaderSelection.fromMap(Map<String, dynamic> map) {
     return ReaderSelection(
@@ -533,7 +534,45 @@ class ReaderSelection {
       normalizedCfiRange: _string(map['normalizedCfi']),
       position: ReaderSelectionPosition.fromValue(map['pos']),
       scrollOffset: _double(map['scrollOffset']),
-      containedHighlightIds: _stringList(map['containedHighlightIds']),
+      highlightMerge: ReaderHighlightMerge.fromValue(map['highlightMerge']),
+    );
+  }
+}
+
+/// Merge plan the WebView computes for a selection: the union of the
+/// selection and every saved highlight sharing text with it. [cfiRange] is a
+/// saved highlight's own anchor when the union equals its range.
+class ReaderHighlightMerge {
+  const ReaderHighlightMerge({
+    required this.cfiRange,
+    required this.text,
+    required this.highlightIds,
+  });
+
+  final String cfiRange;
+  final String text;
+
+  /// Absorbed saved highlights, in document order.
+  final List<String> highlightIds;
+
+  /// Returns `null` for a missing or incomplete plan; saving then stores the
+  /// plain selection, never a half-specified merge.
+  static ReaderHighlightMerge? fromValue(Object? value) {
+    if (value is! Map) return null;
+    final cfiRange = _string(value['cfi']);
+    final text = _string(value['text']);
+    final highlightIds = _stringList(value['highlightIds']);
+    if (cfiRange == null ||
+        cfiRange.isEmpty ||
+        text == null ||
+        text.isEmpty ||
+        highlightIds.isEmpty) {
+      return null;
+    }
+    return ReaderHighlightMerge(
+      cfiRange: cfiRange,
+      text: text,
+      highlightIds: highlightIds,
     );
   }
 }

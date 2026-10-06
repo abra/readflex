@@ -39,14 +39,11 @@ class LibraryListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Rows own the 16dp gutter so selection tints and the swipe background
+    // run edge to edge.
     return ListView.builder(
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        kLibraryContentBottomPadding,
-      ),
+      padding: EdgeInsets.only(bottom: libraryContentBottomPadding(context)),
       // Bouncing parent guarantees the elastic snap-back even on
       // short lists where ClampingScrollPhysics (the Android default)
       // would silently absorb the drag without returning.
@@ -92,7 +89,11 @@ class _SwipeDeleteBackground extends StatelessWidget {
       alignment: AlignmentDirectional.centerEnd,
       padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpacing.lg),
       color: colors.error,
-      child: Icon(AppIcons.delete, color: colors.onError),
+      child: Icon(
+        key: const ValueKey('librarySwipeDeleteIcon'),
+        AppIcons.delete,
+        color: colors.onError,
+      ),
     );
   }
 }

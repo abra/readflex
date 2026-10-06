@@ -172,7 +172,7 @@ void main() {
     expect(find.text('Collections'), findsOneWidget);
     await tapUi(tester, manage);
     await tapUi(tester, find.text('Delete collection'));
-    await tapUi(tester, find.text('Cancel'));
+    await tapUi(tester, find.text('Keep'));
     expect(
       (await tester.runAsync(app.collectionRepository.getCollections)),
       hasLength(1),

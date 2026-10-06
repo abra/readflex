@@ -184,7 +184,7 @@ for (const platform of ['ios', 'android']) for (const pageTurnStyle of ['vertica
 
 for (const platform of ['ios', 'android']) {
     for (const pageTurnStyle of ['vertical', 'slide']) {
-        test(`${platform} ${pageTurnStyle} selection can absorb and cross saved highlights`, async t => {
+        test(`${platform} ${pageTurnStyle} selection plans one merged highlight over saved highlights it shares text with`, async t => {
             const { page } = await openVerticalBook(t, {
                 runtime: true, appleTouch: platform === 'ios',
                 androidTouch: platform === 'android', pageTurnStyle,
@@ -234,16 +234,17 @@ for (const platform of ['ios', 'android']) {
                 }
             })
             for (const scenario of [
-                { text: 'The power bank keeps', ids: ['saved-phrase'] },
-                { text: 'power', ids: [] },
-                { text: 'power bank', ids: ['saved-phrase'] },
-                { text: 'The power', ids: [] },
-                { text: 'bank keeps', ids: [] },
-                { text: 'power bank keeps', ids: ['saved-phrase'] },
-                { text: 'The power bank', ids: ['saved-phrase'] },
-                { text: 'power bank keeps devices running', ids: ['saved-phrase', 'saved-word'] },
+                { text: 'The power bank keeps', ids: ['saved-phrase'], merged: 'The power bank keeps' },
+                // Inside or equal to a saved highlight: its own CFI is reused (a recolour).
+                { text: 'power', ids: ['saved-phrase'], merged: 'power bank', reusesSaved: true },
+                { text: 'power bank', ids: ['saved-phrase'], merged: 'power bank', reusesSaved: true },
+                { text: 'The power', ids: ['saved-phrase'], merged: 'The power bank' },
+                { text: 'bank keeps', ids: ['saved-phrase'], merged: 'power bank keeps' },
+                { text: 'power bank keeps', ids: ['saved-phrase'], merged: 'power bank keeps' },
+                { text: 'The power bank', ids: ['saved-phrase'], merged: 'The power bank' },
+                { text: 'power bank keeps devices running', ids: ['saved-phrase', 'saved-word'], merged: 'power bank keeps devices running' },
                 { text: 'Paragraph 0.', ids: [] },
-                { text: 'power bank', paragraph: 'p1', ids: ['other-paragraph'] },
+                { text: 'power bank', paragraph: 'p1', ids: ['other-paragraph'], merged: 'power bank', reusesSaved: true },
             ]) {
                 const result = await page.evaluate(async ({ text, paragraph, platform }) => {
                     const view = window.testView
@@ -257,10 +258,14 @@ for (const platform of ['ios', 'android']) {
                     await new Promise(resolve => setTimeout(resolve, 200))
                     const payload = window.bridgeCalls.filter(([name]) => name === 'onSelectionEnd').at(-1)?.[1]
                     const live = window.getCurrentTextSelection()
+                    const merge = payload?.highlightMerge ?? null
                     return {
                         native: doc.getSelection().toString(),
                         text: payload?.text ?? null,
-                        ids: payload?.containedHighlightIds ?? null,
+                        ids: merge?.highlightIds ?? [],
+                        merged: merge?.text ?? null,
+                        mergedRestored: merge ? view.resolveCFI(merge.cfi).anchor(doc).toString() : null,
+                        reusesSaved: Boolean(merge) && merge.cfi === window.reader.annotationsById.get(merge.highlightIds[0])?.value,
                         liveText: live?.text ?? null,
                         restored: payload ? view.resolveCFI(payload.cfi).anchor(doc).toString() : null,
                         editMenus: window.bridgeCalls.filter(([name]) => name === 'onAnnotationClick').length,
@@ -269,6 +274,8 @@ for (const platform of ['ios', 'android']) {
                 }, { ...scenario, platform })
                 assert.deepEqual(result, {
                     native: scenario.text, text: scenario.text, ids: scenario.ids,
+                    merged: scenario.merged ?? null, mergedRestored: scenario.merged ?? null,
+                    reusesSaved: scenario.reusesSaved ?? false,
                     liveText: scenario.text, restored: scenario.text, editMenus: 0, saved: 3,
                 }, JSON.stringify(scenario))
             }
@@ -276,10 +283,10 @@ for (const platform of ['ios', 'android']) {
             // Move both boundaries without cancelling the native selection.
             for (const backwards of [false, true]) {
                 for (const [text, ids] of [
-                    ['bank', []],
+                    ['bank', ['saved-phrase']],
                     ['power bank', ['saved-phrase']],
                     ['The power bank keeps devices', ['saved-phrase', 'saved-word']],
-                    ['bank keeps devices', ['saved-word']],
+                    ['bank keeps devices', ['saved-phrase', 'saved-word']],
                 ]) {
                     const result = await page.evaluate(({ text, backwards, platform }) => {
                         const { doc } = window.testView.renderer.getContents()[0]
@@ -294,13 +301,36 @@ for (const platform of ['ios', 'android']) {
                         const payload = window.getCurrentTextSelection()
                         return {
                             native: selection.toString(), text: payload.text,
-                            ids: payload.containedHighlightIds,
+                            ids: payload.highlightMerge?.highlightIds ?? [],
                             edits: window.bridgeCalls.filter(([name]) => name === 'onAnnotationClick').length,
                         }
                     }, { text, backwards, platform })
                     assert.deepEqual(result, { native: text, text, ids, edits: 0 })
                 }
             }
+
+            // A union reaching across paragraphs keeps the paragraph break in its
+            // text, like a native selection would; the CFI restores the range.
+            const crossing = await page.evaluate(() => {
+                const view = window.testView
+                const { doc } = view.renderer.getContents()[0]
+                const start = window.rangeForHighlightTest('vices running.')
+                const end = window.rangeForHighlightTest('Paragraph 1', 'p1')
+                const selection = doc.getSelection()
+                selection.setBaseAndExtent(start.startContainer, start.startOffset, end.endContainer, end.endOffset)
+                doc.dispatchEvent(new Event('selectionchange'))
+                const merge = window.getCurrentTextSelection().highlightMerge
+                return {
+                    ids: merge.highlightIds,
+                    text: merge.text,
+                    restored: view.resolveCFI(merge.cfi).anchor(doc).toString(),
+                }
+            })
+            assert.deepEqual(crossing, {
+                ids: ['saved-word'],
+                text: 'devices running.\nParagraph 1',
+                restored: 'devices running.Paragraph 1',
+            })
 
             assert.equal(await page.evaluate(() => window.highlightHitTests), 0,
                 'selection changes must not probe saved-highlight paint geometry')

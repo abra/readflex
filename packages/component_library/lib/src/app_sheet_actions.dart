@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'app_busy_button_label.dart';
 import 'app_button_label.dart';
-import 'button_loading_indicator.dart';
 import 'theme/extensions/build_context_ext.dart';
+import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
 
 /// A primary command and a secondary exit, stacked when labels need more room.
@@ -31,41 +32,44 @@ class AppSheetActions extends StatelessWidget {
   final bool destructiveSecondary;
   final bool busy;
 
+  /// Whether the pair stacks at [maxWidth]: a label wider than its half of
+  /// the row minus the button padding. Sheets that size a step before layout
+  /// (Manage collection) use the same rule to budget the second row.
+  static bool stacks(
+    BuildContext context, {
+    required double maxWidth,
+    required String primaryLabel,
+    required String secondaryLabel,
+  }) {
+    final labelWidth = (maxWidth - AppSpacing.md) / 2 - AppSpacing.lg * 2;
+    for (final label in [primaryLabel, secondaryLabel]) {
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: context.text.labelLarge),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout();
+      final wide = painter.width > labelWidth;
+      painter.dispose();
+      if (wide) return true;
+    }
+    return false;
+  }
+
+  /// Height added by the second row when the pair stacks.
+  static const double stackedExtent = AppSizes.buttonHeight + AppSpacing.sm;
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final labelWidth =
-          (constraints.maxWidth - AppSpacing.md) / 2 - AppSpacing.lg * 2;
-      var stacked = false;
-      for (final label in [primaryLabel, secondaryLabel]) {
-        final painter = TextPainter(
-          text: TextSpan(text: label, style: context.text.labelLarge),
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
-        )..layout();
-        stacked |= painter.width > labelWidth;
-        painter.dispose();
-      }
+      final stacked = stacks(
+        context,
+        maxWidth: constraints.maxWidth,
+        primaryLabel: primaryLabel,
+        secondaryLabel: secondaryLabel,
+      );
       final primary = FilledButton(
         onPressed: busy ? null : onPrimary,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Visibility(
-              visible: !busy,
-              maintainSize: true,
-              maintainAnimation: true,
-              maintainState: true,
-              child: AppButtonLabel(primaryLabel),
-            ),
-            if (busy)
-              Semantics(
-                label: primaryLabel,
-                liveRegion: true,
-                child: const ButtonLoadingIndicator(),
-              ),
-          ],
-        ),
+        child: AppBusyButtonLabel(primaryLabel, busy: busy),
       );
       final colors = context.colors;
       final secondary = OutlinedButton(

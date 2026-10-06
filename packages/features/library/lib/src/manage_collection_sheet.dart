@@ -17,9 +17,6 @@ const double _collectionSourcesMaxHeight = 260;
 const double _collectionSourceRowHeight =
     AppSizes.buttonHeight + AppSpacing.sm * 2;
 const double _collectionSourceDividerHeight = 1;
-// Align the glyph with the header; keep the full hit target in the gutter.
-const double _collectionSourceActionOutset =
-    (AppSizes.buttonHeight - AppIconSize.sm) / 2;
 // EmptyState(compact) adds its own 16dp padding around one bodyMedium line.
 const double _emptyCollectionListHeightEstimate = 80;
 const double _manageCollectionTextFieldHeightEstimate = 56;
@@ -31,15 +28,78 @@ const double _manageCollectionViewportTopReserve = 96;
 const EdgeInsets _sheetHorizontalPadding = EdgeInsets.symmetric(
   horizontal: AppSpacing.xl,
 );
-const EdgeInsets _sheetActionsPadding = EdgeInsets.fromLTRB(
-  AppSpacing.xl,
-  0,
-  AppSpacing.xl,
-  AppSpacing.lg,
-);
+// Sheet rhythm shared with ActionBottomSheetLayout footers: 16dp after the
+// last body line, 8dp above the commands and 16dp below them.
+const EdgeInsets _sheetBodyPadding = ActionBottomSheetLayout.defaultBodyPadding;
+const EdgeInsets _sheetFooterPadding =
+    ActionBottomSheetLayout.defaultFooterPadding;
 const EdgeInsets _collectionSourcesListPadding = EdgeInsets.only(
   bottom: AppSpacing.lg,
 );
+
+// The count row runs from the 24dp gutter to the delete button's ink: the
+// theme pads text buttons 16dp, so an 8dp end inset puts its label on the
+// gutter while the ink bleeds into it.
+const EdgeInsetsDirectional _countRowPadding = EdgeInsetsDirectional.only(
+  start: AppSpacing.xl,
+  end: AppSpacing.xl - AppSpacing.lg,
+);
+
+/// Height of a confirmation's command pair for the step estimate, using the
+/// width the commands actually get.
+double _confirmationCommandsHeight(
+  BuildContext context, {
+  required String primaryLabel,
+  required String secondaryLabel,
+}) {
+  final stacks = AppSheetActions.stacks(
+    context,
+    maxWidth: MediaQuery.sizeOf(context).width - _sheetFooterPadding.horizontal,
+    primaryLabel: primaryLabel,
+    secondaryLabel: secondaryLabel,
+  );
+  return AppSizes.buttonHeight + (stacks ? AppSheetActions.stackedExtent : 0);
+}
+
+double _textWidth(BuildContext context, String text, TextStyle style) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+  )..layout();
+  final width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+/// Whether the count label and the delete button cannot share one row at
+/// [maxWidth]; the step estimate and the row itself use the same rule.
+bool _countRowStacks(
+  BuildContext context, {
+  required double maxWidth,
+  required String countLabel,
+  required String deleteLabel,
+}) {
+  final text = context.text;
+  final buttonWidth =
+      _textWidth(context, deleteLabel, text.labelLarge) + AppSpacing.lg * 2;
+  return _textWidth(context, countLabel, text.labelSmall) +
+          AppSpacing.md +
+          buttonWidth >
+      maxWidth - _countRowPadding.horizontal;
+}
+
+String _sourceCountLabel(
+  ReadflexLocalizations l10n, {
+  required int bookCount,
+  required int articleCount,
+}) {
+  final parts = [
+    if (bookCount > 0) l10n.libraryBookCount(bookCount),
+    if (articleCount > 0) l10n.libraryArticleCount(articleCount),
+  ];
+  return parts.isEmpty ? l10n.libraryEmptySourceCount : parts.join(', ');
+}
 
 Future<ManageCollectionSheetResult?> showManageCollectionSheet({
   required BuildContext context,
@@ -243,28 +303,54 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
     final renameHeight = widget.scope.canRename
         ? _manageCollectionTextFieldHeightEstimate + AppSpacing.lg
         : 0.0;
+    final l10n = context.l10n;
+    // With a delete button the count row is a 48dp target row, or the label
+    // plus the button when they cannot share a line.
+    final countRowHeight = switch (widget.scope.canDelete) {
+      false => _manageCollectionCountLabelHeightEstimate,
+      true =>
+        _countRowStacks(
+              context,
+              maxWidth: MediaQuery.sizeOf(context).width,
+              countLabel: _sourceCountLabel(
+                l10n,
+                bookCount: _bookCount,
+                articleCount: _articleCount,
+              ),
+              deleteLabel: l10n.libraryDeleteCollectionButton,
+            )
+            ? _manageCollectionCountLabelHeightEstimate + AppSizes.buttonHeight
+            : AppSizes.buttonHeight,
+    };
     final manageHeight =
         AppSizes.buttonHeight +
         AppSpacing.sm +
         renameHeight +
-        _manageCollectionCountLabelHeightEstimate +
+        countRowHeight +
         AppSpacing.md +
         sourceListHeight +
-        AppSpacing.lg +
         AppSizes.buttonHeight +
-        _sheetActionsPadding.vertical +
-        (widget.scope.canDelete
-            ? _collectionSourceDividerHeight +
-                  AppSizes.buttonHeight +
-                  AppSpacing.lg
-            : 0);
+        _sheetFooterPadding.vertical;
+    final confirmationCommandsHeight = switch (step) {
+      _ManageCollectionStep.manage => AppSizes.buttonHeight,
+      _ManageCollectionStep.confirmDelete => _confirmationCommandsHeight(
+        context,
+        primaryLabel: l10n.commonKeep,
+        secondaryLabel: l10n.commonDelete,
+      ),
+      _ManageCollectionStep.confirmDiscard => _confirmationCommandsHeight(
+        context,
+        primaryLabel: l10n.commonKeepEditing,
+        secondaryLabel: l10n.commonDiscardChanges,
+      ),
+    };
     final deleteHeight =
         AppSizes.buttonHeight +
         AppSpacing.sm +
         _manageCollectionDeleteBodyHeightEstimate +
-        AppSpacing.lg +
-        AppSizes.buttonHeight +
-        _sheetActionsPadding.vertical;
+        _sheetBodyPadding.bottom +
+        confirmationCommandsHeight +
+        _sheetFooterPadding.vertical;
     final viewportLimit = math.max(
       0.0,
       MediaQuery.sizeOf(context).height -
@@ -347,7 +433,6 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
           canDelete: widget.scope.canDelete,
           canSave: canSave,
           onSave: _saveChanges,
-          onCancel: _requestClose,
           onToggleSource: _toggleSourceRemoval,
           onDeletePressed: _showDeleteConfirmation,
         ),
@@ -361,7 +446,7 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
         child: _DeleteCollectionConfirmationContent(
           state: state,
           collectionName: _currentName,
-          onCancel: _returnToEditing,
+          onKeep: _returnToEditing,
           onDelete: _deleteCollection,
         ),
       ),
@@ -371,29 +456,29 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
         hasPreviousStep: true,
         onBack: _goBack,
         onClose: () => _requestClose(closeFlow: true),
-        child: Padding(
-          padding: _sheetActionsPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Text(
-                    context.l10n.libraryDiscardChangesBody,
-                    style: context.text.bodyMedium,
-                  ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: _sheetBodyPadding,
+                child: Text(
+                  context.l10n.libraryDiscardChangesBody,
+                  style: context.text.bodyMedium,
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              AppSheetActions(
-                primaryLabel: context.l10n.libraryKeepEditing,
+            ),
+            Padding(
+              padding: _sheetFooterPadding,
+              child: AppSheetActions(
+                primaryLabel: context.l10n.commonKeepEditing,
                 onPrimary: _returnToEditing,
-                secondaryLabel: context.l10n.libraryDiscardChanges,
+                secondaryLabel: context.l10n.commonDiscardChanges,
                 onSecondary: _discard,
                 destructiveSecondary: true,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     };
@@ -617,7 +702,6 @@ class _ManageCollectionContent extends StatelessWidget {
     required this.canDelete,
     required this.canSave,
     required this.onSave,
-    required this.onCancel,
     required this.onToggleSource,
     required this.onDeletePressed,
   });
@@ -632,7 +716,6 @@ class _ManageCollectionContent extends StatelessWidget {
   final bool canDelete;
   final bool canSave;
   final Future<void> Function() onSave;
-  final VoidCallback onCancel;
   final ValueChanged<LibrarySource> onToggleSource;
   final VoidCallback onDeletePressed;
 
@@ -666,36 +749,26 @@ class _ManageCollectionContent extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.lg),
       ],
-      Padding(
-        padding: _sheetHorizontalPadding,
-        child: Text(
-          _sourceCountLabel(context),
-          style: context.text.labelSmall.copyWith(
-            color: context.colors.onSurfaceVariant,
-          ),
+      _CollectionCountRow(
+        label: _sourceCountLabel(
+          context.l10n,
+          bookCount: bookCount,
+          articleCount: articleCount,
         ),
+        deleteLabel: canDelete
+            ? context.l10n.libraryDeleteCollectionButton
+            : null,
+        enabled: !state.isBusy,
+        onDeletePressed: onDeletePressed,
       ),
       const SizedBox(height: AppSpacing.md),
     ];
-    final deleteAction = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Divider(height: _collectionSourceDividerHeight),
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: TextButton.icon(
-            onPressed: state.isBusy ? null : onDeletePressed,
-            style: TextButton.styleFrom(foregroundColor: context.colors.error),
-            icon: const Icon(AppIcons.delete, size: AppIconSize.sm),
-            label: Text(context.l10n.libraryDeleteCollectionButton),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
-    );
-    final actions = _CollectionFormActions(
-      onCancel: state.isBusy ? null : onCancel,
-      onSave: canSave ? onSave : null,
+    final actions = Padding(
+      padding: _sheetFooterPadding,
+      child: _SaveCollectionAction(
+        onSave: canSave ? onSave : null,
+        busy: state.isBusy,
+      ),
     );
 
     return LayoutBuilder(
@@ -707,6 +780,7 @@ class _ManageCollectionContent extends StatelessWidget {
             MediaQuery.textScalerOf(context).scale(15) > 20;
         if (scrollForm) {
           return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
                 child: ScrollEdgeFadeStack(
@@ -726,32 +800,29 @@ class _ManageCollectionContent extends StatelessWidget {
                           ),
                         )
                       else
-                        SliverList.builder(
-                          itemCount: visibleSources.length,
-                          itemBuilder: (context, index) {
-                            final source = visibleSources[index];
-                            return _CollectionSourceRow(
-                              key: ValueKey('collectionSource-${source.id}'),
-                              source: source,
-                              enabled: !state.isBusy,
-                              removed: removedSourceIds.contains(source.id),
-                              showDivider: index < visibleSources.length - 1,
-                              onTogglePressed: () => onToggleSource(source),
-                            );
-                          },
-                        ),
-                      if (canDelete)
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: _sheetHorizontalPadding,
-                            child: deleteAction,
+                        // Same 16dp after the last row as the fixed layout.
+                        SliverPadding(
+                          padding: _collectionSourcesListPadding,
+                          sliver: SliverList.builder(
+                            itemCount: visibleSources.length,
+                            itemBuilder: (context, index) {
+                              final source = visibleSources[index];
+                              return _CollectionSourceRow(
+                                key: ValueKey('collectionSource-${source.id}'),
+                                source: source,
+                                enabled: !state.isBusy,
+                                removed: removedSourceIds.contains(source.id),
+                                showDivider: index < visibleSources.length - 1,
+                                onTogglePressed: () => onToggleSource(source),
+                              );
+                            },
                           ),
                         ),
                     ],
                   ),
                 ),
               ),
-              Padding(padding: _sheetActionsPadding, child: actions),
+              actions,
             ],
           );
         }
@@ -767,44 +838,98 @@ class _ManageCollectionContent extends StatelessWidget {
                 onToggleSource: onToggleSource,
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Padding(
-              padding: _sheetActionsPadding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [if (canDelete) deleteAction, actions],
-              ),
-            ),
+            actions,
           ],
         );
       },
     );
   }
-
-  String _sourceCountLabel(BuildContext context) {
-    final parts = [
-      if (bookCount > 0) context.l10n.libraryBookCount(bookCount),
-      if (articleCount > 0) context.l10n.libraryArticleCount(articleCount),
-    ];
-    return parts.isEmpty
-        ? context.l10n.libraryEmptySourceCount
-        : parts.join(', ');
-  }
 }
 
-class _CollectionFormActions extends StatelessWidget {
-  const _CollectionFormActions({required this.onCancel, required this.onSave});
+/// Single footer command; leaving is the header's job (Back/Close) and a
+/// dirty draft still goes through the discard guard.
+class _SaveCollectionAction extends StatelessWidget {
+  const _SaveCollectionAction({required this.onSave, required this.busy});
 
-  final VoidCallback? onCancel;
   final VoidCallback? onSave;
+  final bool busy;
 
   @override
-  Widget build(BuildContext context) => AppSheetActions(
-    primaryLabel: context.l10n.commonSave,
-    onPrimary: onSave,
-    secondaryLabel: context.l10n.commonCancel,
-    onSecondary: onCancel,
+  Widget build(BuildContext context) => FilledButton(
+    onPressed: busy ? null : onSave,
+    child: AppBusyButtonLabel(context.l10n.commonSave, busy: busy),
   );
+}
+
+/// Source count under the name field; a deletable collection shows the
+/// compact destructive "Delete collection" at the row's end, dropping below
+/// the count when both cannot share the line.
+class _CollectionCountRow extends StatelessWidget {
+  const _CollectionCountRow({
+    required this.label,
+    required this.deleteLabel,
+    required this.enabled,
+    required this.onDeletePressed,
+  });
+
+  final String label;
+  final String? deleteLabel;
+  final bool enabled;
+  final VoidCallback onDeletePressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = Text(
+      label,
+      style: context.text.labelSmall.copyWith(
+        color: context.colors.onSurfaceVariant,
+      ),
+    );
+    final deleteLabel = this.deleteLabel;
+    if (deleteLabel == null) {
+      return Padding(padding: _sheetHorizontalPadding, child: count);
+    }
+    final button = TextButton(
+      key: const ValueKey('libraryDeleteCollectionButton'),
+      onPressed: enabled ? onDeletePressed : null,
+      style: TextButton.styleFrom(foregroundColor: context.colors.error),
+      child: AppButtonLabel(deleteLabel),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked = _countRowStacks(
+          context,
+          maxWidth: constraints.maxWidth,
+          countLabel: label,
+          deleteLabel: deleteLabel,
+        );
+        if (stacked) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(padding: _sheetHorizontalPadding, child: count),
+              Padding(
+                padding: EdgeInsetsDirectional.only(end: _countRowPadding.end),
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: button,
+                ),
+              ),
+            ],
+          );
+        }
+        return Padding(
+          padding: _countRowPadding,
+          child: Row(
+            children: [
+              Expanded(child: count),
+              button,
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 /// Scrollable list of sources currently displayed inside the collection.
@@ -864,52 +989,59 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
   const _DeleteCollectionConfirmationContent({
     required this.state,
     required this.collectionName,
-    required this.onCancel,
+    required this.onKeep,
     required this.onDelete,
   });
 
   final ManageCollectionState state;
   final String collectionName;
-  final VoidCallback onCancel;
+  final VoidCallback onKeep;
   final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: _sheetActionsPadding,
-      child: Column(
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (state.errorCode != null) ...[
-            Text(
-              _manageCollectionErrorMessage(context.l10n, state.errorCode!),
-              style: context.text.bodyMedium.copyWith(
-                color: context.colors.error,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-          ],
-          Expanded(
-            child: Center(
-              child: Text(
-                context.l10n.libraryDeleteCollectionBody(collectionName),
-                textAlign: TextAlign.center,
-                style: context.text.bodyMedium,
-              ),
+    // Start-aligned like the sibling Discard and Delete items confirmations.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: _sheetBodyPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (state.errorCode != null) ...[
+                  Text(
+                    _manageCollectionErrorMessage(
+                      context.l10n,
+                      state.errorCode!,
+                    ),
+                    style: context.text.bodyMedium.copyWith(
+                      color: context.colors.error,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                Text(
+                  context.l10n.libraryDeleteCollectionBody(collectionName),
+                  style: context.text.bodyMedium,
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          AppSheetActions(
-            primaryLabel: context.l10n.commonCancel,
-            onPrimary: onCancel,
+        ),
+        Padding(
+          padding: _sheetFooterPadding,
+          child: AppSheetActions(
+            primaryLabel: context.l10n.commonKeep,
+            onPrimary: onKeep,
             secondaryLabel: context.l10n.commonDelete,
             onSecondary: onDelete,
             destructiveSecondary: true,
             busy: state.isBusy,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -938,10 +1070,12 @@ class _CollectionSourceRow extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Padding(
+          // The 48dp remove target bleeds into the trailing gutter so its
+          // glyph ends on the 24dp content edge.
           padding: const EdgeInsetsDirectional.fromSTEB(
             AppSpacing.xl,
             AppSpacing.sm,
-            AppSpacing.xl - _collectionSourceActionOutset,
+            AppSpacing.xl - AppSizes.iconActionOutset,
             AppSpacing.sm,
           ),
           child: Row(
@@ -1000,7 +1134,14 @@ class _CollectionSourceRow extends StatelessWidget {
             ],
           ),
         ),
-        if (showDivider) const Divider(height: _collectionSourceDividerHeight),
+        if (showDivider)
+          Padding(
+            padding: _sheetHorizontalPadding,
+            child: Divider(
+              key: ValueKey('collectionSourceDivider-${source.id}'),
+              height: _collectionSourceDividerHeight,
+            ),
+          ),
       ],
     );
   }

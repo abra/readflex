@@ -19,7 +19,11 @@ void main() {
       scrollOffset: 42,
       progress: 0.42,
       chapterTitle: 'Chapter 4',
-      containedHighlightIds: ['h-1'],
+      highlightMerge: HighlightMergeTarget(
+        cfiRange: 'union-cfi',
+        text: 'hello there friend',
+        highlightIds: ['h-1', 'h-2'],
+      ),
     );
 
     expect(selection.selectedText, 'hello');
@@ -37,7 +41,14 @@ void main() {
     expect(selection.scrollOffset, 42);
     expect(selection.progress, 0.42);
     expect(selection.chapterTitle, 'Chapter 4');
-    expect(selection.containedHighlightIds, ['h-1']);
+    expect(
+      selection.highlightMerge,
+      const HighlightMergeTarget(
+        cfiRange: 'union-cfi',
+        text: 'hello there friend',
+        highlightIds: ['h-1', 'h-2'],
+      ),
+    );
   });
 
   test(
@@ -88,6 +99,62 @@ void main() {
 
     expect(action.label, 'Highlight');
     expect(action.icon, Icons.edit);
+  });
+
+  group('HighlightMergeTarget', () {
+    const target = HighlightMergeTarget(
+      cfiRange: 'cfi',
+      text: 'text',
+      highlightIds: ['a', 'b'],
+    );
+
+    test('compares by value, including the order of absorbed ids', () {
+      expect(
+        target,
+        const HighlightMergeTarget(
+          cfiRange: 'cfi',
+          text: 'text',
+          highlightIds: ['a', 'b'],
+        ),
+      );
+      expect(
+        target.hashCode,
+        const HighlightMergeTarget(
+          cfiRange: 'cfi',
+          text: 'text',
+          highlightIds: ['a', 'b'],
+        ).hashCode,
+      );
+      expect(
+        target,
+        isNot(
+          const HighlightMergeTarget(
+            cfiRange: 'cfi',
+            text: 'text',
+            highlightIds: ['b', 'a'],
+          ),
+        ),
+      );
+      expect(
+        target,
+        isNot(
+          const HighlightMergeTarget(
+            cfiRange: 'other',
+            text: 'text',
+            highlightIds: ['a', 'b'],
+          ),
+        ),
+      );
+    });
+
+    test('defaults to no merge on a plain selection', () {
+      const selection = TextSelectionContext(
+        selectedText: 'hello',
+        sourceId: 'book-1',
+        sourceType: SourceType.book,
+      );
+      expect(selection.highlightMerge, isNull);
+    });
   });
 }
 

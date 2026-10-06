@@ -61,11 +61,12 @@ test('article return remains usable if a resize notification never arrives', asy
     await expectProgress(page, 0.4)
 })
 
-test('article navigation marks the exact repeated occurrence and removes the old marker', async t => {
+test('article navigation paints the exact repeated occurrence without rewriting the text', async t => {
     const { page, routes, articleUrl } = await createHarness(t)
     routes.set('/article-content', '<p id="block-0" data-rf-block-id="block-0"><span id="block-0-s0" data-rf-sentence="0">One vision, another <em>vision</em>, a third vision and the final vision.</span></p>')
     await page.goto(articleUrl())
     await page.waitForFunction(() => window.bridgeCalls.some(([name]) => name === 'onLoadEnd'))
+    const dom = await page.evaluate(() => document.getElementById('article-content').innerHTML)
     await page.evaluate(() => window.startSearch(42, 'vision'))
     await page.waitForFunction(() => window.bridgeCalls.some(([name, data]) =>
         name === 'onSearch' && data.requestId === 42 && data.type === 'done'))
@@ -75,30 +76,36 @@ test('article navigation marks the exact repeated occurrence and removes the old
     assert.equal(results.length, 4)
     for (const index of [0, 1, 2, 3, 2, 0]) {
         const actual = await page.evaluate(cfi => {
-            window.goToCfi(cfi)
-            const markers = document.querySelectorAll('mark.readflex-search-match')
-            const marker = markers[0]
+            window.goToSearchResult(cfi)
+            const active = [...(CSS.highlights.get('readflex-search-active') ?? [])]
+            const [range] = active
             const prefix = document.createRange()
-            prefix.selectNodeContents(marker.closest('[data-rf-sentence]'))
-            prefix.setEndBefore(marker)
+            prefix.selectNodeContents(document.getElementById('block-0-s0'))
+            prefix.setEnd(range.startContainer, range.startOffset)
             return {
-                count: markers.length,
-                text: marker.textContent,
+                count: active.length,
+                inactive: CSS.highlights.get('readflex-search-matches')?.size ?? 0,
+                text: range.toString(),
                 prefix: prefix.toString(),
-                outline: getComputedStyle(marker).outlineStyle,
-                shadow: getComputedStyle(marker).boxShadow,
-                background: getComputedStyle(marker).backgroundColor,
+                marks: document.querySelectorAll('mark').length,
+                dom: document.getElementById('article-content').innerHTML,
             }
         }, results[index].cfi)
         assert.equal(actual.count, 1)
+        assert.equal(actual.inactive, 3, 'the active match is not tinted twice')
         assert.equal(actual.text, 'vision')
         assert.equal((actual.prefix.match(/vision/g) ?? []).length, index)
-        assert.equal(actual.outline, 'none')
-        assert.equal(actual.shadow, 'none')
-        assert.equal(actual.background, 'rgba(255, 179, 0, 0.36)')
+        assert.equal(actual.marks, 0)
+        assert.equal(actual.dom, dom, 'search navigation must not rewrite the article')
     }
+    const activeRule = await page.evaluate(() => [...document.styleSheets]
+        .flatMap(sheet => [...sheet.cssRules]).map(rule => rule.cssText)
+        .find(text => text.includes('::highlight(readflex-search-active)')))
+    assert.ok(activeRule.includes('rgba(255, 179, 0, 0.36)'), activeRule)
     await page.evaluate(() => window.clearSearch())
-    assert.equal(await page.locator('mark.readflex-search-match').count(), 0)
-    assert.equal(await page.locator('#article-content').innerText(),
-        'One vision, another vision, a third vision and the final vision.')
+    assert.deepEqual(await page.evaluate(() => ({
+        active: CSS.highlights.has('readflex-search-active'),
+        inactive: CSS.highlights.has('readflex-search-matches'),
+        dom: document.getElementById('article-content').innerHTML,
+    })), { active: false, inactive: false, dom })
 })

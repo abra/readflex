@@ -40,6 +40,7 @@ import 'reader_highlight_color.dart';
 import 'reader_highlight_controls.dart';
 import 'reader_highlight_filter.dart';
 import 'reader_highlight_list_tile.dart';
+import 'reader_highlight_merge.dart';
 import 'reader_highlight_note_sheet.dart';
 import 'reader_image_highlight_cubit.dart';
 import 'reader_image_highlight_preview.dart';
@@ -138,15 +139,6 @@ String _readerBrightnessLabel(
 }) {
   if (!state.usesSystemBrightness) return '${state.percent}%';
   return systemLabel;
-}
-
-// Share the header/row glyph edge while retaining a full 48dp action target.
-const _readerDrawerActionEndPadding = readerDrawerActionEndPadding;
-
-double _readerDrawerListBottomPadding(BuildContext context) {
-  return MediaQuery.viewInsetsOf(context).bottom +
-      MediaQuery.paddingOf(context).bottom +
-      AppSpacing.lg;
 }
 
 ReaderTapAxis _readerTapAxisForPageTurnStyle(ReaderPageTurnStyle style) {

@@ -2,6 +2,8 @@ import 'package:domain_models/domain_models.dart'
     show HighlightColor, SourceType;
 import 'package:flutter/widgets.dart';
 
+import 'highlight_merge_target.dart';
+
 /// Payload delivered to a [TextAction] when the user selects text in the
 /// reader: selected text plus an opaque anchor back to the source. Books use
 /// EPUB CFI; articles use a serialized `readflex-html-position:` anchor.
@@ -28,7 +30,7 @@ class TextSelectionContext {
     this.progress,
     this.chapterTitle,
     this.sourceLanguageHint,
-    this.containedHighlightIds = const [],
+    this.highlightMerge,
   });
 
   /// The exact text the user selected.
@@ -109,8 +111,9 @@ class TextSelectionContext {
   /// to auto-detect the final language per selection.
   final String? sourceLanguageHint;
 
-  /// Saved highlights fully contained in the selection, including equal ranges.
-  final List<String> containedHighlightIds;
+  /// Saved highlights sharing text with the selection, merged into one
+  /// range; `null` when the selection touches no saved highlight.
+  final HighlightMergeTarget? highlightMerge;
 }
 
 String _collapseSelectionWhitespace(String value) =>

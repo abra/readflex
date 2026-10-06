@@ -83,26 +83,37 @@ for (const nativeHighlights of [true, false]) {
 
         const sentenceCfi = await page.evaluate(() => window.bridgeCalls
             .find(([name]) => name === 'onArticlePositionChanged')[1].cfi)
+        const activeState = () => page.evaluate(({ nativeHighlights, activeColor }) => {
+            if (nativeHighlights) {
+                return {
+                    active: CSS.highlights.get('readflex-search-active')?.size ?? 0,
+                    rule: [...document.styleSheets].flatMap(sheet => [...sheet.cssRules])
+                        .map(rule => rule.cssText)
+                        .find(text => text.includes('::highlight(readflex-search-active)')),
+                }
+            }
+            const groups = [...document.querySelectorAll('[data-rf-highlight-overlay] g')]
+                .filter(g => g.getAttribute('fill') === activeColor)
+            return { active: groups.length, rule: null }
+        }, { nativeHighlights, activeColor: ACTIVE_SEARCH_HIGHLIGHT_COLOR })
         for (const index of [1, 3, 0]) {
-            const active = await page.evaluate(cfi => {
-                window.goToCfi(cfi)
-                const marker = document.querySelector('mark.readflex-search-match')
-                return { count: document.querySelectorAll('mark.readflex-search-match').length,
-                    background: getComputedStyle(marker).backgroundColor }
-            }, results[index].cfi)
-            assert.equal(active.count, 1)
-            assert.equal(active.background, rgba(ACTIVE_SEARCH_HIGHLIGHT_COLOR, ACTIVE_SEARCH_HIGHLIGHT_OPACITY))
+            await page.evaluate(cfi => window.goToSearchResult(cfi), results[index].cfi)
+            const active = await activeState()
+            assert.equal(active.active, 1)
+            if (nativeHighlights) {
+                assert.ok(active.rule.includes(rgba(ACTIVE_SEARCH_HIGHLIGHT_COLOR, ACTIVE_SEARCH_HIGHLIGHT_OPACITY)), active.rule)
+            }
             const during = await countMatches()
-            // The wrapped match is shown by the marker; the other three keep their tint,
-            // including matches that were active before and had to be re-resolved.
-            assert.equal(during.css, nativeHighlights ? 4 : 0)
-            if (!nativeHighlights) assert.ok(during.svg >= 3 && during.svg <= 4, JSON.stringify(during))
+            // The active match is painted alone; the other three keep their tint.
+            if (nativeHighlights) assert.equal(during.css, 3)
+            else assert.equal(during.svg, 4, JSON.stringify(during))
+            assert.equal(during.text, before.text, 'painting the active match keeps the text')
         }
         await page.evaluate(cfi => window.goToCfi(cfi), sentenceCfi)
         const restored = await countMatches()
         assert.equal(nativeHighlights ? restored.css : restored.svg, 4,
             'leaving the active match restores its inactive tint')
-        assert.equal(await page.locator('mark.readflex-search-match').count(), 0)
+        assert.equal((await activeState()).active, 0)
         const svgFill = nativeHighlights ? null : await page.evaluate(() => {
             const g = document.querySelector('[data-rf-highlight-overlay] g')
             return { fill: g.getAttribute('fill'), opacity: g.style.opacity, rx: g.querySelector('rect').getAttribute('rx') }
@@ -127,14 +138,14 @@ test('customCSS overrides the shared search tints in the article shell', async t
     const cfi = await page.evaluate(() => window.bridgeCalls
         .find(([name, data]) => name === 'onSearch' && data.requestId === 8 && data.type === 'results')[1].items[0].cfi)
     const result = await page.evaluate(cfi => {
-        window.goToCfi(cfi)
+        window.goToSearchResult(cfi)
+        const rules = [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]).map(rule => rule.cssText)
         return {
-            active: getComputedStyle(document.querySelector('mark.readflex-search-match')).backgroundColor,
-            matchRule: [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]).map(rule => rule.cssText)
-                .find(text => text.includes('::highlight(readflex-search-matches)')),
+            activeRule: rules.find(text => text.includes('::highlight(readflex-search-active)')),
+            matchRule: rules.find(text => text.includes('::highlight(readflex-search-matches)')),
         }
     }, cfi)
-    assert.equal(result.active, 'rgba(0, 255, 0, 0.5)')
+    assert.ok(result.activeRule.includes('rgba(0, 255, 0, 0.5)'), result.activeRule)
     assert.ok(result.matchRule.includes(`rgba(0, 0, 255, ${SEARCH_HIGHLIGHT_OPACITY})`), result.matchRule)
 })
 

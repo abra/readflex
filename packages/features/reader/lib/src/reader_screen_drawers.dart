@@ -221,7 +221,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
             padding: const EdgeInsetsDirectional.fromSTEB(
               AppSpacing.lg,
               AppSpacing.sm,
-              _readerDrawerActionEndPadding,
+              readerDrawerActionEndPadding,
               AppSpacing.xs,
             ),
             child: Row(
@@ -272,6 +272,11 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                 tabAlignment: scrollable
                     ? TabAlignment.start
                     : TabAlignment.fill,
+                // Scrolling tabs start at the drawer gutter: 8dp bar inset
+                // plus the 8dp label padding puts the first glyph on 16.
+                padding: scrollable
+                    ? const EdgeInsets.symmetric(horizontal: AppSpacing.sm)
+                    : null,
                 labelPadding: EdgeInsets.symmetric(
                   horizontal: scrollable ? AppSpacing.sm : 0,
                 ),
@@ -565,7 +570,7 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
 
   @override
   Widget build(BuildContext context) {
-    final listBottomPadding = _readerDrawerListBottomPadding(context);
+    final listBottomPadding = readerDrawerListBottomPadding(context);
     final filteredItems = _filteredItems();
     final activeSourceIndex = _activeSourceIndex();
 
@@ -706,7 +711,7 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
 
   @override
   Widget build(BuildContext context) {
-    final listBottomPadding = _readerDrawerListBottomPadding(context);
+    final listBottomPadding = readerDrawerListBottomPadding(context);
     final edits = context.select<ReaderBloc, ReaderBookmarkEdits>(
       (b) => b.state.bookmarkEdits,
     );
@@ -816,7 +821,7 @@ class _ReaderBookmarkListTile extends StatelessWidget {
       contentPadding: const EdgeInsetsDirectional.fromSTEB(
         AppSpacing.lg,
         AppSpacing.xxs,
-        _readerDrawerActionEndPadding,
+        readerDrawerActionEndPadding,
         AppSpacing.xxs,
       ),
       minVerticalPadding: AppSpacing.xs,
@@ -1005,6 +1010,9 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
     }
     final hasItems = widget.highlights.isNotEmpty || _removed.isNotEmpty;
     return Column(
+      // Stretch so the filter strip starts on the gutter instead of
+      // centering its shrink-wrapped scroll view.
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1016,29 +1024,10 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
           ),
         ),
         if (hasItems)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  AppFilterChip(
-                    label: context.l10n.readerHighlightFilterAll,
-                    selected: _color == null,
-                    onTap: () => _selectColor(null),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  for (final color in HighlightColor.values)
-                    ReaderHighlightColorButton(
-                      color: color,
-                      readerTheme: widget.readerTheme,
-                      selected: _color == color,
-                      enabled: true,
-                      onPressed: () => _selectColor(color),
-                    ),
-                ],
-              ),
-            ),
+          _ReaderHighlightFilterStrip(
+            readerTheme: widget.readerTheme,
+            selected: _color,
+            onSelected: _selectColor,
           ),
         Expanded(
           child: _ReaderDrawerContentFrame(
@@ -1058,7 +1047,7 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
                           ? const ScrollCacheExtent.pixels(0)
                           : null,
                       padding: EdgeInsets.only(
-                        bottom: _readerDrawerListBottomPadding(context),
+                        bottom: readerDrawerListBottomPadding(context),
                       ),
                       itemCount: _filtered.length,
                       itemBuilder: (context, index) {
@@ -1106,6 +1095,52 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "All" chip plus one swatch per highlight color, scrolling horizontally.
+///
+/// Every control sits in a 48dp target; the 32dp swatch matches the chip
+/// beside it. The strip owns the 16dp gutter and 8dp above/below the targets.
+class _ReaderHighlightFilterStrip extends StatelessWidget {
+  const _ReaderHighlightFilterStrip({
+    required this.readerTheme,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final ReaderThemeData readerTheme;
+  final HighlightColor? selected;
+  final ValueChanged<HighlightColor?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      child: Row(
+        children: [
+          AppFilterChip(
+            label: context.l10n.readerHighlightFilterAll,
+            selected: selected == null,
+            onTap: () => onSelected(null),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          for (final color in HighlightColor.values)
+            ReaderHighlightColorButton(
+              color: color,
+              readerTheme: readerTheme,
+              selected: selected == color,
+              enabled: true,
+              size: AppSizes.chipHeight,
+              onPressed: () => onSelected(color),
+            ),
+        ],
+      ),
     );
   }
 }

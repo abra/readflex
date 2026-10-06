@@ -12,7 +12,7 @@ test('article HTTP failure reports a terminal load failure to Flutter', async t 
     assert.equal(calls.includes('onLoadEnd'), false)
 })
 
-test('article selection reports only fully contained saved highlights', async t => {
+test('article selection plans one merged highlight over every saved highlight it shares text with', async t => {
     const { page, routes, articleUrl } = await createHarness(t)
     routes.set('/article-content', '<p id="block-0" data-rf-block-id="block-0"><span id="block-0-s0" data-rf-sentence="0">The power bank keeps devices running.</span></p>')
     await page.goto(articleUrl())
@@ -27,30 +27,40 @@ test('article selection reports only fully contained saved highlights', async t 
             document.dispatchEvent(new Event('selectionchange'))
             return window.getCurrentTextSelection()
         }
-        const saved = [['phrase', 'power bank'], ['word', 'devices']].map(([id, text]) => ({
+        window.savedHighlights = [['phrase', 'power bank'], ['word', 'devices']].map(([id, text]) => ({
             id, text, cfiRange: window.selectHighlightTestRange(text).cfi, color: '#FFE600',
         }))
-        window.setArticleHighlights(saved)
+        window.setArticleHighlights(window.savedHighlights)
     })
-    for (const [text, ids] of [
-        ['The power bank keeps', ['phrase']],
-        ['power', []],
-        ['power bank', ['phrase']],
-        ['The power', []],
-        ['bank keeps', []],
-        ['The power bank keeps devices running.', ['phrase', 'word']],
-        ['running.', []],
+    for (const [text, ids, mergedText, reusesSaved] of [
+        ['The power bank keeps', ['phrase'], 'The power bank keeps', false],
+        ['power', ['phrase'], 'power bank', true],
+        ['power bank', ['phrase'], 'power bank', true],
+        ['The power', ['phrase'], 'The power bank', false],
+        ['bank keeps', ['phrase'], 'power bank keeps', false],
+        ['bank keeps devi', ['phrase', 'word'], 'power bank keeps devices', false],
+        ['The power bank keeps devices running.', ['phrase', 'word'], 'The power bank keeps devices running.', false],
+        // Touching a highlight without sharing a character is not a merge.
+        [' keeps', null, null, false],
+        ['running.', null, null, false],
     ]) {
         const result = await page.evaluate(text => {
             window.bridgeCalls.length = 0
             const payload = window.selectHighlightTestRange(text)
+            const merge = payload.highlightMerge
             return {
-                text: payload.text, ids: payload.containedHighlightIds,
+                text: payload.text,
                 native: window.getSelection().toString(),
                 edits: window.bridgeCalls.filter(([name]) => name === 'onAnnotationClick').length,
+                ids: merge?.highlightIds ?? null,
+                mergedText: merge?.text ?? null,
+                reusesSaved: Boolean(merge) && window.savedHighlights.some(saved => saved.cfiRange === merge.cfi),
+                hasCfi: Boolean(merge?.cfi),
             }
         }, text)
-        assert.deepEqual(result, { text, ids, native: text, edits: 0 })
+        assert.deepEqual(result, {
+            text: text.trim(), native: text, edits: 0, ids, mergedText, reusesSaved, hasCfi: ids != null,
+        }, text)
     }
 })
 

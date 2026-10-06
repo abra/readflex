@@ -342,4 +342,105 @@ void main() {
       greaterThan(tester.getTopRight(find.text('power')).dx - 1),
     );
   });
+
+  testWidgets('FAB is themed: circular primary with no call-site overrides', (
+    tester,
+  ) async {
+    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            floatingActionButton: FloatingActionButton(
+              onPressed: () {},
+              child: const Icon(Icons.add),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final fabTheme = theme.floatingActionButtonTheme;
+      expect(fabTheme.backgroundColor, theme.colorScheme.primary);
+      expect(fabTheme.foregroundColor, theme.colorScheme.onPrimary);
+      expect(fabTheme.shape, const CircleBorder());
+      expect(fabTheme.elevation, AppElevation.level2);
+      final material = tester.widget<Material>(
+        find.descendant(
+          of: find.byType(FloatingActionButton),
+          matching: find.byType(Material),
+        ),
+      );
+      expect(material.color, theme.colorScheme.primary);
+      expect(material.shape, const CircleBorder());
+    }
+  });
+
+  test('icon action outset puts a 20dp glyph on the gutter', () {
+    expect(AppSizes.iconActionOutset, 14);
+    expect(AppSpacing.lg - AppSizes.iconActionOutset, 2);
+    expect(AppSpacing.xl - AppSizes.iconActionOutset, 10);
+    expect(AppSizes.checkboxOutset, 15);
+  });
+
+  test('sheet footer gap after a default body is 24dp', () {
+    expect(
+      ActionBottomSheetLayout.defaultBodyPadding.bottom +
+          ActionBottomSheetLayout.defaultFooterPadding.top,
+      AppSpacing.xl,
+    );
+    expect(ActionBottomSheetLayout.defaultFooterPadding.bottom, AppSpacing.lg);
+  });
+
+  testWidgets('secondary is outlined on a transparent background and a '
+      'disabled primary does not look like it', (tester) async {
+    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: theme,
+          home: Scaffold(
+            body: Row(
+              children: [
+                OutlinedButton(onPressed: () {}, child: const Text('Cancel')),
+                const FilledButton(onPressed: null, child: Text('Save')),
+                FilledButton(onPressed: () {}, child: const Text('Go')),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      Material materialOf(Finder button) => tester.widget<Material>(
+        find.descendant(of: button, matching: find.byType(Material)).first,
+      );
+      final secondary = materialOf(
+        find.widgetWithText(OutlinedButton, 'Cancel'),
+      );
+      final disabled = materialOf(find.widgetWithText(FilledButton, 'Save'));
+      final primary = materialOf(find.widgetWithText(FilledButton, 'Go'));
+      expect(secondary.color, Colors.transparent);
+      expect(
+        (secondary.shape! as RoundedRectangleBorder).side.color,
+        theme.colorScheme.outline,
+      );
+      expect(disabled.color, isNot(Colors.transparent));
+      expect(disabled.color, isNot(primary.color));
+      final disabledText = tester.widget<DefaultTextStyle>(
+        find
+            .ancestor(
+              of: find.text('Save'),
+              matching: find.byType(DefaultTextStyle),
+            )
+            .first,
+      );
+      final secondaryText = tester.widget<DefaultTextStyle>(
+        find
+            .ancestor(
+              of: find.text('Cancel'),
+              matching: find.byType(DefaultTextStyle),
+            )
+            .first,
+      );
+      expect(disabledText.style.color, isNot(secondaryText.style.color));
+    }
+  });
 }

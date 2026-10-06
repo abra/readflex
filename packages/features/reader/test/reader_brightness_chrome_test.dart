@@ -215,7 +215,7 @@ void main() {
       expect(find.byType(PositionedDirectional), findsOneWidget);
       final pill = tester.getRect(find.byType(DecoratedBox).first);
       final width = tester.getSize(find.byType(Scaffold)).width;
-      expect(rtl ? pill.left : width - pill.right, AppSpacing.md);
+      expect(rtl ? pill.left : width - pill.right, AppSpacing.lg);
       final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
       expect(slide.duration, AppMotion.short);
       uiCubit.hideChrome();
@@ -283,7 +283,7 @@ void main() {
     final width = tester.getSize(find.byType(Scaffold)).width;
     expect(
       width - tester.getRect(find.byType(DecoratedBox).first).right,
-      AppSpacing.md,
+      AppSpacing.lg,
     );
   });
 }

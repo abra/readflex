@@ -9,14 +9,15 @@ const double _collectionScopeRowHeight = 48;
 const double _collectionScopeResultsMaxHeight = 420;
 const double _collectionScopeSectionChromeHeight = 36;
 const double _collectionScopeBottomBreathingRoom = AppSpacing.xl;
-// Match the header's icon alignment without shrinking the 48dp hit target.
-const double _collectionScopeActionOutset =
-    (AppSizes.buttonHeight - AppIconSize.sm) / 2;
+// Rows keep an 8dp inset for their selection pill and a trailing 48dp menu
+// target; the list subtracts both so icons and the menu glyph land on the
+// 24dp sheet gutter while the pill and target bleed into it.
+const double _collectionScopeRowInset = AppSpacing.sm;
 const EdgeInsetsDirectional _collectionScopeListPadding =
     EdgeInsetsDirectional.fromSTEB(
-      AppSpacing.xl,
+      AppSpacing.xl - _collectionScopeRowInset,
       0,
-      AppSpacing.xl - _collectionScopeActionOutset,
+      AppSpacing.xl - AppSizes.iconActionOutset,
       AppSpacing.lg,
     );
 
@@ -341,8 +342,8 @@ class _ScopeSection extends StatelessWidget {
           if (title != null)
             Padding(
               padding: const EdgeInsetsDirectional.only(
-                start: AppSpacing.xs,
-                end: AppSpacing.xs + _collectionScopeActionOutset,
+                start: _collectionScopeRowInset,
+                end: AppSizes.iconActionOutset,
                 bottom: AppSpacing.xs,
               ),
               child: Text(
@@ -393,10 +394,11 @@ class _CollectionScopeRow extends StatelessWidget {
         color: Colors.transparent,
         child: Stack(
           children: [
+            // The pill bleeds 8dp into both gutters, like Language options.
             if (selected)
               PositionedDirectional(
                 start: 0,
-                end: _collectionScopeActionOutset,
+                end: AppSizes.iconActionOutset - _collectionScopeRowInset,
                 top: 0,
                 bottom: 0,
                 child: Ink(
@@ -421,7 +423,7 @@ class _CollectionScopeRow extends StatelessWidget {
                 height: _collectionScopeRowHeight,
                 child: Padding(
                   padding: const EdgeInsetsDirectional.only(
-                    start: AppSpacing.sm,
+                    start: _collectionScopeRowInset,
                   ),
                   child: Row(
                     children: [
@@ -456,7 +458,9 @@ class _CollectionScopeRow extends StatelessWidget {
                       if (scope.canManage)
                         AppPlainIconButton(
                           tooltip: l10n.libraryManageCollection(label),
-                          color: foreground,
+                          color: selected
+                              ? colors.selectedControlForeground
+                              : colors.onSurfaceVariant,
                           icon: AppIcons.moreVertical,
                           key: ValueKey(
                             'collectionScopeManage-${scope.type.name}-${scope.id}',

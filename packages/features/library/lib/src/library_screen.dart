@@ -579,15 +579,10 @@ class _LibraryFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-
+    // Colour, shape and elevation come from floatingActionButtonTheme.
     return FloatingActionButton(
       onPressed: onAddPressed,
       tooltip: context.l10n.importAddToLibraryTitle,
-      backgroundColor: colors.primary,
-      foregroundColor: colors.onPrimary,
-      shape: const CircleBorder(),
-      elevation: AppElevation.level2,
       // Keep the FAB out of Hero transitions; this screen can be opened
       // beside other FAB-based surfaces when frozen tabs are re-enabled.
       heroTag: null,

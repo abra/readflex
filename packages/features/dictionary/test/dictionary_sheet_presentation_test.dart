@@ -201,6 +201,116 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('definitions sit 12dp apart and the last ends 16dp above the '
+      'body end', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await _pumpSheet(
+      tester,
+      service: _ResultDictionaryService(
+        entries: const [
+          DictionaryLexicalEntry(
+            lemma: 'power',
+            definitions: [
+              DictionaryDefinition(
+                text: 'Energy for devices.',
+                examples: ['Devices need power.'],
+              ),
+              DictionaryDefinition(
+                text: 'Control over others.',
+                examples: ['Power corrupts.'],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    final firstExample = tester.getRect(find.text('Devices need power.'));
+    final secondNumber = tester.getRect(find.text('2.'));
+    final secondText = tester.getRect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText && widget.data == 'Control over others.',
+      ),
+    );
+    final lastExample = tester.getRect(find.text('Power corrupts.'));
+    expect(secondNumber.top, secondText.top);
+    expect(secondNumber.top - firstExample.bottom, AppSpacing.md);
+    final sheet = tester.getRect(find.byType(DictionarySheet));
+    expect(sheet.bottom - lastExample.bottom, AppSpacing.lg);
+    final body = find.descendant(
+      of: find.byType(SingleChildScrollView),
+      matching: find.byType(Scrollable),
+    );
+    expect(
+      tester.state<ScrollableState>(body.first).position.maxScrollExtent,
+      0,
+    );
+  });
+
+  testWidgets('an example starts where its definition text starts', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await _pumpSheet(tester);
+    final sheet = tester.getRect(find.byType(DictionarySheet));
+    final number = tester.getRect(find.text('1.'));
+    final definition = tester.getRect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText && widget.data == 'Energy for devices.',
+      ),
+    );
+    final example = tester.getRect(find.text('Devices need power.'));
+    expect(number.left, sheet.left + AppSpacing.xl);
+    expect(definition.left, number.left + AppSpacing.xl + AppSpacing.xs);
+    expect(example.left, definition.left);
+    expect(example.right, definition.right);
+    expect(example.right, sheet.right - AppSpacing.xl);
+  });
+
+  testWidgets('an Arabic example starts on the definition text edge', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await _pumpSheet(
+      tester,
+      selection: _arabicSelection,
+      service: _ResultDictionaryService(
+        entries: const [
+          DictionaryLexicalEntry(
+            lemma: 'الطاقة',
+            definitions: [
+              DictionaryDefinition(
+                text: 'القدرة على العمل.',
+                examples: ['تحتاج الأجهزة إلى الطاقة.'],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+    final sheet = tester.getRect(find.byType(DictionarySheet));
+    final number = tester.getRect(find.text('1.'));
+    final definition = tester.getRect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is SelectableText && widget.data == 'القدرة على العمل.',
+      ),
+    );
+    final example = tester.getRect(find.text('تحتاج الأجهزة إلى الطاقة.'));
+    expect(number.right, sheet.right - AppSpacing.xl);
+    expect(definition.right, number.right - AppSpacing.xl - AppSpacing.xs);
+    expect(example.right, definition.right);
+    expect(example.left, definition.left);
+    expect(example.left, sheet.left + AppSpacing.xl);
+  });
 }
 
 Future<void> _pumpSheet(

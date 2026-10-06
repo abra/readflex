@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_typography.dart';
 import '../tokens/app_colors.dart';
+import '../tokens/app_elevation.dart';
 import '../tokens/app_radius.dart';
 import '../tokens/app_sizes.dart';
 import '../tokens/app_spacing.dart';
@@ -66,8 +67,10 @@ class AppButtonThemes {
           horizontal: AppSpacing.lg,
           vertical: AppSpacing.md,
         ),
+        // Transparent, not the field grey: a disabled filled primary stays
+        // distinguishable from an enabled secondary beside it.
         side: BorderSide(color: palette.border),
-        backgroundColor: palette.secondary,
+        backgroundColor: Colors.transparent,
         shape: _controlShape,
       ),
     );
@@ -112,6 +115,17 @@ class AppButtonThemes {
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
       ),
+    );
+  }
+
+  /// Circular primary FAB; call sites pass only `onPressed`, tooltip and icon.
+  static FloatingActionButtonThemeData floatingAction(ColorScheme colors) {
+    return FloatingActionButtonThemeData(
+      backgroundColor: colors.primary,
+      foregroundColor: colors.onPrimary,
+      shape: const CircleBorder(),
+      elevation: AppElevation.level2,
+      highlightElevation: AppElevation.level3,
     );
   }
 }

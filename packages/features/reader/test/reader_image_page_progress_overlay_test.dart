@@ -49,6 +49,35 @@ void main() {
   );
 
   _localizedTests();
+
+  for (final (inset, expected) in [(0.0, AppSpacing.lg), (34.0, 34.0)]) {
+    testWidgets('page pill keeps at least 16dp above the edge inset=$inset', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpOverlay(
+        currentPage: 0,
+        totalPages: 25,
+        bottomInset: inset,
+      );
+      final positioned = tester.widget<Positioned>(
+        find
+            .ancestor(
+              of: find.byKey(_overlayOpacityKey),
+              matching: find.byType(Positioned),
+            )
+            .first,
+      );
+      expect(positioned.bottom, expected + AppSpacing.md);
+      expect(
+        844 - tester.getRect(find.byKey(_overlayOpacityKey)).bottom,
+        expected + AppSpacing.md,
+      );
+    });
+  }
 }
 
 const _overlayOpacityKey = ValueKey('readerImagePageProgressOverlayOpacity');
@@ -97,6 +126,7 @@ extension on WidgetTester {
     bool selectionActionsVisible = false,
     bool disableAnimations = false,
     Locale locale = const Locale('en'),
+    double bottomInset = 0,
   }) async {
     await pumpWidget(
       MaterialApp(
@@ -105,9 +135,11 @@ extension on WidgetTester {
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(disableAnimations: disableAnimations),
+          data: MediaQuery.of(context).copyWith(
+            disableAnimations: disableAnimations,
+            padding: EdgeInsets.only(bottom: bottomInset),
+            viewPadding: EdgeInsets.only(bottom: bottomInset),
+          ),
           child: child!,
         ),
         home: Scaffold(

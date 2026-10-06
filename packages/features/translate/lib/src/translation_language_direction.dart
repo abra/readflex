@@ -39,7 +39,7 @@ class TranslationLanguageDirection extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final sourceWidth = _labelWidth(context, sourceLabel);
+        final sourceWidth = _labelWidth(context, sourceLabel, flushStart: true);
         final targetWidth = _labelWidth(context, targetLabel);
         final stacked =
             sourceWidth + targetWidth + AppIconSize.sm + 2 * AppSpacing.xs >
@@ -58,6 +58,7 @@ class TranslationLanguageDirection extends StatelessWidget {
             selectedCode: sourceLanguageCode,
             enabled: enabled,
             includeAuto: true,
+            flushStart: true,
             onChanged: onSourceChanged,
           ),
         );
@@ -115,7 +116,11 @@ class TranslationLanguageDirection extends StatelessWidget {
   }
 }
 
-double _labelWidth(BuildContext context, String label) {
+double _labelWidth(
+  BuildContext context,
+  String label, {
+  bool flushStart = false,
+}) {
   // Measure only the two labels, including system scaling, to avoid clipped
   // language names or a stranded direction arrow when the controls wrap.
   final painter = TextPainter(
@@ -126,7 +131,7 @@ double _labelWidth(BuildContext context, String label) {
   )..layout();
   final width =
       painter.width.ceilToDouble() +
-      2 * _pickerPadding +
+      (flushStart ? 1 : 2) * _pickerPadding +
       _pickerIconGap +
       AppIconSize.xs;
   painter.dispose();
@@ -143,6 +148,7 @@ class _LanguageMenu extends StatelessWidget {
     required this.onChanged,
     this.controller,
     this.includeAuto = false,
+    this.flushStart = false,
     this.semanticsValue,
   });
 
@@ -154,6 +160,10 @@ class _LanguageMenu extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final MenuController? controller;
   final bool includeAuto;
+
+  /// Drops the leading ink inset so the label starts on the row's edge; the
+  /// trailing inset stays so the ink still clears the chevron.
+  final bool flushStart;
   final String? semanticsValue;
 
   @override
@@ -243,17 +253,19 @@ class _LanguageMenu extends StatelessWidget {
           child: TextButton(
             key: buttonKey,
             onPressed: enabled ? toggle : null,
+            // Colours and shape come from the text-button theme; only the
+            // compact label style, height and inset are picker-specific.
             style: TextButton.styleFrom(
-              foregroundColor: context.actionForeground,
-              backgroundColor: Colors.transparent,
               textStyle: context.text.bodySmall,
               minimumSize: const Size(0, AppSizes.buttonHeight),
-              padding: const EdgeInsets.symmetric(
-                horizontal: _pickerPadding,
-                vertical: AppSpacing.sm,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
+              // Start-aligned content keeps the label on the edge when the
+              // measured width rounds up; the symmetric picker stays centred.
+              alignment: flushStart ? AlignmentDirectional.centerStart : null,
+              padding: EdgeInsetsDirectional.only(
+                start: flushStart ? 0 : _pickerPadding,
+                end: _pickerPadding,
+                top: AppSpacing.sm,
+                bottom: AppSpacing.sm,
               ),
             ),
             child: Row(

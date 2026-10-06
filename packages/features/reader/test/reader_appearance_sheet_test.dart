@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show Tristate;
 
 import 'package:component_library/component_library.dart';
@@ -52,14 +53,16 @@ void main() {
     expect(find.text('Font'), findsOneWidget);
 
     expect(find.byKey(const ValueKey('reader-font-picker')), findsOneWidget);
-    expect(
-      tester.getTopLeft(find.byKey(const ValueKey('reader-font-picker'))).dx,
-      tester.getTopLeft(find.byKey(const ValueKey('reader-theme-presets'))).dx,
+    // The swatch grid bleeds its 4dp ink inset past the gutter the Font row
+    // sits on; the painted samples line up with the row.
+    final fontPicker = tester.getRect(
+      find.byKey(const ValueKey('reader-font-picker')),
     );
-    expect(
-      tester.getTopRight(find.byKey(const ValueKey('reader-font-picker'))).dx,
-      tester.getTopRight(find.byKey(const ValueKey('reader-theme-presets'))).dx,
+    final presets = tester.getRect(
+      find.byKey(const ValueKey('reader-theme-presets')),
     );
+    expect(fontPicker.left - presets.left, AppSpacing.xs);
+    expect(presets.right - fontPicker.right, AppSpacing.xs);
     expect(find.text('Literata'), findsOneWidget);
     expect(find.text('PT Serif'), findsNothing);
     expect(find.text('Open Sans'), findsNothing);
@@ -706,6 +709,88 @@ void main() {
       expect(tester.takeException(), isNull);
       semantics.dispose();
     });
+  }
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    testWidgets(
+      'theme samples, Font row and font options share the 24dp gutter $locale',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.openAppearanceSheet(cubit, locale: locale);
+        final rtl = locale.languageCode == 'ar';
+        final l10n = tester.element(find.byType(BottomSheet)).l10n;
+        double leading(Rect rect) => rtl ? 390 - rect.right : rect.left;
+        double trailing(Rect rect) => rtl ? rect.left : 390 - rect.right;
+
+        expect(leading(tester.getRect(find.text(l10n.readerTheme))), 24);
+        Rect sample(ReaderThemePreset preset) => tester.getRect(
+          find
+              .descendant(
+                of: find.byKey(ValueKey('reader-theme-swatch-${preset.id}')),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        Rect tile(ReaderThemePreset preset) => tester.getRect(
+          find.byKey(ValueKey('reader-theme-swatch-${preset.id}')),
+        );
+        final first = ReaderThemePreset.values.first;
+        // Sample border on the gutter; the ink tile bleeds 4dp past it.
+        expect(leading(sample(first)), AppSpacing.xl);
+        expect(leading(tile(first)), AppSpacing.xl - AppSpacing.xs);
+        expect(
+          ReaderThemePreset.values.map(sample).map(trailing).reduce(math.min),
+          AppSpacing.xl,
+        );
+        expect(
+          ReaderThemePreset.values.map(tile).map(trailing).reduce(math.min),
+          AppSpacing.xl - AppSpacing.xs,
+        );
+
+        final fontRow = find.byKey(const ValueKey('reader-font-picker'));
+        expect(leading(tester.getRect(fontRow)), AppSpacing.xl);
+        expect(trailing(tester.getRect(fontRow)), AppSpacing.xl);
+        expect(
+          leading(
+            tester.getRect(
+              find.descendant(
+                of: fontRow,
+                matching: find.text(l10n.readerFont),
+              ),
+            ),
+          ),
+          AppSpacing.xl,
+        );
+        expect(
+          leading(tester.getRect(find.text(l10n.readerFontSize))),
+          AppSpacing.xl,
+        );
+
+        await tester.openFontStep();
+        final selected = ReaderFontPreset.fromId(
+          cubit.state.effectiveAppearance.fontId,
+        );
+        final option = find.byKey(
+          ValueKey('reader-font-option-${selected.id}'),
+        );
+        final text = tester.getRect(
+          find.byKey(ValueKey('reader-font-${selected.id}')),
+        );
+        final check = tester.getRect(
+          find.descendant(of: option, matching: find.byIcon(AppIcons.check)),
+        );
+        expect(leading(text), AppSpacing.xl);
+        expect(check.size, const Size.square(AppIconSize.sm));
+        expect(trailing(check), AppSpacing.xl);
+        // The option's fill keeps its 8dp ink inset on both sides.
+        expect(leading(tester.getRect(option)), AppSpacing.xl - AppSpacing.sm);
+        expect(trailing(tester.getRect(option)), AppSpacing.xl - AppSpacing.sm);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   testWidgets('system Back returns from Font before closing the flow', (

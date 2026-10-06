@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +8,7 @@ import 'package:library_feature/src/library_bloc.dart';
 import 'package:library_feature/src/library_grid_view.dart';
 import 'package:library_feature/src/library_header.dart';
 import 'package:library_feature/src/library_layout.dart';
+import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_list_view.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -91,56 +94,127 @@ void main() {
   });
 
   group('content clears the FAB', () {
-    test('clearance covers the FAB, its lift and a content gap', () {
-      expect(
-        kLibraryContentBottomPadding,
-        56 + AppSpacing.sm + AppSpacing.lg + AppSpacing.lg,
-      );
-    });
-
-    testWidgets('list and grid use the clearance as bottom padding', (
-      tester,
-    ) async {
-      final controller = ScrollController();
-      addTearDown(controller.dispose);
-      await tester.pumpWidget(
-        host(
-          Column(
-            children: [
-              Expanded(
-                child: LibraryListView(
-                  sources: sources,
-                  selection: const LibrarySelectionState(),
-                  scrollController: controller,
-                  onSourcePressed: (_) {},
-                  onSourceLongPressed: (_) {},
-                  onConfirmSwipeDelete: (_) async => false,
-                ),
-              ),
-              Expanded(
-                child: LibraryGridView(
-                  sources: sources,
-                  selection: const LibrarySelectionState(),
-                  scrollController: ScrollController(),
-                  onSourcePressed: (_) {},
-                  onSourceLongPressed: (_) {},
-                ),
-              ),
-            ],
+    Widget bothLayouts(ScrollController controller) => Column(
+      children: [
+        Expanded(
+          child: LibraryListView(
+            sources: sources,
+            selection: const LibrarySelectionState(),
+            scrollController: controller,
+            onSourcePressed: (_) {},
+            onSourceLongPressed: (_) {},
+            onConfirmSwipeDelete: (_) async => false,
           ),
         ),
-      );
-      final list = tester.widget<ListView>(find.byType(ListView));
-      expect(
-        list.padding!.resolve(TextDirection.ltr).bottom,
-        kLibraryContentBottomPadding,
-      );
-      final grid = tester.widget<GridView>(find.byType(GridView));
-      expect(
-        grid.padding!.resolve(TextDirection.ltr).bottom,
-        kLibraryContentBottomPadding,
-      );
-    });
+        Expanded(
+          child: LibraryGridView(
+            sources: sources,
+            selection: const LibrarySelectionState(),
+            scrollController: ScrollController(),
+            onSourcePressed: (_) {},
+            onSourceLongPressed: (_) {},
+          ),
+        ),
+      ],
+    );
+
+    for (final (inset, expected) in [
+      (0.0, 96.0),
+      (16.0, 96.0),
+      (34.0, 114.0),
+      (48.0, 128.0),
+    ]) {
+      testWidgets('clearance covers the FAB, its lift, a content gap and the '
+          'safe inset beyond the margin: inset=$inset', (tester) async {
+        final controller = ScrollController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MediaQuery(
+            data: MediaQueryData(padding: EdgeInsets.only(bottom: inset)),
+            child: host(bothLayouts(controller)),
+          ),
+        );
+        final context = tester.element(find.byType(LibraryListView));
+        expect(libraryContentBottomPadding(context), expected);
+        expect(
+          libraryContentBottomPadding(context),
+          56 +
+              AppSpacing.sm +
+              AppSpacing.lg +
+              AppSpacing.lg +
+              math.max(0, inset - AppSpacing.lg),
+        );
+        final list = tester.widget<ListView>(find.byType(ListView));
+        expect(list.padding!.resolve(TextDirection.ltr).bottom, expected);
+        final grid = tester.widget<GridView>(find.byType(GridView));
+        expect(grid.padding!.resolve(TextDirection.ltr).bottom, expected);
+      });
+    }
+  });
+
+  testWidgets('list and grid rows start at the same offset and gutter', (
+    tester,
+  ) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    Widget layout(LibraryLayoutMode mode) => host(
+      SizedBox(
+        height: 400,
+        child: switch (mode) {
+          LibraryLayoutMode.list => LibraryListView(
+            sources: sources,
+            selection: const LibrarySelectionState(),
+            scrollController: controller,
+            onSourcePressed: (_) {},
+            onSourceLongPressed: (_) {},
+            onConfirmSwipeDelete: (_) async => false,
+          ),
+          LibraryLayoutMode.grid => LibraryGridView(
+            sources: sources,
+            selection: const LibrarySelectionState(),
+            scrollController: controller,
+            onSourcePressed: (_) {},
+            onSourceLongPressed: (_) {},
+          ),
+        },
+      ),
+    );
+    await tester.pumpWidget(layout(LibraryLayoutMode.list));
+    final listCover = tester.getRect(find.byType(AppSourceCoverFrame));
+    await tester.pumpWidget(layout(LibraryLayoutMode.grid));
+    final gridCover = tester.getRect(find.byType(AppSourceCoverFrame));
+    expect(listCover.left, AppSpacing.lg);
+    expect(gridCover.left, AppSpacing.lg);
+    expect(listCover.top, kLibraryContentTopPadding);
+    expect(gridCover.top, listCover.top);
+  });
+
+  testWidgets('grid covers sit on the 16dp gutter in RTL', (tester) async {
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.rtl,
+        child: host(
+          SizedBox(
+            height: 400,
+            child: Directionality(
+              textDirection: TextDirection.rtl,
+              child: LibraryGridView(
+                sources: sources,
+                selection: const LibrarySelectionState(),
+                scrollController: controller,
+                onSourcePressed: (_) {},
+                onSourceLongPressed: (_) {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    final cover = tester.getRect(find.byType(AppSourceCoverFrame));
+    expect(cover.right, 390 - AppSpacing.lg);
+    expect(cover.top, kLibraryContentTopPadding);
   });
 
   testWidgets('grid keeps three phone columns and grows on tablets', (

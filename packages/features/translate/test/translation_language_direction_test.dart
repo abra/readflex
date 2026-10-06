@@ -174,13 +174,96 @@ void main() {
     tester,
   ) async {
     await _pumpDirection(tester);
+    final theme = Theme.of(tester.element(find.byKey(_sourceKey)));
+    expect(theme.textButtonTheme.style?.backgroundColor, isNull);
     for (final key in [_sourceKey, _targetKey]) {
       final finder = find.byKey(key);
       final button = tester.widget<TextButton>(finder);
-      expect(button.style?.backgroundColor?.resolve({}), Colors.transparent);
+      expect(button.style?.backgroundColor, isNull);
       expect(tester.getSize(finder).height, AppSizes.buttonHeight);
     }
   });
+
+  testWidgets('pickers take shape and colours from the text-button theme', (
+    tester,
+  ) async {
+    await _pumpDirection(tester);
+    final context = tester.element(find.byKey(_sourceKey));
+    final themeStyle = Theme.of(context).textButtonTheme.style!;
+    expect(
+      themeStyle.shape!.resolve({}),
+      RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
+    );
+    for (final key in [_sourceKey, _targetKey]) {
+      final style = tester.widget<TextButton>(find.byKey(key)).style!;
+      expect(style.shape, isNull);
+      expect(style.backgroundColor, isNull);
+      expect(style.foregroundColor, isNull);
+      expect(style.side, isNull);
+      expect(style.textStyle!.resolve({}), context.text.bodySmall);
+      expect(
+        style.minimumSize!.resolve({}),
+        const Size(0, AppSizes.buttonHeight),
+      );
+    }
+  });
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    final rtl = locale.languageCode == 'ar';
+    testWidgets('source label starts on the content edge and the target '
+        'keeps symmetric ink: $locale', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await _pumpDirection(tester, locale: locale);
+      // The host pads by the sheet gutter, like `headerBottom`.
+      final host = tester.getRect(find.byType(TranslationLanguageDirection));
+      final source = find.byKey(_sourceKey);
+      final target = find.byKey(_targetKey);
+      final sourceLabel = tester.getRect(
+        find.descendant(of: source, matching: find.byType(Text)),
+      );
+      final targetButton = tester.getRect(target);
+      final targetLabel = tester.getRect(
+        find.descendant(of: target, matching: find.byType(Text)),
+      );
+      final targetChevron = tester.getRect(
+        find.descendant(of: target, matching: find.byType(Icon)),
+      );
+      // The measured width rounds up to whole pixels; the centred target
+      // picker splits that remainder, so its ink is symmetric within 0.5dp.
+      const rounding = 0.5;
+      if (rtl) {
+        expect(host.right, 390 - AppSpacing.xl);
+        expect(sourceLabel.right, host.right);
+        expect(
+          targetButton.right - targetLabel.right,
+          closeTo(AppSpacing.xxs, rounding),
+        );
+        expect(
+          targetChevron.left - targetButton.left,
+          closeTo(AppSpacing.xxs, rounding),
+        );
+      } else {
+        expect(host.left, AppSpacing.xl);
+        expect(sourceLabel.left, host.left);
+        expect(
+          targetLabel.left - targetButton.left,
+          closeTo(AppSpacing.xxs, rounding),
+        );
+        expect(
+          targetButton.right - targetChevron.right,
+          closeTo(AppSpacing.xxs, rounding),
+        );
+      }
+      expect(
+        tester.getSize(source).height,
+        greaterThanOrEqualTo(AppSizes.buttonHeight),
+      );
+      _expectNoTruncatedLabels(tester);
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   for (final brightness in Brightness.values) {
     testWidgets(
@@ -189,8 +272,8 @@ void main() {
         await _pumpDirection(tester, brightness: brightness);
         final finder = find.byKey(_sourceKey);
         final theme = Theme.of(tester.element(finder));
-        final button = tester.widget<TextButton>(finder);
-        final foreground = button.style!.foregroundColor!.resolve({})!;
+        final foreground = theme.textButtonTheme.style!.foregroundColor!
+            .resolve({})!;
         final background =
             theme.bottomSheetTheme.backgroundColor ?? theme.colorScheme.surface;
         final luminances = [
@@ -262,16 +345,20 @@ Future<void> _pumpDirection(
         child: child!,
       ),
       home: Scaffold(
+        // Full width inside the sheet gutter, like the `headerBottom` slot.
         body: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
-          child: TranslationLanguageDirection(
-            sourceLanguageCode: source,
-            targetLanguageCode: target,
-            detectedSourceLanguage: detectedSource,
-            enabled: enabled,
-            sourceMenu: MenuController(),
-            onSourceChanged: onSourceChanged ?? (_) {},
-            onTargetChanged: onTargetChanged ?? (_) {},
+          child: SizedBox(
+            width: double.infinity,
+            child: TranslationLanguageDirection(
+              sourceLanguageCode: source,
+              targetLanguageCode: target,
+              detectedSourceLanguage: detectedSource,
+              enabled: enabled,
+              sourceMenu: MenuController(),
+              onSourceChanged: onSourceChanged ?? (_) {},
+              onTargetChanged: onTargetChanged ?? (_) {},
+            ),
           ),
         ),
       ),

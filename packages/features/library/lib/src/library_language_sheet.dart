@@ -23,11 +23,13 @@ class LibraryLanguageSheet extends StatelessWidget {
     closeLabel: context.l10n.commonClose,
     onBack: onBack,
     backLabel: onBack == null ? null : context.l10n.commonBack,
-    // Options already include vertical padding inside their 48dp tap targets.
+    // Options already include vertical padding inside their 48dp tap targets,
+    // and their 8dp horizontal inset bleeds into the gutter so labels and
+    // checkmarks sit on the 24dp content edge.
     bodyPadding: const EdgeInsets.fromLTRB(
-      AppSpacing.xl,
+      AppSpacing.xl - _optionHorizontalPadding,
       0,
-      AppSpacing.xl,
+      AppSpacing.xl - _optionHorizontalPadding,
       AppSpacing.sm,
     ),
     child: _LanguageOptions(
@@ -37,8 +39,9 @@ class LibraryLanguageSheet extends StatelessWidget {
   );
 }
 
+const _optionHorizontalPadding = AppSpacing.sm;
 const _optionPadding = EdgeInsets.symmetric(
-  horizontal: AppSpacing.sm,
+  horizontal: _optionHorizontalPadding,
   vertical: AppSpacing.md,
 );
 const _checkmarkGap = AppSpacing.xs;

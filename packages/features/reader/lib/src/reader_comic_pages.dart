@@ -74,8 +74,12 @@ class _ComicPagesViewState extends State<_ComicPagesView> {
       final columns = (constraints.maxWidth / math.max(150, scale.scale(120)))
           .floor()
           .clamp(1, 4);
+      // 16dp drawer gutter around the grid, 12dp between tiles.
       final width =
-          (constraints.maxWidth - AppSpacing.md * (columns + 1)) / columns;
+          (constraints.maxWidth -
+              AppSpacing.lg * 2 -
+              AppSpacing.md * (columns - 1)) /
+          columns;
       final extent = width * 1.5 + scale.scale(24) + AppSpacing.md;
       final maxOffset = math.max(
         0.0,
@@ -87,7 +91,7 @@ class _ComicPagesViewState extends State<_ComicPagesView> {
           maxOffset,
           widget.currentIndex < columns
               ? 0
-              : AppSpacing.md +
+              : AppSpacing.lg +
                     (widget.currentIndex ~/ columns) * (extent + AppSpacing.md),
         ),
       );
@@ -100,10 +104,10 @@ class _ComicPagesViewState extends State<_ComicPagesView> {
           child: GridView.builder(
             controller: _scroll,
             padding: EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md + MediaQuery.paddingOf(context).bottom,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
             ),
             scrollCacheExtent: const ScrollCacheExtent.pixels(0),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(

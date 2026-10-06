@@ -35,12 +35,6 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryDiscardChangesBody => '对此收藏的更改尚未保存。';
 
   @override
-  String get libraryDiscardChanges => '放弃';
-
-  @override
-  String get libraryKeepEditing => '继续编辑';
-
-  @override
   String get readerSelectionStart => '选择起点';
 
   @override
@@ -256,6 +250,9 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get commonDelete => '删除';
+
+  @override
+  String get commonKeep => '保留';
 
   @override
   String get commonRetry => '重试';

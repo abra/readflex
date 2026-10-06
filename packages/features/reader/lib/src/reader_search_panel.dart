@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_directional_layout.dart';
+import 'reader_drawer_layout.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_search_cubit.dart';
 import 'reader_search_result_tile.dart';
@@ -44,10 +45,6 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
   // Builder tiles far from the current offset do not exist yet; each pass
   // jumps by the list's extrapolated extent before aligning precisely.
   static const _maxRevealPasses = 3;
-
-  // Content gutters align glyphs, not the outer edges of 48dp targets.
-  static const _actionEndPadding =
-      AppSpacing.lg - (AppSizes.buttonHeight - AppIconSize.sm) / 2;
 
   @override
   void initState() {
@@ -149,15 +146,9 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
               curve: Curves.easeOutCubic,
               child: Material(
                 color: context.colors.surface,
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.viewInsetsOf(context).bottom,
-                    ),
-                    child: _content(),
-                  ),
-                ),
+                // The list's bottom padding carries the keyboard inset, like
+                // the Contents drawer.
+                child: SafeArea(bottom: false, child: _content()),
               ),
             ),
           ),
@@ -175,7 +166,7 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
             padding: const EdgeInsetsDirectional.fromSTEB(
               AppSpacing.lg,
               AppSpacing.sm,
-              _actionEndPadding,
+              readerDrawerActionEndPadding,
               AppSpacing.xs,
             ),
             child: Row(
@@ -247,7 +238,7 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
   Widget _results(ReaderSearchState state) {
     final l10n = context.l10n;
     final bottom = EdgeInsets.only(
-      bottom: appBottomSafeInset(context) + AppSpacing.md,
+      bottom: readerDrawerListBottomPadding(context),
     );
     if (state.results.isNotEmpty) {
       return ListView.builder(
@@ -293,7 +284,7 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
             contentPadding: const EdgeInsetsDirectional.fromSTEB(
               AppSpacing.lg,
               AppSpacing.xs,
-              _actionEndPadding,
+              readerDrawerActionEndPadding,
               AppSpacing.xs,
             ),
             leading: Icon(
@@ -313,6 +304,7 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
             trailing: AppPlainIconButton(
               tooltip: l10n.readerRemoveFromHistory,
               icon: AppIcons.delete,
+              color: context.colors.onSurfaceVariant,
               onPressed: () =>
                   context.read<ReaderSearchCubit>().recentQueryRemoved(query),
             ),

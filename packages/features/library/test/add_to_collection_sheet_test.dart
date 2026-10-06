@@ -17,6 +17,7 @@ void main() {
     double inset = 0,
     double scale = 1,
     int count = 7,
+    Locale locale = const Locale('en'),
   }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -39,6 +40,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
+        locale: locale,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         builder: (context, child) => MediaQuery(
@@ -76,7 +78,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(find.text('Create and add').hitTestable(), findsOneWidget);
-      expect(find.text('Cancel').hitTestable(), findsOneWidget);
+      expect(find.byType(OutlinedButton), findsNothing);
       expect(
         tester.getBottomLeft(find.text('Create and add')).dy,
         lessThan(844 - 320),
@@ -483,5 +485,203 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Collection 0'), findsOneWidget);
     expect(find.byType(BottomSheet), findsOneWidget);
+  });
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    testWidgets('destination rows, dividers and counts share the picker\'s '
+        'gutters ($locale)', (tester) async {
+      final repository = FakeCollectionRepository()
+        ..seedCollectionSourceIds({
+          '0': {'book'},
+        });
+      await open(tester, repository, count: 2, locale: locale);
+      final rtl = locale.languageCode == 'ar';
+      final sheet = tester.getRect(find.byType(BottomSheet));
+      double start(Rect r) => rtl ? sheet.right - r.right : r.left - sheet.left;
+      double end(Rect r) => rtl ? r.left - sheet.left : sheet.right - r.right;
+      final strings = tester.element(find.byType(BottomSheet)).l10n;
+
+      final title = tester.getRect(
+        find.text(strings.libraryAddToCollectionTitle),
+      );
+      final favouritesIcon = tester.getRect(
+        find.byIcon(AppIcons.collectionFavourites),
+      );
+      final collectionIcon = tester.getRect(
+        find.byIcon(AppIcons.collection).first,
+      );
+      final newRow = find.byKey(const ValueKey('libraryNewCollectionRow'));
+      final newIcon = tester.getRect(
+        find.descendant(
+          of: newRow,
+          matching: find.byIcon(AppIcons.collectionAdd),
+        ),
+      );
+      expect(start(title), AppSpacing.xl);
+      expect(start(favouritesIcon), closeTo(AppSpacing.xl, .01));
+      expect(start(collectionIcon), closeTo(AppSpacing.xl, .01));
+      expect(start(newIcon), closeTo(AppSpacing.xl, .01));
+      final dividers = find.byType(Divider).evaluate().toList();
+      expect(dividers, hasLength(2));
+      for (final element in dividers) {
+        final box = element.renderObject! as RenderBox;
+        final rect = box.localToGlobal(Offset.zero) & box.size;
+        expect(start(rect), closeTo(AppSpacing.xl, .01));
+        expect(end(rect), closeTo(AppSpacing.xl, .01));
+      }
+      // Ink bleeds 4dp past the content on both sides.
+      final row = find
+          .ancestor(
+            of: find.text('Collection 1'),
+            matching: find.byType(InkWell),
+          )
+          .first;
+      final rowRect = tester.getRect(row);
+      expect(start(rowRect), closeTo(AppSpacing.xl - AppSpacing.xs, .01));
+      expect(
+        end(rowRect),
+        closeTo(AppSpacing.xl - AppSpacing.xs - AppSizes.iconActionOutset, .01),
+      );
+      // The check glyph ends on the gutter like the picker's menu glyph and
+      // counts end 12dp before that 48dp slot.
+      final check = tester.getRect(find.byIcon(AppIcons.check));
+      expect(end(check), closeTo(AppSpacing.xl, .01));
+      final countEnd =
+          AppSpacing.xl +
+          AppIconSize.sm +
+          AppSizes.iconActionOutset +
+          AppSpacing.md;
+      for (final count in tester.widgetList<Text>(find.text('0'))) {
+        expect(
+          end(tester.getRect(find.byWidget(count))),
+          closeTo(countEnd, .01),
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('Create and add shows a busy spinner instead of a progress '
+      'strip and disables the command without resizing it', (tester) async {
+    final repository = FakeCollectionRepository();
+    final cubit = await open(tester, repository);
+    final gate = Completer<void>();
+    repository.writeGate = gate;
+    await tester.tap(find.text('New collection'));
+    await tester.pumpAndSettle();
+    final layout = tester.widget<ActionBottomSheetLayout>(
+      find.byKey(const ValueKey('addToCollectionCreateStep')),
+    );
+    expect(layout.footer, isNotNull);
+    expect(layout.footerPadding, ActionBottomSheetLayout.defaultFooterPadding);
+    expect(layout.bodyPadding.vertical, AppSpacing.lg);
+    await tester.enterText(find.byType(TextField), 'Research');
+    await tester.pump();
+    final create = find.widgetWithText(FilledButton, 'Create and add');
+    expect(find.byType(OutlinedButton), findsNothing);
+    expect(tester.widget<FilledButton>(create).onPressed, isNotNull);
+    final createRect = tester.getRect(create);
+    await tester.tap(find.text('Create and add'));
+    await tester.pump();
+    expect(cubit.state.isBusy, isTrue);
+    // No strip over the form; the hidden destination step keeps its own.
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('addToCollectionCreateStep')),
+        matching: find.byType(LinearProgressIndicator),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: create,
+        matching: find.byType(ButtonLoadingIndicator),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<AppBusyButtonLabel>(
+            find.descendant(
+              of: create,
+              matching: find.byType(AppBusyButtonLabel),
+            ),
+          )
+          .busy,
+      isTrue,
+    );
+    expect(tester.widget<FilledButton>(create).onPressed, isNull);
+    expect(tester.getRect(create), createRect);
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(repository.addedSourceIdsByCollection.values.single, {'book'});
+  });
+
+  testWidgets('create step shows one full-width command on the 24dp gutters '
+      'and no secondary', (tester) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      await openForm(tester);
+      final step = find.byKey(const ValueKey('addToCollectionCreateStep'));
+      final layout = tester.widget<ActionBottomSheetLayout>(step);
+      expect(layout.footer, isA<Widget>());
+      expect(
+        layout.footerPadding,
+        ActionBottomSheetLayout.defaultFooterPadding,
+      );
+      expect(
+        find.descendant(of: step, matching: find.byType(FilledButton)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: step, matching: find.byType(OutlinedButton)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: step, matching: find.byType(AppSheetActions)),
+        findsNothing,
+      );
+      expect(find.text('Cancel'), findsNothing);
+      final create = tester.getRect(
+        find.widgetWithText(FilledButton, 'Create and add'),
+      );
+      expect(create.left, closeTo(AppSpacing.xl, .01));
+      expect(create.right, closeTo(390 - AppSpacing.xl, .01));
+      expect(create.height, AppSizes.buttonHeight);
+      // 16dp footer inset plus the route's max(16, safe inset).
+      expect(844 - create.bottom, closeTo(AppSpacing.lg * 2, .01));
+      // Leaving stays with the header: Back and Close are both present (the
+      // offstage destination step keeps its own, non-interactive Close).
+      expect(find.byTooltip('Back').hitTestable(), findsOneWidget);
+      expect(find.byTooltip('Close').hitTestable(), findsOneWidget);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  testWidgets('create step: Close with a draft still asks, Keep editing '
+      'closes only the decision', (tester) async {
+    await openForm(tester, draft: 'Draft');
+    await tester.tap(find.byTooltip('Close').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Discard changes?'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Keep editing'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Discard'), findsOneWidget);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
+    // Header Back from the form is a step back that keeps the draft.
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(find.text('Collection 0'), findsOneWidget);
+    await tester.tap(find.text('New collection'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
   });
 }

@@ -144,6 +144,61 @@ void main() {
     expect(find.text('Plain'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  group('AppSheetDismissRegistry', () {
+    test('the latest hold wins and releases fall back to earlier holders', () {
+      final registry = AppSheetDismissRegistry();
+      final first = Object();
+      final second = Object();
+      void onFirst() {}
+      void onSecond() {}
+
+      registry.hold(first, onFirst);
+      registry.hold(second, onSecond);
+      expect(registry.value, onSecond);
+
+      registry.release(first);
+      expect(registry.value, onSecond);
+      expect(registry.guarded, isTrue);
+
+      registry.release(second);
+      expect(registry.value, isNull);
+      expect(registry.guarded, isFalse);
+    });
+
+    test('a release after a later hold keeps the newer guard', () {
+      final registry = AppSheetDismissRegistry();
+      final previous = Object();
+      final next = Object();
+      void onPrevious() {}
+      void onNext() {}
+
+      // Step change: the next guard publishes before the previous one is
+      // disposed, in either order.
+      registry.hold(next, onNext);
+      registry.hold(previous, onPrevious);
+      registry.release(previous);
+      expect(registry.value, onNext);
+
+      registry.release(Object());
+      expect(registry.value, onNext);
+      registry.dispose();
+    });
+
+    test('re-holding an owner moves it to the front', () {
+      final registry = AppSheetDismissRegistry();
+      final a = Object();
+      final b = Object();
+      void onA() {}
+      void onB() {}
+      registry.hold(a, onA);
+      registry.hold(b, onB);
+      registry.hold(a, onA);
+      expect(registry.value, onA);
+      registry.release(a);
+      expect(registry.value, onB);
+    });
+  });
 }
 
 class _GuardedBody extends StatefulWidget {

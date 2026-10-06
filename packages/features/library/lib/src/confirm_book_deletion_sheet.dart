@@ -6,7 +6,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 /// Confirmation bottom sheet shown before deleting a library item.
 ///
 /// The sheet returns one of:
-///   * `null` — user cancelled (Cancel button, scrim tap, system back).
+///   * `null` — user kept the items (Keep button, scrim tap, system back).
 ///   * [BookDeletionScope.keepLearningData] — user confirmed deletion.
 ///
 /// Wording is count-aware: `count == 1` shows the singular phrasing,
@@ -35,25 +35,18 @@ class _ConfirmBookDeletionSheet extends StatelessWidget {
       closeLabel: l10n.commonClose,
       onClose: () => Navigator.of(context).pop(),
       constrainBody: true,
+      footer: AppSheetActions(
+        primaryLabel: l10n.commonKeep,
+        onPrimary: () => Navigator.of(context).pop(),
+        secondaryLabel: l10n.commonDelete,
+        onSecondary: () =>
+            Navigator.of(context).pop(BookDeletionScope.keepLearningData),
+        destructiveSecondary: true,
+      ),
       child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.libraryDeleteItemsBody(count),
-              style: context.text.bodyMedium,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AppSheetActions(
-              primaryLabel: l10n.commonCancel,
-              onPrimary: () => Navigator.of(context).pop(),
-              secondaryLabel: l10n.commonDelete,
-              onSecondary: () =>
-                  Navigator.of(context).pop(BookDeletionScope.keepLearningData),
-              destructiveSecondary: true,
-            ),
-          ],
+        child: Text(
+          l10n.libraryDeleteItemsBody(count),
+          style: context.text.bodyMedium,
         ),
       ),
     );

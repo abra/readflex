@@ -41,6 +41,7 @@ class FakeCollectionRepository implements CollectionRepository {
     required String name,
     required Iterable<String> sourceIds,
   }) async {
+    await writeGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     final collection = LibraryCollection(
       id: 'collection-${_collections.length + 1}',
@@ -139,6 +140,7 @@ class FakeCollectionRepository implements CollectionRepository {
     String? name,
     Iterable<String> removedSourceIds = const [],
   }) async {
+    await writeGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     if (name != null) {
       await renameCollection(collectionId: collectionId, name: name);
@@ -162,6 +164,7 @@ class FakeCollectionRepository implements CollectionRepository {
   Future<void> removeSourcesFromFavourites({
     required Iterable<String> sourceIds,
   }) async {
+    await writeGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     addedSourceIdsByCollection[CollectionRepository.favouritesCollectionId]
         ?.removeAll(sourceIds.toSet());

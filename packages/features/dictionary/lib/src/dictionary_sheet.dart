@@ -255,14 +255,19 @@ class _DictionaryEntryView extends StatelessWidget {
                 metadata,
               ],
               const SizedBox(height: AppSpacing.md),
-              for (var index = 0; index < entry.definitions.length; index++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: _DefinitionView(
-                    number: index + 1,
-                    definition: entry.definitions[index],
-                  ),
-                ),
+              // Spacing between definitions only, so the last one ends the
+              // entry and the sheet keeps its 16dp bottom inset.
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: AppSpacing.md,
+                children: [
+                  for (var index = 0; index < entry.definitions.length; index++)
+                    _DefinitionView(
+                      number: index + 1,
+                      definition: entry.definitions[index],
+                    ),
+                ],
+              ),
             ],
           ),
         ),

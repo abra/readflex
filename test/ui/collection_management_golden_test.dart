@@ -87,16 +87,17 @@ void main() {
       await expectUiGolden(tester, profile, 'collection-undo');
       await tapUi(tester, undo);
       expect(find.byIcon(AppIcons.undo), findsNothing);
-      if (profile == VisualProfile.largeText) {
-        final save = tester.getRect(
-          find.widgetWithText(FilledButton, strings.commonSave),
-        );
-        final cancel = tester.getRect(
-          find.widgetWithText(OutlinedButton, strings.commonCancel),
-        );
-        expect(save.bottom, lessThan(cancel.top));
-        expect(save.width, greaterThan(profile.size.width * 0.75));
-      }
+      // One full-width Save; leaving is the header's job.
+      final save = tester.getRect(
+        find.widgetWithText(FilledButton, strings.commonSave),
+      );
+      // Wide profiles cap the sheet content; the header spans that content.
+      expect(
+        save.width,
+        tester.getRect(find.byType(BottomSheetHeader)).width -
+            2 * AppSpacing.xl,
+      );
+      expect(find.byType(OutlinedButton), findsNothing);
       final field = find.descendant(
         of: sheet,
         matching: find.byType(TextField),
@@ -110,7 +111,7 @@ void main() {
       await tester.enterText(field, 'Changed');
       await tapUi(tester, find.byTooltip(strings.commonClose));
       await expectUiGolden(tester, profile, 'collection-discard');
-      await tapUi(tester, find.text(strings.libraryKeepEditing));
+      await tapUi(tester, find.text(strings.commonKeepEditing));
       expect(find.widgetWithText(TextField, 'Changed'), findsOneWidget);
       await unmountUi(tester);
     }, tags: ['golden']);

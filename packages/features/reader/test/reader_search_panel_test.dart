@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:reader/src/reader_drawer_layout.dart';
 import 'package:reader/src/reader_drawer_messages.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_navigation_bar.dart';
@@ -473,6 +474,15 @@ void main() {
                 : progress.left - returnLabel.right,
             12,
           );
+          // The Close target extends into the gutter so its glyph ends on
+          // the 16dp line shared with the return row's percentage.
+          final closeIcon = tester.getRect(find.byIcon(AppIcons.close));
+          expect(closeIcon.size, const Size.square(AppIconSize.sm));
+          expect(
+            rtl ? closeIcon.left : closeIcon.right,
+            rtl ? progress.left : progress.right,
+          );
+          expect(rtl ? closeIcon.left : 390 - closeIcon.right, AppSpacing.lg);
           expect(tester.takeException(), isNull);
         },
       );
@@ -874,7 +884,63 @@ void main() {
     final removeIcon = tester.getRect(find.byIcon(AppIcons.delete));
     expect(removeIcon.size, const Size.square(AppIconSize.sm));
     expect(removeIcon.right, closeIcon.right);
+    // Inline row removal is muted like the other row delete glyphs.
+    final remove = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byIcon(AppIcons.delete),
+        matching: find.byType(IconButton),
+      ),
+    );
+    expect(
+      remove.style?.foregroundColor?.resolve({}),
+      tester.element(find.byType(SearchField)).colors.onSurfaceVariant,
+    );
   });
+
+  for (final (safe, keyboard) in [(0.0, 0.0), (34.0, 0.0), (0.0, 300.0)]) {
+    testWidgets(
+      'result list bottom padding follows the drawer formula '
+      'safe=$safe keyboard=$keyboard',
+      (tester) async {
+        viewport(tester, const Size(390, 844));
+        final cubit = await seed(tester, count: 3);
+        await tester.pumpWidget(
+          _app(
+            cubit: cubit,
+            inset: keyboard,
+            safePadding: EdgeInsets.only(bottom: safe),
+            child: ReaderSearchPanel(
+              visible: true,
+              format: BookFormat.epub,
+              pageProgressionRtl: false,
+              onClose: () {},
+              onResultSelected: (_) {},
+              onSearch: (_) => const Stream.empty(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final list = tester.widget<ListView>(find.byType(ListView));
+        expect(
+          list.padding,
+          EdgeInsets.only(
+            bottom: readerDrawerListBottomPadding(
+              tester.element(find.byType(ListView)),
+            ),
+          ),
+        );
+        expect(
+          list.padding,
+          EdgeInsets.only(bottom: safe + keyboard + AppSpacing.lg),
+        );
+        // The panel itself no longer pads for the keyboard; the list does.
+        expect(
+          tester.getRect(find.byType(ReaderSearchPanel)).bottom,
+          844,
+        );
+      },
+    );
+  }
 
   for (final rtl in [false, true]) {
     testWidgets('hidden search panel slides toward the leading edge rtl=$rtl', (

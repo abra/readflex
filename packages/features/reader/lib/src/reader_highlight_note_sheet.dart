@@ -77,6 +77,9 @@ class _ReaderHighlightNoteSheetState extends State<ReaderHighlightNoteSheet> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final note = _normalize(_controller.text);
+    final VoidCallback? onSave = note != _initialNote
+        ? () => Navigator.of(context).pop(ReaderHighlightNoteResult(note))
+        : null;
     return PopScope<ReaderHighlightNoteResult>(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -99,49 +102,42 @@ class _ReaderHighlightNoteSheetState extends State<ReaderHighlightNoteSheet> {
         backLabel: _confirmDiscard ? l10n.commonBack : null,
         onBack: _confirmDiscard ? _keepEditing : null,
         constrainBody: true,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Retain the draft and the form height while confirming dismissal.
-              TextField(
-                controller: _controller,
-                enabled: !_confirmDiscard,
-                minLines: 3,
-                maxLines: 4,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  hintText: l10n.readerCommentHint,
-                  isDense: true,
-                ),
+        // Commands live in the footer slot so the body-to-command gap and the
+        // bottom inset follow the shared sheet rhythm.
+        footer: _confirmDiscard
+            ? AppSheetActions(
+                primaryLabel: l10n.commonKeepEditing,
+                onPrimary: _keepEditing,
+                secondaryLabel: l10n.commonDiscardChanges,
+                destructiveSecondary: true,
+                onSecondary: () => Navigator.of(context).pop(_discardResult),
+              )
+            : widget.existingHighlight
+            ? FilledButton(
+                onPressed: onSave,
+                child: AppButtonLabel(l10n.commonSave),
+              )
+            // Skip keeps the new highlight without a note, unlike Close, which
+            // pops null and saves nothing.
+            : AppSheetActions(
+                primaryLabel: l10n.commonSave,
+                onPrimary: onSave,
+                secondaryLabel: l10n.readerSkip,
+                onSecondary: () =>
+                    _requestExit(const ReaderHighlightNoteResult(null)),
               ),
-              const SizedBox(height: AppSpacing.md),
-              if (_confirmDiscard)
-                AppSheetActions(
-                  primaryLabel: l10n.commonKeepEditing,
-                  onPrimary: _keepEditing,
-                  secondaryLabel: l10n.commonDiscardChanges,
-                  onSecondary: () => Navigator.of(context).pop(_discardResult),
-                )
-              else
-                AppSheetActions(
-                  primaryLabel: l10n.commonSave,
-                  onPrimary: note != _initialNote
-                      ? () => Navigator.of(
-                          context,
-                        ).pop(ReaderHighlightNoteResult(note))
-                      : null,
-                  secondaryLabel: widget.existingHighlight
-                      ? l10n.commonCancel
-                      : l10n.readerSkip,
-                  onSecondary: () => _requestExit(
-                    widget.existingHighlight
-                        ? null
-                        : const ReaderHighlightNoteResult(null),
-                  ),
-                ),
-            ],
+        child: SingleChildScrollView(
+          // Retain the draft and the form height while confirming dismissal.
+          child: TextField(
+            controller: _controller,
+            enabled: !_confirmDiscard,
+            minLines: 3,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              hintText: l10n.readerCommentHint,
+              isDense: true,
+            ),
           ),
         ),
       ),

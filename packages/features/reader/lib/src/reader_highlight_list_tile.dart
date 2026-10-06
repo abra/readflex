@@ -7,6 +7,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'reader_directional_layout.dart';
 import 'reader_drawer_layout.dart';
 import 'reader_highlight_color.dart';
+import 'reader_highlight_expand_button.dart';
 import 'reader_highlight_location_label.dart';
 import 'reader_image_highlight_list_tile.dart';
 
@@ -93,9 +94,11 @@ class ReaderHighlightListTile extends StatelessWidget {
           hint: hasLocation ? l10n.readerGoToPassage : null,
           child: InkWell(
             onTap: hasLocation ? onNavigate : null,
+            // The body owns the leading gutter so Read more can bleed its
+            // ink into it.
             child: Padding(
               padding: EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.lg,
+                0,
                 AppSpacing.lg,
                 removed ? readerDrawerActionEndPadding : AppSpacing.lg,
                 AppSpacing.lg,
@@ -185,6 +188,7 @@ class _ReaderHighlightTileBody extends StatelessWidget {
     final l10n = context.l10n;
     final note = this.note;
     final hasNote = note != null;
+    const gutter = EdgeInsetsDirectional.only(start: AppSpacing.lg);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -192,6 +196,10 @@ class _ReaderHighlightTileBody extends StatelessWidget {
           builder: (context, constraints) {
             // Only materialized list rows are measured. Use the actual width,
             // font and scaler, not a character-count approximation of truncation.
+            final textWidth = (constraints.maxWidth - AppSpacing.lg).clamp(
+              0.0,
+              double.infinity,
+            );
             final painter =
                 TextPainter(
                   text: TextSpan(text: quote, style: style),
@@ -200,7 +208,7 @@ class _ReaderHighlightTileBody extends StatelessWidget {
                   locale: Localizations.localeOf(context),
                   maxLines: 3,
                 )..layout(
-                  maxWidth: (constraints.maxWidth - AppSpacing.md - 3).clamp(
+                  maxWidth: (textWidth - AppSpacing.md - 3).clamp(
                     0,
                     double.infinity,
                   ),
@@ -217,7 +225,7 @@ class _ReaderHighlightTileBody extends StatelessWidget {
                 textScaler: MediaQuery.textScalerOf(context),
                 locale: Localizations.localeOf(context),
                 maxLines: 2,
-              )..layout(maxWidth: constraints.maxWidth);
+              )..layout(maxWidth: textWidth);
               canExpand |= notePainter.didExceedMaxLines;
               notePainter.dispose();
             }
@@ -226,33 +234,36 @@ class _ReaderHighlightTileBody extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Directionality(
-                  textDirection: direction,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      border: BorderDirectional(
-                        start: BorderSide(width: 3, color: color),
+                Padding(
+                  padding: gutter,
+                  child: Directionality(
+                    textDirection: direction,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: BorderDirectional(
+                          start: BorderSide(width: 3, color: color),
+                        ),
                       ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.only(
-                        start: AppSpacing.md,
-                      ),
-                      child: Text(
-                        quote,
-                        style: style,
-                        textDirection: direction,
-                        textAlign: align,
-                        maxLines: expanded ? null : 3,
-                        overflow: expanded ? null : TextOverflow.ellipsis,
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          start: AppSpacing.md,
+                        ),
+                        child: Text(
+                          quote,
+                          style: style,
+                          textDirection: direction,
+                          textAlign: align,
+                          maxLines: expanded ? null : 3,
+                          overflow: expanded ? null : TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ),
                 ),
                 if (hasNote)
                   Padding(
-                    padding: const EdgeInsets.only(
-                      top: AppSpacing.sm,
+                    padding: gutter.add(
+                      const EdgeInsets.only(top: AppSpacing.sm),
                     ),
                     child: Text(
                       note,
@@ -268,13 +279,9 @@ class _ReaderHighlightTileBody extends StatelessWidget {
                 if (canExpand)
                   Align(
                     alignment: AlignmentDirectional.centerStart,
-                    child: TextButton(
+                    child: ReaderHighlightExpandButton(
+                      expanded: expanded,
                       onPressed: onExpanded,
-                      child: Text(
-                        expanded
-                            ? l10n.readerCollapseHighlight
-                            : l10n.readerExpandHighlight,
-                      ),
                     ),
                   ),
               ],
@@ -283,7 +290,7 @@ class _ReaderHighlightTileBody extends StatelessWidget {
         ),
         if (location != null || !hasLocation)
           Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            padding: gutter.add(const EdgeInsets.only(top: AppSpacing.sm)),
             child: Text(
               [
                 ?location,

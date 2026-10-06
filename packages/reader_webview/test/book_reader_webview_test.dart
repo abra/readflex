@@ -178,8 +178,10 @@ void main() {
       expect(bookJs, contains('window.setImageAreaSelectionPreviewRetained'));
       expect(bookJs, contains('isImageAreaDraftRetained()'));
       expect(bookJs, contains('setImageAreaDraftRetained'));
-      expect(bookJs, contains('containedHighlightIdsForRange'));
-      expect(bookJs, contains('containedHighlightIds'));
+      // A selection reports the merge plan for saving it as a highlight.
+      expect(bookJs, contains('highlightMergeForRange'));
+      expect(bookJs, contains('planHighlightMerge'));
+      expect(bookJs, isNot(contains('containedHighlightIds')));
       expect(bookJs, contains('installNativeTextActionMenuGuard(doc)'));
       expect(
         bookJs,
@@ -611,6 +613,15 @@ void main() {
       expect(articleReader, contains('this.onHighlightTapped'));
       expect(articleReader, contains('void _syncHighlights()'));
       expect(articleReader, contains("label: 'setArticleHighlights'"));
+      final articleHtmlSource = _readPackageSource(
+        'assets/article-html/index.html',
+      );
+      expect(articleHtmlSource, contains('function articleHighlightMerge('));
+      expect(articleHtmlSource, isNot(contains('containedHighlightIds')));
+      // Search results and saved highlights take different shell entries.
+      expect(articleReader, contains("label: 'goToSearchResult'"));
+      expect(articleReader, contains(r"window.goToSearchResult($escaped)"));
+      expect(articleReader, contains(r"window.goToCfi($escaped)"));
       expect(
         articleReader,
         contains('onTextSelected: (selection) =>'),
@@ -1019,10 +1030,19 @@ void main() {
         ),
       );
       expect(html, contains('window.goToCfi = value =>'));
+      // Saved highlights navigate; only search results become the active
+      // match, painted without rewriting the article text.
+      expect(html, contains('window.goToSearchResult = value =>'));
+      expect(
+        html,
+        contains("searchActiveHighlightName = 'readflex-search-active'"),
+      );
+      expect(html, isNot(contains('extractContents')));
+      expect(html, isNot(contains('insertNode')));
+      expect(html, isNot(contains('mark.readflex-search-match')));
       expect(html, contains('window.startSearch = startSearch'));
       expect(html, contains('window.toggleBookmarkHere = () =>'));
       expect(html, contains('window.setArticleBookmarks = bookmarks =>'));
-      expect(html, contains('mark.readflex-search-match'));
       expect(html, contains('var(--rf-search-active-background'));
       expect(html, contains('readflex_shell_constants.js'));
       expect(html, contains('searchHighlightRootCSS()'));
@@ -1034,7 +1054,10 @@ void main() {
         contains('matchPrefix: text.slice(prefixStart, matchIndex)'),
       );
       expect(html, contains('function contextMatchOffset('));
-      expect(html, contains('setActiveSearchElement(target, decoded, value)'));
+      expect(
+        html,
+        contains('setActiveSearchMatch(found.target, found.range, value)'),
+      );
       expect(html, contains('textRangeForNormalizedOffset'));
       expect(
         html,
@@ -1812,7 +1835,7 @@ void main() {
     });
 
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_154');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_157');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

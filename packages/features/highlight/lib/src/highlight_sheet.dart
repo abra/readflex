@@ -10,6 +10,10 @@ import 'package:shared/shared.dart';
 import 'highlight_color_resolver.dart';
 import 'highlight_cubit.dart';
 
+/// How far a swatch's 48dp circular target extends past its painted circle
+/// (the default `AppColorSwatchButton` sample is `AppSizes.chipHeight`).
+const _swatchOutset = (AppSizes.buttonHeight - AppSizes.chipHeight) / 2;
+
 /// Opens the standalone [HighlightSheet] as a modal bottom sheet.
 Future<void> showHighlightSheet(
   BuildContext context, {
@@ -132,6 +136,7 @@ class _HighlightSheetViewState extends State<_HighlightSheetView> {
                 ? _HighlightDiscardStep(
                     onKeepEditing: _keepEditing,
                     onDiscard: () => Navigator.of(context).pop(),
+                    onClose: _requestClose,
                   )
                 : _HighlightFormStep(
                     selection: widget.selection,
@@ -147,14 +152,20 @@ class _HighlightSheetViewState extends State<_HighlightSheetView> {
   }
 }
 
+/// Discard decision for a typed note, shaped like Import's discard step:
+/// header Back and Close, commands in the footer. Close keeps the decision
+/// visible until the user chooses. There is no localized body copy for a
+/// highlight note yet, so the body stays empty.
 class _HighlightDiscardStep extends StatelessWidget {
   const _HighlightDiscardStep({
     required this.onKeepEditing,
     required this.onDiscard,
+    required this.onClose,
   });
 
   final VoidCallback onKeepEditing;
   final VoidCallback onDiscard;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -163,13 +174,18 @@ class _HighlightDiscardStep extends StatelessWidget {
       title: l10n.commonDiscardChangesTitle,
       onBack: onKeepEditing,
       backLabel: l10n.commonBack,
-      child: AppSheetActions(
+      onClose: onClose,
+      closeLabel: l10n.commonClose,
+      constrainBody: true,
+      bodyPadding: EdgeInsets.zero,
+      footer: AppSheetActions(
         primaryLabel: l10n.commonKeepEditing,
         onPrimary: onKeepEditing,
         secondaryLabel: l10n.commonDiscardChanges,
         onSecondary: onDiscard,
         destructiveSecondary: true,
       ),
+      child: const SizedBox.shrink(),
     );
   }
 }
@@ -204,7 +220,8 @@ class _HighlightFormStep extends StatelessWidget {
       closeLabel: l10n.commonClose,
       onClose: isSaving ? null : onClose,
       constrainBody: true,
-      bodyPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      // Each body row owns the gutter so the swatch row can outset into it.
+      bodyPadding: EdgeInsets.zero,
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -236,9 +253,7 @@ class _HighlightFormStep extends StatelessWidget {
                     progress: selection.progress,
                     chapterTitle: selection.chapterTitle,
                   ),
-            child: isSaving
-                ? const ButtonLoadingIndicator()
-                : AppButtonLabel(l10n.commonSave),
+            child: AppBusyButtonLabel(l10n.commonSave, busy: isSaving),
           ),
         ],
       ),
@@ -247,43 +262,56 @@ class _HighlightFormStep extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SelectionPreviewCard(
-              text: text,
-              textDirection: Bidi.detectRtlDirectionality(text)
-                  ? TextDirection.rtl
-                  : TextDirection.ltr,
-              backgroundColor: swatchFor(
-                state.selectedColor,
-              ).withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                for (final color in HighlightColor.values)
-                  AppColorSwatchButton(
-                    key: ValueKey('highlightColorSemantics-${color.name}'),
-                    color: swatchFor(color),
-                    selected: state.selectedColor == color,
-                    tooltip: _labelForHighlightColor(l10n, color),
-                    semanticsLabel: l10n.highlightColorSemantics(
-                      _labelForHighlightColor(l10n, color),
-                    ),
-                    onTapHint: l10n.highlightSelectColor,
-                    onPressed: isSaving ? null : () => cubit.setColor(color),
-                  ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: noteController,
-              decoration: InputDecoration(
-                hintText: l10n.highlightNoteHint,
-                isDense: true,
+            Padding(
+              padding: _gutter,
+              child: SelectionPreviewCard(
+                text: text,
+                textDirection: Bidi.detectRtlDirectionality(text)
+                    ? TextDirection.rtl
+                    : TextDirection.ltr,
+                backgroundColor: swatchFor(
+                  state.selectedColor,
+                ).withValues(alpha: 0.3),
               ),
-              maxLines: 2,
-              enabled: !isSaving,
-              onChanged: cubit.setNote,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Outset by the target inset so the first and last painted
+            // circles sit on the gutter like the preview and the field.
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl - _swatchOutset,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  for (final color in HighlightColor.values)
+                    AppColorSwatchButton(
+                      key: ValueKey('highlightColorSemantics-${color.name}'),
+                      color: swatchFor(color),
+                      selected: state.selectedColor == color,
+                      tooltip: _labelForHighlightColor(l10n, color),
+                      semanticsLabel: l10n.highlightColorSemantics(
+                        _labelForHighlightColor(l10n, color),
+                      ),
+                      onTapHint: l10n.highlightSelectColor,
+                      onPressed: isSaving ? null : () => cubit.setColor(color),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Padding(
+              padding: _gutter,
+              child: TextField(
+                controller: noteController,
+                decoration: InputDecoration(
+                  hintText: l10n.highlightNoteHint,
+                  isDense: true,
+                ),
+                maxLines: 2,
+                enabled: !isSaving,
+                onChanged: cubit.setNote,
+              ),
             ),
           ],
         ),
@@ -291,6 +319,8 @@ class _HighlightFormStep extends StatelessWidget {
     );
   }
 }
+
+const _gutter = EdgeInsets.symmetric(horizontal: AppSpacing.xl);
 
 HighlightColorResolver _appPaletteResolver(BuildContext context) {
   final ext = context.appColors;

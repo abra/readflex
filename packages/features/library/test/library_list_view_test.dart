@@ -1,3 +1,6 @@
+import 'package:library_feature/src/library_bloc.dart';
+import 'package:library_feature/src/library_header.dart';
+import 'package:library_feature/src/library_layout.dart';
 import 'package:library_feature/src/library_selection_tint.dart';
 import 'package:library_feature/src/library_list_view.dart';
 import 'package:library_feature/src/library_list_tile.dart';
@@ -6,6 +9,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 final _books = [
   Book(
@@ -205,6 +209,10 @@ void main() {
       backgroundRect.bottom,
       closeTo(coverRect.bottom + AppSpacing.xs, 0.1),
     );
+    // Full-bleed tint; the content keeps the 16dp gutter.
+    expect(backgroundRect.left, rowRect.left);
+    expect(backgroundRect.right, rowRect.right);
+    expect(coverRect.left, rowRect.left + AppSpacing.lg);
   });
 
   for (final theme in [AppTheme.light(), AppTheme.dark()]) {
@@ -235,20 +243,14 @@ void main() {
           );
           var background = theme.scaffoldBackgroundColor;
           if (selected) {
-            final decoration =
-                tester
-                        .widget<DecoratedBox>(
-                          find
-                              .byKey(
-                                const ValueKey(
-                                  'libraryListSelectionBackground',
-                                ),
-                              )
-                              .first,
-                        )
-                        .decoration
-                    as BoxDecoration;
-            background = Color.alphaBlend(decoration.color!, background);
+            final tint = tester
+                .widget<ColoredBox>(
+                  find
+                      .byKey(const ValueKey('libraryListSelectionBackground'))
+                      .first,
+                )
+                .color;
+            background = Color.alphaBlend(tint, background);
           }
           final metadata = find.descendant(
             of: find.byKey(const ValueKey('libraryListRowMeta')),
@@ -314,6 +316,10 @@ void main() {
         expect(dividerTop, greaterThan(firstTitleTop));
         expect(dividerTop, lessThan(secondTitleOffset.dy));
         expect(dividerLeft, AppSpacing.lg);
+        expect(
+          tester.getTopRight(dividerFinder).dx,
+          tester.getSize(find.byType(LibraryListView)).width - AppSpacing.lg,
+        );
         expect(dividerLeft, lessThan(secondTitleOffset.dx));
       },
     );
@@ -416,7 +422,7 @@ void main() {
     expect(title.textDirection, TextDirection.rtl);
     expect(title.textAlign, TextAlign.start);
     expect(metaRow.textDirection, TextDirection.rtl);
-    expect(titleRect.right, closeTo(rowRect.right - AppSpacing.xs, 1));
+    expect(titleRect.right, closeTo(rowRect.right - AppSpacing.lg, 1));
   });
 
   testWidgets('RTL swipe reveals the delete icon inside the revealed area', (
@@ -522,15 +528,9 @@ void main() {
           ),
         );
         final colors = theme.colorScheme;
-        final background =
-            tester
-                    .widget<DecoratedBox>(
-                      find.byKey(
-                        const ValueKey('libraryListSelectionBackground'),
-                      ),
-                    )
-                    .decoration
-                as BoxDecoration;
+        final background = tester.widget<ColoredBox>(
+          find.byKey(const ValueKey('libraryListSelectionBackground')),
+        );
         expect(background.color, colors.selectedControlBackground);
         expect(
           tester.widget<Text>(find.text(_books.first.title)).style!.color,
@@ -565,4 +565,164 @@ void main() {
       },
     );
   }
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    testWidgets('list cover and header title share the 16dp gutter ($locale)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final controller = ScrollController();
+      final searchController = TextEditingController();
+      final focus = FocusNode();
+      addTearDown(controller.dispose);
+      addTearDown(searchController.dispose);
+      addTearDown(focus.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          locale: locale,
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          supportedLocales: ReadflexSupportedLocales.locales,
+          home: Scaffold(
+            body: Column(
+              children: [
+                LibraryHeader(
+                  state: LibraryState(),
+                  isOffline: false,
+                  searchController: searchController,
+                  searchFocusNode: focus,
+                  onSearchChanged: (_) {},
+                  onFilterChanged: (_) {},
+                  onCollectionScopePressed: () {},
+                  onCollectionScopeCleared: () {},
+                ),
+                Expanded(
+                  child: LibraryListView(
+                    sources: _books.map(LibrarySource.fromBook).toList(),
+                    selection: const LibrarySelectionState(),
+                    scrollController: controller,
+                    onSourcePressed: (_) {},
+                    onSourceLongPressed: (_) {},
+                    onConfirmSwipeDelete: (_) async => false,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      final strings = tester.element(find.byType(LibraryHeader)).l10n;
+      final title = tester.getRect(find.text(strings.libraryTitle));
+      final cover = tester.getRect(find.byType(AppSourceCoverFrame).first);
+      final text = tester.getRect(find.text('First Book'));
+      final divider = tester.getRect(
+        find.byKey(const ValueKey('libraryListRowTopDivider')),
+      );
+      final header = tester.getRect(find.byType(LibraryHeader));
+      if (locale.languageCode == 'ar') {
+        expect(cover.right, closeTo(390 - AppSpacing.lg, .01));
+        expect(cover.right, closeTo(title.right, .01));
+        expect(text.right, lessThan(cover.left));
+      } else {
+        expect(cover.left, closeTo(AppSpacing.lg, .01));
+        expect(cover.left, closeTo(title.left, .01));
+        expect(text.left, greaterThan(cover.right));
+      }
+      expect(divider.left, AppSpacing.lg);
+      expect(divider.right, 390 - AppSpacing.lg);
+      expect(
+        cover.top,
+        closeTo(header.bottom + kLibraryContentTopPadding, .01),
+      );
+    });
+  }
+
+  testWidgets('swipe background is full width and its glyph ends 16dp from '
+      'the edge', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = ScrollController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: LibraryListView(
+            sources: [LibrarySource.fromBook(_books.first)],
+            selection: const LibrarySelectionState(),
+            scrollController: controller,
+            onSourcePressed: (_) {},
+            onSourceLongPressed: (_) {},
+            onConfirmSwipeDelete: (_) async => false,
+          ),
+        ),
+      ),
+    );
+    final tile = find.byType(BookLibraryListTile);
+    final resting = tester.getRect(tile);
+    expect(resting.left, 0);
+    expect(resting.right, 390);
+    final gesture = await tester.startGesture(tester.getCenter(tile));
+    await gesture.moveBy(const Offset(-30, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(-120, 0));
+    await tester.pump();
+    final background = tester.getRect(
+      find.byKey(const ValueKey('librarySwipeDeleteBackground')),
+    );
+    final icon = tester.getRect(
+      find.byKey(const ValueKey('librarySwipeDeleteIcon')),
+    );
+    expect(background.left, 0);
+    expect(background.right, 390);
+    expect(icon.right, closeTo(390 - AppSpacing.lg, .01));
+    expect(tester.getRect(tile).right, lessThan(icon.left));
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(tester.getRect(tile), resting);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('selection tint is full-bleed in RTL while content keeps the '
+      'gutter', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            body: BookLibraryListTile(
+              source: LibrarySource.fromBook(_books.first),
+              showTopDivider: true,
+              isSelected: true,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    final tint = tester.getRect(
+      find.byKey(const ValueKey('libraryListSelectionBackground')),
+    );
+    final cover = tester.getRect(
+      find.byKey(const ValueKey('libraryListCoverSlot')),
+    );
+    final divider = tester.getRect(
+      find.byKey(const ValueKey('libraryListRowTopDivider')),
+    );
+    expect(tint.left, 0);
+    expect(tint.right, 390);
+    expect(cover.right, 390 - AppSpacing.lg);
+    expect(divider.left, AppSpacing.lg);
+    expect(divider.right, 390 - AppSpacing.lg);
+  });
 }

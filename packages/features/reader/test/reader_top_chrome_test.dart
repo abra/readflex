@@ -170,6 +170,24 @@ void _articleTitleTests() {
     expect(find.text('Saved Article'), findsOneWidget);
   });
 
+  testWidgets('top chrome keeps the 16dp content gutter like the bottom bar', (
+    tester,
+  ) async {
+    await pump(tester);
+    final padding = tester.widget<Padding>(
+      find
+          .ancestor(
+            of: find.text('Saved Article'),
+            matching: find.byType(Padding),
+          )
+          .first,
+    );
+    expect(
+      padding.padding,
+      const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    );
+  });
+
   testWidgets('top chrome hides in one frame under reduced motion', (
     tester,
   ) async {

@@ -56,6 +56,9 @@ selection handles interactive so the selected range can be resized in place.
 The saved-highlight popup (`ReaderSavedHighlightPopup`) is different: its
 full-screen barrier exists only while the popup is open and is opaque, so the
 dismissing tap never also toggles chrome or turns the page.
+All three popups (text selection, image-area selection, saved highlight) clamp
+horizontally inside the safe area plus a 16dp inset, so landscape cutouts
+never cover them; their width is sized from the safe width.
 Each action starts resolving the current WebView range on pointer down, before
 focus can collapse the native WebKit selection, and awaits that same snapshot
 on execution. The reader runtime also retains the latest changed range as a
@@ -80,9 +83,14 @@ Language and the text-action result sheets. `AppSettingsSection` and
 Theme swatches retain the preset's page colors for the localized sample
 (`readerAppearanceSample`); each swatch is an ink tile with a 48dp target,
 `Semantics(button, selected)` and the shared `selectedControlBackground/
-Foreground` pair behind the active sample and label. Font options use the
-same fill-plus-check selection as the Language sheet, without an extra border.
-The Font row shows the active typeface and
+Foreground` pair behind the active sample and label. Each swatch keeps a 4dp
+ink inset around its sample, so the sheet body gutter is reduced by that inset
+for the swatch grid only (`_swatchInkInset`): sample borders, the "Theme"
+label, the Font row and the setting rows all sit on the 24dp gutter while the
+ink tiles bleed 4dp past it. Font options use the same fill-plus-check
+selection as the Language sheet, without an extra border, and the same 8dp
+option inset: the Font sheet body gives those 8dp back so option text and the
+check glyph land on 24dp. The Font row shows the active typeface and
 opens a sample picker inside the same route. Appearance's content determines
 both steps' height; the picker scrolls only when its samples need more space.
 Selection applies immediately through `ReaderAppearanceCubit` and stays in the
@@ -143,8 +151,12 @@ projection, while unrelated reading-position updates do not.
 image-area highlights can add a previously skipped note, edit it, or save an
 empty value to clear it. A null result cancels; a result containing a null note
 explicitly clears/skips. `ReaderBloc` persists the patch through the existing
-repository method. Close/Cancel/system Back protect dirty text; scrim/drag
-dismissal is disabled. Confirmation retains the draft field and its geometry.
+repository method. Editing a saved note shows one full-width Save command,
+enabled only once the note changed; leaving is the header Close. A new
+highlight keeps the Skip/Save pair because Skip keeps the highlight without a
+note, a different outcome from Close. Close/system Back protect dirty text
+through the Keep editing/Discard confirmation; scrim/drag dismissal is
+disabled. Confirmation retains the draft field and its geometry.
 
 Image-area rows instead show a cropped preview, the localized page number as
 their primary line, and an optional expandable note. Comic "chapter titles"
@@ -167,7 +179,14 @@ text keeps the book direction; active chapter, active search result and
 bookmark rows share the plain `ListTile(selected:)` fill, drawn edge to edge
 with an explicit rectangular shape: the app-wide 16dp tile radius is for inset
 rows and must not bleed into full-bleed panel rows. The highlight color
-filter's "All" entry is an `AppFilterChip` with a visible selected state.
+filter strip starts on the 16dp gutter like the search field above it, with
+8dp above and below its 48dp targets; its "All" entry is an `AppFilterChip`
+with a visible selected state and the swatches beside it paint 32dp circles
+(`ReaderHighlightColorButton(size:)`), while the selection popups keep 24dp.
+Highlight rows own their leading 16dp gutter inside the body so Read more /
+Show less (`ReaderHighlightExpandButton`, `AppButtonLabel`) starts its label on
+the gutter with the themed 16dp button padding and lets the ink extend past
+it; quote, note and location text keep their 16dp edge.
 Empty tabs render `EmptyState(compact: true)`. The drawer slides in from the
 leading edge of the app locale.
 
@@ -182,7 +201,8 @@ icon. Both use the same 48dp target and 20dp glyph in every locale/text scale,
 with a localized tooltip/accessibility name. No label measurement is needed,
 and adjacent rows stay in place. Only the row whose write is in flight
 disables its own action; the serialized event bucket orders the rest.
-Oversized Contents tab labels scroll horizontally rather than overlapping.
+Oversized Contents tab labels scroll horizontally rather than overlapping;
+the scrolling bar is inset 8dp so the first glyph lands on the 16dp gutter.
 
 Deleting a highlight from the saved-highlight popup follows the same model
 (`highlightEdits` in `ReaderState`): the page annotation disappears and the
@@ -197,8 +217,9 @@ with Undo. Removed rows neither navigate nor expand; image rows keep their
 preview.
 
 CBZ Contents replaces Chapters with a Pages grid, initially revealing the saved
-page. Page order follows the book's progression direction independently of the
-app locale. Captions and controls still use the app locale. Only the visible
+page. The grid keeps the 16dp drawer gutter on every side (plus the bottom
+system inset) with 12dp between tiles. Page order follows the book's
+progression direction independently of the app locale. Captions and controls still use the app locale. Only the visible
 Pages or Highlights tab owns `ReaderComicThumbnailCubit`; its callback is supplied by the reader
 host, and the View receives no repository or WebView controller. One preview is
 decoded at a time. Offscreen queued requests are discarded; a 24-entry LRU retains
@@ -266,7 +287,14 @@ Search content uses a 16 logical-pixel horizontal inset inside the safe area:
 the header, field, recent queries, result count and excerpts share this inset.
 Close and history-removal buttons are `AppPlainIconButton`s with the default
 20dp glyph on the same trailing axis, with glyph edges aligned to the field. Their 48dp targets extend into the
-gutter and stay inside the safe area, including RTL.
+gutter (`readerDrawerActionEndPadding`) and stay inside the safe area,
+including RTL. The history delete glyph is `onSurfaceVariant` like the other
+inline row deletes. Result and history lists pad their bottom with
+`readerDrawerListBottomPadding` (keyboard + system inset + 16dp), the same
+formula as the Contents drawer lists; the panel itself adds no keyboard inset.
+The bottom match-navigation bar's Close target extends into the trailing
+gutter so its glyph ends on the 16dp line shared with the return row's
+percentage.
 History removal uses the shared trash icon; Close and field clearing keep the
 cross. Removing a history entry does not run a search or close the panel.
 Geometry tests and search goldens cover narrow/wide layouts, large text, RTL,
@@ -288,7 +316,8 @@ source-load snapshot from overwriting edits made while it was pending.
 Bookmark rows use the shared trash icon for deletion and retain the existing
 in-place icon-only Undo action; the cross in the header only closes the drawer.
 All three glyphs are the default 20dp, aligned to the Contents field's 16dp
-gutter with full 48dp targets (`_readerDrawerActionEndPadding`). Geometry tests compare the visible icon boxes, not only button
+gutter with full 48dp targets (`readerDrawerActionEndPadding` in
+`reader_drawer_layout.dart`, defined from `AppSizes.iconActionOutset`). Geometry tests compare the visible icon boxes, not only button
 bounds; native flows also exercise deletion and Undo.
 The reader's bottom toolbar is built from `AppPlainIconButton` (48dp targets,
 circular pressed feedback), including its custom filled/outline bookmark glyph
@@ -306,7 +335,10 @@ Active bookmark/Undo icons and the tab indicator use the accessible action
 foreground. Active search results use the same selected color pair as Contents
 and settings controls; text and emphasized matches remain readable on that fill.
 The brightness pill beside the page uses `PositionedDirectional(end:)`, so it
-sits at the trailing edge and slides toward it in RTL. Its step buttons are
+sits 16dp from the trailing edge (like the page-bookmark indicator and every
+other reader edge) and slides toward it in RTL. The top chrome shares the
+bottom bar's 16dp content gutter. The transient CBZ page pill sits
+`appBottomSafeInset` (minimum 16dp) plus 12dp above the bottom edge. Its step buttons are
 `AppPlainIconButton`s; the value button is a 48dp selected control
 (`selectedControlBackground/Foreground` while a custom level is active) whose
 "System" label comes from `readerBrightnessSystem`.

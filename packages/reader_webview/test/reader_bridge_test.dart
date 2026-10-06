@@ -500,7 +500,11 @@ void main() {
         'normalizedMarkedContextText': '[[Both fields normalized]] in context.',
         'pos': {'left': 0.2, 'top': 0.3, 'right': 0.6, 'bottom': 0.4},
         'scrollOffset': 0.3,
-        'containedHighlightIds': ['h-1', '', 42, 'h-2'],
+        'highlightMerge': {
+          'cfi': 'union-cfi',
+          'text': 'Both fields and more',
+          'highlightIds': ['h-1', '', 42, 'h-2'],
+        },
       });
 
       expect(selection.text, 'Both fields');
@@ -520,8 +524,55 @@ void main() {
       expect(selection.position!.right, 0.6);
       expect(selection.position!.bottom, 0.4);
       expect(selection.scrollOffset, 0.3);
-      expect(selection.containedHighlightIds, ['h-1', 'h-2']);
+      final merge = selection.highlightMerge!;
+      expect(merge.cfiRange, 'union-cfi');
+      expect(merge.text, 'Both fields and more');
+      expect(merge.highlightIds, ['h-1', 'h-2']);
     });
+
+    for (final (name, value) in <(String, Object?)>[
+      ('missing', null),
+      ('not a map', 'union-cfi'),
+      (
+        'without an anchor',
+        {
+          'text': 'x',
+          'highlightIds': ['h-1'],
+        },
+      ),
+      (
+        'with an empty anchor',
+        {
+          'cfi': '',
+          'text': 'x',
+          'highlightIds': ['h-1'],
+        },
+      ),
+      (
+        'without text',
+        {
+          'cfi': 'c',
+          'highlightIds': ['h-1'],
+        },
+      ),
+      ('without absorbed ids', {'cfi': 'c', 'text': 'x', 'highlightIds': []}),
+      (
+        'with only invalid ids',
+        {
+          'cfi': 'c',
+          'text': 'x',
+          'highlightIds': ['', 7],
+        },
+      ),
+    ]) {
+      test('fromMap ignores a merge plan $name', () {
+        final selection = ReaderSelection.fromMap({
+          'text': 'Selected',
+          'highlightMerge': value,
+        });
+        expect(selection.highlightMerge, isNull);
+      });
+    }
 
     test('fromMap clamps malformed selection position fractions', () {
       final selection = ReaderSelection.fromMap({
@@ -573,7 +624,7 @@ void main() {
       expect(selection.text, '');
       expect(selection.cfiRange, isNull);
       expect(selection.scrollOffset, isNull);
-      expect(selection.containedHighlightIds, isEmpty);
+      expect(selection.highlightMerge, isNull);
     });
   });
 

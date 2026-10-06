@@ -302,6 +302,7 @@ ThemeData _assembleTheme({
           : colorScheme.primary,
     ),
     iconButtonTheme: AppButtonThemes.icon(palette),
+    floatingActionButtonTheme: AppButtonThemes.floatingAction(colorScheme),
     inputDecorationTheme: AppInputThemes.theme(palette, textTheme, colorScheme),
     segmentedButtonTheme: AppSelectionThemes.segmentedButton(
       palette,

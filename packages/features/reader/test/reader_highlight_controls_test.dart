@@ -10,6 +10,7 @@ import 'package:reader/src/reader_highlight_color.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 void main() {
+  _swatchSizeTests();
   testWidgets('swatches expose state and respond across the full target', (
     tester,
   ) async {
@@ -153,6 +154,56 @@ void main() {
     } finally {
       semantics.dispose();
     }
+  });
+}
+
+void _swatchSizeTests() {
+  testWidgets('popup swatches paint 24dp circles in 48dp targets', (
+    tester,
+  ) async {
+    await _pumpControls(
+      tester,
+      width: 360,
+      onColor: (_) {},
+      onSave: () {},
+    );
+    for (final circle in find.byType(AnimatedContainer).evaluate()) {
+      expect(
+        tester.getSize(find.byWidget(circle.widget)),
+        const Size.square(AppIconSize.md),
+      );
+    }
+    expect(tester.getSize(find.byTooltip('Green')), const Size.square(48));
+  });
+
+  testWidgets('size widens only the painted circle', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        supportedLocales: ReadflexSupportedLocales.locales,
+        home: Scaffold(
+          body: Center(
+            child: ReaderHighlightColorButton(
+              color: HighlightColor.green,
+              readerTheme: ReaderThemePreset.paper.data,
+              selected: false,
+              enabled: true,
+              size: AppSizes.chipHeight,
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.getSize(find.byType(AnimatedContainer)),
+      const Size.square(AppSizes.chipHeight),
+    );
+    expect(
+      tester.getSize(find.byType(ReaderHighlightColorButton)),
+      const Size.square(AppSizes.buttonHeight),
+    );
   });
 }
 

@@ -129,6 +129,17 @@ void main() {
       final action = find.widgetWithIcon(AppPlainIconButton, AppIcons.delete);
       expect(tester.getSize(action), const Size(48, 48));
       expect(
+        tester.widget<AppPlainIconButton>(action).color,
+        tester.element(action).colors.error,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(FilledButton),
+          matching: find.byType(AppButtonLabel),
+        ),
+        findsOneWidget,
+      );
+      expect(
         844 - tester.getBottomLeft(find.byType(FilledButton)).dy,
         AppSpacing.lg * 2,
       );

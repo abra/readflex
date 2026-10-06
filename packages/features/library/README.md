@@ -84,9 +84,12 @@ a failed single delete re-reads storage rather than re-emitting the old list.
 The list swipe's `confirmDismiss` awaits that effect (matched by source id): the
 row leaves only after storage confirms, and a failed write springs it back
 beside the error toast.
-Delete confirmations follow the shared safe-default model: Cancel is the filled
-primary and Delete the outlined error-coloured secondary (`AppSheetActions`,
-`destructiveSecondary: true`). The list swipe background, cover format/finished
+Delete confirmations follow the shared safe-default model: the safe choice is
+the filled primary, named for what it keeps ("Keep" for library items, "Keep
+collection" for a collection, never "Cancel"), and Delete is the outlined
+error-coloured secondary (`AppSheetActions`, `destructiveSecondary: true`) in
+the layout's `footer`, 24dp after the body text and 16dp above the route's
+safe area. Keep closes only the confirmation and never writes. The list swipe background, cover format/finished
 badges and selection checks use directional placement, so they mirror in RTL.
 Grid selection scale, progress fill and the list/grid cross-fade resolve their
 durations through `context.motion`, settling in one frame under reduced motion.
@@ -100,23 +103,37 @@ row geometry and cover badges are unchanged.
 
 The header's Display action and the collection-filter clear action use the
 shared `AppPlainIconButton`: a transparent resting surface, circular pressed
-feedback and a 48dp target. Search uses the same utility-action behavior for its
+feedback and a 48dp target. Each header row owns its own gutters: the title
+row ends `AppSizes.iconActionOutset` short of the 16dp edge so the Display
+target bleeds into the gutter and its 20dp glyph ends exactly where the search
+field and chips do. Search uses the same utility-action behavior for its
 smaller clear glyph. Muted header glyphs use `onSurfaceVariant`, not an alpha
-over `onSurface`; the import FAB is opaque `primary` at `AppElevation.level2`.
+over `onSurface`; the import FAB takes its primary colour, circular shape and
+`AppElevation.level2` from the theme's `floatingActionButtonTheme` and passes
+only `onPressed`, tooltip and icon.
+List rows own the 16dp screen gutter (the `ListView` has no horizontal
+padding): the cover sits on the gutter with the header title, the top hairline
+spans 16…16, while the selection tint and the swipe-delete background run
+edge to edge with the delete glyph ending 16dp from the screen edge.
 A selected row fills with `selectedControlBackground` and switches its title
 and metadata to `selectedControlForeground`; the cover itself keeps a shared
 translucent marker wash (`kLibraryCoverSelectionTintAlpha`) under the opaque
 `selectionMarker*` check so artwork stays visible. The grid's finished badge
 uses the `successContainer`/`onSuccessContainer` pair.
 
-In the Collections picker, row menu icons align with the sheet's close icon.
-Their 48dp targets extend into the trailing list gutter; labels and counts in
-rows without a menu retain their content insets. Insets mirror in RTL.
-The selected-row background has symmetric 24dp gutters independently of the
-trailing action target. Selection includes a check, paired theme colors and
-selected semantics. Row press/focus feedback remains enabled.
+In the Collections picker, row icons and section titles sit on the 24dp sheet
+gutter with the search field, and row menu glyphs end where the close glyph
+does. Rows keep an 8dp inset for their selection pill and a trailing 48dp
+menu target; the list subtracts both (`AppSizes.iconActionOutset`) from its
+padding, so the pill bleeds 8dp into both gutters (16dp from the sheet edges)
+and the target extends into the trailing gutter without shrinking. Labels and
+counts in rows without a menu keep its slot, so every count ends 12dp before
+the same 48dp column as Add to collection's check slot. Insets mirror in RTL.
+Selection includes a check, paired theme colors and selected semantics; the
+menu glyph is `onSurfaceVariant`, or `selectedControlForeground` on the
+selected row. Row press/focus feedback remains enabled.
 
-Collections -> Manage is one guarded sheet flow. Back/Cancel returns to the
+Collections -> Manage is one guarded sheet flow. Back returns to the
 same query and scroll offset; Save/Delete refreshes that list in place. Close
 exits the whole flow after the existing draft guard. Like other guarded forms,
 this flow disables scrim/drag dismissal, reserving the normal handle height.
@@ -130,10 +147,19 @@ targets. English uses `Favs` on the badge only; menus, tooltip and semantics kee
 the full localized collection name.
 Without a selected collection, the folder's visible fill is 32dp square,
 trailing-aligned with the content gutter inside its unchanged 48dp hit target.
+Like `AppFilterChip`, the badge's ink is bounded to its 32dp painted body
+while the surrounding box keeps the 48dp semantic and hit target; its label is
+`labelSmall` w500 like the chips.
 The header reserves only the compact offline icon, not a hidden localized word.
 The lazy grid uses up to three columns, reducing the count on narrow viewports
-and with enlarged text. Generated cover titles budget the actual TextScaler
-height rather than the unscaled font size.
+and with enlarged text. Covers sit directly on the 16dp gutter with no tile
+inset, and both layouts start their first cover `kLibraryContentTopPadding`
+(12dp) below the header's chip row: the list row's own padding supplies it,
+the grid adds it as top padding. Content bottom padding comes from
+`libraryContentBottomPadding(context)`, which clears the FAB, its lift and a
+content gap and grows with any bottom safe inset beyond the 16dp margin.
+Generated cover titles budget the actual TextScaler height rather than the
+unscaled font size.
 
 A collection read failure retains the last valid stored scopes and selection,
 while books/articles still refresh. First-load failure does not manufacture an
@@ -148,7 +174,9 @@ Source repositories, not LibraryBloc, own atomic membership cleanup on deletion.
 Selection replaces the import FAB with a bottom action bar: selected count,
 explicit cancel, add to collection, and secondary delete. Scaffold reserves its
 height, including `AppBottomSafeArea` and 16dp below the commands. Cancel/trash
-glyphs align with the screen's 16dp gutter while retaining 48dp targets.
+glyphs align with the screen's 16dp gutter while retaining 48dp targets
+(`AppSizes.iconActionOutset`); the trash stays `error` as the bar's bulk
+destructive command and the filled label goes through `AppButtonLabel`.
 System Back still clears selection. Display and
 selection changes reuse loaded sources instead of querying storage again.
 
@@ -167,7 +195,9 @@ stretching Display.
 Language's five rows have no extra vertical gaps. Options retain their 48dp
 minimum tap targets and vertical inner padding; the grid ends with 8dp body
 padding. Column gaps and horizontal option padding are 8dp, with 4dp before
-the checkmark. At standard text size all ten options fit without scrolling on
+the checkmark; the body subtracts that 8dp inset from the 24dp gutters so
+labels and checkmarks sit on the content edge with the title while the tinted
+pill bleeds into the gutter. At standard text size all ten options fit without scrolling on
 320dp and wider portrait phones, without enlarging Display. Oversized text or
 insufficient viewport space retains scrolling rather than clipping choices or
 shrinking targets. Step navigation preserves the height. Changing the locale, text
@@ -198,22 +228,42 @@ delete the book or article from the library. Their localized tooltips name the
 source; the close icon is reserved for dismissing the sheet.
 The 20dp trash glyph aligns with the header close glyph at the 24dp content
 gutter. Its 48dp target extends into that gutter without changing text insets;
-the geometry mirrors in RTL.
-Collection edits remain staged until Save. At the root, Cancel, Close and system
-Back prompt only when there are actual edits. Drag/scrim dismissal is disabled for this form
-so it cannot bypass the guard. Delete is secondary and has its own confirmation.
-Discard and delete confirmations are steps in the same sheet, not nested dialogs.
-Both use the safe-default pairing: Keep editing / Cancel is filled, Discard /
-Delete is the outlined error-coloured secondary.
+the geometry mirrors in RTL. Source-row hairlines span 24…24.
+"Delete collection" is a compact destructive `TextButton` (no icon,
+`foregroundColor: error`, `AppButtonLabel`, 48dp target, muted while busy) at
+the end of the source-count row directly under the name field:
+`Row[Expanded(count), button]`, the count centred in the 48dp row. The row
+ends 8dp in (the theme pads text buttons 16dp) so the label sits on the 24dp
+gutter while the ink bleeds into it; it mirrors in RTL. When the label and
+the count cannot share the line (large text, long translations, measured with
+`TextPainter` like the sibling sites), the row stacks: count on its own line,
+button below aligned to the end. The step-height estimate uses the same rule.
+There is no separate delete entry, hairline or gap above the footer any more.
+Both the fixed and the scrolling layout keep one rhythm: the source list's
+own 16dp bottom after the last row, then the shared footer padding
+(`ActionBottomSheetLayout.defaultFooterPadding`: 24dp above the command and
+16dp below). The footer is one full-width filled Save (the step's header
+already has Close/Back, so no Cancel sits beside it, per the Command Footers
+contract). Save wraps `AppBusyButtonLabel`, so a write shows a spinner with
+stable geometry while Save, Close and the row actions are disabled. The delete
+confirmation body is start-aligned `bodyMedium` on the 24dp gutter like the
+Discard and Delete items confirmations.
+Collection edits remain staged until Save. At the root, Close and system Back
+prompt only when there are actual edits. Drag/scrim dismissal is disabled for
+this form so it cannot bypass the guard. Delete is secondary and has its own
+confirmation. Discard and delete confirmations are steps in the same sheet,
+not nested dialogs. Both use the safe-default pairing: Keep editing / Keep
+collection (`commonKeepEditing` / `commonKeep`) is filled, Discard /
+Delete (`commonDiscardChanges` / `commonDelete`) is the outlined error-coloured
+secondary, placed secondary-left, primary-right.
 Header/system Back from a confirmation returns to the draft without writing it.
-Cancel on delete also returns to editing without deleting anything. Close on
+Keep also returns to editing without deleting anything. Close on
 delete exits the flow or requests the discard decision when there are edits;
 it never acts as Back. Repeated Close on the discard decision leaves that guard
 visible until the user chooses Discard or returns to editing.
 Large text and keyboard-constrained layouts scroll the form in a single lazy
-sliver viewport while keeping Save/Cancel available. No collection/source is
-deleted by canceling the form. Footer actions stack when localized labels at
-the user's text scale cannot fit side by side.
+sliver viewport while keeping Save available on the same 24dp gutters. No
+collection/source is deleted by leaving the form.
 Removing membership retains the row and replaces trash with `AppIcons.undo`,
 the same curved-arrow role as bookmark restoration. A localized status explains
 that removal takes effect after Save. The status slot retains its height;
@@ -235,13 +285,23 @@ slot remains reserved so item counts stay aligned.
 One grouped membership query (bounded parameter batches) supplies this state,
 not a query per visible row or a read of every collection's source IDs.
 New collection is an `AppDrillInRow`; it opens a separate name form in the
-same route. Destination rows clip their ripple to `AppRadius.sm`. The complete
-destination step, including its wrapping header, determines both steps' height.
-Back/Cancel returns to destinations and preserves the draft; Close dismisses
-the flow. While the name field is non-empty the form wraps itself in
+same route. Destination rows clip their ripple to `AppRadius.sm` and keep a
+4dp ink inset that bleeds past the 24dp gutter, so their icons sit with the
+New collection icon and the dividers span 24…24. Their trailing 48dp slot
+matches the Collections picker's menu column: the check glyph ends on the
+gutter and counts end 12dp before the slot in both sheets. The name form's
+footer is one full-width filled "Create and add" (`FilledButton` with
+`AppBusyButtonLabel`, busy from the cubit, disabled while the name is empty)
+in the layout's `footer` slot: the step's header has Back and Close, so no
+Cancel sits beside it. The write shows a spinner in that button rather than a
+progress strip over the field; the destination step keeps its 2dp strip while
+a row write is in flight because it has no command button to host a spinner.
+The complete destination step, including its wrapping header, determines both
+steps' height. Back returns to destinations and preserves the draft; Close
+dismisses the flow. While the name field is non-empty the form wraps itself in
 `AppSheetDismissGuard`: Close, a scrim tap and drag-down do not dismiss but show
-the same Keep editing / Discard decision as Manage (Keep editing filled,
-Discard outlined in the error color); Discard leaves the flow, Keep editing or
+the same Keep editing / Discard decision as Manage (`commonKeepEditing` filled,
+`commonDiscardChanges` outlined in the error color); Discard leaves the flow, Keep editing or
 header/system Back return to the form with the draft intact, and repeated
 Close/scrim attempts keep the decision visible. An empty form keeps the handle
 and dismisses freely. System Back from the form remains a step back to

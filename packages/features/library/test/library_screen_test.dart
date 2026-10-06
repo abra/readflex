@@ -575,8 +575,9 @@ void main() {
           .widget<SingleChildScrollView>(list)
           .padding!
           .resolve(Directionality.of(tester.element(list)));
-      expect(listPadding.left, AppSpacing.xl);
-      expect(listPadding.right, AppSpacing.xl);
+      // Options bleed their 8dp inset into the 24dp gutters.
+      expect(listPadding.left, AppSpacing.xl - AppSpacing.sm);
+      expect(listPadding.right, AppSpacing.xl - AppSpacing.sm);
       final fades = find.descendant(
         of: sheet,
         matching: find.byType(ScrollEdgeFade),
@@ -651,14 +652,29 @@ void main() {
     await tester.pump();
 
     final scaffoldRect = tester.getRect(find.byType(Scaffold));
-    final displayButtonRect = tester.getRect(
-      find.byKey(const ValueKey('libraryHeaderDisplayButton')),
+    final displayButton = find.byKey(
+      const ValueKey('libraryHeaderDisplayButton'),
     );
+    final displayButtonRect = tester.getRect(displayButton);
+    final glyphRect = tester.getRect(
+      find.descendant(
+        of: displayButton,
+        matching: find.byIcon(AppIcons.moreVertical),
+      ),
+    );
+    final searchRect = tester.getRect(find.byType(SearchField));
 
+    // The 48dp target bleeds into the gutter; its glyph ends on it.
+    expect(displayButtonRect.size, const Size.square(48));
     expect(
       displayButtonRect.right,
-      closeTo(scaffoldRect.right - AppSpacing.lg, 1),
+      closeTo(
+        scaffoldRect.right - AppSpacing.lg + AppSizes.iconActionOutset,
+        1,
+      ),
     );
+    expect(glyphRect.right, closeTo(scaffoldRect.right - AppSpacing.lg, 1));
+    expect(glyphRect.right, closeTo(searchRect.right, 1));
   });
 
   testWidgets('shows offline status next to Library title', (tester) async {
@@ -1389,9 +1405,9 @@ void main() {
     expect(
       listView.padding,
       const EdgeInsetsDirectional.fromSTEB(
-        AppSpacing.xl,
+        AppSpacing.xl - AppSpacing.sm,
         0,
-        AppSpacing.xl - (AppSizes.buttonHeight - AppIconSize.sm) / 2,
+        AppSpacing.xl - AppSizes.iconActionOutset,
         AppSpacing.lg,
       ),
     );
@@ -1654,7 +1670,7 @@ void main() {
     expect(visibleGapBelowAuthor, greaterThanOrEqualTo(AppSpacing.lg));
   });
 
-  for (final closeMethod in ['cancel', 'close', 'back']) {
+  for (final closeMethod in ['close', 'back']) {
     testWidgets('collection $closeMethod guards staged edits without saving', (
       tester,
     ) async {
@@ -1687,10 +1703,10 @@ void main() {
         find.byKey(const ValueKey('collectionSourceRemove-b-1')),
       );
       await tester.pumpAndSettle();
+      // No Cancel sits beside Save: leaving is the header's job.
+      expect(find.text('Cancel'), findsNothing);
       Future<void> close() async {
         switch (closeMethod) {
-          case 'cancel':
-            await tester.tap(find.text('Cancel'));
           case 'close':
             await tester.tap(find.byTooltip('Close'));
           case 'back':
@@ -1716,7 +1732,7 @@ void main() {
       expect(
         find.byType(BottomSheet),
         closeMethod == 'close' ? findsNothing : findsOneWidget,
-        reason: 'Close exits the flow; Cancel and Back return to Collections',
+        reason: 'Close exits the flow; Back returns to Collections',
       );
       expect(
         (await collectionRepository.getCollections()).single.name,
@@ -1911,13 +1927,22 @@ void main() {
     expect(countLabel, findsOneWidget);
     expect(emptyLabel, findsOneWidget);
 
-    final listAreaTop = tester.getBottomLeft(countLabel).dy + AppSpacing.md;
+    // Delete shares the count row, so that row's 48dp target ends the header
+    // area; the empty placeholder pads itself and the footer's 8dp top follows.
     final deleteAction = find.descendant(
       of: sheet,
       matching: find.widgetWithText(TextButton, 'Delete collection'),
     );
-    final listAreaBottom =
-        tester.getTopLeft(deleteAction).dy - 1 - AppSpacing.lg;
+    expect(
+      tester.getCenter(countLabel).dy,
+      closeTo(tester.getCenter(deleteAction).dy, .5),
+    );
+    final listAreaTop = tester.getBottomLeft(deleteAction).dy + AppSpacing.md;
+    final save = find.descendant(
+      of: sheet,
+      matching: find.widgetWithText(FilledButton, 'Save'),
+    );
+    final listAreaBottom = tester.getTopLeft(save).dy - AppSpacing.sm;
     final expectedCenter = (listAreaTop + listAreaBottom) / 2;
 
     expect(tester.getCenter(emptyLabel).dy, closeTo(expectedCenter, 1));
@@ -2215,16 +2240,22 @@ void main() {
       of: deleteStep,
       matching: find.widgetWithText(OutlinedButton, 'Delete'),
     );
-    final messageAreaTop =
-        tester.getBottomLeft(deleteHeader).dy + AppSpacing.sm;
-    final messageAreaBottom =
-        tester.getTopLeft(deleteButton).dy - AppSpacing.lg;
-    final expectedMessageCenter = (messageAreaTop + messageAreaBottom) / 2;
-
+    // Start-aligned under the header like the sibling confirmations.
     expect(deleteMessage, findsOneWidget);
+    final messageRect = tester.getRect(deleteMessage);
+    final stepRect = tester.getRect(deleteStep);
     expect(
-      tester.getCenter(deleteMessage).dy,
-      closeTo(expectedMessageCenter, 1),
+      messageRect.top,
+      closeTo(tester.getBottomLeft(deleteHeader).dy + AppSpacing.sm, 1),
+    );
+    expect(messageRect.left, closeTo(stepRect.left + AppSpacing.xl, 1));
+    expect(
+      tester.widget<Text>(deleteMessage).textAlign,
+      isNot(TextAlign.center),
+    );
+    expect(
+      tester.getTopLeft(deleteButton).dy - messageRect.bottom,
+      greaterThanOrEqualTo(AppSpacing.xl),
     );
 
     await tester.tap(find.text('Delete'));
@@ -2324,15 +2355,12 @@ void main() {
     await tester.pumpAndSettle();
 
     final nameField = find.widgetWithText(TextField, 'New collection name');
-    expect(find.text('Cancel'), findsOneWidget);
-    expect(find.text('Create and add'), findsOneWidget);
+    expect(find.text('Cancel'), findsNothing);
+    expect(find.byType(OutlinedButton), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Create and add'), findsOneWidget);
     expect(
       tester.getCenter(nameField).dy,
       lessThan(tester.getCenter(find.text('Create and add')).dy),
-    );
-    expect(
-      tester.getCenter(find.text('Cancel')).dy,
-      closeTo(tester.getCenter(find.text('Create and add')).dy, 1),
     );
 
     await tester.enterText(
@@ -2352,7 +2380,7 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('import FAB is opaque primary with token elevation and icon', (
+  testWidgets('import FAB takes colour, shape and elevation from the theme', (
     tester,
   ) async {
     bookRepository.seedBooks([_book]);
@@ -2361,10 +2389,22 @@ void main() {
     final fab = tester.widget<FloatingActionButton>(
       find.byType(FloatingActionButton),
     );
-    final colors = AppTheme.light().colorScheme;
-    expect(fab.backgroundColor, colors.primary);
-    expect(fab.backgroundColor!.a, 1);
-    expect(fab.elevation, AppElevation.level2);
+    expect(fab.backgroundColor, isNull);
+    expect(fab.foregroundColor, isNull);
+    expect(fab.shape, isNull);
+    expect(fab.elevation, isNull);
+    expect(fab.heroTag, isNull);
+    final theme = AppTheme.light();
+    final material = tester.widget<Material>(
+      find.descendant(
+        of: find.byType(FloatingActionButton),
+        matching: find.byType(Material),
+      ),
+    );
+    expect(material.color, theme.colorScheme.primary);
+    expect(material.color!.a, 1);
+    expect(material.shape, const CircleBorder());
+    expect(material.elevation, AppElevation.level2);
     final icon = tester.widget<Icon>(
       find.descendant(
         of: find.byType(FloatingActionButton),
@@ -2487,7 +2527,7 @@ void main() {
     final restingRect = tester.getRect(listRow(_book));
 
     await swipeRow(tester, _book);
-    await tester.tap(find.widgetWithText(FilledButton, 'Cancel'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Keep'));
     await tester.pumpAndSettle();
 
     expect(tester.getRect(listRow(_book)), restingRect);

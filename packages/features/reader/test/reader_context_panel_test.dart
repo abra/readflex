@@ -98,6 +98,29 @@ void main() {
           chapterTitle: null,
         );'''),
     );
+    // Saving merges overlapping highlights; the colour preview shows that
+    // merged range, and the bridge list is in paint order (newest on top).
+    expect(
+      contextPanelSource,
+      contains(
+        'final cfiRange = sel.highlightMerge?.cfiRange ?? sel.cfiRange;',
+      ),
+    );
+    expect(
+      contextPanelSource,
+      contains('highlightMerge: highlightMergeTargetFor(live.highlightMerge)'),
+    );
+    expect(
+      contentSource,
+      contains(
+        'highlightMerge: highlightMergeTargetFor(selection.highlightMerge)',
+      ),
+    );
+    expect(
+      contentSource,
+      contains('..sort((a, b) => a.createdAt.compareTo(b.createdAt));'),
+    );
+    expect(contentSource, contains('for (final h in ordered)'));
     expect(contextPanelSource, contains('showSelectionHighlightPreview'));
     expect(
       contextPanelSource,
