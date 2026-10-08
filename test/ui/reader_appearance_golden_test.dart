@@ -60,7 +60,7 @@ void main() {
         reason: 'Font percentage must not be truncated',
       );
       await expectUiGolden(tester, profile, 'reader-appearance');
-      final pageTurn = find.byTooltip(sheetContext.l10n.readerVerticalPageTurn);
+      final pageTurn = find.text(sheetContext.l10n.readerPageTurnVerticalShort);
       // Short/large-text screens must make the last row reachable, not clip it.
       await tester.ensureVisible(pageTurn);
       await tester.pumpAndSettle();

@@ -182,7 +182,7 @@ void main() {
     expect(coverFrameRect, tileRect);
   });
 
-  testWidgets('article grid tile shows WEB badge instead of ARTICLE', (
+  testWidgets('article grid tile shows no format badge', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -203,7 +203,7 @@ void main() {
       ),
     );
 
-    expect(find.text('WEB'), findsOneWidget);
+    expect(find.text('WEB'), findsNothing);
     expect(find.text('ARTICLE'), findsNothing);
     expect(find.text('Saved Article'), findsOneWidget);
     expect(find.text('EXAMPLE'), findsOneWidget);
@@ -381,13 +381,13 @@ void main() {
     );
     expect(sourceCover.bottomReserve, 16);
     expect(sourceCover.topAlignText, isTrue);
-    expect(sourceCover.topReserve, 24);
+    // No top badge on an opened, unfinished cover: no top reserve.
+    expect(sourceCover.topReserve, 0);
+    expect(find.text('EPUB'), findsNothing);
 
     final coverRect = tester.getRect(find.byType(AppSourceCoverFrame));
     final titleRect = tester.getRect(find.text('Flutter in Action'));
     final authorRect = tester.getRect(find.text('ERIC WINDMILL'));
-    final formatBadgeRect = tester.getRect(find.text('EPUB'));
-    expect(titleRect.top, greaterThan(formatBadgeRect.bottom));
     expect(titleRect.top, lessThan(coverRect.top + 56));
     expect(authorRect.top, greaterThan(titleRect.bottom));
   });
@@ -422,21 +422,17 @@ void main() {
         ),
       );
       final cover = tester.getRect(find.byType(AppSourceCoverFrame));
-      final format = tester.getRect(find.text('EPUB'));
       final finishedBadge = tester.getRect(
         find.byKey(const ValueKey('libraryGridFinishedBadge')),
       );
       final check = tester.getRect(
         find.byIcon(AppIcons.check).last,
       );
+      expect(find.text('EPUB'), findsNothing);
       if (direction == TextDirection.ltr) {
-        expect(format.left, greaterThan(cover.left));
-        expect(format.left, lessThan(cover.center.dx));
         expect(finishedBadge.right, closeTo(cover.right - AppSpacing.xs, 1));
         expect(check.center.dx, greaterThan(cover.center.dx));
       } else {
-        expect(format.right, lessThan(cover.right));
-        expect(format.right, greaterThan(cover.center.dx));
         expect(finishedBadge.left, closeTo(cover.left + AppSpacing.xs, 1));
         expect(check.center.dx, lessThan(cover.center.dx));
       }
@@ -583,6 +579,176 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  group('New badge', () {
+    final newBadge = find.byKey(const ValueKey('libraryGridNewBadge'));
+
+    Future<void> pumpTile(
+      WidgetTester tester,
+      LibrarySource source, {
+      ThemeData? theme,
+      TextDirection direction = TextDirection.ltr,
+      double textScale = 1,
+    }) => tester.pumpWidget(
+      MaterialApp(
+        theme: theme ?? AppTheme.light(),
+        home: MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
+          child: Directionality(
+            textDirection: direction,
+            child: Scaffold(
+              body: Center(
+                child: SizedBox(
+                  width: 120,
+                  height: 180,
+                  child: BookLibraryGridTile(source: source, onTap: () {}),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    for (final (name, source) in [
+      ('book', LibrarySource.fromBook(_book)),
+      ('article', LibrarySource.fromArticle(_article)),
+      (
+        'comic',
+        LibrarySource.fromBook(
+          Book(
+            id: 'c-1',
+            title: 'Comic',
+            filePath: '/c.cbz',
+            format: BookFormat.cbz,
+            addedAt: DateTime(2026),
+          ),
+        ),
+      ),
+    ]) {
+      testWidgets('marks a never-opened $name, without a format badge', (
+        tester,
+      ) async {
+        expect(source.isNew, isTrue);
+        await pumpTile(tester, source);
+        expect(newBadge, findsOneWidget);
+        expect(
+          find.descendant(of: newBadge, matching: find.text('New')),
+          findsOneWidget,
+        );
+        for (final format in ['EPUB', 'CBZ', 'PDF', 'FB2', 'WEB']) {
+          expect(find.text(format), findsNothing);
+        }
+      });
+    }
+
+    for (final (name, source) in [
+      (
+        'opened at zero progress',
+        LibrarySource.fromBook(_book.copyWith(lastOpenedAt: DateTime(2026, 2))),
+      ),
+      (
+        'progress without an open date',
+        LibrarySource.fromBook(_book.copyWith(readingProgress: 0.3)),
+      ),
+      (
+        'in progress',
+        LibrarySource.fromBook(
+          _book.copyWith(
+            readingProgress: 0.3,
+            lastOpenedAt: DateTime(2026, 2),
+          ),
+        ),
+      ),
+      (
+        'finished',
+        LibrarySource.fromBook(
+          _book.copyWith(isFinished: true, lastOpenedAt: DateTime(2026, 2)),
+        ),
+      ),
+    ]) {
+      testWidgets('no New badge when $name', (tester) async {
+        // Same predicate as the New filter.
+        expect(source.isNew, isFalse);
+        await pumpTile(tester, source);
+        expect(newBadge, findsNothing);
+        expect(find.text('New'), findsNothing);
+        expect(find.text('EPUB'), findsNothing);
+      });
+    }
+
+    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+      testWidgets('surface pill with accent labelSmall w700: '
+          '${theme.brightness}', (tester) async {
+        await pumpTile(tester, LibrarySource.fromBook(_book), theme: theme);
+        final pill = tester.widget<Container>(newBadge);
+        final decoration = pill.decoration! as BoxDecoration;
+        expect(decoration.color, theme.colorScheme.surface);
+        expect(decoration.borderRadius, BorderRadius.circular(AppRadius.full));
+        final label = tester.widget<Text>(
+          find.descendant(of: newBadge, matching: find.text('New')),
+        );
+        expect(label.style!.fontSize, theme.textTheme.labelSmall!.fontSize);
+        expect(label.style!.fontWeight, FontWeight.w700);
+        expect(label.style!.color, tester.element(newBadge).actionForeground);
+        expect(tester.getSize(newBadge).height, 20);
+      });
+    }
+
+    for (final direction in TextDirection.values) {
+      testWidgets('sits top-start inside the cover: $direction', (
+        tester,
+      ) async {
+        await pumpTile(
+          tester,
+          LibrarySource.fromBook(_book),
+          direction: direction,
+        );
+        final cover = tester.getRect(find.byType(AppSourceCoverFrame));
+        final badge = tester.getRect(newBadge);
+        expect(badge.top, cover.top + AppSpacing.xs);
+        if (direction == TextDirection.ltr) {
+          expect(badge.left, cover.left + AppSpacing.xs);
+        } else {
+          expect(badge.right, cover.right - AppSpacing.xs);
+        }
+        expect(cover.contains(badge.topLeft), isTrue);
+        expect(cover.contains(badge.bottomRight), isTrue);
+      });
+    }
+
+    testWidgets('cover text reserves the pill height, growing with text '
+        'scale', (tester) async {
+      await pumpTile(tester, LibrarySource.fromBook(_book));
+      expect(
+        tester.widget<AppSourceCover>(find.byType(AppSourceCover)).topReserve,
+        AppSpacing.xs * 2 + 20,
+      );
+      final title = tester.getRect(find.text('Flutter in Action'));
+      expect(title.top, greaterThanOrEqualTo(tester.getRect(newBadge).bottom));
+
+      await pumpTile(tester, LibrarySource.fromBook(_book), textScale: 2);
+      final labelSmall = AppTheme.light().textTheme.labelSmall!;
+      final scaledLine = labelSmall.fontSize! * 2 * labelSmall.height!;
+      expect(
+        tester.widget<AppSourceCover>(find.byType(AppSourceCover)).topReserve,
+        closeTo(AppSpacing.xs * 2 + scaledLine, .01),
+      );
+      expect(tester.getSize(newBadge).height, closeTo(scaledLine, 1));
+      expect(tester.takeException(), isNull);
+
+      await pumpTile(
+        tester,
+        LibrarySource.fromBook(
+          _book.copyWith(lastOpenedAt: DateTime(2026, 2)),
+        ),
+      );
+      expect(
+        tester.widget<AppSourceCover>(find.byType(AppSourceCover)).topReserve,
+        0,
+      );
+    });
+  });
 }
 
 Future<void> _pumpGridTile(

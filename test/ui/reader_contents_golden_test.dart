@@ -128,16 +128,17 @@ void main() {
       );
       ui.openTocDrawer();
       await tester.pumpAndSettle();
-      final active = tester.widget<ListTile>(
-        find
-            .ancestor(
-              of: find.text('Chapter 2'),
-              matching: find.byType(ListTile),
-            )
-            .first,
-      );
+      final activeTile = find
+          .ancestor(of: find.text('Chapter 2'), matching: find.byType(ListTile))
+          .first;
+      final active = tester.widget<ListTile>(activeTile);
       expect(active.selected, isTrue);
-      final foreground = (active.title! as Text).style!.color!;
+      final foreground = tester
+          .widget<Text>(
+            find.descendant(of: activeTile, matching: find.text('Chapter 2')),
+          )
+          .style!
+          .color!;
       final background = active.selectedTileColor!;
       expect(background, readerContext.colors.selectedControlBackground);
       expect(foreground, readerContext.colors.selectedControlForeground);
@@ -156,14 +157,10 @@ void main() {
       );
       await expectUiGolden(tester, profile, 'reader-active-chapter');
       await tapUi(tester, find.text(l10n.readerBookmarks));
-      final deleteBookmark = find.byTooltip(l10n.readerDeleteBookmark);
-      expect(
-        find.descendant(
-          of: deleteBookmark,
-          matching: find.byIcon(AppIcons.delete),
-        ),
-        findsNWidgets(3),
-      );
+      // Bookmark rows carry no per-row buttons: delete is an end-to-start
+      // swipe or the row's custom semantics action.
+      expect(find.byTooltip(l10n.readerDeleteBookmark), findsNothing);
+      expect(find.byIcon(AppIcons.delete), findsNothing);
       expect(find.byIcon(AppIcons.close).hitTestable(), findsOneWidget);
       final closeIcon = tester.getRect(
         find.byIcon(AppIcons.close).hitTestable(),
@@ -176,22 +173,13 @@ void main() {
         rtl ? closeIcon.left : closeIcon.right,
         rtl ? searchField.left : searchField.right,
       );
-      final deleteButtons = find.byWidgetPredicate(
-        (widget) =>
-            widget is IconButton && widget.tooltip == l10n.readerDeleteBookmark,
-      );
-      for (final element in deleteButtons.evaluate()) {
-        final button = find.byWidget(element.widget);
-        final icon = tester.getRect(
-          find.descendant(of: button, matching: find.byIcon(AppIcons.delete)),
-        );
-        expect(icon.size, closeIcon.size);
-        expect(icon.center.dx, closeIcon.center.dx);
-        expect(tester.getSize(button), const Size.square(48));
-      }
       final next = find.text('Saved passage 2: a place to return to.');
       final before = tester.getRect(next);
-      await tapUi(tester, deleteBookmark.first);
+      await tester.drag(
+        find.text('Saved passage 1: a place to return to.'),
+        Offset(rtl ? 400 : -400, 0),
+      );
+      await tester.pumpAndSettle();
       await waitForUi(
         tester,
         () => bloc.state.bookmarkEdits.removed.length == 1,

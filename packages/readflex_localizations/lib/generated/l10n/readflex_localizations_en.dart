@@ -196,22 +196,10 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get libraryResetFilters => 'Reset filters';
 
   @override
-  String get libraryClearCollectionFilter => 'Clear collection filter';
-
-  @override
   String get commonCopied => 'Copied';
 
   @override
   String get commonCopyFailed => 'Could not copy';
-
-  @override
-  String get appSkip => 'Skip';
-
-  @override
-  String get appNext => 'Next';
-
-  @override
-  String get appGetStarted => 'Get Started';
 
   @override
   String get appInitializationFailed => 'Initialization failed';
@@ -242,9 +230,6 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   @override
   String get onboardingHighlightSaveDescription =>
       'Select text to create highlights. Add notes for deeper understanding.';
-
-  @override
-  String get onboardingOrganizeLibraryTitle => 'Organize your library';
 
   @override
   String get onboardingOrganizeLibraryDescription =>
@@ -307,19 +292,16 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get librarySearchHint => 'Search library...';
 
   @override
-  String get libraryFilterAll => 'All';
+  String get libraryScopeBooks => 'Books';
 
   @override
-  String get libraryFilterBooks => 'Books';
+  String get libraryScopeArticles => 'Articles';
 
   @override
-  String get libraryFilterArticles => 'Articles';
+  String get libraryScopeComics => 'Comics';
 
   @override
-  String get libraryFilterComics => 'Comics';
-
-  @override
-  String get libraryFilterNew => 'New';
+  String get libraryScopeNew => 'New';
 
   @override
   String get libraryDisplayOptions => 'Display options';
@@ -447,9 +429,6 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
 
   @override
   String get libraryFavourites => 'Favourites';
-
-  @override
-  String get libraryFavouritesBadge => 'Favs';
 
   @override
   String libraryCreateCollectionPrompt(int count) {
@@ -601,17 +580,7 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get importAddToLibraryTitle => 'Add to Library';
 
   @override
-  String get importUploadBook => 'Upload Book';
-
-  @override
-  String get importUploadBookFormats => 'EPUB, FB2, MOBI, PDF, AZW3, CBZ';
-
-  @override
   String get importSaveArticle => 'Save Article';
-
-  @override
-  String get importSaveArticleDescription =>
-      'Paste a web URL for offline reading';
 
   @override
   String get importBeforeUploadingTitle => 'Before uploading';
@@ -910,21 +879,6 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get readerPageTurn => 'Page turn';
 
   @override
-  String get readerAlignStart => 'Align start';
-
-  @override
-  String get readerJustifyText => 'Justify text';
-
-  @override
-  String get readerAlignEnd => 'Align end';
-
-  @override
-  String get readerHorizontalPageTurn => 'Horizontal page turn';
-
-  @override
-  String get readerVerticalPageTurn => 'Vertical page turn';
-
-  @override
   String get readerResetTextSize => 'Reset text size';
 
   @override
@@ -935,24 +889,6 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
 
   @override
   String get readerIncreaseTextSize => 'Increase text size';
-
-  @override
-  String get readerResetLineSpacing => 'Reset line spacing';
-
-  @override
-  String get readerDecreaseLineSpacing => 'Decrease line spacing';
-
-  @override
-  String get readerIncreaseLineSpacing => 'Increase line spacing';
-
-  @override
-  String get readerResetPageMargins => 'Reset page margins';
-
-  @override
-  String get readerDecreasePageMargins => 'Decrease page margins';
-
-  @override
-  String get readerIncreasePageMargins => 'Increase page margins';
 
   @override
   String get readerThemeSnow => 'Snow';
@@ -1095,4 +1031,77 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
 
   @override
   String get importArticleOfflineSubtitle => 'Needs an internet connection';
+
+  @override
+  String get libraryContinueReading => 'Continue reading';
+
+  @override
+  String readingTimeLeftMinutes(int count) {
+    return '$count min left';
+  }
+
+  @override
+  String readingTimeLeftHours(int hours, int minutes) {
+    return '$hours h $minutes min left';
+  }
+
+  @override
+  String get libraryUploadFile => 'Upload a file';
+
+  @override
+  String get librarySaveArticleAction => 'Save an article';
+
+  @override
+  String get importFileKinds => 'Books, comics and PDF';
+
+  @override
+  String get importFromDevice => 'File from device';
+
+  @override
+  String get importArticleFromLink => 'Article from a link';
+
+  @override
+  String get importArticleOffline => 'Saved for reading offline';
+
+  @override
+  String get libraryChooseCollection => 'Choose collection';
+
+  @override
+  String get onboardingAddBook => 'Add a book';
+
+  @override
+  String get onboardingNotNow => 'Not now';
+
+  @override
+  String get readerLineSpacingCompact => 'Compact';
+
+  @override
+  String get readerLineSpacingNormal => 'Normal';
+
+  @override
+  String get readerLineSpacingRelaxed => 'Relaxed';
+
+  @override
+  String get readerMarginsNarrow => 'Narrow';
+
+  @override
+  String get readerMarginsMedium => 'Medium';
+
+  @override
+  String get readerMarginsWide => 'Wide';
+
+  @override
+  String get readerAlignNormal => 'Normal';
+
+  @override
+  String get readerAlignJustified => 'Justified';
+
+  @override
+  String get readerPageTurnHorizontalShort => 'Horizontal';
+
+  @override
+  String get readerPageTurnVerticalShort => 'Vertical';
+
+  @override
+  String get readerChapterRead => 'Read';
 }

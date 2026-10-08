@@ -85,7 +85,7 @@ void main() {
             await tester.pumpAndSettle();
             final menuRect = tester.getRect(find.byType(BottomSheet));
 
-            await tester.tap(find.text(l10n.importUploadBook));
+            await tester.tap(find.text(l10n.importFromDevice));
             await tester.pump();
             await expectLevelFrames(tester, menuRect);
             // A determinate bar lets the frame settle; the preparing phase

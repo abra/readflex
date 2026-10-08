@@ -2,99 +2,82 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-import 'onboarding_page_data.dart';
+import 'onboarding_page_preview.dart';
 
-/// Onboarding intro shown on the first app launch.
+/// Single onboarding screen shown on the first app launch.
 ///
-/// The caller persists completion through [onComplete].
-class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({required this.onComplete, super.key});
+/// Both actions finish onboarding; the caller persists completion and decides
+/// where each one leads.
+class OnboardingScreen extends StatelessWidget {
+  const OnboardingScreen({
+    required this.onAddBook,
+    required this.onNotNow,
+    super.key,
+  });
 
-  /// Called when the user finishes or skips onboarding.
-  final VoidCallback onComplete;
+  /// Primary action: finish onboarding and start adding a book.
+  final VoidCallback onAddBook;
 
-  @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
-}
-
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _controller = PageController();
-  int _currentPage = 0;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _complete() {
-    widget.onComplete();
-  }
-
-  void _next() {
-    if (context.reduceMotion) {
-      _controller.jumpToPage(_currentPage + 1);
-      return;
-    }
-    _controller.nextPage(
-      duration: context.motion(AppMotion.medium),
-      curve: Curves.easeInOut,
-    );
-  }
+  /// Secondary action: finish onboarding without importing.
+  final VoidCallback onNotNow;
 
   @override
   Widget build(BuildContext context) {
     debugLogScreenBuild('OnboardingScreen');
 
-    final colorScheme = context.colors;
     final l10n = context.l10n;
-    final pages = onboardingPages(l10n);
-    final isLastPage = _currentPage == pages.length - 1;
+    final text = context.text;
+    final colors = context.colors;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Align(
-              alignment: AlignmentDirectional.topEnd,
-              child: TextButton(
-                onPressed: _complete,
-                child: AppButtonLabel(l10n.appSkip, maxLines: 1),
-              ),
-            ),
             Expanded(
-              child: PageView.builder(
-                controller: _controller,
-                itemCount: pages.length,
-                onPageChanged: (index) {
-                  setState(() => _currentPage = index);
-                },
-                itemBuilder: (context, index) {
-                  final page = pages[index];
-                  return _OnboardingPage(data: page);
-                },
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  pages.length,
-                  (index) => AnimatedContainer(
-                    duration: context.motion(AppMotion.short),
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs,
+              // Large text scrolls the page; the actions stay reachable below.
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
                     ),
-                    width: _currentPage == index
-                        ? AppSpacing.xl
-                        : AppSpacing.sm,
-                    height: AppSpacing.sm,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppRadius.xs),
-                      color: _currentPage == index
-                          ? colorScheme.primary
-                          : colorScheme.outline,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Room for the tilted corners and the card's shadow.
+                        const SizedBox(height: AppSpacing.xl),
+                        // The page sample carries the highlight story, so the
+                        // copy below does not repeat it.
+                        OnboardingPagePreview(
+                          chapter: l10n.onboardingHighlightSaveTitle,
+                          highlightedParagraph:
+                              l10n.onboardingHighlightSaveDescription,
+                          paragraph: l10n.onboardingOrganizeLibraryDescription,
+                        ),
+                        const SizedBox(height: AppSpacing.xl + AppSpacing.sm),
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            l10n.onboardingReadAnythingTitle,
+                            style: text.headlineSmall,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          l10n.onboardingReadAnythingDescription,
+                          style: text.bodyLarge.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
                     ),
                   ),
                 ),
@@ -103,64 +86,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
-                0,
+                AppSpacing.sm,
                 AppSpacing.lg,
                 AppSpacing.lg,
               ),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: isLastPage ? _complete : _next,
-                  child: AppButtonLabel(
-                    isLastPage ? l10n.appGetStarted : l10n.appNext,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  FilledButton.icon(
+                    onPressed: onAddBook,
+                    icon: const Icon(AppIcons.add, size: AppIconSize.sm),
+                    label: AppButtonLabel(l10n.onboardingAddBook),
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.sm),
+                  TextButton(
+                    onPressed: onNotNow,
+                    child: AppButtonLabel(l10n.onboardingNotNow),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OnboardingPage extends StatelessWidget {
-  const _OnboardingPage({required this.data});
-
-  final OnboardingPageData data;
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = context.text;
-    final colorScheme = context.colors;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(data.icon, size: 80, color: colorScheme.primary),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  data.title,
-                  style: textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  data.description,
-                  style: textTheme.bodyLarge.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

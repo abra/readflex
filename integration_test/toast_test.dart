@@ -34,7 +34,10 @@ void main() {
     await tester.pumpWidget(app.widget);
     await waitForUi(
       tester,
-      () => find.byType(FloatingActionButton).evaluate().isNotEmpty,
+      () => find
+          .byKey(const ValueKey('libraryHeaderTitle'))
+          .evaluate()
+          .isNotEmpty,
       description: 'Library',
     );
     for (final (locale, mode) in const [
@@ -46,7 +49,9 @@ void main() {
         (p) => p.copyWith(locale: locale, themeMode: mode),
       );
       await tester.pumpAndSettle();
-      final context = tester.element(find.byType(FloatingActionButton));
+      final context = tester.element(
+        find.byKey(const ValueKey('libraryHeaderTitle')),
+      );
       final strings = ReadflexLocalizations.of(context)!;
       final message = strings.librarySaveCollectionFailed;
       showToast(context, type: NotificationType.error, message: message);
@@ -76,7 +81,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(message), findsNothing);
     }
-    final context = tester.element(find.byType(FloatingActionButton));
+    final context = tester.element(
+      find.byKey(const ValueKey('libraryHeaderTitle')),
+    );
     final message = ReadflexLocalizations.of(context)!.commonCopied;
     showToast(context, type: NotificationType.success, message: message);
     await tester.pump();

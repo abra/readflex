@@ -12,13 +12,22 @@ class AppChoiceOption<T> {
     required this.value,
     required this.label,
     this.icon,
+    this.glyph,
     this.labelStyle,
     this.labelKey,
-  });
+  }) : assert(
+         icon == null || glyph == null,
+         'glyph replaces the icon; pass one or the other.',
+       );
 
   final T value;
   final String label;
   final IconData? icon;
+
+  /// Decorative widget drawn in the icon box instead of [icon], for glyphs
+  /// that are not font icons. It should paint with the ambient [IconTheme]
+  /// color so selected and disabled states match icon segments.
+  final Widget? glyph;
   final TextStyle? labelStyle;
   final Key? labelKey;
 }
@@ -31,6 +40,7 @@ class AppChoiceControl<T> extends StatelessWidget {
     required this.options,
     required this.onChanged,
     this.iconOnly = false,
+    this.reselectable = false,
     super.key,
   });
 
@@ -39,11 +49,19 @@ class AppChoiceControl<T> extends StatelessWidget {
   final ValueChanged<T>? onChanged;
   final bool iconOnly;
 
+  /// Reports a tap on the selected option too, for controls that select the
+  /// nearest option to a value they cannot represent exactly: tapping it
+  /// then applies that option's own value.
+  final bool reselectable;
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       assert(options.isNotEmpty);
-      assert(!iconOnly || options.every((option) => option.icon != null));
+      assert(
+        !iconOnly || options.every((option) => option.hasIcon),
+        'iconOnly options need an icon or a glyph.',
+      );
       final style = context.text.bodyMedium.copyWith(letterSpacing: 0);
       var widest = AppSizes.buttonHeight;
       if (!iconOnly) {
@@ -62,7 +80,7 @@ class AppChoiceControl<T> extends StatelessWidget {
             widest,
             painter.width +
                 AppSpacing.md * 2 +
-                (option.icon == null ? 0 : AppIconSize.sm + AppSpacing.sm),
+                (option.hasIcon ? AppIconSize.sm + AppSpacing.sm : 0),
           );
         }
         painter.dispose();
@@ -100,20 +118,23 @@ class AppChoiceControl<T> extends StatelessWidget {
                             child: label(option),
                           ),
                         ),
-                  icon: option.icon == null
-                      ? null
-                      : SizedBox(
+                  icon: option.hasIcon
+                      ? SizedBox(
                           width: AppIconSize.sm,
                           height: AppSizes.buttonHeight - AppSpacing.sm * 2,
-                          child: Icon(option.icon, size: AppIconSize.sm),
-                        ),
+                          child: _AppChoiceIcon(option: option),
+                        )
+                      : null,
                   tooltip: iconOnly ? option.label : null,
                 ),
             ],
             selected: {selected},
+            // An empty set is a tap on the selected segment.
+            emptySelectionAllowed: reselectable,
             onSelectionChanged: onChanged == null
                 ? null
-                : (values) => onChanged!(values.single),
+                : (values) =>
+                      onChanged!(values.isEmpty ? selected : values.single),
             showSelectedIcon: false,
             expandedInsets: EdgeInsets.zero,
           ),
@@ -164,8 +185,11 @@ class AppChoiceControl<T> extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        if (option.icon != null) ...[
-                          Icon(option.icon, size: AppIconSize.sm),
+                        if (option.hasIcon) ...[
+                          SizedBox.square(
+                            dimension: AppIconSize.sm,
+                            child: _AppChoiceIcon(option: option),
+                          ),
                           const SizedBox(width: AppSpacing.sm),
                         ],
                         Flexible(child: label(option)),
@@ -179,4 +203,19 @@ class AppChoiceControl<T> extends StatelessWidget {
       );
     },
   );
+}
+
+extension on AppChoiceOption<Object?> {
+  bool get hasIcon => icon != null || glyph != null;
+}
+
+/// The option's font icon or glyph, centered in the icon box.
+class _AppChoiceIcon extends StatelessWidget {
+  const _AppChoiceIcon({required this.option});
+
+  final AppChoiceOption<Object?> option;
+
+  @override
+  Widget build(BuildContext context) =>
+      Center(child: option.glyph ?? Icon(option.icon, size: AppIconSize.sm));
 }

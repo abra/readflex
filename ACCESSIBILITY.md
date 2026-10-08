@@ -64,6 +64,24 @@ they preserve normal paragraph line spacing, underline, and independent link/tap
 semantics. This follows the [inline exception for text links](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html#exceptions);
 it does not reduce the touch targets of standalone buttons or the checkbox row.
 
+`AppInlineSheet` (reader Contents and Search) behaves like a modal sheet for
+assistive technology without being a route: it names itself like a route
+(`scopesRoute`/`namesRoute` with the panel title), its scrim is a dismissible
+`ModalBarrier` labelled with Material's scrim strings and blocks the page
+behind it, and a hidden sheet is offstage, so it has no semantics or focus.
+Explicit Close stays in the header: drag, fling and pull-to-close are
+shortcuts, never the only way out. With large text the sheet opens at full
+height, and on a screen too short for its content the content scrolls as a
+whole instead of clipping.
+
+The Library's bottom capsule keeps each control its own node: the collection
+switcher merges into one button (label Choose collection, value the shown
+collection) and keeps its enabled state, and "+" is a labelled filled icon
+button. The header title above it is a heading that names the shown
+collection; it has no tap action. The capsule's height is fixed, so its text
+scales to 200% and no further; at 320dp and 200% it still fits within the
+gutters, truncating a long collection name rather than clipping.
+
 When behavior changes accessibility output, add focused tests:
 
 - Use `tester.ensureSemantics()` and dispose the handle before the widget test
@@ -90,8 +108,9 @@ to layout, navigation and performance contracts.
 Collections exposes selected state and a check as well as the selection fill.
 Reader active-result text and action icons use tested foreground/background
 pairs in both themes. Quote direction, note direction and interface direction
-are independent. Onboarding uses directional Skip placement and honors reduced
-motion for page changes and indicators. Errors do not expire automatically
+are independent. Onboarding is one static screen: its page preview tilt mirrors
+in RTL, nothing animates, and both actions stay outside the scrolling content
+at large text. Errors do not expire automatically
 when accessible navigation is enabled; short success notifications remain 1s.
 Toasts expose the full message as a live region, separately from the localized
 48dp Close action. Large-text suffixes wrap instead of leaving the viewport;

@@ -5,7 +5,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
+import 'library_empty_state.dart';
 import 'library_grid_view.dart';
+import 'library_import_entry.dart';
+import 'library_layout.dart';
 import 'library_layout_cubit.dart';
 import 'library_list_view.dart';
 import 'library_selection_cubit.dart';
@@ -17,9 +20,12 @@ const _layoutTransitionOffset = 8.0;
 /// nothing to show.
 ///
 /// Distinguishes two empty states by design:
-///   1. Library is genuinely empty — prompt the user to import.
+///   1. Library is genuinely empty — offer file and article import.
 ///   2. Library has items but the current filter/search hides them all —
 ///      tell the user to relax the filter.
+///
+/// In the default view (no search, filter or collection, not selecting)
+/// the Continue reading card leads the content in both layouts.
 ///
 /// Wrapping [RefreshIndicator] is always present (even for the empty
 /// states) so pull-to-refresh stays available.
@@ -30,6 +36,7 @@ class LibraryBody extends StatelessWidget {
     required this.onSourcePressed,
     required this.onSourceLongPressed,
     required this.onConfirmSwipeDelete,
+    required this.onImportPressed,
     required this.onRefresh,
     required this.onResetFilters,
     super.key,
@@ -40,6 +47,9 @@ class LibraryBody extends StatelessWidget {
   final void Function(LibrarySource source) onSourcePressed;
   final void Function(LibrarySource source) onSourceLongPressed;
   final Future<bool> Function(LibrarySource source) onConfirmSwipeDelete;
+
+  /// Empty-library import commands; `null` while an import flow is open.
+  final ValueChanged<LibraryImportEntry>? onImportPressed;
   final Future<void> Function() onRefresh;
   final VoidCallback onResetFilters;
 
@@ -55,16 +65,18 @@ class LibraryBody extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
+          // "No results" keeps the "+" button: Reset filters must scroll
+          // clear of it, like the last row of a list. An empty library has
+          // no button.
+          padding: state.isEmpty
+              ? null
+              : EdgeInsets.only(bottom: libraryContentBottomPadding(context)),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: MediaQuery.sizeOf(context).height * 0.6,
             ),
             child: state.isEmpty
-                ? EmptyState(
-                    icon: AppIcons.book,
-                    message: l10n.libraryEmptyTitle,
-                    subtitle: l10n.libraryEmptySubtitle,
-                  )
+                ? LibraryEmptyState(onImportPressed: onImportPressed)
                 : EmptyState(
                     icon: AppIcons.searchOff,
                     message: l10n.libraryNoResultsTitle,
@@ -90,9 +102,14 @@ class LibraryBody extends StatelessWidget {
           >(
             selector: (state) => state,
             builder: (context, selection) {
+              final continueReadingSource =
+                  state.isDefaultView && !selection.isActive
+                  ? state.continueReadingSource
+                  : null;
               final child = switch (layoutMode) {
                 LibraryLayoutMode.list => LibraryListView(
                   sources: visibleItems,
+                  continueReadingSource: continueReadingSource,
                   selection: selection,
                   scrollController: scrollController,
                   onSourcePressed: onSourcePressed,
@@ -101,6 +118,7 @@ class LibraryBody extends StatelessWidget {
                 ),
                 LibraryLayoutMode.grid => LibraryGridView(
                   sources: visibleItems,
+                  continueReadingSource: continueReadingSource,
                   selection: selection,
                   scrollController: scrollController,
                   onSourcePressed: onSourcePressed,

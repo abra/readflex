@@ -108,6 +108,7 @@ void main() {
         'pageProgressionDirection': 'rtl',
         'atEnd': false,
         'atStart': false,
+        'minutesLeft': 6.5,
         'bookmark': {
           'exists': true,
           'cfi': 'epubcfi(/6/4)',
@@ -125,6 +126,7 @@ void main() {
       expect(position.sizeTotal, 480000);
       expect(position.relocationReason, 'page');
       expect(position.pageProgressionRtl, isTrue);
+      expect(position.minutesLeft, 6.5);
       expect(position.atEnd, isFalse);
       expect(position.atStart, isFalse);
       expect(position.bookmarkExists, isTrue);
@@ -153,6 +155,7 @@ void main() {
       expect(position.atStart, isFalse);
       expect(position.bookmarkExists, isFalse);
       expect(position.bookmarkCfi, isNull);
+      expect(position.minutesLeft, isNull);
     });
 
     test('fromMap drops oversized chapter titles', () {
@@ -232,6 +235,50 @@ void main() {
       expect(position.bookTotalPages, isNull);
       expect(position.sizeTotal, isNull);
       expect(position.atEnd, isFalse);
+    });
+
+    group('minutes left', () {
+      BookPosition parse(Map<String, dynamic> extra) => BookPosition.fromMap({
+        'cfi': 'epubcfi(/6/4)',
+        'percentage': 0.4,
+        ...extra,
+      });
+
+      test('articles read minutesLeft', () {
+        expect(parse({'minutesLeft': 12.5}).minutesLeft, 12.5);
+        expect(parse({'minutesLeft': 3}).minutesLeft, 3.0);
+        expect(parse({'minutesLeft': 0}).minutesLeft, 0.0);
+      });
+
+      test('missing estimates stay null', () {
+        expect(parse({}).minutesLeft, isNull);
+        expect(parse({'minutesLeft': null}).minutesLeft, isNull);
+      });
+
+      test('the former book key is ignored', () {
+        expect(parse({'sectionMinutesLeft': 6}).minutesLeft, isNull);
+      });
+
+      for (final (label, value) in [
+        ('negative', -1.0),
+        ('NaN', double.nan),
+        ('infinite', double.infinity),
+        ('negative infinite', double.negativeInfinity),
+        ('string', '5'),
+        ('bool', true),
+        ('map', <String, Object>{}),
+      ]) {
+        test('rejects $label estimates', () {
+          expect(parse({'minutesLeft': value}).minutesLeft, isNull);
+        });
+      }
+
+      test('a JSON-string payload keeps the estimate', () {
+        final map = readerBridgeMap(
+          '{"cfi":"x","percentage":0.5,"minutesLeft":1.5}',
+        )!;
+        expect(BookPosition.fromMap(map).minutesLeft, 1.5);
+      });
     });
   });
 

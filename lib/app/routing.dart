@@ -80,22 +80,30 @@ GoRoute _buildLibraryRoute(DependenciesContainer deps) => GoRoute(
   builder: (context, state) {
     final isOffline =
         ConnectivityScope.of(context) == ConnectivityStatus.offline;
+    final arguments = switch (state.extra) {
+      LibraryRouteArguments arguments => arguments,
+      _ => const LibraryRouteArguments(),
+    };
     return LibraryScreen(
       bookRepository: deps.bookRepository,
       articleRepository: deps.articleRepository,
       collectionRepository: deps.collectionRepository,
       preferencesService: deps.preferencesService,
       isOffline: isOffline,
+      // Read once by the screen's first frame; later rebuilds keep the state.
+      openImportOnStart: arguments.openImportOnStart,
       onSourcePressed: (source, {onSourceOpened}) => context.push(
         AppRoutes.reader(source.id),
         extra: ReaderRouteArguments(onSourceOpened: onSourceOpened),
       ),
-      onAddPressed: ({required onImported}) => _showImportSheet(
-        context,
-        deps,
-        isOffline: isOffline,
-        onImported: onImported,
-      ),
+      onAddPressed: ({required onImported, entry = LibraryImportEntry.menu}) =>
+          _showImportSheet(
+            context,
+            deps,
+            isOffline: isOffline,
+            entry: _importFlowEntryFor(entry),
+            onImported: onImported,
+          ),
     );
   },
 );
@@ -169,24 +177,44 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
 
 GoRoute _buildOnboardingRoute(DependenciesContainer deps) => GoRoute(
   path: AppRoutes.onboarding,
-  builder: (context, state) => OnboardingScreen(
-    onComplete: () {
+  builder: (context, state) {
+    void complete({required bool openImport}) {
       deps.preferencesService.update(
         (p) => p.copyWith(onboardingCompleted: true),
       );
-      context.go(AppRoutes.library);
-    },
-  ),
+      // A repeated tap resolves to the same Library page and state, so the
+      // import sheet still opens once.
+      context.go(
+        AppRoutes.library,
+        extra: LibraryRouteArguments(openImportOnStart: openImport),
+      );
+    }
+
+    return OnboardingScreen(
+      onAddBook: () => complete(openImport: true),
+      onNotNow: () => complete(openImport: false),
+    );
+  },
 );
+
+/// Library and import are sibling features; the router owns the mapping.
+ImportFlowEntry _importFlowEntryFor(LibraryImportEntry entry) =>
+    switch (entry) {
+      LibraryImportEntry.menu => ImportFlowEntry.menu,
+      LibraryImportEntry.file => ImportFlowEntry.file,
+      LibraryImportEntry.article => ImportFlowEntry.article,
+    };
 
 Future<void> _showImportSheet(
   BuildContext context,
   DependenciesContainer deps, {
   required bool isOffline,
   required VoidCallback onImported,
+  ImportFlowEntry entry = ImportFlowEntry.menu,
 }) async {
   await showImportFlowSheet(
     context,
+    entry: entry,
     isOffline: isOffline,
     isOfflineStream: _isOfflineStream(deps),
     onPickBookFile: pickBookFile,
@@ -257,6 +285,14 @@ Future<void> _openExternalUrl(String rawUrl) async {
   } catch (error) {
     debugPrint('Failed to open URL: $rawUrl ($error)');
   }
+}
+
+/// Optional Library arguments, set by onboarding's Add a book action.
+class LibraryRouteArguments {
+  const LibraryRouteArguments({this.openImportOnStart = false});
+
+  /// Opens file import over the Library once, after its first frame.
+  final bool openImportOnStart;
 }
 
 /// Optional reader arguments. The path ID remains authoritative, including

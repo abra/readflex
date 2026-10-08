@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -216,20 +219,20 @@ void main() {
     // Reopening without an active result does not move the list.
     visible.value = false;
     await tester.pumpAndSettle();
-    final offset = tester
-        .state<ScrollableState>(find.byType(Scrollable).first)
-        .position
-        .pixels;
     cubit.reset();
+    await tester.pumpAndSettle();
+    // The body's own Scrollable, not the field's or the sheet's; finders
+    // skip the hidden sheet.
+    final body = find
+        .descendant(
+          of: find.byType(ScrollEdgeFadeStack, skipOffstage: false),
+          matching: find.byType(Scrollable, skipOffstage: false),
+        )
+        .first;
+    final offset = tester.state<ScrollableState>(body).position.pixels;
     visible.value = true;
     await tester.pumpAndSettle();
-    expect(
-      tester
-          .state<ScrollableState>(find.byType(Scrollable).first)
-          .position
-          .pixels,
-      offset,
-    );
+    expect(tester.state<ScrollableState>(body).position.pixels, offset);
   });
 
   testWidgets('search field uses the keyboard search action', (tester) async {
@@ -313,8 +316,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Clear search'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Remove from history'));
+    await tester.drag(find.text('devices'), const Offset(-390, 0));
     await tester.pumpAndSettle();
+    expect(cubit.state.recentQueries, isEmpty);
     await tester.enterText(find.byType(TextField), 'unmatched');
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
@@ -619,8 +623,12 @@ void main() {
               ),
             );
             final closeIcon = tester.getRect(find.byIcon(AppIcons.close));
-            expect(field.left, safePadding.left + 16);
-            expect(field.right, size.width - safePadding.right - 16);
+            // A centered landscape sheet pads only for the cutout it reaches.
+            final sheet = tester.getRect(_sheetSurface);
+            final start = math.max(sheet.left, safePadding.left);
+            final end = math.min(sheet.right, size.width - safePadding.right);
+            expect(field.left, start + 16);
+            expect(field.right, end - 16);
             expect(heading.left, field.left);
             expect(heading.right, field.right);
             expect(
@@ -641,41 +649,30 @@ void main() {
                 find.descendant(of: row, matching: find.byIcon(AppIcons.clock)),
               );
               final title = tester.getRect(find.text(query));
-              final remove = tester.getRect(
+              final rowRect = tester.getRect(row);
+              // Removal is a swipe: no trailing control, the title runs to
+              // the field's trailing edge.
+              expect(
                 find.descendant(of: row, matching: find.byType(IconButton)),
-              );
-              final removeIcon = tester.getRect(
-                find.descendant(
-                  of: row,
-                  matching: find.byIcon(AppIcons.delete),
-                ),
+                findsNothing,
               );
               expect(
                 rtl ? clock.right : clock.left,
                 rtl ? field.right : field.left,
               );
               expect(
-                rtl ? removeIcon.left : removeIcon.right,
-                rtl ? field.left : field.right,
-              );
-              expect(
                 rtl ? clock.left - title.right : title.left - clock.right,
                 greaterThanOrEqualTo(AppSpacing.sm),
               );
               expect(
-                rtl ? title.left - remove.right : remove.left - title.right,
-                greaterThanOrEqualTo(AppSpacing.sm),
+                rtl ? title.left : title.right,
+                rtl
+                    ? greaterThanOrEqualTo(field.left)
+                    : lessThanOrEqualTo(field.right),
               );
-              expect(remove.width, greaterThanOrEqualTo(48));
-              expect(remove.height, greaterThanOrEqualTo(48));
-              expect(remove.center.dx, close.center.dx);
-              expect(removeIcon.size, closeIcon.size);
-              expect(removeIcon.center.dx, closeIcon.center.dx);
-              expect(remove.left, greaterThanOrEqualTo(safePadding.left));
-              expect(
-                remove.right,
-                lessThanOrEqualTo(size.width - safePadding.right),
-              );
+              expect(rowRect.height, greaterThanOrEqualTo(48));
+              expect(rowRect.left, start);
+              expect(rowRect.right, end);
             }
             await tester.tap(find.text('devices'));
             await tester.pumpAndSettle();
@@ -724,7 +721,8 @@ void main() {
     }
   }
 
-  testWidgets('history removal does not search and the clock opens its query', (
+  testWidgets('history swipe removal does not search and the clock opens its '
+      'query', (
     tester,
   ) async {
     viewport(tester, const Size(390, 844));
@@ -749,16 +747,12 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byIcon(AppIcons.close), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byTooltip('Remove from history'),
-        matching: find.byIcon(AppIcons.delete),
-      ),
-      findsNWidgets(2),
-    );
-    await tester.tap(find.byTooltip('Remove from history').last);
+    expect(find.byTooltip('Remove from history'), findsNothing);
+    expect(find.byIcon(AppIcons.delete), findsNothing);
+    await tester.drag(find.text('power'), const Offset(-390, 0));
     await tester.pumpAndSettle();
     expect(cubit.state.recentQueries, ['devices']);
+    expect(find.text('power'), findsNothing);
     expect(searches, isEmpty);
     await tester.tap(find.byIcon(AppIcons.clock));
     await tester.pumpAndSettle();
@@ -771,8 +765,173 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  group('recent search swipe', () {
+    Future<ReaderSearchCubit> pumpHistory(
+      WidgetTester tester, {
+      bool rtl = false,
+      double scale = 1,
+      bool disableAnimations = false,
+      List<String>? searches,
+    }) async {
+      viewport(tester, const Size(390, 844));
+      final cubit = ReaderSearchCubit(
+        initialRecentQueries: const ['devices', 'power'],
+      );
+      addTearDown(cubit.close);
+      await tester.pumpWidget(
+        _app(
+          cubit: cubit,
+          rtl: rtl,
+          scale: scale,
+          disableAnimations: disableAnimations,
+          child: ReaderSearchPanel(
+            visible: true,
+            format: BookFormat.epub,
+            pageProgressionRtl: false,
+            onClose: () {},
+            onResultSelected: (_) {},
+            onSearch: (query) {
+              searches?.add(query);
+              return Stream.value(const ReaderSearchDone(requestId: 1));
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return cubit;
+    }
+
+    for (final rtl in [false, true]) {
+      for (final scale in [1.0, 2.0]) {
+        testWidgets(
+          'reveals a full-bleed delete fill with the glyph on the trailing '
+          'gutter rtl=$rtl scale=$scale',
+          (tester) async {
+            final cubit = await pumpHistory(tester, rtl: rtl, scale: scale);
+            final row = find.ancestor(
+              of: find.text('power'),
+              matching: find.byType(ListTile),
+            );
+            final rowRect = tester.getRect(row);
+            // End-to-start follows the app locale: leftward in LTR.
+            final gesture = await tester.startGesture(
+              tester.getCenter(find.text('power')),
+            );
+            final direction = rtl ? 1.0 : -1.0;
+            await gesture.moveBy(Offset(direction * 20, 0));
+            await gesture.moveBy(Offset(direction * 100, 0));
+            await tester.pump();
+            final fill = find.ancestor(
+              of: find.byIcon(AppIcons.delete),
+              matching: find.byType(ColoredBox),
+            );
+            final colors = tester.element(find.byType(SearchField)).colors;
+            expect(tester.widget<ColoredBox>(fill.first).color, colors.error);
+            expect(tester.getRect(fill.first), rowRect);
+            final glyph = tester.getRect(find.byIcon(AppIcons.delete));
+            expect(rtl ? glyph.left : 390 - glyph.right, AppSpacing.lg);
+            expect(
+              tester.widget<Icon>(find.byIcon(AppIcons.delete)).color,
+              colors.onError,
+            );
+            final label = find.descendant(
+              of: fill.first,
+              matching: find.text('Remove from history'),
+            );
+            expect(label, findsOneWidget);
+            expect(
+              rtl
+                  ? tester.getRect(label).left - glyph.right
+                  : glyph.left - tester.getRect(label).right,
+              AppSpacing.sm,
+            );
+            expect(tester.takeException(), isNull);
+            // Short of the threshold the row springs back and stays.
+            await gesture.up();
+            await tester.pumpAndSettle();
+            expect(cubit.state.recentQueries, ['devices', 'power']);
+            expect(tester.getRect(row), rowRect);
+            // Dismissible keeps the fill mounted but clipped to nothing.
+            expect(find.byIcon(AppIcons.delete).hitTestable(), findsNothing);
+
+            await tester.drag(
+              find.text('power'),
+              Offset(direction * 390, 0),
+            );
+            await tester.pumpAndSettle();
+            expect(cubit.state.recentQueries, ['devices']);
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+
+      testWidgets('a start-to-end drag keeps the entry rtl=$rtl', (
+        tester,
+      ) async {
+        final cubit = await pumpHistory(tester, rtl: rtl);
+        await tester.drag(find.text('power'), Offset(rtl ? -390 : 390, 0));
+        await tester.pumpAndSettle();
+        expect(cubit.state.recentQueries, ['devices', 'power']);
+      });
+    }
+
+    testWidgets('a semantics action removes the entry without searching', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final searches = <String>[];
+      final cubit = await pumpHistory(tester, searches: searches);
+      const action = CustomSemanticsAction(label: 'Remove from history');
+      final id = CustomSemanticsAction.getIdentifier(action);
+      final node = tester.getSemantics(find.text('power'));
+      expect(node.getSemanticsData().customSemanticsActionIds, contains(id));
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      expect(node.getSemanticsData().label, contains('power'));
+      node.owner!.performAction(node.id, SemanticsAction.customAction, id);
+      await tester.pumpAndSettle();
+      expect(cubit.state.recentQueries, ['devices']);
+      expect(searches, isEmpty);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      semantics.dispose();
+    });
+
+    testWidgets('reduced motion removes a swiped entry without resizing', (
+      tester,
+    ) async {
+      final cubit = await pumpHistory(tester, disableAnimations: true);
+      final dismissible = tester.widget<Dismissible>(
+        find.ancestor(
+          of: find.text('power'),
+          matching: find.byType(Dismissible),
+        ),
+      );
+      expect(dismissible.resizeDuration, isNull);
+      expect(dismissible.movementDuration, Duration.zero);
+      await tester.drag(find.text('power'), const Offset(-390, 0));
+      await tester.pumpAndSettle();
+      expect(cubit.state.recentQueries, ['devices']);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('history rows collapse with the short motion token', (
+      tester,
+    ) async {
+      await pumpHistory(tester);
+      final dismissible = tester.widget<Dismissible>(
+        find.ancestor(
+          of: find.text('power'),
+          matching: find.byType(Dismissible),
+        ),
+      );
+      expect(dismissible.key, const ValueKey<Object>('power'));
+      expect(dismissible.direction, DismissDirection.endToStart);
+      expect(dismissible.resizeDuration, AppMotion.short);
+      expect(dismissible.movementDuration, AppMotion.short);
+    });
+  });
+
   testWidgets(
-    'search panel close and history controls have circular feedback',
+    'search panel close control has circular feedback',
     (
       tester,
     ) async {
@@ -793,7 +952,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      for (final tooltip in ['Close', 'Remove from history']) {
+      for (final tooltip in ['Close']) {
         final ink = tester.widget<InkWell>(
           find.descendant(
             of: find.byWidgetPredicate(
@@ -881,20 +1040,8 @@ void main() {
     final closeIcon = tester.getRect(find.byIcon(AppIcons.close));
     expect(closeIcon.size, const Size.square(AppIconSize.sm));
     expect(390 - closeIcon.right, AppSpacing.lg);
-    final removeIcon = tester.getRect(find.byIcon(AppIcons.delete));
-    expect(removeIcon.size, const Size.square(AppIconSize.sm));
-    expect(removeIcon.right, closeIcon.right);
-    // Inline row removal is muted like the other row delete glyphs.
-    final remove = tester.widget<IconButton>(
-      find.ancestor(
-        of: find.byIcon(AppIcons.delete),
-        matching: find.byType(IconButton),
-      ),
-    );
-    expect(
-      remove.style?.foregroundColor?.resolve({}),
-      tester.element(find.byType(SearchField)).colors.onSurfaceVariant,
-    );
+    // History rows have no inline remove glyph; the swipe owns removal.
+    expect(find.byIcon(AppIcons.delete), findsNothing);
   });
 
   for (final (safe, keyboard) in [(0.0, 0.0), (34.0, 0.0), (0.0, 300.0)]) {
@@ -929,21 +1076,16 @@ void main() {
             ),
           ),
         );
-        expect(
-          list.padding,
-          EdgeInsets.only(bottom: safe + keyboard + AppSpacing.lg),
-        );
-        // The panel itself no longer pads for the keyboard; the list does.
-        expect(
-          tester.getRect(find.byType(ReaderSearchPanel)).bottom,
-          844,
-        );
+        // The sheet sits on the keyboard, so the list pads for the system
+        // inset and the 16dp gutter only.
+        expect(list.padding, EdgeInsets.only(bottom: safe + AppSpacing.lg));
+        expect(tester.getRect(_sheetSurface).bottom, 844 - keyboard);
       },
     );
   }
 
   for (final rtl in [false, true]) {
-    testWidgets('hidden search panel slides toward the leading edge rtl=$rtl', (
+    testWidgets('a hidden search sheet stays mounted offstage rtl=$rtl', (
       tester,
     ) async {
       viewport(tester, const Size(390, 844));
@@ -964,13 +1106,84 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final slide = tester.widget<AnimatedSlide>(find.byType(AnimatedSlide));
-      expect(slide.offset, Offset(rtl ? 1 : -1, 0));
-      expect(slide.duration, AppMotion.short);
+      final offstage = tester.widget<Offstage>(
+        find
+            .descendant(
+              of: find.byType(AppInlineSheet),
+              matching: find.byType(Offstage),
+            )
+            .first,
+      );
+      expect(offstage.offstage, isTrue);
+      expect(find.byType(TextField, skipOffstage: false), findsOneWidget);
     });
   }
 
-  testWidgets('search panel settles in one frame under reduced motion', (
+  testWidgets('opens at half height with the field mid-screen', (
+    tester,
+  ) async {
+    viewport(tester, const Size(390, 844));
+    final cubit = await seed(tester, count: 10);
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        child: ReaderSearchPanel(
+          visible: true,
+          format: BookFormat.epub,
+          pageProgressionRtl: false,
+          onClose: () {},
+          onResultSelected: (_) {},
+          onSearch: (_) => const Stream.empty(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final geometry = AppInlineSheetGeometry.resolve(
+      maxHeight: 844,
+      keyboardInset: 0,
+      topInset: 0,
+    );
+    expect(
+      tester.getRect(_sheetSurface).top,
+      moreOrLessEquals(844 - geometry.half),
+    );
+    expect(
+      tester.getRect(find.byType(SearchField)).top,
+      greaterThan(844 / 3),
+    );
+  });
+
+  testWidgets('the sheet rises with the keyboard and keeps the field in '
+      'view', (tester) async {
+    viewport(tester, const Size(390, 844));
+    final cubit = ReaderSearchCubit(initialRecentQueries: const ['power']);
+    addTearDown(cubit.close);
+    await tester.pumpWidget(
+      _app(
+        cubit: cubit,
+        inset: 291,
+        child: ReaderSearchPanel(
+          visible: true,
+          format: BookFormat.epub,
+          pageProgressionRtl: false,
+          onClose: () {},
+          onResultSelected: (_) {},
+          onSearch: (_) => const Stream.empty(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final sheet = tester.getRect(_sheetSurface);
+    expect(sheet.bottom, 844 - 291);
+    // 60% of 545dp above the keyboard; the field and history sit right above
+    // the keys.
+    expect(sheet.height, moreOrLessEquals(545 * 0.6));
+    final field = tester.getRect(find.byType(SearchField));
+    expect(field.bottom, lessThan(sheet.bottom));
+    expect(find.text('power').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('the search sheet settles in one frame under reduced motion', (
     tester,
   ) async {
     viewport(tester, const Size(390, 844));
@@ -996,32 +1209,31 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(
-      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).duration,
-      Duration.zero,
-    );
     visible.value = true;
     await tester.pump();
-    expect(
-      tester.widget<AnimatedSlide>(find.byType(AnimatedSlide)).offset,
-      Offset.zero,
+    final geometry = AppInlineSheetGeometry.resolve(
+      maxHeight: 844,
+      keyboardInset: 0,
+      topInset: 0,
     );
     expect(
-      tester
-          .getRect(
-            find
-                .descendant(
-                  of: find.byType(ReaderSearchPanel),
-                  matching: find.byType(Material),
-                )
-                .first,
-          )
-          .left,
-      0,
+      tester.getRect(_sheetSurface).top,
+      moreOrLessEquals(844 - geometry.half),
     );
-    expect(tester.hasRunningAnimations, isFalse);
+    // Opening focuses the empty field, whose border transition is the
+    // framework's; the sheet itself must not move any further.
+    final top = tester.getRect(_sheetSurface).top;
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(tester.getRect(_sheetSurface).top, top);
   });
 }
+
+final _sheetSurface = find
+    .descendant(
+      of: find.byType(AppInlineSheet),
+      matching: find.byType(Material),
+    )
+    .first;
 
 Widget _app({
   required ReaderSearchCubit cubit,

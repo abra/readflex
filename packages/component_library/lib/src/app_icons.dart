@@ -37,12 +37,17 @@ abstract final class AppIcons {
   // ── Content ───────────────────────────────────────────────
   static const IconData book = LucideIcons.bookOpen;
   static const IconData article = LucideIcons.fileText;
+  static const IconData comic = LucideIcons.bookImage;
+
+  /// Items never opened: the Library's New collection.
+  static const IconData newItems = LucideIcons.sparkles;
   static const IconData articleBadge = LucideIcons.newspaper;
   static const IconData bookmark = LucideIcons.bookmark;
   static const IconData bookmarkAdd = LucideIcons.bookmarkPlus;
   static const IconData collection = LucideIcons.folder;
   static const IconData collectionAdd = LucideIcons.folderPlus;
   static const IconData collectionFavourites = LucideIcons.heart;
+
   static const IconData author = LucideIcons.user;
   static const IconData highlight = LucideIcons.highlighter;
   static const IconData quote = LucideIcons.quote;
@@ -80,10 +85,6 @@ abstract final class AppIcons {
 
   // ── Metadata ──────────────────────────────────────────────
   static const IconData language = LucideIcons.globe;
-
-  // ── Onboarding ────────────────────────────────────────────
-  static const IconData readAnything = LucideIcons.bookOpen;
-  static const IconData highlightSave = LucideIcons.highlighter;
 
   // ── States ────────────────────────────────────────────────
   static const IconData error = LucideIcons.alertCircle;

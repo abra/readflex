@@ -32,7 +32,7 @@ void main() {
       await tester.pumpAndSettle();
       final menuRect = tester.getRect(find.byType(BottomSheet));
       for (final action in [
-        find.text(host.l10n.importUploadBook),
+        find.text(host.l10n.importFromDevice),
         find.byTooltip(host.l10n.commonBack),
       ]) {
         await tester.tap(action);
@@ -83,8 +83,8 @@ void main() {
         );
         await tester.pumpAndSettle();
         final menuRect = tester.getRect(find.byType(BottomSheet));
-        await tester.ensureVisible(find.text(l10n.importUploadBook));
-        await tester.tap(find.text(l10n.importUploadBook));
+        await tester.ensureVisible(find.text(l10n.importFromDevice));
+        await tester.tap(find.text(l10n.importFromDevice));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
 

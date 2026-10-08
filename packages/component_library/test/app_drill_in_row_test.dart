@@ -178,6 +178,54 @@ void main() {
     );
   });
 
+  testWidgets('leading widget takes the icon slot and its 12dp gap', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    var taps = 0;
+    for (final direction in TextDirection.values) {
+      await pump(
+        tester,
+        AppDrillInRow(
+          leading: const SizedBox.square(
+            key: ValueKey('tile'),
+            dimension: 40,
+          ),
+          title: 'File from device',
+          subtitle: 'Books, comics and PDF',
+          onTap: () => taps++,
+        ),
+        direction: direction,
+      );
+      final row = tester.getRect(find.byType(AppDrillInRow));
+      final tile = tester.getRect(find.byKey(const ValueKey('tile')));
+      final title = tester.getRect(find.text('File from device'));
+      if (direction == TextDirection.ltr) {
+        expect(tile.left, row.left);
+        expect(title.left, tile.right + AppSpacing.md);
+      } else {
+        expect(tile.right, row.right);
+        expect(title.right, tile.left - AppSpacing.md);
+      }
+      expect(tile.center.dy, closeTo(row.center.dy, 0.5));
+
+      await tester.tapAt(tile.center);
+      expect(
+        tester.getSemantics(find.byType(AppDrillInRow)),
+        matchesSemantics(
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: true,
+          hasTapAction: true,
+          label: 'File from device',
+          value: 'Books, comics and PDF',
+        ),
+      );
+    }
+    expect(taps, 2, reason: 'taps on the leading widget reach the row');
+    semantics.dispose();
+  });
+
   testWidgets('chevron follows the layout direction', (tester) async {
     await pump(tester, AppDrillInRow(title: 'Language', onTap: () {}));
     expect(find.byIcon(AppIcons.chevronRight), findsOneWidget);

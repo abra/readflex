@@ -20,6 +20,27 @@ final _book = Book(
 
 final _favouritesScope = LibraryCollectionScope.favourites();
 
+/// The four built-in scopes a load always leads with, by count.
+List<LibraryCollectionScope> _builtIns({
+  int books = 0,
+  int articles = 0,
+  int comics = 0,
+  int unread = 0,
+}) => [
+  for (final (type, count) in [
+    (LibraryCollectionScopeType.books, books),
+    (LibraryCollectionScopeType.articles, articles),
+    (LibraryCollectionScopeType.comics, comics),
+    (LibraryCollectionScopeType.unread, unread),
+  ])
+    LibraryCollectionScope.smart(
+      type: type,
+      id: type.name,
+      label: type.name,
+      sourceCount: count,
+    ),
+];
+
 void main() {
   for (final initiallyLoaded in [false, true]) {
     test(
@@ -68,7 +89,11 @@ void main() {
           expect(bloc.state.selectedCollectionScope!.id, 'manual');
           expect(bloc.state.visibleItems.map((s) => s.id), ['1']);
         } else {
-          expect(bloc.state.collectionScopes, isEmpty);
+          // Only the built-in scopes, which need no collection storage.
+          expect(
+            bloc.state.collectionScopes.where((scope) => !scope.isBuiltIn),
+            isEmpty,
+          );
         }
         collections.shouldThrow = false;
         final recovered = bloc.stream.firstWhere(
@@ -170,7 +195,10 @@ void main() {
         LibraryState(
           status: LibraryStatus.success,
           sources: [_book].map(LibrarySource.fromBook).toList(),
-          collectionScopes: [_favouritesScope],
+          collectionScopes: [
+            ..._builtIns(books: 1, unread: 1),
+            _favouritesScope,
+          ],
         ),
       ],
     );
@@ -201,7 +229,7 @@ void main() {
         LibraryState(status: LibraryStatus.loading),
         LibraryState(
           status: LibraryStatus.success,
-          collectionScopes: [_favouritesScope],
+          collectionScopes: [..._builtIns(), _favouritesScope],
         ),
       ],
     );
@@ -241,13 +269,12 @@ void main() {
     );
 
     blocTest<LibraryBloc, LibraryState>(
-      'reset cancels a pending search and clears all filters without IO',
+      'reset cancels a pending search and clears search and scope without IO',
       build: () => LibraryBloc(bookRepository: repository),
       seed: () => LibraryState(
         status: LibraryStatus.success,
         sources: [_book].map(LibrarySource.fromBook).toList(),
-        filter: LibraryFilter.comics,
-        selectedCollectionScope: _favouritesScope,
+        selectedCollectionScope: _builtIns(comics: 0)[2],
         searchQuery: 'old',
       ),
       act: (bloc) async {
@@ -283,7 +310,7 @@ void main() {
         LibraryState(
           status: LibraryStatus.success,
           deletionVersion: 1,
-          collectionScopes: [_favouritesScope],
+          collectionScopes: [..._builtIns(), _favouritesScope],
           deletionEffect: const LibraryDeletionEffect(
             version: 1,
             success: true,
@@ -530,6 +557,122 @@ void main() {
     );
   });
 
+  group('built-in scopes', () {
+    late FakeBookRepository repository;
+    final newBook = Book(
+      id: 'new',
+      title: 'Never opened',
+      filePath: '/new.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 1),
+    );
+    final openedBook = Book(
+      id: 'opened',
+      title: 'Opened',
+      filePath: '/opened.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 1),
+      lastOpenedAt: DateTime(2026, 1, 3),
+    );
+    final comic = Book(
+      id: 'comic',
+      title: 'Comic',
+      filePath: '/comic.cbz',
+      format: BookFormat.cbz,
+      addedAt: DateTime(2026, 1, 1),
+      lastOpenedAt: DateTime(2026, 1, 2),
+    );
+
+    setUp(() => repository = FakeBookRepository());
+
+    test('a load counts Books, Articles, Comics and New ahead of the '
+        'curated and derived scopes', () async {
+      repository.seedBooks([newBook, openedBook, comic]);
+      final bloc = LibraryBloc(
+        bookRepository: repository,
+        collectionRepository: FakeCollectionRepository(),
+      );
+      addTearDown(bloc.close);
+      bloc.add(const LibraryLoadRequested());
+      await bloc.stream.firstWhere((s) => s.status == LibraryStatus.success);
+
+      expect(
+        bloc.state.builtInCollectionScopes,
+        _builtIns(books: 2, comics: 1, unread: 1),
+      );
+      // Built-ins lead, then Favourites.
+      expect(
+        bloc.state.collectionScopes.take(5).map((scope) => scope.type),
+        [
+          ...LibraryCollectionScopeType.builtIn,
+          LibraryCollectionScopeType.favourites,
+        ],
+      );
+      expect(
+        bloc.state.collectionScopes.where((scope) => scope.isBuiltIn),
+        everyElement(
+          isA<LibraryCollectionScope>().having(
+            (scope) => scope.canManage,
+            'canManage',
+            isFalse,
+          ),
+        ),
+      );
+    });
+
+    blocTest<LibraryBloc, LibraryState>(
+      'choosing a built-in scope narrows the list without IO',
+      build: () => LibraryBloc(bookRepository: repository),
+      seed: () => LibraryState(
+        status: LibraryStatus.success,
+        sources: [newBook, comic].map(LibrarySource.fromBook).toList(),
+        collectionScopes: _builtIns(books: 1, comics: 1, unread: 1),
+      ),
+      act: (bloc) => bloc.add(
+        LibraryCollectionScopeChanged(_builtIns(comics: 1)[2]),
+      ),
+      verify: (bloc) {
+        expect(bloc.state.visibleItems.map((s) => s.id), ['comic']);
+        expect(bloc.state.scopeItemCount, 1);
+        expect(repository.getBooksCallCount, 0);
+      },
+    );
+
+    test('New stays selected after its last item is opened', () async {
+      repository.seedBooks([newBook, comic]);
+      final bloc = LibraryBloc(bookRepository: repository);
+      addTearDown(bloc.close);
+      bloc.add(const LibraryLoadRequested());
+      await bloc.stream.firstWhere((s) => s.status == LibraryStatus.success);
+      bloc.add(
+        LibraryCollectionScopeChanged(bloc.state.builtInCollectionScopes[3]),
+      );
+      await bloc.stream.firstWhere((s) => s.hasCollectionScope);
+      expect(bloc.state.visibleItems.map((s) => s.id), ['new']);
+
+      // Reading it is the usual way New empties.
+      repository.seedBooks([
+        newBook.copyWith(lastOpenedAt: DateTime(2026, 2)),
+        comic,
+      ]);
+      final done = Completer<void>();
+      bloc.add(LibraryRefreshRequested(completer: done));
+      await done.future;
+
+      expect(
+        bloc.state.selectedCollectionScope?.type,
+        LibraryCollectionScopeType.unread,
+      );
+      expect(bloc.state.selectedCollectionScope?.sourceCount, 0);
+      expect(bloc.state.visibleItems, isEmpty);
+      // Its row stays in the picker so it can be left.
+      expect(
+        bloc.state.pickerBuiltInCollectionScopes.map((scope) => scope.type),
+        contains(LibraryCollectionScopeType.unread),
+      );
+    });
+  });
+
   group('LibraryState', () {
     test(
       'visibleItems are sorted by lastOpenedAt descending with addedAt fallback',
@@ -626,45 +769,7 @@ void main() {
       expect(state.visibleItems, [LibrarySource.fromBook(_book)]);
     });
 
-    test('visibleItems applies manual collection scope before filter', () {
-      final epub = Book(
-        id: 'book-epub',
-        title: 'Dune',
-        filePath: '/dune.epub',
-        format: BookFormat.epub,
-        addedAt: DateTime(2026, 1, 1),
-      );
-      final comic = Book(
-        id: 'book-comic',
-        title: 'Dune Comic',
-        filePath: '/dune.cbz',
-        format: BookFormat.cbz,
-        addedAt: DateTime(2026, 1, 2),
-      );
-      final collection = LibraryCollection(
-        id: 'collection-1',
-        name: 'Dune',
-        sourceCount: 2,
-        createdAt: DateTime(2026),
-        updatedAt: DateTime(2026),
-      );
-      final scope = LibraryCollectionScope.manual(
-        collection: collection,
-        sourceIds: [epub.id, comic.id],
-      );
-
-      final state = LibraryState(
-        status: LibraryStatus.success,
-        sources: [epub, comic].map(LibrarySource.fromBook).toList(),
-        filter: LibraryFilter.books,
-        collectionScopes: [scope],
-        selectedCollectionScope: scope,
-      );
-
-      expect(state.visibleItems, [LibrarySource.fromBook(epub)]);
-    });
-
-    test('New filter excludes a source that was opened but not read', () {
+    test('New scope excludes a source that was opened but not read', () {
       final untouched = Book(
         id: 'book-new',
         title: 'Untouched',
@@ -683,7 +788,7 @@ void main() {
       final state = LibraryState(
         status: LibraryStatus.success,
         sources: [untouched, opened].map(LibrarySource.fromBook).toList(),
-        filter: LibraryFilter.unread,
+        selectedCollectionScope: _builtIns(unread: 1)[3],
       );
 
       // Same rule as the row's "New" label.

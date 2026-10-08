@@ -2,7 +2,8 @@
 
 Bottom sheet for adding content to the library: import a book file
 (EPUB / PDF / FB2 / MOBI / AZW3 / CBZ) or save an article URL. Opened from the Library screen's FAB
-and used as the single import entry point for adding library content.
+and used as the single import entry point for adding library content; callers
+that already know the path pass an `ImportFlowEntry` instead of a second sheet.
 
 ## Public API
 
@@ -21,6 +22,7 @@ Future<ImportFlowResult?> showImportFlowSheet(
   AcceptBookImportTerms? acceptBookImportTerms,
   Future<void> Function()? onOpenTerms,
   Future<void> Function()? onOpenPrivacy,
+  ImportFlowEntry entry = ImportFlowEntry.menu,
 });
 ```
 
@@ -39,6 +41,14 @@ Future<ImportFlowResult?> showImportFlowSheet(
 - `isBookImportTermsAccepted` / `acceptBookImportTerms` — optional gate for
   book uploads; callers normally back this with persisted preferences.
 - `onOpenTerms` / `onOpenPrivacy` — optional external legal-link callbacks.
+- `entry` — where the sheet starts. `menu` shows the two rows. `file` runs
+  the file row's action before the first frame: the consent step while terms
+  are not accepted, otherwise the platform picker over the menu (cancel leaves
+  the menu). `article` opens the URL step directly. Steps opened this way
+  behave like steps opened from the menu: header/system Back returns to the
+  menu and the URL draft is retained until the sheet closes. The article entry
+  still opens offline; the form then shows the offline hint and keeps Save
+  disabled.
 - Sheet resolves with `ImportFlowResult.bookImported` or
   `ImportFlowResult.articleImported` when the user finishes a successful import
   while the sheet remains open. Dismissal is not an import-completion signal.
@@ -57,6 +67,7 @@ Helpers exported from `import_flow.dart`:
 | `importBookFile`      | Default book-import implementation       |
 | `bookExtensions`      | File-picker allowed extensions           |
 | `ImportFlowResult`    | What got imported                        |
+| `ImportFlowEntry`     | Starting step: menu, file or article     |
 
 ## Architecture
 
@@ -90,16 +101,22 @@ Links wrap with the surrounding text at the shared `bodySmall` line height;
 button-sized widgets must not inflate the paragraph's line boxes. Recognizers
 are owned and disposed by the consent widget. Menu and URL forms scroll when
 content exceeds the viewport or the keyboard leaves less room. The menu uses
-two full-width `AppDrillInRow`s (24dp vertical padding inside the ripple) with
-book/link icons and directional chevrons; their divider spans the full row
-width within the sheet padding. The close
-action stays in the header while the rows scroll.
+two full-width `AppDrillInRow`s (24dp vertical padding inside the ripple) and
+directional chevrons: **File from device** ("Books, comics and PDF", upload
+glyph) and **Article from a link** ("Saved for reading offline", link glyph).
+Each leading glyph sits in a 40dp tile with a 12dp radius in the
+`selectedControlBackground/Foreground` pair, on the 24dp gutter, with the labels
+12dp after it. The tile goes in the row's `leading` slot, so the whole row
+stays one tap target and one semantics node (label = title, value = subtitle). Other steps keep their titles (Save Article,
+Before uploading). The divider spans the full row width within the sheet
+padding. The close action stays in the header while the rows scroll.
 Divider color and thickness come from the shared `DividerTheme`, as in Library.
 The rows use 24dp vertical padding and share any unused body space equally
 above and below the group. Long content scrolls instead of stretching the sheet;
 the menu and URL form retain the same height on forward/back navigation.
-Offline article import remains disabled, with a warning icon and no navigation
-chevron, while local books remain available. The URL form uses the shared 48dp
+Offline article import remains disabled, with a warning glyph on a neutral
+`surfaceContainerHighest` tile, "Needs an internet connection" in place of the
+subtitle and no navigation chevron, while local books remain available. The URL form uses the shared 48dp
 header with Back and Close, and a single filled Save action. The input and hints
 scroll between them. Hints sit 8dp above the footer; remaining body space stays
 between the reserved validation area and the hints, with a minimum 8dp gap.
@@ -159,8 +176,13 @@ artificial progress or new repository operation drives the presentation.
 
 ## Verification
 
-Package tests cover menu spacing, reachable hints and stable step height in English,
-Russian, and Arabic, menu hit targets and disabled semantics, RTL/large-text
+Package tests cover menu copy, icon tiles (size, radius, colour pair in light
+and dark, gutter and RTL mirroring), tile taps reaching the row, drill-in
+semantics and 48dp targets, the offline row, every `ImportFlowEntry` (file with
+and without accepted terms, a picked book, article online/offline) with
+header/system Back returning to the menu, menu spacing, reachable hints and
+stable step height in English, Russian, and Arabic, menu hit targets and
+disabled semantics, RTL/large-text
 header access, validation, clipboard races/failures, retry state, picker
 cancellation, progress layout, and keyboard access with enlarged text. Regression
 tests distinguish header/system Back from Close/scrim/drag and check draft retention.

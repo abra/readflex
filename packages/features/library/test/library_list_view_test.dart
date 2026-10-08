@@ -595,9 +595,6 @@ void main() {
                   searchController: searchController,
                   searchFocusNode: focus,
                   onSearchChanged: (_) {},
-                  onFilterChanged: (_) {},
-                  onCollectionScopePressed: () {},
-                  onCollectionScopeCleared: () {},
                 ),
                 Expanded(
                   child: LibraryListView(

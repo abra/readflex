@@ -210,7 +210,12 @@ void main() {
             'comic-highlights-preview-error',
           );
           failPreview = false;
-          await tapUi(tester, find.byTooltip(l10n.commonRetry).first);
+          // The retained list may leave a row's preview partly below the
+          // sheet; retry the first one in view.
+          await tapUi(
+            tester,
+            find.byTooltip(l10n.commonRetry).hitTestable().first,
+          );
           await decodeVisiblePreviews(tester);
           await tester.pumpAndSettle();
           expect(find.byTooltip(l10n.commonRetry), findsNothing);

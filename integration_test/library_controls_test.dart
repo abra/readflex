@@ -63,7 +63,7 @@ void main() {
     tester.platformDispatcher.defaultRouteNameTestValue = '/';
     addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
     await tester.pumpWidget(app.widget);
-    final add = find.byType(FloatingActionButton);
+    final add = find.byKey(const ValueKey('libraryAddButton'));
     await tapUi(tester, add);
     await capture(tester, 'import-menu');
     expectSheetCloseAlignment(tester);
@@ -183,19 +183,26 @@ void main() {
       () => tile.evaluate().isNotEmpty,
       description: 'library',
     );
-    final collectionFill = find.byKey(
-      const ValueKey('library-collection-fill'),
-    );
-    expect(tester.getSize(collectionFill), const Size.square(32));
+    // The title is a heading and Display the header's only action; the
+    // bottom capsule holds the collection switcher and +.
+    expect(find.byKey(const ValueKey('libraryHeaderTitle')), findsOneWidget);
     expect(
-      tester.getSize(find.byTooltip('Collections')),
-      const Size.square(48),
+      tester
+          .getSize(find.byKey(const ValueKey('libraryCollectionsButton')))
+          .height,
+      greaterThanOrEqualTo(48),
     );
     expect(
-      tester.getCenter(find.byIcon(AppIcons.collection)),
-      tester.getCenter(collectionFill),
+      tester.getSize(find.byKey(const ValueKey('libraryAddButton'))),
+      const Size.square(AppSizes.buttonHeight),
     );
-    await capture(tester, 'library-filters');
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('libraryFloatingActions')))
+          .height,
+      AppSizes.floatingActionButton,
+    );
+    await capture(tester, 'library-header');
     final search = find.byType(TextField);
     final initialReads = app.bookRepository.reads;
     await tester.enterText(search, 'no matching title');
@@ -223,7 +230,10 @@ void main() {
     expect(find.text('Selected: 1'), findsOneWidget);
     await capture(tester, 'library-selection');
     await tapUi(tester, find.byTooltip('Cancel selection'));
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('libraryAddButton')),
+      findsOneWidget,
+    );
     await tapUi(tester, find.byTooltip('Display options'));
     await capture(tester, 'library-display');
     final displayRect = tester.getRect(find.byType(BottomSheet));
@@ -351,7 +361,7 @@ void main() {
       description: 'saved collection',
     );
     final collection = (await app.collectionRepository.getCollections()).single;
-    await tapUi(tester, find.byIcon(AppIcons.collection));
+    await tapUi(tester, find.byKey(const ValueKey('libraryCollectionsButton')));
     await tester.enterText(find.byType(TextField).last, 'Reading');
     await tester.pumpAndSettle();
     final collectionsSheet = tester.element(find.byType(BottomSheet));

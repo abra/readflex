@@ -2,10 +2,38 @@ part of 'library_bloc.dart';
 
 enum LibraryStatus { initial, loading, success, failure }
 
-/// Kept as an enum so switches are exhaustive and renames are refactor-safe.
-enum LibraryFilter { all, books, articles, comics, unread }
+/// What a collection scope narrows the Library to. One picker holds them all,
+/// so there is a single way to choose what the Library shows.
+enum LibraryCollectionScopeType {
+  /// Built in, derived from the source: books that are not comics.
+  books,
 
-enum LibraryCollectionScopeType { favourites, manual, site, author }
+  /// Built in: saved articles.
+  articles,
+
+  /// Built in: comic archives.
+  comics,
+
+  /// Built in: never opened, the same rule as the cover's New badge.
+  unread,
+
+  /// Permanent, repository-managed membership.
+  favourites,
+
+  /// User-created, repository-managed membership.
+  manual,
+
+  /// Derived: articles grouped by site.
+  site,
+
+  /// Derived: sources grouped by author.
+  author;
+
+  /// Book, article, comic and New scopes, always built in this order.
+  static const builtIn = [books, articles, comics, unread];
+
+  bool get isBuiltIn => builtIn.contains(this);
+}
 
 class LibraryCollectionScope extends Equatable {
   LibraryCollectionScope.favourites({Iterable<String> sourceIds = const []})
@@ -37,6 +65,7 @@ class LibraryCollectionScope extends Equatable {
   final int sourceCount;
   final List<String> sourceIds;
 
+  bool get isBuiltIn => type.isBuiltIn;
   bool get isManual => type == LibraryCollectionScopeType.manual;
   bool get isFavourites => type == LibraryCollectionScopeType.favourites;
   bool get canManage => isManual || isFavourites;
@@ -74,7 +103,6 @@ class LibraryState extends Equatable {
   LibraryState({
     this.status = LibraryStatus.initial,
     this.sources = const [],
-    this.filter = LibraryFilter.all,
     this.collectionScopes = const [],
     this.collectionsLoadFailed = false,
     this.selectedCollectionScope,
@@ -88,7 +116,6 @@ class LibraryState extends Equatable {
   final LibraryStatus status;
   final List<LibrarySource> sources;
 
-  final LibraryFilter filter;
   final List<LibraryCollectionScope> collectionScopes;
   final bool collectionsLoadFailed;
   final LibraryCollectionScope? selectedCollectionScope;
@@ -107,6 +134,26 @@ class LibraryState extends Equatable {
 
   bool get hasCollectionScope => selectedCollectionScope != null;
 
+  /// Book, article, comic and New scopes in their fixed order.
+  List<LibraryCollectionScope> get builtInCollectionScopes => collectionScopes
+      .where((scope) => scope.isBuiltIn)
+      .toList(growable: false);
+
+  /// Built-in scopes the picker lists: empty ones and ones holding the whole
+  /// library would only repeat Library, so they are left out unless
+  /// selected — a selected scope that empties keeps its row to be left.
+  List<LibraryCollectionScope> get pickerBuiltInCollectionScopes {
+    final selected = selectedCollectionScope;
+    return collectionScopes
+        .where(
+          (scope) =>
+              scope.isBuiltIn &&
+              ((scope.sourceCount > 0 && scope.sourceCount < totalCount) ||
+                  (selected?.type == scope.type && selected?.id == scope.id)),
+        )
+        .toList(growable: false);
+  }
+
   List<LibraryCollectionScope> get favouriteCollectionScopes => collectionScopes
       .where((scope) => scope.type == LibraryCollectionScopeType.favourites)
       .toList(growable: false);
@@ -123,9 +170,24 @@ class LibraryState extends Equatable {
       .where((scope) => scope.type == LibraryCollectionScopeType.author)
       .toList(growable: false);
 
-  /// Total count shown in the header ("N items") — reflects the raw
-  /// library size regardless of the active filter or collection scope.
+  /// Raw library size regardless of the collection scope; the Collections
+  /// picker's Library row shows it.
   int get totalCount => sources.length;
+
+  /// Size of the current scope (the whole library or the selected
+  /// collection) shown under the header title. Ignores search.
+  int get scopeItemCount => _collectionScopedSources.length;
+
+  /// The unfiltered landing view: no search and no collection scope.
+  bool get isDefaultView =>
+      searchQuery.trim().isEmpty && selectedCollectionScope == null;
+
+  /// Most recently opened source that is started but not finished, for the
+  /// Library's Continue reading card; `null` when nothing qualifies.
+  ///
+  /// Cached per state like [visibleItems]; not in [props] for the same reason.
+  late final LibrarySource? continueReadingSource =
+      _computeContinueReadingSource(sources);
 
   late final List<LibrarySource> _collectionScopedSources =
       _applyCollectionScope(
@@ -133,8 +195,27 @@ class LibraryState extends Equatable {
         collectionScope: selectedCollectionScope,
       );
 
-  /// Sources after applying the current collection scope, [filter], and
-  /// [searchQuery], sorted by most-recently-opened first, then by newest added.
+  static LibrarySource? _computeContinueReadingSource(
+    List<LibrarySource> sources,
+  ) {
+    LibrarySource? latest;
+    for (final source in sources) {
+      final openedAt = source.lastOpenedAt;
+      if (openedAt == null ||
+          source.isFinished ||
+          source.readingProgress <= 0 ||
+          source.readingProgress >= 1) {
+        continue;
+      }
+      if (latest == null || openedAt.isAfter(latest.lastOpenedAt!)) {
+        latest = source;
+      }
+    }
+    return latest;
+  }
+
+  /// Sources after applying the current collection scope and [searchQuery],
+  /// sorted by most-recently-opened first, then by newest added.
   ///
   /// Cached: `late final` evaluates [_computeVisibleItems] once per
   /// state instance and reuses the result. Earlier this was a getter
@@ -146,7 +227,6 @@ class LibraryState extends Equatable {
   /// states with equal raw inputs already produce the same list.
   late final List<LibrarySource> visibleItems = _computeVisibleItems(
     sources: _collectionScopedSources,
-    filter: filter,
     searchQuery: searchQuery,
   );
 
@@ -156,6 +236,18 @@ class LibraryState extends Equatable {
   }) {
     if (collectionScope == null) return sources;
     return switch (collectionScope.type) {
+      LibraryCollectionScopeType.books ||
+      LibraryCollectionScopeType.articles ||
+      LibraryCollectionScopeType.comics ||
+      LibraryCollectionScopeType.unread =>
+        sources
+            .where(
+              (source) => libraryBuiltInScopeMatches(
+                collectionScope.type,
+                source,
+              ),
+            )
+            .toList(),
       // Favourite membership is repository-managed, but this remains a
       // permanent scope so it cannot be edited or deleted as manual collection.
       LibraryCollectionScopeType.favourites => _sourcesInCollection(
@@ -195,23 +287,11 @@ class LibraryState extends Equatable {
 
   static List<LibrarySource> _computeVisibleItems({
     required List<LibrarySource> sources,
-    required LibraryFilter filter,
     required String searchQuery,
   }) {
     final trimmedQuery = searchQuery.trim().toLowerCase();
 
     final filtered = sources.where((source) {
-      final matchesFilter = switch (filter) {
-        LibraryFilter.all => true,
-        LibraryFilter.books =>
-          source.sourceType == SourceType.book && !source.isComic,
-        LibraryFilter.articles => source.sourceType == SourceType.article,
-        LibraryFilter.comics => source.isComic,
-        // Same rule as the row's "New" label: never opened, nothing read.
-        LibraryFilter.unread => source.isNew,
-      };
-      if (!matchesFilter) return false;
-
       if (trimmedQuery.isEmpty) return true;
       final title = source.title.toLowerCase();
       final author = (source.author ?? '').toLowerCase();
@@ -236,7 +316,6 @@ class LibraryState extends Equatable {
   LibraryState copyWith({
     LibraryStatus? status,
     List<LibrarySource>? sources,
-    LibraryFilter? filter,
     List<LibraryCollectionScope>? collectionScopes,
     bool? collectionsLoadFailed,
     Object? selectedCollectionScope = _absent,
@@ -246,7 +325,6 @@ class LibraryState extends Equatable {
   }) => LibraryState(
     status: status ?? this.status,
     sources: sources ?? this.sources,
-    filter: filter ?? this.filter,
     collectionScopes: collectionScopes ?? this.collectionScopes,
     collectionsLoadFailed: collectionsLoadFailed ?? this.collectionsLoadFailed,
     selectedCollectionScope: selectedCollectionScope == _absent
@@ -261,7 +339,6 @@ class LibraryState extends Equatable {
   List<Object?> get props => [
     status,
     sources,
-    filter,
     collectionScopes,
     collectionsLoadFailed,
     selectedCollectionScope,
@@ -269,6 +346,27 @@ class LibraryState extends Equatable {
     deletionVersion,
     deletionEffect,
   ];
+}
+
+/// Whether [source] belongs to the built-in scope [type]. The same predicate
+/// builds the scope's count and narrows the list, so the two never disagree.
+bool libraryBuiltInScopeMatches(
+  LibraryCollectionScopeType type,
+  LibrarySource source,
+) {
+  return switch (type) {
+    LibraryCollectionScopeType.books =>
+      source.sourceType == SourceType.book && !source.isComic,
+    LibraryCollectionScopeType.articles =>
+      source.sourceType == SourceType.article,
+    LibraryCollectionScopeType.comics => source.isComic,
+    // Same rule as the cover's New badge: never opened, nothing read.
+    LibraryCollectionScopeType.unread => source.isNew,
+    LibraryCollectionScopeType.favourites ||
+    LibraryCollectionScopeType.manual ||
+    LibraryCollectionScopeType.site ||
+    LibraryCollectionScopeType.author => false,
+  };
 }
 
 String? _siteLabelForSource(LibrarySource source) {

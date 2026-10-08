@@ -75,6 +75,110 @@ void main() {
       expect: () => [const ImportFlowBookTermsRequired()],
     );
 
+    group('start', () {
+      test('menu stays on the menu without opening the picker', () async {
+        var pickCount = 0;
+        final cubit = _buildCubit(
+          pickBookFile: () async {
+            pickCount++;
+            return null;
+          },
+        );
+        addTearDown(cubit.close);
+        final states = <ImportFlowState>[];
+        final subscription = cubit.stream.listen(states.add);
+        addTearDown(subscription.cancel);
+
+        cubit.start(ImportFlowEntry.menu);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(cubit.state, const ImportFlowMenu());
+        expect(states, isEmpty);
+        expect(pickCount, 0);
+      });
+
+      test('file with accepted terms opens the picker over the menu', () async {
+        var pickCount = 0;
+        final cubit = _buildCubit(
+          isBookImportTermsAccepted: () => true,
+          pickBookFile: () async {
+            pickCount++;
+            return null;
+          },
+        );
+        addTearDown(cubit.close);
+
+        cubit.start(ImportFlowEntry.file);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(pickCount, 1);
+        expect(cubit.state, const ImportFlowMenu());
+      });
+
+      test('file with a picked book continues into the upload', () async {
+        final cubit = _buildCubit(
+          isBookImportTermsAccepted: () => true,
+          pickBookFile: () async => File('/tmp/entry.epub'),
+          importBook: (file, {onProgress}) async => _fakeBook(),
+        );
+        addTearDown(cubit.close);
+        final states = <ImportFlowState>[];
+        final subscription = cubit.stream.listen(states.add);
+        addTearDown(subscription.cancel);
+
+        cubit.start(ImportFlowEntry.file);
+        await Future<void>.delayed(Duration.zero);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(states, [
+          const ImportFlowBookUploading(filename: 'entry.epub'),
+          const ImportFlowBookDone(
+            filename: 'entry.epub',
+            format: BookFormat.epub,
+          ),
+        ]);
+      });
+
+      test('file without accepted terms asks for consent first', () async {
+        var pickCount = 0;
+        final cubit = _buildCubit(
+          isBookImportTermsAccepted: () => false,
+          pickBookFile: () async {
+            pickCount++;
+            return null;
+          },
+        );
+        addTearDown(cubit.close);
+
+        cubit.start(ImportFlowEntry.file);
+        await Future<void>.delayed(Duration.zero);
+
+        expect(cubit.state, const ImportFlowBookTermsRequired());
+        expect(pickCount, 0);
+        cubit.cancelBookImportTerms();
+        expect(cubit.state, const ImportFlowMenu());
+        expect(pickCount, 0);
+      });
+
+      test('article opens an empty URL step; back returns to the menu', () {
+        final cubit = _buildCubit();
+        addTearDown(cubit.close);
+
+        cubit.start(ImportFlowEntry.article);
+        expect(cubit.state, const ImportFlowArticleUrlEntry());
+
+        cubit.articleUrlChanged('https://example.com/entry');
+        cubit.backToMenu();
+        expect(cubit.state, const ImportFlowMenu());
+        // The draft from the entered step survives like a menu-opened one.
+        cubit.showArticleUrlEntry();
+        expect(
+          cubit.state,
+          const ImportFlowArticleUrlEntry(url: 'https://example.com/entry'),
+        );
+      });
+    });
+
     test('requestBookImport bypasses terms after acceptance', () async {
       var pickCount = 0;
       final cubit = _buildCubit(

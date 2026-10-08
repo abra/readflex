@@ -6,19 +6,17 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'library_selection_tint.dart';
 import 'library_source_semantics.dart';
 
-/// Alpha for the format badge background (dark overlay on cover art).
-const double _kBadgeBackgroundAlpha = 0.55;
-
-const double _kFormatBadgeTextReserve = 24.0;
+const double _kNewBadgeHeight = 20.0;
 const double _kProgressOverlayReserve = 16.0;
 const double _kProgressOverlayInset = AppSpacing.xxs;
 const _kProgressFillAnimationCurve = Curves.easeOutCubic;
 
 /// Grid-mode tile for a library source.
 ///
-/// Cover-only: 2:3 aspect ratio with optional format/finished badges and a
+/// Cover-only: 2:3 aspect ratio with optional New/finished badges and a
 /// slim progress bar overlay. Tap target spans the whole cover. Width is
-/// decided by the enclosing grid delegate.
+/// decided by the enclosing grid delegate. The file format stays in list
+/// rows and semantics, not on the artwork.
 class BookLibraryGridTile extends StatelessWidget {
   const BookLibraryGridTile({
     required this.source,
@@ -42,10 +40,21 @@ class BookLibraryGridTile extends StatelessWidget {
     final hasReadingActivity =
         source.lastOpenedAt != null || source.readingProgress > 0;
     final showsProgressOverlay = hasReadingActivity && !source.isFinished;
+    // Same predicate as the New filter.
+    final showsNewBadge = source.isNew;
     final coverTextDirection = _sourceTextDirection(source);
     // Badges are chrome: they follow the layout, not the cover's text.
     final layoutDirection = Directionality.of(context);
     final l10n = context.l10n;
+    // Generated cover text keeps clear of the New pill, which grows with the
+    // text scale beyond its 20dp minimum.
+    final newBadgeReserve = showsNewBadge
+        ? AppSpacing.xs * 2 +
+              _newBadgeHeight(
+                MediaQuery.textScalerOf(context),
+                context.text.labelSmall,
+              )
+        : 0.0;
 
     return _GridTileShell(
       sourceId: source.id,
@@ -72,20 +81,17 @@ class BookLibraryGridTile extends StatelessWidget {
         showMatte: false,
         centerText: isArticle,
         topAlignText: !isArticle && showsProgressOverlay,
-        topReserve: !isArticle && showsProgressOverlay
-            ? _kFormatBadgeTextReserve
-            : 0,
+        topReserve: newBadgeReserve,
         bottomReserve: showsProgressOverlay ? _kProgressOverlayReserve : 0,
-        articleBadgeAlignment:
-            (isArticle
-                    ? AlignmentDirectional.topEnd
-                    : AlignmentDirectional.topStart)
-                .resolve(layoutDirection),
+        // The article icon keeps the top-end corner; New owns top-start.
+        articleBadgeAlignment: AlignmentDirectional.topEnd.resolve(
+          layoutDirection,
+        ),
       ),
       isFinished: source.isFinished,
       progress: source.readingProgress,
       showProgress: showsProgressOverlay,
-      formatLabel: isArticle ? 'WEB' : source.typeLabel,
+      newLabel: showsNewBadge ? l10n.librarySourceNew : null,
       semanticsLabel: librarySourceSemanticsLabel(source, l10n),
       semanticsValue: librarySourceSemanticsValue(source, l10n),
       reportsSelectedState: isSelectionMode,
@@ -103,6 +109,11 @@ class BookLibraryGridTile extends StatelessWidget {
       onLongPress: onLongPress,
     );
   }
+}
+
+double _newBadgeHeight(TextScaler textScaler, TextStyle style) {
+  final lineHeight = textScaler.scale(style.fontSize!) * (style.height ?? 1);
+  return lineHeight > _kNewBadgeHeight ? lineHeight : _kNewBadgeHeight;
 }
 
 TextDirection _sourceTextDirection(LibrarySource source) {
@@ -129,7 +140,7 @@ class _GridTileShell extends StatelessWidget {
     required this.longPressHint,
     required this.onTap,
     this.onLongPress,
-    this.formatLabel,
+    this.newLabel,
   });
 
   final String sourceId;
@@ -143,7 +154,7 @@ class _GridTileShell extends StatelessWidget {
   final bool reportsSelectedState;
   final String tapHint;
   final String? longPressHint;
-  final String? formatLabel;
+  final String? newLabel;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
 
@@ -180,11 +191,11 @@ class _GridTileShell extends StatelessWidget {
           child: AppSourceCoverFrame(
             cover: cover,
             overlays: [
-              if (formatLabel != null)
+              if (newLabel != null)
                 PositionedDirectional(
                   top: AppSpacing.xs,
                   start: AppSpacing.xs,
-                  child: _FormatBadge(label: formatLabel!),
+                  child: _NewBadge(label: newLabel!),
                 ),
               if (isFinished)
                 const PositionedDirectional(
@@ -275,28 +286,29 @@ class _GridTileShell extends StatelessWidget {
   }
 }
 
-/// Small dark pill in the cover corner that shows the book file format
-/// (EPUB, PDF, FB2, …). Only present on book tiles.
-class _FormatBadge extends StatelessWidget {
-  const _FormatBadge({required this.label});
+/// Surface pill in the cover's top-start corner for never-opened sources.
+class _NewBadge extends StatelessWidget {
+  const _NewBadge({required this.label});
 
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xs,
-        vertical: 2,
-      ),
+      key: const ValueKey('libraryGridNewBadge'),
+      constraints: const BoxConstraints(minHeight: _kNewBadgeHeight),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: _kBadgeBackgroundAlpha),
-        borderRadius: BorderRadius.circular(AppRadius.xs),
+        color: context.colors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.full),
       ),
       child: Text(
         label,
-        style: context.text.sourceCoverBadge.copyWith(
-          color: Colors.white,
+        maxLines: 1,
+        style: context.text.labelSmall.copyWith(
+          fontWeight: FontWeight.w700,
+          color: context.actionForeground,
         ),
       ),
     );

@@ -499,9 +499,8 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     );
     final webViewReady = sourceId != null && _webViewReadySourceId == sourceId;
     // Reader theme drives the book *page* — WebView background and
-    // foliate-js customCSS. Chrome (passed-through Stack siblings)
-    // pulls colours from the app theme themselves; they don't take
-    // a `readerTheme` prop any more.
+    // foliate-js customCSS — and chrome text drawn straight on the page.
+    // Chrome surfaces (capsule, drawers, popups) keep the app theme.
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
     _debugTraceReader(
       '_ReadyContentBody build '
@@ -635,12 +634,14 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                               webViewReady && sourceType != SourceType.article,
                         ),
                         ReaderTopChromeDriver(
+                          readerTheme: readerTheme,
                           onArticleTitlePressed: widget.onArticleTitlePressed,
                         ),
                         const ReaderPageBookmarkIndicatorDriver(),
                         const ReaderBrightnessChromeDriver(),
                         if (!searchNavigation.active)
                           ReaderBottomChromeDriver(
+                            readerTheme: readerTheme,
                             onTocPressed: _openTocDrawer,
                             onFontPressed: _openAppearanceSheet,
                             onPageTurnPressed: _togglePageTurnStyle,
@@ -734,8 +735,7 @@ class _ReaderBrightnessDimmingOverlayDriver extends StatelessWidget {
   }
 }
 
-/// Derives the platform status/navigation bar style from reader theme and
-/// chrome visibility.
+/// Derives the platform status/navigation bar style from the reader theme.
 class _ReaderSystemUiOverlayDriver extends StatelessWidget {
   const _ReaderSystemUiOverlayDriver({
     required this.readerTheme,
@@ -747,26 +747,11 @@ class _ReaderSystemUiOverlayDriver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final chromeVisible = context.select<ReaderUiCubit, bool>(
-      (c) => c.state.chromeVisible,
-    );
-    final panelVisible = context.select<ReaderUiCubit, bool>(
-      (c) => c.state.tocDrawerVisible || c.state.searchDrawerVisible,
-    );
-    final systemUiStyle = readerSystemUiOverlayStyle(
-      readerTheme: readerTheme,
-      chromeVisible: chromeVisible,
-      panelVisible: panelVisible,
-      chromeSurfaceColor: context.colors.surface,
-      appNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
-    );
-    _debugTraceReader(
-      '_ReaderSystemUiOverlayDriver build '
-      'chrome=$chromeVisible panel=$panelVisible',
-    );
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: systemUiStyle,
+      value: readerSystemUiOverlayStyle(
+        readerTheme: readerTheme,
+        appNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
+      ),
       child: child,
     );
   }
@@ -1248,24 +1233,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           'atStart=${position.atStart} '
           'atEnd=${position.atEnd}',
         );
-        bloc.add(
-          ReaderBookPositionUpdated(
-            cfi: position.cfi,
-            progress: position.fraction,
-            chapterTitle: position.chapterTitle,
-            bookCurrentPage: position.bookCurrentPage,
-            bookTotalPages: position.bookTotalPages,
-            chapterCurrentPage: position.chapterCurrentPage,
-            chapterTotalPages: position.chapterTotalPages,
-            sizeTotal: position.sizeTotal,
-            pageProgressionRtl: position.pageProgressionRtl,
-            atStart: position.atStart,
-            atEnd: position.atEnd,
-            currentPageBookmarked: position.bookmarkExists,
-            currentPageBookmarkCfi: position.bookmarkCfi,
-            currentPageBookmarkId: position.bookmarkId,
-          ),
-        );
+        bloc.add(ReaderBookPositionUpdated.fromBookPosition(position));
         widget.onPositionChanged?.call(position);
       },
       onTocChanged: (items) {
@@ -1540,18 +1508,7 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
           'atStart=${position.atStart} '
           'atEnd=${position.atEnd}',
         );
-        bloc.add(
-          ReaderBookPositionUpdated(
-            cfi: position.cfi,
-            progress: position.fraction,
-            chapterTitle: position.chapterTitle,
-            atStart: position.atStart,
-            atEnd: position.atEnd,
-            currentPageBookmarked: position.bookmarkExists,
-            currentPageBookmarkCfi: position.bookmarkCfi,
-            currentPageBookmarkId: position.bookmarkId,
-          ),
-        );
+        bloc.add(ReaderBookPositionUpdated.fromBookPosition(position));
         widget.onPositionChanged?.call(position);
       },
       onTocChanged: (items) {

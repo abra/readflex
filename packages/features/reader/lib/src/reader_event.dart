@@ -49,10 +49,32 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     this.pageProgressionRtl,
     this.atStart = false,
     this.atEnd = false,
+    this.minutesLeft,
     this.currentPageBookmarked = false,
     this.currentPageBookmarkCfi,
     this.currentPageBookmarkId,
   });
+
+  /// Maps one renderer position. Articles omit the page metrics, so they map
+  /// to null here exactly as for books that do not report them.
+  factory ReaderBookPositionUpdated.fromBookPosition(BookPosition position) =>
+      ReaderBookPositionUpdated(
+        cfi: position.cfi,
+        progress: position.fraction,
+        chapterTitle: position.chapterTitle,
+        bookCurrentPage: position.bookCurrentPage,
+        bookTotalPages: position.bookTotalPages,
+        chapterCurrentPage: position.chapterCurrentPage,
+        chapterTotalPages: position.chapterTotalPages,
+        sizeTotal: position.sizeTotal,
+        pageProgressionRtl: position.pageProgressionRtl,
+        atStart: position.atStart,
+        atEnd: position.atEnd,
+        minutesLeft: position.minutesLeft,
+        currentPageBookmarked: position.bookmarkExists,
+        currentPageBookmarkCfi: position.bookmarkCfi,
+        currentPageBookmarkId: position.bookmarkId,
+      );
 
   final String cfi;
   final double progress;
@@ -78,6 +100,10 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
 
   final bool atStart;
   final bool atEnd;
+
+  /// Estimated minutes left in the whole article; books send none. See
+  /// [BookPosition.minutesLeft].
+  final double? minutesLeft;
   final bool currentPageBookmarked;
   final String? currentPageBookmarkCfi;
   final String? currentPageBookmarkId;
@@ -95,6 +121,7 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
     pageProgressionRtl,
     atStart,
     atEnd,
+    minutesLeft,
     currentPageBookmarked,
     currentPageBookmarkCfi,
     currentPageBookmarkId,

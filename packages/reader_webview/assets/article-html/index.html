@@ -251,6 +251,7 @@
       const progressStartThreshold = 0.001
       const progressEndThreshold = 0.999
       const minEmitIntervalMs = 140
+      const articleCharsPerMinute = 1200
       const scrollRestoreSuppressMs = 700
       const selectionClickSuppressMs = READFLEX_SELECTION_CLICK_SUPPRESS_MS
       const contextWindowChars = 200
@@ -339,7 +340,10 @@
       let activeSentenceKey = null
       let lastEmittedSentenceKey = null
       let lastEmittedProgress = -1
+      let lastEmittedAtEnd = false
       let lastEmitAt = 0
+      let articleTextLength = 0
+      let sentenceTextOffsets = new WeakMap()
       let scheduled = false
       let restoringUntil = 0
       let cancelProgressRestore = () => {}
@@ -1195,6 +1199,30 @@
         return current || null
       }
 
+      // One walk after load: text is never rewritten afterwards, so a position
+      // emit only looks up the current sentence's offset.
+      function indexArticleText() {
+        const offsets = new WeakMap()
+        let length = 0
+        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT)
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const sentence = node.parentElement?.closest('[data-rf-sentence]')
+          if (sentence && !offsets.has(sentence)) offsets.set(sentence, length)
+          length += node.data.replace(/\s+/g, ' ').length
+        }
+        sentenceTextOffsets = offsets
+        articleTextLength = length
+      }
+
+      function minutesLeftAt(element, progressValue, atEnd) {
+        if (atEnd || articleTextLength <= 0) return 0
+        const offset = element ? sentenceTextOffsets.get(element) : undefined
+        const remaining = offset === undefined
+          ? articleTextLength * (1 - progressValue)
+          : articleTextLength - offset
+        return Math.max(0, remaining) / articleCharsPerMinute
+      }
+
       function emitPosition(reason = 'scroll', force = false) {
         const element = currentSentenceElement()
         const anchor = sentenceAnchorFor(element)
@@ -1202,6 +1230,7 @@
         if (element?.id) activeSentenceKey = element.id
 
         const nextProgress = progress()
+        const atEnd = nextProgress >= progressEndThreshold
         const now = performance.now()
         const progressMoved = Math.abs(nextProgress - lastEmittedProgress) >= progressEmitStep
         const sentenceChanged = nextSentenceKey !== lastEmittedSentenceKey
@@ -1209,6 +1238,7 @@
           !force &&
           !sentenceChanged &&
           !progressMoved &&
+          atEnd === lastEmittedAtEnd &&
           now - lastEmitAt < minEmitIntervalMs
         ) {
           return
@@ -1216,6 +1246,7 @@
 
         lastEmittedSentenceKey = nextSentenceKey
         lastEmittedProgress = nextProgress
+        lastEmittedAtEnd = atEnd
         lastEmitAt = now
         callHandler('onArticlePositionChanged', {
           cfi: encodePosition(anchor),
@@ -1223,7 +1254,8 @@
           chapterTitle: activeChapterTitle(),
           reason,
           atStart: nextProgress <= progressStartThreshold,
-          atEnd: nextProgress >= progressEndThreshold,
+          atEnd,
+          minutesLeft: minutesLeftAt(element, nextProgress, atEnd),
           bookmark: bookmarkPayloadFor(anchor),
         })
       }
@@ -1811,6 +1843,7 @@
           content.removeAttribute('aria-busy')
           installTextSelectionHandler()
           renderArticleHighlights()
+          indexArticleText()
           observeSentences()
           emitToc()
           await nextPaint()

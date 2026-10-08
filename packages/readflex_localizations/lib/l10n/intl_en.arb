@@ -105,12 +105,8 @@
   },
   "@@locale": "en",
   "libraryResetFilters": "Reset filters",
-  "libraryClearCollectionFilter": "Clear collection filter",
   "commonCopied": "Copied",
   "commonCopyFailed": "Could not copy",
-  "appSkip": "Skip",
-  "appNext": "Next",
-  "appGetStarted": "Get Started",
   "appInitializationFailed": "Initialization failed",
   "appInitializationFailedBody": "Readflex could not start. Try again.",
   "appTechnicalDetails": "Technical details",
@@ -120,7 +116,6 @@
   "onboardingReadAnythingDescription": "Import books and read comfortably with a customizable reader.",
   "onboardingHighlightSaveTitle": "Highlight & save",
   "onboardingHighlightSaveDescription": "Select text to create highlights. Add notes for deeper understanding.",
-  "onboardingOrganizeLibraryTitle": "Organize your library",
   "onboardingOrganizeLibraryDescription": "Keep books and articles in one place and return to your reading progress.",
   "commonCancel": "Cancel",
   "commonSave": "Save",
@@ -148,11 +143,16 @@
   },
   "libraryOffline": "offline",
   "librarySearchHint": "Search library...",
-  "libraryFilterAll": "All",
-  "libraryFilterBooks": "Books",
-  "libraryFilterArticles": "Articles",
-  "libraryFilterComics": "Comics",
-  "libraryFilterNew": "New",
+  "libraryScopeBooks": "Books",
+  "@libraryScopeBooks": {
+    "description": "Built-in collection of books (not comics)."
+  },
+  "libraryScopeArticles": "Articles",
+  "libraryScopeComics": "Comics",
+  "libraryScopeNew": "New",
+  "@libraryScopeNew": {
+    "description": "Built-in collection of items that were never opened."
+  },
   "libraryDisplayOptions": "Display options",
   "libraryDisplayTitle": "Display",
   "libraryDisplayView": "View",
@@ -208,10 +208,6 @@
   "libraryNoResultsSubtitle": "Try a different search or filter",
   "libraryAddToCollectionTitle": "Add to collection",
   "libraryFavourites": "Favourites",
-  "libraryFavouritesBadge": "Favs",
-  "@libraryFavouritesBadge": {
-    "description": "Compact label for the active favourites filter badge only. Menus, tooltips and accessibility use libraryFavourites."
-  },
   "libraryCreateCollectionPrompt": "{count, plural, one{Create a collection for 1 selected item.} other{Create a collection for {count} selected items.}}",
   "@libraryCreateCollectionPrompt": {
     "placeholders": {
@@ -309,10 +305,7 @@
     }
   },
   "importAddToLibraryTitle": "Add to Library",
-  "importUploadBook": "Upload Book",
-  "importUploadBookFormats": "EPUB, FB2, MOBI, PDF, AZW3, CBZ",
   "importSaveArticle": "Save Article",
-  "importSaveArticleDescription": "Paste a web URL for offline reading",
   "importBeforeUploadingTitle": "Before uploading",
   "importBookTermsBody": "Only upload books, comics, and documents you have the right to use in ReadFlex.",
   "importBookTermsConfirm": "I confirm I have the right to upload this file.",
@@ -423,21 +416,10 @@
   "readerTextAlignment": "Text alignment",
   "readerPageMargins": "Page margins",
   "readerPageTurn": "Page turn",
-  "readerAlignStart": "Align start",
-  "readerJustifyText": "Justify text",
-  "readerAlignEnd": "Align end",
-  "readerHorizontalPageTurn": "Horizontal page turn",
-  "readerVerticalPageTurn": "Vertical page turn",
   "readerResetTextSize": "Reset text size",
   "readerTextSize": "Text size",
   "readerDecreaseTextSize": "Decrease text size",
   "readerIncreaseTextSize": "Increase text size",
-  "readerResetLineSpacing": "Reset line spacing",
-  "readerDecreaseLineSpacing": "Decrease line spacing",
-  "readerIncreaseLineSpacing": "Increase line spacing",
-  "readerResetPageMargins": "Reset page margins",
-  "readerDecreasePageMargins": "Decrease page margins",
-  "readerIncreasePageMargins": "Increase page margins",
   "readerThemeSnow": "Snow",
   "readerThemePaper": "Paper",
   "readerThemeWarm": "Warm",
@@ -505,5 +487,110 @@
   "importDiscardUrlBody": "The address you entered will not be saved.",
   "readerTapAreaHint": "Tap area",
   "importOfflineHint": "You're offline",
-  "importArticleOfflineSubtitle": "Needs an internet connection"
+  "importArticleOfflineSubtitle": "Needs an internet connection",
+  "libraryContinueReading": "Continue reading",
+  "@libraryContinueReading": {
+    "description": "Overline of the Library card that reopens the most recently read source"
+  },
+  "readingTimeLeftMinutes": "{count} min left",
+  "@readingTimeLeftMinutes": {
+    "description": "Estimated reading time left, under one hour",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readingTimeLeftHours": "{hours} h {minutes} min left",
+  "@readingTimeLeftHours": {
+    "description": "Estimated reading time left, one hour or more",
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryUploadFile": "Upload a file",
+  "@libraryUploadFile": {
+    "description": "Empty-library action that opens file import"
+  },
+  "librarySaveArticleAction": "Save an article",
+  "@librarySaveArticleAction": {
+    "description": "Empty-library action that opens article import"
+  },
+  "importFileKinds": "Books, comics and PDF",
+  "@importFileKinds": {
+    "description": "What file import accepts, in reader terms rather than file extensions"
+  },
+  "importFromDevice": "File from device",
+  "@importFromDevice": {
+    "description": "Import menu row that picks a file from the device"
+  },
+  "importArticleFromLink": "Article from a link",
+  "@importArticleFromLink": {
+    "description": "Import menu row that saves a web article from a URL"
+  },
+  "importArticleOffline": "Saved for reading offline",
+  "@importArticleOffline": {
+    "description": "Subtitle of the article import row"
+  },
+  "libraryChooseCollection": "Choose collection",
+  "@libraryChooseCollection": {
+    "description": "Accessibility label of the Library title, which opens the collection switcher"
+  },
+  "onboardingAddBook": "Add a book",
+  "@onboardingAddBook": {
+    "description": "Primary onboarding action; finishes onboarding and opens import"
+  },
+  "onboardingNotNow": "Not now",
+  "@onboardingNotNow": {
+    "description": "Secondary onboarding action; finishes onboarding without importing"
+  },
+  "readerLineSpacingCompact": "Compact",
+  "@readerLineSpacingCompact": {
+    "description": "Line spacing preset"
+  },
+  "readerLineSpacingNormal": "Normal",
+  "@readerLineSpacingNormal": {
+    "description": "Line spacing preset"
+  },
+  "readerLineSpacingRelaxed": "Relaxed",
+  "@readerLineSpacingRelaxed": {
+    "description": "Line spacing preset"
+  },
+  "readerMarginsNarrow": "Narrow",
+  "@readerMarginsNarrow": {
+    "description": "Page margin preset"
+  },
+  "readerMarginsMedium": "Medium",
+  "@readerMarginsMedium": {
+    "description": "Page margin preset"
+  },
+  "readerMarginsWide": "Wide",
+  "@readerMarginsWide": {
+    "description": "Page margin preset"
+  },
+  "readerAlignNormal": "Normal",
+  "@readerAlignNormal": {
+    "description": "Text alignment option: ragged, not justified; direction-neutral"
+  },
+  "readerAlignJustified": "Justified",
+  "@readerAlignJustified": {
+    "description": "Text alignment option: justified"
+  },
+  "readerPageTurnHorizontalShort": "Horizontal",
+  "@readerPageTurnHorizontalShort": {
+    "description": "Short label of the horizontal page-turn option"
+  },
+  "readerPageTurnVerticalShort": "Vertical",
+  "@readerPageTurnVerticalShort": {
+    "description": "Short label of the vertical page-turn option"
+  },
+  "readerChapterRead": "Read",
+  "@readerChapterRead": {
+    "description": "Accessibility value of a chapter before the current one"
+  }
 }

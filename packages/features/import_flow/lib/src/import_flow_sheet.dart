@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'import_flow_cubit.dart';
+import 'import_flow_entry.dart';
 import 'import_flow_result.dart';
 
 /// Shows the multi-step Add-to-Library bottom sheet.
@@ -26,6 +27,7 @@ import 'import_flow_result.dart';
 ///     depends on network extraction; local book uploads remain available.
 ///   * [onOpenTerms] and [onOpenPrivacy] open legal documents outside
 ///     the sheet; the cubit never launches URLs directly.
+///   * [entry] starts on the menu, the file path or the article URL step.
 ///
 /// Returns [ImportFlowResult.bookImported] when the user finished an
 /// import, or `null` if they dismissed without finishing.
@@ -40,18 +42,21 @@ Future<ImportFlowResult?> showImportFlowSheet(
   AcceptBookImportTerms? acceptBookImportTerms,
   Future<void> Function()? onOpenTerms,
   Future<void> Function()? onOpenPrivacy,
+  ImportFlowEntry entry = ImportFlowEntry.menu,
 }) {
   return showAppBottomSheet<ImportFlowResult>(
     context,
     scrimClosesFlow: true,
     builder: (_) => BlocProvider(
+      // The entry is applied before the first frame, so a direct step opens
+      // without sliding in from the menu.
       create: (_) => ImportFlowCubit(
         onPickBookFile: onPickBookFile,
         onImportBook: onImportBook,
         onImportArticle: onImportArticle,
         isBookImportTermsAccepted: isBookImportTermsAccepted,
         acceptBookImportTerms: acceptBookImportTerms,
-      ),
+      )..start(entry),
       child: _ImportFlowSheet(
         isOffline: isOffline,
         isOfflineStream: isOfflineStream,
@@ -397,6 +402,7 @@ class _MenuView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<ImportFlowCubit>();
+    final colors = context.colors;
     final warning = context.appColors.warning;
     final l10n = context.l10n;
 
@@ -420,22 +426,35 @@ class _MenuView extends StatelessWidget {
                 children: [
                   AppDrillInRow(
                     key: const ValueKey('importMenu-book'),
-                    icon: AppIcons.book,
-                    title: l10n.importUploadBook,
-                    subtitle: l10n.importUploadBookFormats,
+                    leading: _MenuIconTile(
+                      icon: AppIcons.uploadFile,
+                      background: colors.selectedControlBackground,
+                      foreground: colors.selectedControlForeground,
+                    ),
+                    title: l10n.importFromDevice,
+                    subtitle: l10n.importFileKinds,
                     padding: _kMenuRowPadding,
                     onTap: cubit.requestBookImport,
                   ),
                   const Divider(),
                   AppDrillInRow(
                     key: const ValueKey('importMenu-article'),
-                    icon: isOffline ? AppIcons.offline : AppIcons.link,
-                    iconColor: isOffline ? warning : null,
-                    title: l10n.importSaveArticle,
+                    leading: _MenuIconTile(
+                      icon: isOffline ? AppIcons.offline : AppIcons.link,
+                      // Offline reads as unavailable: a neutral tile behind
+                      // the warning glyph instead of the accent pair.
+                      background: isOffline
+                          ? colors.surfaceContainerHighest
+                          : colors.selectedControlBackground,
+                      foreground: isOffline
+                          ? warning
+                          : colors.selectedControlForeground,
+                    ),
+                    title: l10n.importArticleFromLink,
                     // Say why the row is disabled instead of a stale promise.
                     subtitle: isOffline
                         ? l10n.importArticleOfflineSubtitle
-                        : l10n.importSaveArticleDescription,
+                        : l10n.importArticleOffline,
                     padding: _kMenuRowPadding,
                     // Offline keeps the warning glyph and drops the chevron.
                     trailing: isOffline
@@ -453,6 +472,35 @@ class _MenuView extends StatelessWidget {
     );
   }
 }
+
+/// 40dp rounded tile behind a menu row's leading glyph.
+class _MenuIconTile extends StatelessWidget {
+  const _MenuIconTile({
+    required this.icon,
+    required this.background,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: SizedBox.square(
+        dimension: _kMenuIconTileSize,
+        child: Icon(icon, size: AppIconSize.sm, color: foreground),
+      ),
+    );
+  }
+}
+
+const _kMenuIconTileSize = 40.0;
 
 const _kMenuRowPadding = EdgeInsets.symmetric(vertical: AppSpacing.xl);
 

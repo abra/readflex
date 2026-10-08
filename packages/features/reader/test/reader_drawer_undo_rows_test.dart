@@ -9,6 +9,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_swipe_to_delete.dart';
 
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
@@ -67,7 +68,12 @@ void main() {
         .timeout(const Duration(seconds: 3));
   }
 
+  /// Phone-sized, so the half-height Contents sheet shows every row.
   Future<void> pump(WidgetTester tester) async {
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -218,7 +224,7 @@ void main() {
       tester.widget<Text>(find.text('First page')).style?.color,
       context.colors.onSurface,
     );
-    await tester.tap(find.byTooltip(l10n.readerDeleteBookmark).first);
+    await tester.drag(find.text('First page'), const Offset(-800, 0));
     await tester.pumpAndSettle();
     expect(find.text(l10n.readerBookmarkRemoved), findsOneWidget);
     expect(
@@ -238,7 +244,7 @@ void main() {
     await pump(tester);
     final l10n = tester.element(find.byType(Scaffold)).l10n;
     await openTab(tester, l10n.readerBookmarks);
-    await tester.tap(find.byTooltip(l10n.readerDeleteBookmark).first);
+    await tester.drag(find.text('First page'), const Offset(-800, 0));
     await tester.pumpAndSettle();
     final gate = Completer<void>();
     books.restoreGate = gate.future;
@@ -252,13 +258,13 @@ void main() {
       ),
     );
     expect(undo.onPressed, isNull);
-    final delete = tester.widget<AppPlainIconButton>(
+    final swipe = tester.widget<ReaderSwipeToDelete>(
       find.ancestor(
-        of: find.byIcon(AppIcons.delete),
-        matching: find.byType(AppPlainIconButton),
+        of: find.text('Second page'),
+        matching: find.byType(ReaderSwipeToDelete),
       ),
     );
-    expect(delete.onPressed, isNotNull);
+    expect(swipe.onDelete, isNotNull);
     gate.complete();
     await tester.pumpAndSettle();
     expect(bloc.state.bookmarkEdits, const ReaderBookmarkEdits());

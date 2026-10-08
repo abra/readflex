@@ -15,7 +15,10 @@ import 'add_to_collection_cubit.dart';
 import 'add_to_collection_sheet.dart';
 import 'library_bloc.dart';
 import 'library_body.dart';
+import 'library_floating_actions.dart';
 import 'library_header.dart';
+import 'library_import_entry.dart';
+import 'library_layout.dart';
 import 'library_layout_cubit.dart';
 import 'library_locale_cubit.dart';
 import 'library_theme_cubit.dart';
@@ -27,12 +30,16 @@ import 'select_collection_scope_sheet.dart';
 import 'confirm_book_deletion_sheet.dart';
 
 const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
-const _libraryFabBottomLift = AppSpacing.sm;
 
 /// Completes when the import UI closes. [onImported] fires only after storage
 /// commits, including when the user dismissed the sheet during an import.
+/// `entry` names the step to open; implementations default it to
+/// [LibraryImportEntry.menu], and the Library always passes it.
 typedef LibraryImportLauncher =
-    Future<void> Function({required VoidCallback onImported});
+    Future<void> Function({
+      required VoidCallback onImported,
+      LibraryImportEntry entry,
+    });
 
 /// Entry point for the Library screen.
 ///
@@ -50,6 +57,7 @@ class LibraryScreen extends StatelessWidget {
     required this.onAddPressed,
     this.articleRepository,
     this.isOffline = false,
+    this.openImportOnStart = false,
     super.key,
   });
 
@@ -64,6 +72,10 @@ class LibraryScreen extends StatelessWidget {
   })
   onSourcePressed;
   final LibraryImportLauncher onAddPressed;
+
+  /// Opens file import once after the first frame (onboarding's "Add a
+  /// book"). Rebuilding the same screen does not reopen it.
+  final bool openImportOnStart;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +119,7 @@ class LibraryScreen extends StatelessWidget {
       ],
       child: _LibraryView(
         isOffline: isOffline,
+        openImportOnStart: openImportOnStart,
         onSourcePressed: onSourcePressed,
         onAddPressed: onAddPressed,
       ),
@@ -115,8 +128,8 @@ class LibraryScreen extends StatelessWidget {
 }
 
 /// Stateful shell that owns the transient UI state of the library screen —
-/// the search text controller and the in-flight guard for the FAB — and
-/// assembles [LibraryHeader] + [LibraryBody] around them.
+/// the search text controller and the in-flight import guard — and
+/// assembles [LibraryHeader], [LibraryBody] and the "+" button around them.
 ///
 /// Keeping this state local (rather than in [LibraryBloc]) means it doesn't
 /// survive navigation, which is what we want: re-entering the screen starts
@@ -124,11 +137,13 @@ class LibraryScreen extends StatelessWidget {
 class _LibraryView extends StatefulWidget {
   const _LibraryView({
     required this.isOffline,
+    required this.openImportOnStart,
     required this.onSourcePressed,
     required this.onAddPressed,
   });
 
   final bool isOffline;
+  final bool openImportOnStart;
   final Future<void> Function(
     LibrarySource source, {
     VoidCallback? onSourceOpened,
@@ -147,8 +162,8 @@ class _LibraryViewState extends State<_LibraryView> {
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode(debugLabel: 'Library search');
 
-  /// Prevents duplicate import sheets and disables the FAB while the current
-  /// import flow is open.
+  /// Prevents duplicate import sheets and disables the import actions while
+  /// the current import flow is open.
   bool _addInFlight = false;
   final _scrollController = ScrollController();
 
@@ -156,6 +171,16 @@ class _LibraryViewState extends State<_LibraryView> {
   /// is resolved by the matching [LibraryDeletionEffect] so `Dismissible`
   /// only finishes the row once storage has confirmed the delete.
   final _pendingSwipeDeletions = <String, Completer<bool>>{};
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.openImportOnStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _handleAdd(context, LibraryImportEntry.file);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -168,12 +193,16 @@ class _LibraryViewState extends State<_LibraryView> {
     super.dispose();
   }
 
-  Future<void> _handleAdd(BuildContext context) async {
+  Future<void> _handleAdd(
+    BuildContext context,
+    LibraryImportEntry entry,
+  ) async {
     if (_addInFlight) return;
     setState(() => _addInFlight = true);
     try {
       final bloc = context.read<LibraryBloc>();
       await widget.onAddPressed(
+        entry: entry,
         onImported: () {
           if (mounted && !bloc.isClosed) {
             bloc.add(const LibraryRefreshRequested());
@@ -318,15 +347,16 @@ class _LibraryViewState extends State<_LibraryView> {
     );
     if (result == null || !context.mounted) return;
 
-    if (result case LibraryCollectionScopeSelected(:final scope)) {
-      context.read<LibraryBloc>().add(LibraryCollectionScopeChanged(scope));
+    final bloc = context.read<LibraryBloc>();
+    switch (result) {
+      case LibraryCollectionScopeSelected(:final scope):
+        bloc.add(LibraryCollectionScopeChanged(scope));
+      case LibraryCollectionScopeCleared():
+        bloc.add(const LibraryCollectionScopeChanged(null));
+      case LibraryCollectionScopeManageRequested():
+        // Only returned without a manageBuilder; this screen always has one.
+        break;
     }
-  }
-
-  void _handleCollectionScopeCleared(BuildContext context) {
-    context.read<LibraryBloc>().add(
-      const LibraryCollectionScopeChanged(null),
-    );
   }
 
   Future<void> _handleDeleteSelected(BuildContext context) async {
@@ -405,103 +435,142 @@ class _LibraryViewState extends State<_LibraryView> {
       listener: _onDeletionEffect,
       child: _LibrarySelectionPopScope(
         onCancelSelection: () => context.read<LibrarySelectionCubit>().clear(),
-        child: Scaffold(
-          bottomNavigationBar: LibrarySelectionBar(
-            onAddToCollection: () => _handleAddSelectedToCollection(context),
-            onDelete: () => _handleDeleteSelected(context),
-          ),
-          floatingActionButton: Padding(
-            padding: const EdgeInsetsDirectional.only(
-              bottom: _libraryFabBottomLift,
-            ),
-            child: _LibraryFabDriver(
-              addInFlight: _addInFlight,
-              onAddPressed: () => _handleAdd(context),
-            ),
-          ),
-          body: Stack(
-            children: [
-              SafeArea(
-                bottom: false,
-                child: BlocBuilder<LibraryBloc, LibraryState>(
-                  buildWhen: (prev, curr) =>
-                      prev.status != curr.status ||
-                      prev.sources != curr.sources ||
-                      prev.filter != curr.filter ||
-                      prev.collectionScopes != curr.collectionScopes ||
-                      prev.collectionsLoadFailed !=
-                          curr.collectionsLoadFailed ||
-                      prev.selectedCollectionScope !=
-                          curr.selectedCollectionScope ||
-                      prev.searchQuery != curr.searchQuery,
-                  builder: (context, state) {
-                    final bloc = context.read<LibraryBloc>();
-
-                    return switch (state.status) {
-                      LibraryStatus.initial || LibraryStatus.loading =>
-                        const CenteredCircularProgressIndicator(),
-                      LibraryStatus.failure => ErrorState(
-                        message: context.l10n.libraryFailedToLoad,
-                        retryLabel: context.l10n.commonRetry,
-                        onRetry: () => bloc.add(const LibraryLoadRequested()),
-                      ),
-                      LibraryStatus.success => Column(
-                        children: [
-                          LibraryHeader(
-                            state: state,
-                            isOffline: widget.isOffline,
-                            searchController: _searchController,
-                            searchFocusNode: _searchFocusNode,
-                            onSearchChanged: (query) =>
-                                bloc.add(LibrarySearchQueryChanged(query)),
-                            onFilterChanged: (filter) =>
-                                bloc.add(LibraryFilterChanged(filter)),
-                            onCollectionScopePressed: () =>
-                                _handleCollectionScopePressed(
-                                  context,
-                                  state,
-                                ),
-                            onCollectionScopeCleared: () =>
-                                _handleCollectionScopeCleared(context),
+        child: BlocSelector<LibrarySelectionCubit, LibrarySelectionState, bool>(
+          selector: (selection) => selection.isActive,
+          builder: (context, selectionActive) =>
+              BlocSelector<LibraryBloc, LibraryState, bool>(
+                // The empty library offers its own two import commands.
+                selector: (state) =>
+                    state.status == LibraryStatus.success && !state.isEmpty,
+                builder: (context, hasItems) => Scaffold(
+                  // Mounted only while selecting: an occupied bottom slot
+                  // strips the body's bottom safe inset, which the content
+                  // padding relies on.
+                  bottomNavigationBar: selectionActive
+                      ? LibrarySelectionBar(
+                          onAddToCollection: () =>
+                              _handleAddSelectedToCollection(context),
+                          onDelete: () => _handleDeleteSelected(context),
+                        )
+                      : null,
+                  // The selection bar takes the bottom while selecting.
+                  // Swapping to null lets the Scaffold scale the capsule out
+                  // and back in.
+                  floatingActionButton: hasItems && !selectionActive
+                      ? Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            bottom: kLibraryFloatingActionsLift,
                           ),
-                          Expanded(
-                            child: ScrollEdgeFadeStack(
-                              child: LibraryBody(
-                                state: state,
-                                scrollController: _scrollController,
-                                onSourcePressed: (source) =>
-                                    _handleSourceTap(context, source),
-                                onSourceLongPressed: (source) =>
-                                    _handleSourceLongPress(context, source),
-                                onConfirmSwipeDelete: (source) =>
-                                    _confirmAndDispatchSwipe(
-                                      context,
-                                      source,
+                          // Only the capsule follows the scope; the Scaffold
+                          // rebuilds for visibility alone.
+                          child:
+                              BlocSelector<
+                                LibraryBloc,
+                                LibraryState,
+                                LibraryCollectionScope?
+                              >(
+                                selector: (state) =>
+                                    state.selectedCollectionScope,
+                                builder: (context, scope) =>
+                                    LibraryFloatingActions(
+                                      scope: scope,
+                                      onCollectionsPressed: () =>
+                                          _handleCollectionScopePressed(
+                                            context,
+                                            context.read<LibraryBloc>().state,
+                                          ),
+                                      onAddPressed: _addInFlight
+                                          ? null
+                                          : () => _handleAdd(
+                                              context,
+                                              LibraryImportEntry.menu,
+                                            ),
                                     ),
-                                onRefresh: () {
-                                  // Keep the indicator until the reload ends.
-                                  final done = Completer<void>();
-                                  bloc.add(
-                                    LibraryRefreshRequested(completer: done),
-                                  );
-                                  return done.future;
-                                },
-                                onResetFilters: () {
-                                  _searchController.clear();
-                                  _searchFocusNode.unfocus();
-                                  bloc.add(const LibraryFiltersReset());
-                                },
                               ),
-                            ),
+                        )
+                      : null,
+                  body: SafeArea(
+                    bottom: false,
+                    child: BlocBuilder<LibraryBloc, LibraryState>(
+                      buildWhen: (prev, curr) =>
+                          prev.status != curr.status ||
+                          prev.sources != curr.sources ||
+                          prev.collectionScopes != curr.collectionScopes ||
+                          prev.collectionsLoadFailed !=
+                              curr.collectionsLoadFailed ||
+                          prev.selectedCollectionScope !=
+                              curr.selectedCollectionScope ||
+                          prev.searchQuery != curr.searchQuery,
+                      builder: (context, state) {
+                        final bloc = context.read<LibraryBloc>();
+                        // null while an import flow is open renders the import
+                        // actions disabled, matching the re-entry guard.
+                        final onImportPressed = _addInFlight
+                            ? null
+                            : (LibraryImportEntry entry) =>
+                                  _handleAdd(context, entry);
+
+                        return switch (state.status) {
+                          LibraryStatus.initial || LibraryStatus.loading =>
+                            const CenteredCircularProgressIndicator(),
+                          LibraryStatus.failure => ErrorState(
+                            message: context.l10n.libraryFailedToLoad,
+                            retryLabel: context.l10n.commonRetry,
+                            onRetry: () =>
+                                bloc.add(const LibraryLoadRequested()),
                           ),
-                        ],
-                      ),
-                    };
-                  },
+                          LibraryStatus.success => Column(
+                            children: [
+                              LibraryHeader(
+                                state: state,
+                                isOffline: widget.isOffline,
+                                searchController: _searchController,
+                                searchFocusNode: _searchFocusNode,
+                                onSearchChanged: (query) =>
+                                    bloc.add(LibrarySearchQueryChanged(query)),
+                              ),
+                              Expanded(
+                                child: ScrollEdgeFadeStack(
+                                  child: LibraryBody(
+                                    state: state,
+                                    scrollController: _scrollController,
+                                    onSourcePressed: (source) =>
+                                        _handleSourceTap(context, source),
+                                    onSourceLongPressed: (source) =>
+                                        _handleSourceLongPress(context, source),
+                                    onConfirmSwipeDelete: (source) =>
+                                        _confirmAndDispatchSwipe(
+                                          context,
+                                          source,
+                                        ),
+                                    onImportPressed: onImportPressed,
+                                    onRefresh: () {
+                                      // Keep the indicator until the reload
+                                      // ends.
+                                      final done = Completer<void>();
+                                      bloc.add(
+                                        LibraryRefreshRequested(
+                                          completer: done,
+                                        ),
+                                      );
+                                      return done.future;
+                                    },
+                                    onResetFilters: () {
+                                      _searchController.clear();
+                                      _searchFocusNode.unfocus();
+                                      bloc.add(const LibraryFiltersReset());
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        };
+                      },
+                    ),
+                  ),
                 ),
               ),
-            ],
-          ),
         ),
       ),
     );
@@ -535,58 +604,6 @@ class _LibrarySelectionPopScope extends StatelessWidget {
           child: child,
         );
       },
-    );
-  }
-}
-
-/// Hide import while the contextual selection bar is active.
-class _LibraryFabDriver extends StatelessWidget {
-  const _LibraryFabDriver({
-    required this.addInFlight,
-    required this.onAddPressed,
-  });
-
-  final bool addInFlight;
-  final VoidCallback onAddPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocSelector<LibrarySelectionCubit, LibrarySelectionState, bool>(
-      selector: (state) => state.isActive,
-      builder: (context, selectionActive) {
-        if (selectionActive) {
-          return const SizedBox.shrink();
-        }
-
-        return _LibraryFab(
-          // null while an import sheet is in-flight — Flutter's FAB renders
-          // disabled (greyed) when onPressed is null, matching the actual
-          // re-entry guard.
-          onAddPressed: addInFlight ? null : onAddPressed,
-        );
-      },
-    );
-  }
-}
-
-class _LibraryFab extends StatelessWidget {
-  const _LibraryFab({required this.onAddPressed});
-
-  /// Nullable so the parent can render the FAB as disabled while an
-  /// import is in-flight. `FloatingActionButton` greys itself out when
-  /// `onPressed` is null.
-  final VoidCallback? onAddPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    // Colour, shape and elevation come from floatingActionButtonTheme.
-    return FloatingActionButton(
-      onPressed: onAddPressed,
-      tooltip: context.l10n.importAddToLibraryTitle,
-      // Keep the FAB out of Hero transitions; this screen can be opened
-      // beside other FAB-based surfaces when frozen tabs are re-enabled.
-      heroTag: null,
-      child: const Icon(AppIcons.add, size: AppIconSize.md),
     );
   }
 }

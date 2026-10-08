@@ -45,7 +45,6 @@ class ReaderTocDrawerDriver extends StatelessWidget {
     final currentChapterTitle = context.select<ReaderBloc, String?>(
       (b) => b.state.chapterTitle,
     );
-    final colors = context.colors;
 
     return _ReaderTocDrawer(
       loadThumbnail: loadThumbnail,
@@ -58,8 +57,6 @@ class ReaderTocDrawerDriver extends StatelessWidget {
       highlights: highlights,
       currentProgress: currentProgress,
       currentChapterTitle: currentChapterTitle,
-      panelColor: colors.surface,
-      dividerColor: colors.outlineVariant,
       onClose: onClose,
       onItemSelected: onItemSelected,
       onBookmarkSelected: onBookmarkSelected,
@@ -69,7 +66,10 @@ class ReaderTocDrawerDriver extends StatelessWidget {
   }
 }
 
-/// Sliding full-height drawer that hosts chapter and bookmark tabs.
+/// Contents sheet: chapters (or comic pages), bookmarks and highlights.
+///
+/// An [AppInlineSheet] rather than a route, so each tab's search text and
+/// scroll offset survive closing it between chapters.
 class _ReaderTocDrawer extends StatelessWidget {
   const _ReaderTocDrawer({
     required this.loadThumbnail,
@@ -82,8 +82,6 @@ class _ReaderTocDrawer extends StatelessWidget {
     required this.highlights,
     required this.currentProgress,
     required this.currentChapterTitle,
-    required this.panelColor,
-    required this.dividerColor,
     required this.onClose,
     required this.onItemSelected,
     required this.onBookmarkSelected,
@@ -101,8 +99,6 @@ class _ReaderTocDrawer extends StatelessWidget {
   final List<Highlight> highlights;
   final double? currentProgress;
   final String? currentChapterTitle;
-  final Color panelColor;
-  final Color dividerColor;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
@@ -112,39 +108,22 @@ class _ReaderTocDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned.fill(
-      child: IgnorePointer(
-        ignoring: !visible,
-        child: AnimatedSlide(
-          offset: visible
-              ? Offset.zero
-              : readerSidePanelHiddenOffset(Directionality.of(context)),
-          duration: context.motion(AppMotion.short),
-          curve: _kChromeAnimCurve,
-          child: Material(
-            color: panelColor,
-            elevation: 0,
-            child: SafeArea(
-              bottom: false,
-              child: _ReaderTocDrawerContent(
-                loadThumbnail: loadThumbnail,
-                format: format,
-                visible: visible,
-                pageProgressionRtl: pageProgressionRtl,
-                readerTheme: readerTheme,
-                tocItems: tocItems,
-                bookmarks: bookmarks,
-                highlights: highlights,
-                currentProgress: currentProgress,
-                currentChapterTitle: currentChapterTitle,
-                onClose: onClose,
-                onItemSelected: onItemSelected,
-                onBookmarkSelected: onBookmarkSelected,
-                onHighlightSelected: onHighlightSelected,
-                onBookmarkDeleted: onBookmarkDeleted,
-              ),
-            ),
-          ),
-        ),
+      child: _ReaderTocDrawerContent(
+        loadThumbnail: loadThumbnail,
+        format: format,
+        visible: visible,
+        pageProgressionRtl: pageProgressionRtl,
+        readerTheme: readerTheme,
+        tocItems: tocItems,
+        bookmarks: bookmarks,
+        highlights: highlights,
+        currentProgress: currentProgress,
+        currentChapterTitle: currentChapterTitle,
+        onClose: onClose,
+        onItemSelected: onItemSelected,
+        onBookmarkSelected: onBookmarkSelected,
+        onHighlightSelected: onHighlightSelected,
+        onBookmarkDeleted: onBookmarkDeleted,
       ),
     );
   }
@@ -213,186 +192,194 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
     final colors = context.colors;
     final l10n = context.l10n;
 
+    // The tab bar lives in the sheet's dragging header and the tab views in
+    // its body, so the controller wraps the whole sheet.
     return DefaultTabController(
       length: 3,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(
-              AppSpacing.lg,
-              AppSpacing.sm,
-              readerDrawerActionEndPadding,
-              AppSpacing.xs,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.readerContents,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.text.titleLarge.copyWith(
-                      color: colors.onSurface,
+      child: AppInlineSheet(
+        visible: widget.visible,
+        onClose: widget.onClose,
+        semanticsLabel: l10n.readerContents,
+        header: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              // The sheet's grab handle supplies the gap above the title.
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpacing.lg,
+                0,
+                readerDrawerActionEndPadding,
+                AppSpacing.xs,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n.readerContents,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.text.titleLarge.copyWith(
+                        color: colors.onSurface,
+                      ),
                     ),
                   ),
-                ),
-                AppPlainIconButton(
-                  icon: AppIcons.close,
-                  tooltip: l10n.commonClose,
-                  onPressed: widget.onClose,
-                ),
-              ],
-            ),
-          ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              var width = 0.0;
-              for (final label in [
-                widget.format == BookFormat.cbz
-                    ? l10n.readerPages
-                    : l10n.readerChapters,
-                l10n.readerBookmarks,
-                l10n.readerHighlights,
-              ]) {
-                final painter = TextPainter(
-                  text: TextSpan(text: label, style: context.text.labelSmall),
-                  textDirection: Directionality.of(context),
-                  textScaler: MediaQuery.textScalerOf(context),
-                )..layout();
-                width +=
-                    painter.width +
-                    AppIconSize.sm +
-                    AppSpacing.xxs +
-                    2 * AppSpacing.sm;
-                painter.dispose();
-              }
-              final scrollable = width > constraints.maxWidth;
-              return TabBar(
-                isScrollable: scrollable,
-                tabAlignment: scrollable
-                    ? TabAlignment.start
-                    : TabAlignment.fill,
-                // Scrolling tabs start at the drawer gutter: 8dp bar inset
-                // plus the 8dp label padding puts the first glyph on 16.
-                padding: scrollable
-                    ? const EdgeInsets.symmetric(horizontal: AppSpacing.sm)
-                    : null,
-                labelPadding: EdgeInsets.symmetric(
-                  horizontal: scrollable ? AppSpacing.sm : 0,
-                ),
-                tabs: [
-                  Tab(
-                    child: _ReaderDrawerTabLabel(
-                      icon: AppIcons.toc,
-                      label: widget.format == BookFormat.cbz
-                          ? l10n.readerPages
-                          : l10n.readerChapters,
-                    ),
-                  ),
-                  Tab(
-                    child: _ReaderDrawerTabLabel(
-                      icon: AppIcons.bookmark,
-                      label: l10n.readerBookmarks,
-                    ),
-                  ),
-                  Tab(
-                    child: _ReaderDrawerTabLabel(
-                      icon: AppIcons.highlight,
-                      label: l10n.readerHighlights,
-                    ),
+                  AppPlainIconButton(
+                    icon: AppIcons.close,
+                    tooltip: l10n.commonClose,
+                    onPressed: widget.onClose,
                   ),
                 ],
-                labelColor: colors.onSurface,
-                unselectedLabelColor: colors.onSurfaceVariant,
-                indicatorColor: context.actionForeground,
-              );
-            },
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                if (widget.format == BookFormat.cbz)
-                  Builder(
-                    builder: (context) {
-                      final tabs = DefaultTabController.of(context);
-                      return AnimatedBuilder(
-                        animation: tabs,
-                        builder: (context, _) {
-                          if (!widget.visible || tabs.index != 0) {
-                            return const SizedBox.shrink();
-                          }
-                          return ReaderComicPages(
-                            items: widget.tocItems,
-                            pageProgressionRtl: widget.pageProgressionRtl,
-                            currentIndex:
-                                readerActiveTocIndex(
-                                  items: widget.tocItems,
-                                  readingProgress: widget.currentProgress,
-                                  chapterTitle: widget.currentChapterTitle,
-                                ) ??
-                                0,
-                            loadThumbnail: widget.loadThumbnail,
-                            onSelected: widget.onItemSelected,
-                          );
-                        },
+              ),
+            ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                var width = 0.0;
+                for (final label in [
+                  widget.format == BookFormat.cbz
+                      ? l10n.readerPages
+                      : l10n.readerChapters,
+                  l10n.readerBookmarks,
+                  l10n.readerHighlights,
+                ]) {
+                  final painter = TextPainter(
+                    text: TextSpan(text: label, style: context.text.labelSmall),
+                    textDirection: Directionality.of(context),
+                    textScaler: MediaQuery.textScalerOf(context),
+                  )..layout();
+                  width +=
+                      painter.width +
+                      AppIconSize.sm +
+                      AppSpacing.xxs +
+                      2 * AppSpacing.sm;
+                  painter.dispose();
+                }
+                final scrollable = width > constraints.maxWidth;
+                return TabBar(
+                  isScrollable: scrollable,
+                  tabAlignment: scrollable
+                      ? TabAlignment.start
+                      : TabAlignment.fill,
+                  // Scrolling tabs start at the drawer gutter: 8dp bar inset
+                  // plus the 8dp label padding puts the first glyph on 16.
+                  padding: scrollable
+                      ? const EdgeInsets.symmetric(horizontal: AppSpacing.sm)
+                      : null,
+                  labelPadding: EdgeInsets.symmetric(
+                    horizontal: scrollable ? AppSpacing.sm : 0,
+                  ),
+                  tabs: [
+                    Tab(
+                      child: _ReaderDrawerTabLabel(
+                        icon: AppIcons.toc,
+                        label: widget.format == BookFormat.cbz
+                            ? l10n.readerPages
+                            : l10n.readerChapters,
+                      ),
+                    ),
+                    Tab(
+                      child: _ReaderDrawerTabLabel(
+                        icon: AppIcons.bookmark,
+                        label: l10n.readerBookmarks,
+                      ),
+                    ),
+                    Tab(
+                      child: _ReaderDrawerTabLabel(
+                        icon: AppIcons.highlight,
+                        label: l10n.readerHighlights,
+                      ),
+                    ),
+                  ],
+                  labelColor: colors.onSurface,
+                  unselectedLabelColor: colors.onSurfaceVariant,
+                  indicatorColor: context.actionForeground,
+                );
+              },
+            ),
+          ],
+        ),
+        body: TabBarView(
+          children: [
+            if (widget.format == BookFormat.cbz)
+              Builder(
+                builder: (context) {
+                  final tabs = DefaultTabController.of(context);
+                  return AnimatedBuilder(
+                    animation: tabs,
+                    builder: (context, _) {
+                      if (!widget.visible || tabs.index != 0) {
+                        return const SizedBox.shrink();
+                      }
+                      return ReaderComicPages(
+                        items: widget.tocItems,
+                        pageProgressionRtl: widget.pageProgressionRtl,
+                        currentIndex:
+                            readerActiveTocIndex(
+                              items: widget.tocItems,
+                              readingProgress: widget.currentProgress,
+                              chapterTitle: widget.currentChapterTitle,
+                            ) ??
+                            0,
+                        loadThumbnail: widget.loadThumbnail,
+                        onSelected: widget.onItemSelected,
                       );
                     },
-                  )
-                else
-                  _ReaderTocTab(
-                    controller: _chaptersSearchController,
-                    visible: widget.visible,
-                    format: widget.format,
-                    pageProgressionRtl: widget.pageProgressionRtl,
-                    currentProgress: widget.currentProgress,
-                    currentChapterTitle: widget.currentChapterTitle,
-                    query: _chaptersQuery,
-                    hintText: l10n.readerSearchChapters,
-                    items: widget.tocItems,
-                    onQueryChanged: (value) {
-                      setState(() => _chaptersQuery = value);
-                    },
-                    onItemSelected: widget.onItemSelected,
-                  ),
-                _ReaderBookmarksTab(
-                  controller: _bookmarksSearchController,
-                  pageProgressionRtl: widget.pageProgressionRtl,
-                  query: _bookmarksQuery,
-                  bookmarks: widget.bookmarks,
-                  onQueryChanged: (value) {
-                    setState(() => _bookmarksQuery = value);
-                  },
-                  onBookmarkSelected: widget.onBookmarkSelected,
-                  onBookmarkDeleted: widget.onBookmarkDeleted,
-                ),
-                Builder(
-                  builder: (context) {
-                    final tabs = DefaultTabController.of(context);
-                    return AnimatedBuilder(
-                      animation: tabs,
-                      builder: (context, _) => _ReaderHighlightsTab(
-                        controller: _highlightsSearchController,
-                        pageProgressionRtl: widget.pageProgressionRtl,
-                        readerTheme: widget.readerTheme,
-                        query: _highlightsQuery,
-                        highlights: widget.highlights,
-                        previewsEnabled:
-                            widget.visible &&
-                            tabs.index == 2 &&
-                            widget.format == BookFormat.cbz,
-                        loadThumbnail: widget.loadThumbnail,
-                        onQueryChanged: (value) {
-                          setState(() => _highlightsQuery = value);
-                        },
-                        onHighlightSelected: widget.onHighlightSelected,
-                      ),
-                    );
-                  },
-                ),
-              ],
+                  );
+                },
+              )
+            else
+              _ReaderTocTab(
+                controller: _chaptersSearchController,
+                visible: widget.visible,
+                format: widget.format,
+                pageProgressionRtl: widget.pageProgressionRtl,
+                currentProgress: widget.currentProgress,
+                currentChapterTitle: widget.currentChapterTitle,
+                query: _chaptersQuery,
+                hintText: l10n.readerSearchChapters,
+                items: widget.tocItems,
+                onQueryChanged: (value) {
+                  setState(() => _chaptersQuery = value);
+                },
+                onItemSelected: widget.onItemSelected,
+              ),
+            _ReaderBookmarksTab(
+              controller: _bookmarksSearchController,
+              pageProgressionRtl: widget.pageProgressionRtl,
+              query: _bookmarksQuery,
+              bookmarks: widget.bookmarks,
+              onQueryChanged: (value) {
+                setState(() => _bookmarksQuery = value);
+              },
+              onBookmarkSelected: widget.onBookmarkSelected,
+              onBookmarkDeleted: widget.onBookmarkDeleted,
             ),
-          ),
-        ],
+            Builder(
+              builder: (context) {
+                final tabs = DefaultTabController.of(context);
+                return AnimatedBuilder(
+                  animation: tabs,
+                  builder: (context, _) => _ReaderHighlightsTab(
+                    controller: _highlightsSearchController,
+                    pageProgressionRtl: widget.pageProgressionRtl,
+                    readerTheme: widget.readerTheme,
+                    query: _highlightsQuery,
+                    highlights: widget.highlights,
+                    previewsEnabled:
+                        widget.visible &&
+                        tabs.index == 2 &&
+                        widget.format == BookFormat.cbz,
+                    loadThumbnail: widget.loadThumbnail,
+                    onQueryChanged: (value) {
+                      setState(() => _highlightsQuery = value);
+                    },
+                    onHighlightSelected: widget.onHighlightSelected,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -467,6 +454,9 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
   final _activeItemKey = GlobalKey();
   bool _autoScrolledForOpen = false;
   bool _autoScrollScheduled = false;
+  List<ReaderTocItem>? _statesItems;
+  int? _statesActiveIndex;
+  List<ReaderTocReadingState> _states = const [];
 
   @override
   void initState() {
@@ -558,14 +548,25 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final context = _activeItemKey.currentContext;
-        if (context == null) return;
-        Scrollable.ensureVisible(
-          context,
-          alignment: 0.25,
-          duration: Duration.zero,
-        );
+        final row = context?.findRenderObject();
+        if (context == null || row == null) return;
+        // Only this list: Scrollable.ensureVisible would also scroll a sheet
+        // laid out taller than the screen and hide its header.
+        Scrollable.of(context).position.ensureVisible(row, alignment: 0.25);
       });
     });
+  }
+
+  /// Reading-position updates rebuild the tab; the states only change when
+  /// the items or the active chapter do.
+  List<ReaderTocReadingState> _readingStates(int? activeSourceIndex) {
+    if (!identical(_statesItems, widget.items) ||
+        _statesActiveIndex != activeSourceIndex) {
+      _statesItems = widget.items;
+      _statesActiveIndex = activeSourceIndex;
+      _states = readerTocReadingStates(widget.items, activeSourceIndex);
+    }
+    return _states;
   }
 
   @override
@@ -573,6 +574,7 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
     final listBottomPadding = readerDrawerListBottomPadding(context);
     final filteredItems = _filteredItems();
     final activeSourceIndex = _activeSourceIndex();
+    final states = _readingStates(activeSourceIndex);
 
     return Column(
       children: [
@@ -588,15 +590,17 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
         Expanded(
           child: _ReaderDrawerContentFrame(
             child: filteredItems.isEmpty
-                ? EmptyState(
-                    compact: true,
-                    icon: widget.items.isEmpty
-                        ? AppIcons.toc
-                        : AppIcons.searchOff,
-                    message: readerTocEmptyMessage(
-                      l10n: context.l10n,
-                      format: widget.format,
-                      hasSourceItems: widget.items.isNotEmpty,
+                ? _ReaderDrawerPlaceholder(
+                    child: EmptyState(
+                      compact: true,
+                      icon: widget.items.isEmpty
+                          ? AppIcons.toc
+                          : AppIcons.searchOff,
+                      message: readerTocEmptyMessage(
+                        l10n: context.l10n,
+                        format: widget.format,
+                        hasSourceItems: widget.items.isNotEmpty,
+                      ),
                     ),
                   )
                 : ScrollEdgeFadeStack(
@@ -611,7 +615,7 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
                           key: isActive ? _activeItemKey : null,
                           item: entry.item,
                           pageProgressionRtl: widget.pageProgressionRtl,
-                          isActive: isActive,
+                          state: states[entry.sourceIndex],
                           onTap: () => widget.onItemSelected(entry.item),
                         );
                       },
@@ -624,57 +628,158 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
   }
 }
 
+/// One chapter row: a constant leading slot (check for read chapters, dot
+/// for the active one), the title in the book's direction and its start
+/// page or percent at the end.
 class _ReaderTocListTile extends StatelessWidget {
   const _ReaderTocListTile({
     super.key,
     required this.item,
     required this.pageProgressionRtl,
-    required this.isActive,
+    required this.state,
     required this.onTap,
   });
 
   final ReaderTocItem item;
   final bool pageProgressionRtl;
-  final bool isActive;
+  final ReaderTocReadingState state;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final l10n = context.l10n;
+    final isActive = state == ReaderTocReadingState.active;
     final levelInset =
         AppSpacing.lg + (item.level - 1).clamp(0, 4) * AppSpacing.md;
-
-    final titleColor = isActive
-        ? colors.selectedControlForeground
-        : colors.onSurface;
+    final titleStyle = context.text.bodyMedium.copyWith(
+      color: switch (state) {
+        ReaderTocReadingState.active => colors.selectedControlForeground,
+        ReaderTocReadingState.read => colors.onSurfaceVariant,
+        ReaderTocReadingState.upcoming => colors.onSurface,
+      },
+    );
+    final page = readerTocStartPage(item);
+    final percent = page == null ? readerTocStartPercent(item) : null;
+    final position = page != null
+        ? '$page'
+        : percent != null
+        ? '$percent%'
+        : null;
 
     // Row layout follows the app locale; only the chapter text keeps the
     // book's direction. The active fill spans the panel edge to edge: the
     // themed 16dp tile radius is for inset rows, not full-bleed panel rows.
-    return ListTile(
-      selected: isActive,
-      selectedTileColor: colors.selectedControlBackground,
-      shape: const RoundedRectangleBorder(),
-      contentPadding: EdgeInsetsDirectional.only(
-        start: levelInset.toDouble(),
-        end: AppSpacing.lg,
-        top: AppSpacing.xxs,
-        bottom: AppSpacing.xxs,
-      ),
-      minVerticalPadding: AppSpacing.xs,
-      title: Text(
-        item.label.isEmpty ? context.l10n.readerUntitledChapter : item.label,
-        textAlign: readerDirectionalTextAlign(
-          pageProgressionRtl: pageProgressionRtl,
+    return Semantics(
+      value: state == ReaderTocReadingState.read
+          ? l10n.readerChapterRead
+          : null,
+      child: ListTile(
+        selected: isActive,
+        selectedTileColor: colors.selectedControlBackground,
+        shape: const RoundedRectangleBorder(),
+        contentPadding: EdgeInsetsDirectional.only(
+          start: levelInset.toDouble(),
+          end: AppSpacing.lg,
+          top: AppSpacing.xxs,
+          bottom: AppSpacing.xxs,
         ),
-        textDirection: readerDirectionalTextDirection(
-          pageProgressionRtl: pageProgressionRtl,
+        minVerticalPadding: AppSpacing.xs,
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ReaderTocReadingMark(
+              state: state,
+              lineHeight: readerTextLineHeight(
+                MediaQuery.textScalerOf(context),
+                titleStyle,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.label.isEmpty
+                          ? l10n.readerUntitledChapter
+                          : item.label,
+                      textAlign: readerDirectionalTextAlign(
+                        pageProgressionRtl: pageProgressionRtl,
+                      ),
+                      textDirection: readerDirectionalTextDirection(
+                        pageProgressionRtl: pageProgressionRtl,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: titleStyle,
+                    ),
+                  ),
+                  if (position != null) ...[
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      position,
+                      semanticsLabel: page != null
+                          ? l10n.readerPageNumber(page)
+                          : null,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: context.text.bodySmall.copyWith(
+                        // The active fill is tonal in dark mode, so its label
+                        // takes the paired foreground instead of the muted ink.
+                        color: isActive
+                            ? colors.selectedControlForeground
+                            : colors.onSurfaceVariant,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: context.text.bodyMedium.copyWith(color: titleColor),
+        onTap: onTap,
       ),
-      onTap: onTap,
+    );
+  }
+}
+
+/// Fixed-width leading slot, centred on the title's first line, so titles
+/// align whether or not a row shows a mark.
+class _ReaderTocReadingMark extends StatelessWidget {
+  const _ReaderTocReadingMark({required this.state, required this.lineHeight});
+
+  final ReaderTocReadingState state;
+  final double lineHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return SizedBox(
+      width: AppIconSize.xs,
+      height: lineHeight,
+      child: switch (state) {
+        ReaderTocReadingState.read => Center(
+          child: Icon(
+            AppIcons.check,
+            size: AppIconSize.xs,
+            color: colors.onSurfaceVariant,
+          ),
+        ),
+        ReaderTocReadingState.active => Center(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.selectedControlForeground,
+              shape: BoxShape.circle,
+            ),
+            child: const SizedBox.square(dimension: AppSpacing.sm),
+          ),
+        ),
+        ReaderTocReadingState.upcoming => null,
+      },
     );
   }
 }
@@ -745,12 +850,14 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
         Expanded(
           child: _ReaderDrawerContentFrame(
             child: _filtered.isEmpty
-                ? EmptyState(
-                    compact: true,
-                    icon: !hasItems ? AppIcons.bookmark : AppIcons.searchOff,
-                    message: !hasItems
-                        ? context.l10n.readerNoBookmarksYet
-                        : context.l10n.readerNoMatchingBookmarks,
+                ? _ReaderDrawerPlaceholder(
+                    child: EmptyState(
+                      compact: true,
+                      icon: !hasItems ? AppIcons.bookmark : AppIcons.searchOff,
+                      message: !hasItems
+                          ? context.l10n.readerNoBookmarksYet
+                          : context.l10n.readerNoMatchingBookmarks,
+                    ),
                   )
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
@@ -759,7 +866,10 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
                       itemBuilder: (context, index) {
                         final bookmark = _filtered[index];
                         final removed = _removedIds.contains(bookmark.id);
-                        return _ReaderBookmarkListTile(
+                        // Only the row being written disables its action;
+                        // the bookmark event bucket serializes the rest.
+                        final busy = edits.busyId == bookmark.id;
+                        final tile = _ReaderBookmarkListTile(
                           bookmark: bookmark,
                           pageProgressionRtl: widget.pageProgressionRtl,
                           removed: removed,
@@ -767,12 +877,7 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
                           onTap: removed
                               ? null
                               : () => widget.onBookmarkSelected(bookmark),
-                          // Only the row being written disables its action;
-                          // the bookmark event bucket serializes the rest.
-                          onDelete: edits.busyId == bookmark.id
-                              ? null
-                              : () => widget.onBookmarkDeleted(bookmark),
-                          onUndo: edits.busyId == bookmark.id
+                          onUndo: busy
                               ? null
                               : () => context.read<ReaderBloc>().add(
                                   ReaderBookmarkRestored(
@@ -780,6 +885,15 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
                                     id: bookmark.id,
                                   ),
                                 ),
+                        );
+                        if (removed) return tile;
+                        return ReaderSwipeToDelete(
+                          id: bookmark.id,
+                          label: context.l10n.readerDeleteBookmark,
+                          onDelete: busy
+                              ? null
+                              : () => widget.onBookmarkDeleted(bookmark),
+                          child: tile,
                         );
                       },
                     ),
@@ -791,12 +905,13 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
   }
 }
 
+/// Bookmark text and location; deletion is the row's swipe (and semantics
+/// action), so only a removed row shows a trailing control: its Undo.
 class _ReaderBookmarkListTile extends StatelessWidget {
   const _ReaderBookmarkListTile({
     required this.bookmark,
     required this.pageProgressionRtl,
     required this.onTap,
-    required this.onDelete,
     required this.onUndo,
     this.removed = false,
     this.failed = false,
@@ -805,7 +920,6 @@ class _ReaderBookmarkListTile extends StatelessWidget {
   final SourceBookmark bookmark;
   final bool pageProgressionRtl;
   final VoidCallback? onTap;
-  final VoidCallback? onDelete;
   final VoidCallback? onUndo;
   final bool removed;
   final bool failed;
@@ -818,18 +932,13 @@ class _ReaderBookmarkListTile extends StatelessWidget {
     final percentage = (bookmark.progress * 100).clamp(0, 100).round();
 
     return ListTile(
-      contentPadding: const EdgeInsetsDirectional.fromSTEB(
+      contentPadding: EdgeInsetsDirectional.fromSTEB(
         AppSpacing.lg,
         AppSpacing.xxs,
-        readerDrawerActionEndPadding,
+        removed ? readerDrawerActionEndPadding : AppSpacing.lg,
         AppSpacing.xxs,
       ),
       minVerticalPadding: AppSpacing.xs,
-      leading: Icon(
-        AppIcons.bookmark,
-        size: AppIconSize.sm,
-        color: context.actionForeground,
-      ),
       title: Text(
         content.isEmpty ? context.l10n.readerBookmarkedPage : content,
         textAlign: readerDirectionalTextAlign(
@@ -873,17 +982,17 @@ class _ReaderBookmarkListTile extends StatelessWidget {
           ),
         ),
       ),
-      trailing: SizedBox.square(
-        dimension: AppSizes.buttonHeight,
-        child: AppPlainIconButton(
-          tooltip: removed
-              ? context.l10n.commonUndo
-              : context.l10n.readerDeleteBookmark,
-          icon: removed ? AppIcons.undo : AppIcons.delete,
-          color: removed ? context.actionForeground : colors.onSurfaceVariant,
-          onPressed: removed ? onUndo : onDelete,
-        ),
-      ),
+      trailing: removed
+          ? SizedBox.square(
+              dimension: AppSizes.buttonHeight,
+              child: AppPlainIconButton(
+                tooltip: context.l10n.commonUndo,
+                icon: AppIcons.undo,
+                color: context.actionForeground,
+                onPressed: onUndo,
+              ),
+            )
+          : null,
       onTap: onTap,
     );
   }
@@ -1032,12 +1141,14 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
         Expanded(
           child: _ReaderDrawerContentFrame(
             child: _filtered.isEmpty
-                ? EmptyState(
-                    compact: true,
-                    icon: !hasItems ? AppIcons.highlight : AppIcons.searchOff,
-                    message: !hasItems
-                        ? context.l10n.readerNoHighlightsYet
-                        : context.l10n.readerNoMatchingHighlights,
+                ? _ReaderDrawerPlaceholder(
+                    child: EmptyState(
+                      compact: true,
+                      icon: !hasItems ? AppIcons.highlight : AppIcons.searchOff,
+                      message: !hasItems
+                          ? context.l10n.readerNoHighlightsYet
+                          : context.l10n.readerNoMatchingHighlights,
+                    ),
                   )
                 : ScrollEdgeFadeStack(
                     child: ListView.builder(
@@ -1140,6 +1251,28 @@ class _ReaderHighlightFilterStrip extends StatelessWidget {
               onPressed: () => onSelected(color),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// A tab's empty state: centered in the tab body, and scrollable when a short
+/// sheet (landscape, large text, the keyboard) leaves it less room than it
+/// needs. With room to spare it cannot scroll, so a drag moves the sheet.
+class _ReaderDrawerPlaceholder extends StatelessWidget {
+  const _ReaderDrawerPlaceholder({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        primary: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: child,
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_bloc.dart';
@@ -81,5 +82,88 @@ void main() {
     expect(tester.widget<EmptyState>(empty).compact, isTrue);
     expect(find.text(strings.libraryNoMatchingCollections), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  group('built-in scopes', () {
+    LibraryCollectionScope builtIn(LibraryCollectionScopeType type, int n) =>
+        LibraryCollectionScope.smart(
+          type: type,
+          id: type.name,
+          label: type.name,
+          sourceCount: n,
+        );
+    final book = LibrarySource(
+      id: 'a',
+      sourceType: SourceType.book,
+      title: 'A',
+      typeLabel: 'EPUB',
+      addedAt: DateTime(2026),
+    );
+
+    double resultsHeight(WidgetTester tester) => tester
+        .getSize(
+          find
+              .ancestor(
+                of: find.byType(ScrollEdgeFadeStack),
+                matching: find.byType(SizedBox),
+              )
+              .first,
+        )
+        .height;
+
+    testWidgets('rows they would only repeat reserve no height', (
+      tester,
+    ) async {
+      final favourites = LibraryCollectionScope.favourites();
+      // One book: Books and New equal Library, the rest are empty.
+      await open(
+        tester,
+        LibraryState(
+          sources: [book],
+          collectionScopes: [
+            builtIn(LibraryCollectionScopeType.books, 1),
+            builtIn(LibraryCollectionScopeType.articles, 0),
+            builtIn(LibraryCollectionScopeType.comics, 0),
+            builtIn(LibraryCollectionScopeType.unread, 1),
+            favourites,
+          ],
+        ),
+      );
+      final withBuiltIns = resultsHeight(tester);
+      expect(
+        find.byKey(const ValueKey('collectionScopeRow-books-books')),
+        findsNothing,
+      );
+      Navigator.of(tester.element(find.byType(BottomSheet))).pop();
+      await tester.pumpAndSettle();
+
+      await open(
+        tester,
+        LibraryState(sources: [book], collectionScopes: [favourites]),
+      );
+      expect(resultsHeight(tester), withBuiltIns);
+    });
+
+    testWidgets('a selected empty one keeps its row with a check', (
+      tester,
+    ) async {
+      final empty = builtIn(LibraryCollectionScopeType.unread, 0);
+      await open(
+        tester,
+        LibraryState(
+          sources: [book],
+          collectionScopes: [empty, LibraryCollectionScope.favourites()],
+          selectedCollectionScope: empty,
+        ),
+      );
+      final row = find.byKey(
+        const ValueKey('collectionScopeRow-unread-unread'),
+      );
+      expect(row, findsOneWidget);
+      expect(
+        find.descendant(of: row, matching: find.byIcon(AppIcons.check)),
+        findsOneWidget,
+      );
+    });
   });
 }

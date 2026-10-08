@@ -26,17 +26,4 @@ void main() {
       );
     });
   });
-
-  group('readerSidePanelHiddenOffset', () {
-    test('hides toward the leading edge of the app locale', () {
-      expect(
-        readerSidePanelHiddenOffset(TextDirection.ltr),
-        const Offset(-1, 0),
-      );
-      expect(
-        readerSidePanelHiddenOffset(TextDirection.rtl),
-        const Offset(1, 0),
-      );
-    });
-  });
 }

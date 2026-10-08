@@ -5,8 +5,9 @@ import 'package:flutter/widgets.dart';
 /// sits on the 16dp content gutter while the full target stays tappable.
 const readerDrawerActionEndPadding = AppSpacing.lg - AppSizes.iconActionOutset;
 
-/// Bottom padding for drawer and search lists: the keyboard, the system
-/// inset and the 16dp content gutter, applied once by the list.
+/// Bottom padding for Contents and search lists: the keyboard (zero inside
+/// an `AppInlineSheet`, which sits on the keyboard), the system inset and the
+/// 16dp content gutter, applied once by the list.
 double readerDrawerListBottomPadding(BuildContext context) =>
     MediaQuery.viewInsetsOf(context).bottom +
     MediaQuery.paddingOf(context).bottom +

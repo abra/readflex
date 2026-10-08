@@ -6,12 +6,15 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_appearance_cubit.dart';
 import 'reader_font_sheet.dart';
+import 'reader_layout_presets.dart';
+import 'reader_line_spacing_glyph.dart';
+import 'reader_margins_glyph.dart';
 
-const double _marginsControlWidth = 152;
-const double _pageTurnControlWidth = 116;
-const double _textSizeControlWidth = _marginsControlWidth;
+const double _compactControlWidth = 152;
 const double _themeSwatchHeight = 36;
 const double _textScaleEpsilon = 0.001;
+const double _smallTextSizeGlyph = 14;
+const double _largeTextSizeGlyph = 22;
 
 /// The theme swatches keep a 4dp ink inset around their samples. The body
 /// gutter is reduced by that inset so the sample borders land on 24dp, and
@@ -456,6 +459,16 @@ class _FontPickerRow extends StatelessWidget {
   }
 }
 
+/// Text size, line spacing and margins share one width. It grows with text
+/// scale so the percentage keeps its room and the three stay aligned.
+double _compactControlWidthFor(BuildContext context) =>
+    AppSizes.buttonHeight * 2 +
+    (_compactControlWidth - AppSizes.buttonHeight * 2) *
+        (MediaQuery.textScalerOf(context).scale(15) / 15).clamp(
+          1,
+          double.infinity,
+        );
+
 class _FontSizeControl extends StatelessWidget {
   const _FontSizeControl();
 
@@ -469,29 +482,48 @@ class _FontSizeControl extends StatelessWidget {
           ),
         );
     final cubit = context.read<ReaderAppearanceCubit>();
-    return _AppearanceStepper(
-      width: _textSizeControlWidth,
-      stepperKey: const ValueKey('reader-text-scale-control'),
-      valueLabel: '${(stepperState.textScale * 100).round()}%',
-      valueTooltip: context.l10n.readerResetTextSize,
-      valueSemanticLabel: context.l10n.readerTextSize,
-      highlightValue: stepperState.highlighted,
-      decreaseIcon: AppIcons.remove,
-      increaseIcon: AppIcons.add,
-      decreaseTooltip: context.l10n.readerDecreaseTextSize,
-      increaseTooltip: context.l10n.readerIncreaseTextSize,
-      decreaseKey: const ValueKey('reader-text-scale-decrease'),
-      increaseKey: const ValueKey('reader-text-scale-increase'),
-      valueKey: const ValueKey('reader-text-scale-value'),
-      onDecrease: _textScaleChange(
-        context,
-        -ReaderAppearanceCubit.textScaleStep,
+    final cs = context.colors;
+    return SizedBox(
+      key: const ValueKey('reader-text-scale-control'),
+      width: _compactControlWidthFor(context),
+      height: AppSizes.buttonHeight,
+      child: Material(
+        color: cs.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          side: BorderSide(color: cs.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            _TextSizeStepButton(
+              key: const ValueKey('reader-text-scale-decrease'),
+              glyphSize: _smallTextSizeGlyph,
+              tooltip: context.l10n.readerDecreaseTextSize,
+              onTap: _textScaleChange(
+                context,
+                -ReaderAppearanceCubit.textScaleStep,
+              ),
+            ),
+            Expanded(
+              child: _TextSizeValueButton(
+                key: const ValueKey('reader-text-scale-value'),
+                label: '${(stepperState.textScale * 100).round()}%',
+                highlighted: stepperState.highlighted,
+                onTap: cubit.resetTextScale,
+              ),
+            ),
+            _TextSizeStepButton(
+              key: const ValueKey('reader-text-scale-increase'),
+              glyphSize: _largeTextSizeGlyph,
+              tooltip: context.l10n.readerIncreaseTextSize,
+              onTap: _textScaleChange(
+                context,
+                ReaderAppearanceCubit.textScaleStep,
+              ),
+            ),
+          ],
+        ),
       ),
-      onIncrease: _textScaleChange(
-        context,
-        ReaderAppearanceCubit.textScaleStep,
-      ),
-      onValueTap: cubit.resetTextScale,
     );
   }
 }
@@ -510,6 +542,111 @@ VoidCallback? _textScaleChange(BuildContext context, double delta) {
     cubit.previewTextScale(next);
     cubit.commitTextScale(next);
   };
+}
+
+/// Small or large serif "A" of the text size stepper. The letter is a glyph,
+/// not copy: the localized tooltip names the action.
+class _TextSizeStepButton extends StatelessWidget {
+  const _TextSizeStepButton({
+    required this.glyphSize,
+    required this.tooltip,
+    required this.onTap,
+    super.key,
+  });
+
+  final double glyphSize;
+  final String tooltip;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = context.colors;
+    final enabled = onTap != null;
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        enabled: enabled,
+        label: tooltip,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: SizedBox.square(
+            dimension: AppSizes.buttonHeight,
+            child: Center(
+              child: ExcludeSemantics(
+                child: Text(
+                  'A',
+                  // Follows text scale until the large "A" fills its target.
+                  textScaler: MediaQuery.textScalerOf(context).clamp(
+                    maxScaleFactor: AppSizes.buttonHeight / _largeTextSizeGlyph,
+                  ),
+                  style: context.text.labelLarge.copyWith(
+                    fontFamily: ReaderFontPreset.serif.fontFamily,
+                    fontSize: glyphSize,
+                    fontWeight: FontWeight.w500,
+                    height: 1,
+                    letterSpacing: 0,
+                    color: enabled
+                        ? cs.onSurfaceVariant
+                        : cs.onSurface.withValues(alpha: .38),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TextSizeValueButton extends StatelessWidget {
+  const _TextSizeValueButton({
+    required this.label,
+    required this.highlighted,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final bool highlighted;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: context.l10n.readerResetTextSize,
+      child: Semantics(
+        button: true,
+        label: context.l10n.readerTextSize,
+        value: label,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: SizedBox(
+            height: AppSizes.buttonHeight,
+            child: Center(
+              // Announced once, as the node's value.
+              child: ExcludeSemantics(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  // A muted caption; the accent marks a per-source override.
+                  style: context.text.bodySmall.copyWith(
+                    color: highlighted
+                        ? context.actionForeground
+                        : context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _ReaderLayoutSettingsPanel extends StatelessWidget {
@@ -534,6 +671,7 @@ class _ReaderLayoutSettingsPanel extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         _AppearanceSettingRow(
           label: context.l10n.readerTextAlignment,
+          controlBelowLabel: true,
           control: const _AlignmentControl(),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -545,6 +683,7 @@ class _ReaderLayoutSettingsPanel extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           _AppearanceSettingRow(
             label: context.l10n.readerPageTurn,
+            controlBelowLabel: true,
             control: const _PageTurnControl(),
           ),
         ],
@@ -553,51 +692,67 @@ class _ReaderLayoutSettingsPanel extends StatelessWidget {
   }
 }
 
+/// A setting label with its control. Compact controls trail the label and
+/// move below it only for large text in a narrow sheet. Labeled choices
+/// ([controlBelowLabel]) always span the width below their label, so long
+/// translations wrap inside the choice instead of crowding the label.
 class _AppearanceSettingRow extends StatelessWidget {
   const _AppearanceSettingRow({
     required this.label,
     required this.control,
+    this.controlBelowLabel = false,
   });
 
   final String label;
   final Widget control;
+  final bool controlBelowLabel;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final stacked =
+            controlBelowLabel ||
             constraints.maxWidth < 360 &&
-            MediaQuery.textScalerOf(context).scale(14) > 18;
+                MediaQuery.textScalerOf(context).scale(14) > 18;
         final title = Text(
           label,
           maxLines: stacked ? null : 2,
           overflow: TextOverflow.visible,
           style: context.text.bodyMedium,
         );
+        if (stacked) {
+          // With the 4dp row gap the label sits 16dp below the previous
+          // control and 8dp above its own.
+          return Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                title,
+                const SizedBox(height: AppSpacing.sm),
+                if (controlBelowLabel)
+                  control
+                else
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: control,
+                  ),
+              ],
+            ),
+          );
+        }
         return ConstrainedBox(
           constraints: const BoxConstraints(
             minHeight: AppSizes.buttonHeight,
           ),
-          child: stacked
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    title,
-                    const SizedBox(height: AppSpacing.xs),
-                    Align(
-                      alignment: AlignmentDirectional.centerEnd,
-                      child: control,
-                    ),
-                  ],
-                )
-              : Row(
-                  children: [
-                    Expanded(child: title),
-                    const SizedBox(width: AppSpacing.md),
-                    control,
-                  ],
-                ),
+          child: Row(
+            children: [
+              Expanded(child: title),
+              const SizedBox(width: AppSpacing.md),
+              control,
+            ],
+          ),
         );
       },
     );
@@ -614,30 +769,22 @@ class _AlignmentControl extends StatelessWidget {
           (c) => c.state.effectiveAppearance.textAlignment,
         );
     final cubit = context.read<ReaderAppearanceCubit>();
-    return SizedBox(
-      width: _marginsControlWidth,
-      child: AppChoiceControl<ReaderTextAlignment>(
-        iconOnly: true,
-        selected: alignment,
-        onChanged: (value) => cubit.setTextAlignment(value),
-        options: [
-          AppChoiceOption(
-            value: ReaderTextAlignment.start,
-            icon: AppIcons.alignStart,
-            label: context.l10n.readerAlignStart,
-          ),
-          AppChoiceOption(
-            value: ReaderTextAlignment.justify,
-            icon: AppIcons.alignJustify,
-            label: context.l10n.readerJustifyText,
-          ),
-          AppChoiceOption(
-            value: ReaderTextAlignment.end,
-            icon: AppIcons.alignEnd,
-            label: context.l10n.readerAlignEnd,
-          ),
-        ],
-      ),
+    return AppChoiceControl<ReaderTextAlignment>(
+      key: const ValueKey('reader-text-alignment-control'),
+      selected: alignment,
+      onChanged: (value) => cubit.setTextAlignment(value),
+      options: [
+        AppChoiceOption(
+          value: ReaderTextAlignment.start,
+          icon: AppIcons.alignStart,
+          label: context.l10n.readerAlignNormal,
+        ),
+        AppChoiceOption(
+          value: ReaderTextAlignment.justify,
+          icon: AppIcons.alignJustify,
+          label: context.l10n.readerAlignJustified,
+        ),
+      ],
     );
   }
 }
@@ -651,25 +798,22 @@ class _PageTurnControl extends StatelessWidget {
       (c) => c.state.effectiveAppearance.pageTurnStyle,
     );
     final cubit = context.read<ReaderAppearanceCubit>();
-    return SizedBox(
-      width: _pageTurnControlWidth,
-      child: AppChoiceControl<ReaderPageTurnStyle>(
-        iconOnly: true,
-        selected: style,
-        onChanged: (value) => cubit.setPageTurnStyle(value),
-        options: [
-          AppChoiceOption(
-            value: ReaderPageTurnStyle.horizontal,
-            icon: AppIcons.pageTurnHorizontal,
-            label: context.l10n.readerHorizontalPageTurn,
-          ),
-          AppChoiceOption(
-            value: ReaderPageTurnStyle.vertical,
-            icon: AppIcons.pageTurnVertical,
-            label: context.l10n.readerVerticalPageTurn,
-          ),
-        ],
-      ),
+    return AppChoiceControl<ReaderPageTurnStyle>(
+      key: const ValueKey('reader-page-turn-control'),
+      selected: style,
+      onChanged: (value) => cubit.setPageTurnStyle(value),
+      options: [
+        AppChoiceOption(
+          value: ReaderPageTurnStyle.horizontal,
+          icon: AppIcons.pageTurnHorizontal,
+          label: context.l10n.readerPageTurnHorizontalShort,
+        ),
+        AppChoiceOption(
+          value: ReaderPageTurnStyle.vertical,
+          icon: AppIcons.pageTurnVertical,
+          label: context.l10n.readerPageTurnVerticalShort,
+        ),
+      ],
     );
   }
 }
@@ -679,307 +823,93 @@ class _LineSpacingControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stepperState = context
-        .select<ReaderAppearanceCubit, ({double lineHeight, bool highlighted})>(
-          (c) => (
-            lineHeight: c.state.effectiveAppearance.lineHeight,
-            highlighted: c.state.sourceOverride.lineHeight != null,
-          ),
-        );
+    final lineHeight = context.select<ReaderAppearanceCubit, double>(
+      (c) => c.state.effectiveAppearance.lineHeight,
+    );
     final cubit = context.read<ReaderAppearanceCubit>();
-    final lineHeight = stepperState.lineHeight;
-    final decreaseValue = _lineHeightStepValue(lineHeight, -1);
-    final increaseValue = _lineHeightStepValue(lineHeight, 1);
-    void setLineHeight(double value) {
-      cubit.previewLineHeight(value);
-      cubit.commitLineHeight(value);
-    }
-
-    return _AppearanceStepper(
-      width: _marginsControlWidth,
-      stepperKey: const ValueKey('reader-line-height-control'),
-      valueLabel: _lineHeightLabel(lineHeight),
-      valueTooltip: context.l10n.readerResetLineSpacing,
-      valueSemanticLabel: context.l10n.readerLineSpacing,
-      highlightValue: stepperState.highlighted,
-      decreaseIcon: AppIcons.remove,
-      increaseIcon: AppIcons.add,
-      decreaseTooltip: context.l10n.readerDecreaseLineSpacing,
-      increaseTooltip: context.l10n.readerIncreaseLineSpacing,
-      decreaseKey: const ValueKey('reader-line-height-decrease'),
-      increaseKey: const ValueKey('reader-line-height-increase'),
-      valueKey: const ValueKey('reader-line-height-value'),
-      onDecrease: decreaseValue == null
-          ? null
-          : () => setLineHeight(decreaseValue),
-      onIncrease: increaseValue == null
-          ? null
-          : () => setLineHeight(increaseValue),
-      onValueTap: cubit.resetLineHeight,
+    final l10n = context.l10n;
+    return SizedBox(
+      key: const ValueKey('reader-line-height-control'),
+      width: _compactControlWidthFor(context),
+      child: AppChoiceControl<ReaderLineSpacingPreset>(
+        iconOnly: true,
+        // The nearest preset is shown selected; tapping it applies its value.
+        reselectable: true,
+        selected: ReaderLineSpacingPreset.nearest(lineHeight),
+        onChanged: (preset) {
+          final value = preset.lineHeight;
+          if (value == lineHeight) return;
+          cubit.previewLineHeight(value);
+          cubit.commitLineHeight(value);
+        },
+        options: [
+          for (final preset in ReaderLineSpacingPreset.values)
+            AppChoiceOption(
+              value: preset,
+              label: _lineSpacingLabel(l10n, preset),
+              glyph: ReaderLineSpacingGlyph(
+                preset,
+                key: ValueKey('reader-line-spacing-${preset.name}'),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
+
+String _lineSpacingLabel(
+  ReadflexLocalizations l10n,
+  ReaderLineSpacingPreset preset,
+) => switch (preset) {
+  ReaderLineSpacingPreset.compact => l10n.readerLineSpacingCompact,
+  ReaderLineSpacingPreset.normal => l10n.readerLineSpacingNormal,
+  ReaderLineSpacingPreset.relaxed => l10n.readerLineSpacingRelaxed,
+};
 
 class _MarginControl extends StatelessWidget {
   const _MarginControl();
 
   @override
   Widget build(BuildContext context) {
-    final stepperState = context
-        .select<ReaderAppearanceCubit, ({double sideMargin, bool highlighted})>(
-          (c) => (
-            sideMargin: c.state.effectiveAppearance.sideMargin,
-            highlighted: c.state.sourceOverride.sideMargin != null,
-          ),
-        );
+    final sideMargin = context.select<ReaderAppearanceCubit, double>(
+      (c) => c.state.effectiveAppearance.sideMargin,
+    );
     final cubit = context.read<ReaderAppearanceCubit>();
-    final sideMargin = stepperState.sideMargin;
-    final canDecrease =
-        sideMargin > ReaderAppearanceCubit.minSideMargin + _textScaleEpsilon;
-    final canIncrease =
-        sideMargin < ReaderAppearanceCubit.maxSideMargin - _textScaleEpsilon;
-    void setSideMargin(double value) {
-      cubit.previewSideMargin(value);
-      cubit.commitSideMargin(value);
-    }
-
-    return _AppearanceStepper(
-      width: _marginsControlWidth,
-      stepperKey: const ValueKey('reader-margin-control'),
-      valueLabel: '${sideMargin.round()}%',
-      valueTooltip: context.l10n.readerResetPageMargins,
-      valueSemanticLabel: context.l10n.readerPageMargins,
-      highlightValue: stepperState.highlighted,
-      decreaseIcon: AppIcons.remove,
-      increaseIcon: AppIcons.add,
-      decreaseTooltip: context.l10n.readerDecreasePageMargins,
-      increaseTooltip: context.l10n.readerIncreasePageMargins,
-      decreaseKey: const ValueKey('reader-margin-decrease'),
-      increaseKey: const ValueKey('reader-margin-increase'),
-      valueKey: const ValueKey('reader-margin-value'),
-      onDecrease: canDecrease
-          ? () => setSideMargin(
-              sideMargin - ReaderAppearanceCubit.sideMarginStep,
-            )
-          : null,
-      onIncrease: canIncrease
-          ? () => setSideMargin(
-              sideMargin + ReaderAppearanceCubit.sideMarginStep,
-            )
-          : null,
-      onValueTap: cubit.resetSideMargin,
-    );
-  }
-}
-
-class _AppearanceStepper extends StatelessWidget {
-  const _AppearanceStepper({
-    required this.valueLabel,
-    required this.valueTooltip,
-    required this.valueSemanticLabel,
-    required this.highlightValue,
-    required this.decreaseIcon,
-    required this.increaseIcon,
-    required this.decreaseTooltip,
-    required this.increaseTooltip,
-    required this.onDecrease,
-    required this.onIncrease,
-    required this.onValueTap,
-    this.width = _marginsControlWidth,
-    this.stepperKey,
-    this.decreaseKey,
-    this.increaseKey,
-    this.valueKey,
-  });
-
-  final double width;
-  final String valueLabel;
-  final String valueTooltip;
-  final String valueSemanticLabel;
-  final bool highlightValue;
-  final IconData decreaseIcon;
-  final IconData increaseIcon;
-  final String decreaseTooltip;
-  final String increaseTooltip;
-  final VoidCallback? onDecrease;
-  final VoidCallback? onIncrease;
-  final VoidCallback? onValueTap;
-  final Key? stepperKey;
-  final Key? decreaseKey;
-  final Key? increaseKey;
-  final Key? valueKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    final radius = BorderRadius.circular(AppRadius.sm);
+    final l10n = context.l10n;
     return SizedBox(
-      key: stepperKey,
-      width:
-          AppSizes.buttonHeight * 2 +
-          (width - AppSizes.buttonHeight * 2) *
-              (MediaQuery.textScalerOf(context).scale(15) / 15).clamp(
-                1,
-                double.infinity,
-              ),
-      height: AppSizes.buttonHeight,
-      child: Material(
-        color: cs.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: radius,
-          side: BorderSide(color: context.colors.outlineVariant),
-        ),
-        child: Row(
-          children: [
-            _StepperIconButton(
-              key: decreaseKey,
-              icon: decreaseIcon,
-              tooltip: decreaseTooltip,
-              onTap: onDecrease,
-            ),
-            Expanded(
-              child: _StepperValueButton(
-                key: valueKey,
-                label: valueLabel,
-                tooltip: valueTooltip,
-                semanticLabel: valueSemanticLabel,
-                highlighted: highlightValue,
-                onTap: onValueTap,
+      key: const ValueKey('reader-margin-control'),
+      width: _compactControlWidthFor(context),
+      child: AppChoiceControl<ReaderMarginPreset>(
+        iconOnly: true,
+        // The nearest preset is shown selected; tapping it applies its value.
+        reselectable: true,
+        selected: ReaderMarginPreset.nearest(sideMargin),
+        onChanged: (preset) {
+          final value = preset.sideMargin;
+          if (value == sideMargin) return;
+          cubit.previewSideMargin(value);
+          cubit.commitSideMargin(value);
+        },
+        options: [
+          for (final preset in ReaderMarginPreset.values)
+            AppChoiceOption(
+              value: preset,
+              label: _marginLabel(l10n, preset),
+              glyph: ReaderMarginsGlyph(
+                preset,
+                key: ValueKey('reader-margin-${preset.name}'),
               ),
             ),
-            _StepperIconButton(
-              key: increaseKey,
-              icon: increaseIcon,
-              tooltip: increaseTooltip,
-              onTap: onIncrease,
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class _StepperIconButton extends StatelessWidget {
-  const _StepperIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onTap,
-    super.key,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    final enabled = onTap != null;
-    final foreground = enabled
-        ? cs.onSurfaceVariant
-        : cs.onSurface.withValues(alpha: .38);
-    final radius = BorderRadius.circular(AppRadius.sm);
-    return Tooltip(
-      message: tooltip,
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        label: tooltip,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: radius,
-          child: SizedBox(
-            width: AppSizes.buttonHeight,
-            height: AppSizes.buttonHeight,
-            child: Icon(icon, size: AppIconSize.sm, color: foreground),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StepperValueButton extends StatelessWidget {
-  const _StepperValueButton({
-    required this.label,
-    required this.tooltip,
-    required this.semanticLabel,
-    required this.highlighted,
-    required this.onTap,
-    super.key,
-  });
-
-  final String label;
-  final String tooltip;
-  final String semanticLabel;
-  final bool highlighted;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    final radius = BorderRadius.circular(AppRadius.sm);
-    return Tooltip(
-      message: tooltip,
-      child: Semantics(
-        button: true,
-        label: semanticLabel,
-        value: label,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: radius,
-          child: SizedBox(
-            height: AppSizes.buttonHeight,
-            child: Center(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.text.labelLarge.copyWith(
-                  color: highlighted ? context.actionForeground : cs.onSurface,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-double? _lineHeightStepValue(double lineHeight, int direction) {
-  final nextIndex = _nearestLineHeightPresetIndex(lineHeight) + direction;
-  if (nextIndex < 0 ||
-      nextIndex >= ReaderAppearanceCubit.lineHeightPresets.length) {
-    return null;
-  }
-  return ReaderAppearanceCubit.lineHeightPresets[nextIndex];
-}
-
-String _lineHeightLabel(double lineHeight) {
-  final nearest =
-      ReaderAppearanceCubit.lineHeightPresets[_nearestLineHeightPresetIndex(
-        lineHeight,
-      )];
-  if ((lineHeight - nearest).abs() <
-      ReaderAppearanceCubit.lineHeightMatchTolerance) {
-    return nearest.toStringAsFixed(1);
-  }
-  return lineHeight.toStringAsFixed(2);
-}
-
-int _nearestLineHeightPresetIndex(double lineHeight) {
-  final presets = ReaderAppearanceCubit.lineHeightPresets;
-  var nearestIndex = 0;
-  var nearestDistance = double.infinity;
-  for (var i = 0; i < presets.length; i++) {
-    final distance = (lineHeight - presets[i]).abs();
-    if (distance < nearestDistance) {
-      nearestDistance = distance;
-      nearestIndex = i;
-    }
-  }
-  return nearestIndex;
-}
+String _marginLabel(ReadflexLocalizations l10n, ReaderMarginPreset preset) =>
+    switch (preset) {
+      ReaderMarginPreset.narrow => l10n.readerMarginsNarrow,
+      ReaderMarginPreset.medium => l10n.readerMarginsMedium,
+      ReaderMarginPreset.wide => l10n.readerMarginsWide,
+    };

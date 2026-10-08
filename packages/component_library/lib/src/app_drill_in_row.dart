@@ -9,7 +9,9 @@ import 'theme/tokens/app_spacing.dart';
 
 /// Full-width row that opens a nested step inside a sheet or settings list.
 ///
-/// The leading [icon] uses the accent foreground, [title] is `bodyMedium`
+/// The leading [icon] uses the accent foreground; [leading] replaces it for
+/// rows whose glyph sits in a caller-styled frame such as a tinted tile.
+/// [title] is `bodyMedium`
 /// and the optional [subtitle] is a muted `bodySmall`. [trailing] defaults
 /// to a chevron that follows the layout direction; an optional [value] is
 /// shown beside that chevron and moves with it under the title when both
@@ -23,6 +25,7 @@ class AppDrillInRow extends StatelessWidget {
     required this.onTap,
     this.icon,
     this.iconColor,
+    this.leading,
     this.subtitle,
     this.value,
     this.valueStyle,
@@ -33,12 +36,20 @@ class AppDrillInRow extends StatelessWidget {
   }) : assert(
          value == null || trailing == null,
          'value is rendered beside the default chevron; pass one or the other.',
+       ),
+       assert(
+         icon == null || leading == null,
+         'leading replaces the icon glyph; pass one or the other.',
        );
 
   final IconData? icon;
 
   /// Overrides the accent icon tone, for example a warning glyph.
   final Color? iconColor;
+
+  /// Widget in the leading slot, followed by the same 12dp gap as [icon].
+  /// It is decorative: the row keeps one semantics node and one tap target.
+  final Widget? leading;
   final String title;
   final String? subtitle;
 
@@ -65,17 +76,19 @@ class AppDrillInRow extends StatelessWidget {
         .merge(this.valueStyle);
     final isRtl = Directionality.of(context) == TextDirection.rtl;
 
-    final leading = icon == null
-        ? null
-        : Icon(
-            icon,
-            size: AppIconSize.sm,
-            color:
-                iconColor ??
-                (isEnabled
-                    ? context.actionForeground
-                    : colors.onSurfaceVariant),
-          );
+    final leading =
+        this.leading ??
+        (icon == null
+            ? null
+            : Icon(
+                icon,
+                size: AppIconSize.sm,
+                color:
+                    iconColor ??
+                    (isEnabled
+                        ? context.actionForeground
+                        : colors.onSurfaceVariant),
+              ));
     final titleBlock = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,

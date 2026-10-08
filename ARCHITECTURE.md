@@ -322,7 +322,7 @@ The reader is intentionally split across several packages:
 |---------|----------------|
 | `reader_server` | Serves root-confined reader assets, book bytes, article HTML, and article-local assets through a token-scoped localhost URI. |
 | `reader_webview` | Hosts foliate-js for books/comics, the vertical HTML shell for articles, JS bridge DTOs, asset extraction, metadata extraction. |
-| `features/reader` | Reader screen, reader bloc/cubits, chrome, drawers, appearance, search, selection, brightness, keep-awake. |
+| `features/reader` | Reader screen, reader bloc/cubits, chrome, Contents and Search sheets, appearance, search, selection, brightness, keep-awake. |
 | `shared` | `TextAction` plugin contract used by reader context-panel actions. |
 | `features/highlight` | Implements `HighlightAction`. |
 | `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
@@ -381,7 +381,7 @@ Flutter package depends only on the stable Readflex dictionary HTTP contract.
 Reader-specific UI state is split by responsibility:
 
 - `ReaderBloc` loads the source and persists reader position/highlight data.
-- `ReaderUiCubit` owns chrome, drawer, tap-zone, and search-highlight UI state.
+- `ReaderUiCubit` owns chrome, Contents/Search sheet visibility (in-place `AppInlineSheet`s, retained while hidden), tap-zone, and search-highlight UI state.
 - `ReaderSearchCubit` owns in-reader search state and recent query callbacks.
   Streamed results/progress are batched at 16ms intervals, with an immediate
   terminal flush. Reset/replacement/close invalidate pending updates; renderer
@@ -532,6 +532,15 @@ to article storage.
 The import UI does not own storage details. It receives callbacks and reports
 progress/result state back to the route that opened it.
 
+Entry points: the "+" at the outer end of the Library's bottom capsule (after the collection switcher) opens the menu; the empty Library's Upload
+a file / Save an article buttons pass `LibraryImportEntry.file` / `.article`;
+onboarding's Add a book navigates to Library with `LibraryRouteArguments`
+(`openImportOnStart`), which opens the file path once after the first frame.
+`routing.dart` maps `LibraryImportEntry` to `ImportFlowEntry`, because the two
+features never import each other. A file entry still shows the terms step
+first when the current terms are not accepted; Back from an entered step
+returns to the menu.
+
 Closing the import sheet does not cancel an already-started import.
 `LibraryImportLauncher` separates sheet dismissal (its returned Future) from
 successful persistence (`onImported`). The composition root invokes that
@@ -577,7 +586,8 @@ feature package      UI and state management
 - It imports all feature package public barrels.
 - It passes repositories/services from `DependenciesContainer`.
 - It creates navigation callbacks and result callbacks.
-- It gates entry routes such as onboarding.
+- It gates entry routes such as onboarding. Onboarding is one screen; both
+  Add a book and Not now mark it completed before going to Library.
 Features should express navigation needs through callbacks. They should not
 call GoRouter to navigate to sibling features directly.
 

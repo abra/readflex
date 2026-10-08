@@ -25,7 +25,7 @@ abstract final class AppSizes {
   /// Tinted circle behind the icon of an empty or error state.
   static const double stateIconFrame = 56;
 
-  /// Material's regular floating action button.
+  /// Material's regular floating action button (Library "+").
   static const double floatingActionButton = 56;
 
   /// How far a 48dp icon action extends past the content gutter so its 20dp

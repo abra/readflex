@@ -4,9 +4,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:library_feature/src/library_bloc.dart';
 import 'package:library_feature/src/library_grid_view.dart';
-import 'package:library_feature/src/library_header.dart';
 import 'package:library_feature/src/library_layout.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_list_view.dart';
@@ -38,62 +36,7 @@ void main() {
     ),
   ];
 
-  group('filter chip strip', () {
-    Widget header({required double width}) {
-      final controller = TextEditingController();
-      final focus = FocusNode();
-      addTearDown(controller.dispose);
-      addTearDown(focus.dispose);
-      return host(
-        LibraryHeader(
-          state: LibraryState(),
-          isOffline: false,
-          searchController: controller,
-          searchFocusNode: focus,
-          onSearchChanged: (_) {},
-          onFilterChanged: (_) {},
-          onCollectionScopePressed: () {},
-          onCollectionScopeCleared: () {},
-        ),
-        width: width,
-      );
-    }
-
-    Finder endFade() => find.byWidgetPredicate(
-      (w) => w is ScrollEdgeFade && w.edge == ScrollFadeEdge.end,
-    );
-
-    testWidgets('shows an end fade while chips are hidden and clears it at '
-        'the end of the strip', (tester) async {
-      tester.view.physicalSize = const Size(320, 568);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await tester.pumpWidget(header(width: 320));
-      await tester.pump();
-      expect(tester.widget<ScrollEdgeFade>(endFade()).visible, isTrue);
-
-      final strip = find.byWidgetPredicate(
-        (w) => w is ListView && w.scrollDirection == Axis.horizontal,
-      );
-      await tester.drag(strip, const Offset(-600, 0));
-      await tester.pumpAndSettle();
-      expect(tester.widget<ScrollEdgeFade>(endFade()).visible, isFalse);
-      final list = tester.widget<ListView>(strip);
-      expect(
-        list.padding!.resolve(TextDirection.ltr).right,
-        AppSpacing.sm,
-      );
-    });
-
-    testWidgets('wide header has no fade', (tester) async {
-      await tester.pumpWidget(header(width: 800));
-      await tester.pump();
-      expect(tester.widget<ScrollEdgeFade>(endFade()).visible, isFalse);
-    });
-  });
-
-  group('content clears the FAB', () {
+  group('content bottom inset', () {
     Widget bothLayouts(ScrollController controller) => Column(
       children: [
         Expanded(
@@ -118,14 +61,19 @@ void main() {
       ],
     );
 
+    // The capsule (56) + its 8dp lift + the Scaffold's 16dp margin + a 16dp
+    // gap.
+    const clearance = 96.0;
     for (final (inset, expected) in [
-      (0.0, 96.0),
-      (16.0, 96.0),
-      (34.0, 114.0),
-      (48.0, 128.0),
+      (0.0, clearance),
+      (16.0, clearance),
+      (34.0, clearance + 18),
+      (48.0, clearance + 32),
     ]) {
-      testWidgets('clearance covers the FAB, its lift, a content gap and the '
-          'safe inset beyond the margin: inset=$inset', (tester) async {
+      testWidgets('clears the capsule and the safe inset beyond 16dp: '
+          'inset=$inset', (
+        tester,
+      ) async {
         final controller = ScrollController();
         addTearDown(controller.dispose);
         await tester.pumpWidget(
@@ -138,16 +86,23 @@ void main() {
         expect(libraryContentBottomPadding(context), expected);
         expect(
           libraryContentBottomPadding(context),
-          56 +
-              AppSpacing.sm +
-              AppSpacing.lg +
-              AppSpacing.lg +
+          kLibraryFloatingActionsHeight +
+              kLibraryFloatingActionsLift +
+              AppSpacing.lg * 2 +
               math.max(0, inset - AppSpacing.lg),
         );
         final list = tester.widget<ListView>(find.byType(ListView));
         expect(list.padding!.resolve(TextDirection.ltr).bottom, expected);
-        final grid = tester.widget<GridView>(find.byType(GridView));
-        expect(grid.padding!.resolve(TextDirection.ltr).bottom, expected);
+        final gridPadding = tester.widget<SliverPadding>(
+          find.ancestor(
+            of: find.byType(SliverGrid),
+            matching: find.byType(SliverPadding),
+          ),
+        );
+        expect(
+          gridPadding.padding.resolve(TextDirection.ltr).bottom,
+          expected,
+        );
       });
     }
   });
@@ -250,7 +205,7 @@ void main() {
           width: width,
         ),
       );
-      final grid = tester.widget<GridView>(find.byType(GridView));
+      final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
       final delegate =
           grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
       return delegate.crossAxisCount;

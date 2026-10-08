@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:reader_webview/reader_webview.dart';
 
 import 'article_url_utils.dart';
+import 'import_flow_entry.dart';
 
 part 'import_flow_state.dart';
 
@@ -95,6 +96,19 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
   bool _isPickingFile = false;
   bool _isImportingArticle = false;
   ImportFlowArticleUrlEntry _articleDraft = const ImportFlowArticleUrlEntry();
+
+  /// Applies the sheet's entry hint through the same actions as the menu
+  /// rows, so Back from the opened step still returns to the menu.
+  void start(ImportFlowEntry entry) {
+    switch (entry) {
+      case ImportFlowEntry.menu:
+        return;
+      case ImportFlowEntry.file:
+        requestBookImport();
+      case ImportFlowEntry.article:
+        showArticleUrlEntry();
+    }
+  }
 
   void showArticleUrlEntry() {
     emit(_articleDraft);

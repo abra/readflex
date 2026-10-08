@@ -196,22 +196,10 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get libraryResetFilters => 'إعادة ضبط المرشحات';
 
   @override
-  String get libraryClearCollectionFilter => 'مسح مرشح المجموعة';
-
-  @override
   String get commonCopied => 'تم النسخ';
 
   @override
   String get commonCopyFailed => 'تعذر النسخ';
-
-  @override
-  String get appSkip => 'تخطي';
-
-  @override
-  String get appNext => 'التالي';
-
-  @override
-  String get appGetStarted => 'ابدأ';
 
   @override
   String get appInitializationFailed => 'فشل التهيئة';
@@ -242,9 +230,6 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   @override
   String get onboardingHighlightSaveDescription =>
       'حدد النص لإنشاء تظليلات. أضف ملاحظات لفهم أعمق.';
-
-  @override
-  String get onboardingOrganizeLibraryTitle => 'نظّم مكتبتك';
 
   @override
   String get onboardingOrganizeLibraryDescription =>
@@ -311,19 +296,16 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get librarySearchHint => 'البحث في المكتبة...';
 
   @override
-  String get libraryFilterAll => 'الكل';
+  String get libraryScopeBooks => 'كتب';
 
   @override
-  String get libraryFilterBooks => 'كتب';
+  String get libraryScopeArticles => 'مقالات';
 
   @override
-  String get libraryFilterArticles => 'مقالات';
+  String get libraryScopeComics => 'قصص مصورة';
 
   @override
-  String get libraryFilterComics => 'قصص مصورة';
-
-  @override
-  String get libraryFilterNew => 'جديد';
+  String get libraryScopeNew => 'جديد';
 
   @override
   String get libraryDisplayOptions => 'خيارات العرض';
@@ -456,9 +438,6 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get libraryFavourites => 'المفضلة';
-
-  @override
-  String get libraryFavouritesBadge => 'المفضلة';
 
   @override
   String libraryCreateCollectionPrompt(int count) {
@@ -619,16 +598,7 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get importAddToLibraryTitle => 'إضافة إلى المكتبة';
 
   @override
-  String get importUploadBook => 'رفع كتاب';
-
-  @override
-  String get importUploadBookFormats => 'EPUB, FB2, MOBI, PDF, AZW3, CBZ';
-
-  @override
   String get importSaveArticle => 'حفظ مقالة';
-
-  @override
-  String get importSaveArticleDescription => 'الصق رابط ويب للقراءة دون اتصال';
 
   @override
   String get importBeforeUploadingTitle => 'قبل الرفع';
@@ -924,21 +894,6 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get readerPageTurn => 'تقليب الصفحات';
 
   @override
-  String get readerAlignStart => 'محاذاة البداية';
-
-  @override
-  String get readerJustifyText => 'ضبط النص';
-
-  @override
-  String get readerAlignEnd => 'محاذاة النهاية';
-
-  @override
-  String get readerHorizontalPageTurn => 'تقليب أفقي';
-
-  @override
-  String get readerVerticalPageTurn => 'تقليب عمودي';
-
-  @override
   String get readerResetTextSize => 'إعادة تعيين حجم النص';
 
   @override
@@ -949,24 +904,6 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get readerIncreaseTextSize => 'تكبير النص';
-
-  @override
-  String get readerResetLineSpacing => 'إعادة تعيين تباعد الأسطر';
-
-  @override
-  String get readerDecreaseLineSpacing => 'تقليل تباعد الأسطر';
-
-  @override
-  String get readerIncreaseLineSpacing => 'زيادة تباعد الأسطر';
-
-  @override
-  String get readerResetPageMargins => 'إعادة تعيين الهوامش';
-
-  @override
-  String get readerDecreasePageMargins => 'تقليل الهوامش';
-
-  @override
-  String get readerIncreasePageMargins => 'زيادة الهوامش';
 
   @override
   String get readerThemeSnow => 'ثلج';
@@ -1108,4 +1045,77 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get importArticleOfflineSubtitle => 'يتطلب اتصالاً بالإنترنت';
+
+  @override
+  String get libraryContinueReading => 'متابعة القراءة';
+
+  @override
+  String readingTimeLeftMinutes(int count) {
+    return 'متبقٍ $count د';
+  }
+
+  @override
+  String readingTimeLeftHours(int hours, int minutes) {
+    return 'متبقٍ $hours س $minutes د';
+  }
+
+  @override
+  String get libraryUploadFile => 'رفع ملف';
+
+  @override
+  String get librarySaveArticleAction => 'حفظ مقال';
+
+  @override
+  String get importFileKinds => 'كتب وقصص مصورة وPDF';
+
+  @override
+  String get importFromDevice => 'ملف من الجهاز';
+
+  @override
+  String get importArticleFromLink => 'مقال من رابط';
+
+  @override
+  String get importArticleOffline => 'يُحفظ للقراءة دون اتصال';
+
+  @override
+  String get libraryChooseCollection => 'اختيار مجموعة';
+
+  @override
+  String get onboardingAddBook => 'إضافة كتاب';
+
+  @override
+  String get onboardingNotNow => 'ليس الآن';
+
+  @override
+  String get readerLineSpacingCompact => 'مضغوط';
+
+  @override
+  String get readerLineSpacingNormal => 'عادي';
+
+  @override
+  String get readerLineSpacingRelaxed => 'واسع';
+
+  @override
+  String get readerMarginsNarrow => 'ضيقة';
+
+  @override
+  String get readerMarginsMedium => 'متوسطة';
+
+  @override
+  String get readerMarginsWide => 'واسعة';
+
+  @override
+  String get readerAlignNormal => 'عادي';
+
+  @override
+  String get readerAlignJustified => 'ضبط';
+
+  @override
+  String get readerPageTurnHorizontalShort => 'أفقي';
+
+  @override
+  String get readerPageTurnVerticalShort => 'عمودي';
+
+  @override
+  String get readerChapterRead => 'مقروء';
 }

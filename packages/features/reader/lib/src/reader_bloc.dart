@@ -381,6 +381,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             state.pageProgressionRtl != event.pageProgressionRtl) ||
         state.atStart != event.atStart ||
         state.atEnd != event.atEnd ||
+        state.minutesLeft != event.minutesLeft ||
         state.currentPageBookmarked != event.currentPageBookmarked ||
         state.currentPageBookmarkCfi != event.currentPageBookmarkCfi ||
         state.currentPageBookmarkId != event.currentPageBookmarkId;
@@ -403,6 +404,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         pageProgressionRtl: event.pageProgressionRtl,
         atStart: event.atStart,
         atEnd: event.atEnd,
+        minutesLeft: event.minutesLeft,
         currentPageBookmarked: event.currentPageBookmarked,
         currentPageBookmarkCfi: event.currentPageBookmarkCfi,
         currentPageBookmarkId: event.currentPageBookmarkId,

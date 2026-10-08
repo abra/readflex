@@ -459,12 +459,6 @@ abstract class ReadflexLocalizations {
   /// **'Reset filters'**
   String get libraryResetFilters;
 
-  /// No description provided for @libraryClearCollectionFilter.
-  ///
-  /// In en, this message translates to:
-  /// **'Clear collection filter'**
-  String get libraryClearCollectionFilter;
-
   /// No description provided for @commonCopied.
   ///
   /// In en, this message translates to:
@@ -476,24 +470,6 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Could not copy'**
   String get commonCopyFailed;
-
-  /// No description provided for @appSkip.
-  ///
-  /// In en, this message translates to:
-  /// **'Skip'**
-  String get appSkip;
-
-  /// No description provided for @appNext.
-  ///
-  /// In en, this message translates to:
-  /// **'Next'**
-  String get appNext;
-
-  /// No description provided for @appGetStarted.
-  ///
-  /// In en, this message translates to:
-  /// **'Get Started'**
-  String get appGetStarted;
 
   /// No description provided for @appInitializationFailed.
   ///
@@ -548,12 +524,6 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Select text to create highlights. Add notes for deeper understanding.'**
   String get onboardingHighlightSaveDescription;
-
-  /// No description provided for @onboardingOrganizeLibraryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Organize your library'**
-  String get onboardingOrganizeLibraryTitle;
 
   /// No description provided for @onboardingOrganizeLibraryDescription.
   ///
@@ -657,35 +627,29 @@ abstract class ReadflexLocalizations {
   /// **'Search library...'**
   String get librarySearchHint;
 
-  /// No description provided for @libraryFilterAll.
-  ///
-  /// In en, this message translates to:
-  /// **'All'**
-  String get libraryFilterAll;
-
-  /// No description provided for @libraryFilterBooks.
+  /// Built-in collection of books (not comics).
   ///
   /// In en, this message translates to:
   /// **'Books'**
-  String get libraryFilterBooks;
+  String get libraryScopeBooks;
 
-  /// No description provided for @libraryFilterArticles.
+  /// No description provided for @libraryScopeArticles.
   ///
   /// In en, this message translates to:
   /// **'Articles'**
-  String get libraryFilterArticles;
+  String get libraryScopeArticles;
 
-  /// No description provided for @libraryFilterComics.
+  /// No description provided for @libraryScopeComics.
   ///
   /// In en, this message translates to:
   /// **'Comics'**
-  String get libraryFilterComics;
+  String get libraryScopeComics;
 
-  /// No description provided for @libraryFilterNew.
+  /// Built-in collection of items that were never opened.
   ///
   /// In en, this message translates to:
   /// **'New'**
-  String get libraryFilterNew;
+  String get libraryScopeNew;
 
   /// No description provided for @libraryDisplayOptions.
   ///
@@ -891,12 +855,6 @@ abstract class ReadflexLocalizations {
   /// **'Favourites'**
   String get libraryFavourites;
 
-  /// Compact label for the active favourites filter badge only. Menus, tooltips and accessibility use libraryFavourites.
-  ///
-  /// In en, this message translates to:
-  /// **'Favs'**
-  String get libraryFavouritesBadge;
-
   /// No description provided for @libraryCreateCollectionPrompt.
   ///
   /// In en, this message translates to:
@@ -1101,29 +1059,11 @@ abstract class ReadflexLocalizations {
   /// **'Add to Library'**
   String get importAddToLibraryTitle;
 
-  /// No description provided for @importUploadBook.
-  ///
-  /// In en, this message translates to:
-  /// **'Upload Book'**
-  String get importUploadBook;
-
-  /// No description provided for @importUploadBookFormats.
-  ///
-  /// In en, this message translates to:
-  /// **'EPUB, FB2, MOBI, PDF, AZW3, CBZ'**
-  String get importUploadBookFormats;
-
   /// No description provided for @importSaveArticle.
   ///
   /// In en, this message translates to:
   /// **'Save Article'**
   String get importSaveArticle;
-
-  /// No description provided for @importSaveArticleDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Paste a web URL for offline reading'**
-  String get importSaveArticleDescription;
 
   /// No description provided for @importBeforeUploadingTitle.
   ///
@@ -1701,36 +1641,6 @@ abstract class ReadflexLocalizations {
   /// **'Page turn'**
   String get readerPageTurn;
 
-  /// No description provided for @readerAlignStart.
-  ///
-  /// In en, this message translates to:
-  /// **'Align start'**
-  String get readerAlignStart;
-
-  /// No description provided for @readerJustifyText.
-  ///
-  /// In en, this message translates to:
-  /// **'Justify text'**
-  String get readerJustifyText;
-
-  /// No description provided for @readerAlignEnd.
-  ///
-  /// In en, this message translates to:
-  /// **'Align end'**
-  String get readerAlignEnd;
-
-  /// No description provided for @readerHorizontalPageTurn.
-  ///
-  /// In en, this message translates to:
-  /// **'Horizontal page turn'**
-  String get readerHorizontalPageTurn;
-
-  /// No description provided for @readerVerticalPageTurn.
-  ///
-  /// In en, this message translates to:
-  /// **'Vertical page turn'**
-  String get readerVerticalPageTurn;
-
   /// No description provided for @readerResetTextSize.
   ///
   /// In en, this message translates to:
@@ -1754,42 +1664,6 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Increase text size'**
   String get readerIncreaseTextSize;
-
-  /// No description provided for @readerResetLineSpacing.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset line spacing'**
-  String get readerResetLineSpacing;
-
-  /// No description provided for @readerDecreaseLineSpacing.
-  ///
-  /// In en, this message translates to:
-  /// **'Decrease line spacing'**
-  String get readerDecreaseLineSpacing;
-
-  /// No description provided for @readerIncreaseLineSpacing.
-  ///
-  /// In en, this message translates to:
-  /// **'Increase line spacing'**
-  String get readerIncreaseLineSpacing;
-
-  /// No description provided for @readerResetPageMargins.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset page margins'**
-  String get readerResetPageMargins;
-
-  /// No description provided for @readerDecreasePageMargins.
-  ///
-  /// In en, this message translates to:
-  /// **'Decrease page margins'**
-  String get readerDecreasePageMargins;
-
-  /// No description provided for @readerIncreasePageMargins.
-  ///
-  /// In en, this message translates to:
-  /// **'Increase page margins'**
-  String get readerIncreasePageMargins;
 
   /// No description provided for @readerThemeSnow.
   ///
@@ -2054,6 +1928,144 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Needs an internet connection'**
   String get importArticleOfflineSubtitle;
+
+  /// Overline of the Library card that reopens the most recently read source
+  ///
+  /// In en, this message translates to:
+  /// **'Continue reading'**
+  String get libraryContinueReading;
+
+  /// Estimated reading time left, under one hour
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min left'**
+  String readingTimeLeftMinutes(int count);
+
+  /// Estimated reading time left, one hour or more
+  ///
+  /// In en, this message translates to:
+  /// **'{hours} h {minutes} min left'**
+  String readingTimeLeftHours(int hours, int minutes);
+
+  /// Empty-library action that opens file import
+  ///
+  /// In en, this message translates to:
+  /// **'Upload a file'**
+  String get libraryUploadFile;
+
+  /// Empty-library action that opens article import
+  ///
+  /// In en, this message translates to:
+  /// **'Save an article'**
+  String get librarySaveArticleAction;
+
+  /// What file import accepts, in reader terms rather than file extensions
+  ///
+  /// In en, this message translates to:
+  /// **'Books, comics and PDF'**
+  String get importFileKinds;
+
+  /// Import menu row that picks a file from the device
+  ///
+  /// In en, this message translates to:
+  /// **'File from device'**
+  String get importFromDevice;
+
+  /// Import menu row that saves a web article from a URL
+  ///
+  /// In en, this message translates to:
+  /// **'Article from a link'**
+  String get importArticleFromLink;
+
+  /// Subtitle of the article import row
+  ///
+  /// In en, this message translates to:
+  /// **'Saved for reading offline'**
+  String get importArticleOffline;
+
+  /// Accessibility label of the Library title, which opens the collection switcher
+  ///
+  /// In en, this message translates to:
+  /// **'Choose collection'**
+  String get libraryChooseCollection;
+
+  /// Primary onboarding action; finishes onboarding and opens import
+  ///
+  /// In en, this message translates to:
+  /// **'Add a book'**
+  String get onboardingAddBook;
+
+  /// Secondary onboarding action; finishes onboarding without importing
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get onboardingNotNow;
+
+  /// Line spacing preset
+  ///
+  /// In en, this message translates to:
+  /// **'Compact'**
+  String get readerLineSpacingCompact;
+
+  /// Line spacing preset
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get readerLineSpacingNormal;
+
+  /// Line spacing preset
+  ///
+  /// In en, this message translates to:
+  /// **'Relaxed'**
+  String get readerLineSpacingRelaxed;
+
+  /// Page margin preset
+  ///
+  /// In en, this message translates to:
+  /// **'Narrow'**
+  String get readerMarginsNarrow;
+
+  /// Page margin preset
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get readerMarginsMedium;
+
+  /// Page margin preset
+  ///
+  /// In en, this message translates to:
+  /// **'Wide'**
+  String get readerMarginsWide;
+
+  /// Text alignment option: ragged, not justified; direction-neutral
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get readerAlignNormal;
+
+  /// Text alignment option: justified
+  ///
+  /// In en, this message translates to:
+  /// **'Justified'**
+  String get readerAlignJustified;
+
+  /// Short label of the horizontal page-turn option
+  ///
+  /// In en, this message translates to:
+  /// **'Horizontal'**
+  String get readerPageTurnHorizontalShort;
+
+  /// Short label of the vertical page-turn option
+  ///
+  /// In en, this message translates to:
+  /// **'Vertical'**
+  String get readerPageTurnVerticalShort;
+
+  /// Accessibility value of a chapter before the current one
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get readerChapterRead;
 }
 
 class _ReadflexLocalizationsDelegate

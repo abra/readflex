@@ -108,30 +108,6 @@ void main() {
     );
 
     blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
-      'setTextAlignment supports logical end alignment',
-      build: () => ReaderAppearanceCubit(
-        preferencesService: preferencesService,
-        sourceId: _sourceId,
-      ),
-      act: (cubit) => cubit.setTextAlignment(ReaderTextAlignment.end),
-      expect: () => [
-        isA<ReaderAppearanceState>().having(
-          (s) => s.effectiveAppearance.textAlignment,
-          'textAlignment',
-          ReaderTextAlignment.end,
-        ),
-      ],
-      verify: (_) {
-        expect(
-          preferencesService
-              .readerAppearanceOverrideFor(_sourceId)
-              ?.textAlignment,
-          ReaderTextAlignment.end,
-        );
-      },
-    );
-
-    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
       'setPageTurnStyle persists a source-specific override',
       build: () => ReaderAppearanceCubit(
         preferencesService: preferencesService,

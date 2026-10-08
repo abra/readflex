@@ -69,6 +69,17 @@ reveal content, but only the latest buffered position is published after
 Recovery uses the last published position or the original saved anchor, never
 the temporary start of a chapter. This does not delay first-content display.
 
+The article position payload carries a reading-time estimate; book
+relocations carry none, because the book progress row names the chapter
+instead. `onArticlePositionChanged` adds `minutesLeft`: normalized text characters after
+the current sentence at 1200 per minute, falling back to scroll progress for
+articles without sentence anchors. The article shell walks its text once after
+load and keeps per-sentence offsets in a `WeakMap`, so an emit is one lookup and
+scrolling adds no DOM walk or layout read. The end of the article reports 0,
+and reaching it is emitted even inside the usual emit throttle.
+`BookPosition.minutesLeft` is null when the value is missing, negative or not
+finite. `test_browser/article_minutes_left.test.mjs` covers both engines.
+
 This recovery addresses WebView renderer termination, not arbitrary Flutter
 engine/Impeller EGL failures. Device lifecycle and renderer-crash checks are
 still required before release.

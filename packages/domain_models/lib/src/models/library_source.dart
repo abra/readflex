@@ -83,7 +83,19 @@ class LibrarySource extends Equatable {
   final bool isComic;
   final bool supportsReview;
 
+  /// Average silent reading speed in characters: ~240 words per minute at
+  /// ~5 characters per word.
+  static const readingCharactersPerMinute = 1200;
+
   bool get isNew => lastOpenedAt == null && readingProgress == 0;
+
+  /// Estimated minutes left to read, or `null` when the length is unknown
+  /// (books report no character count) or the source is finished.
+  double? get estimatedMinutesLeft {
+    if (estimatedCharacterCount <= 0 || isFinished) return null;
+    final remaining = 1 - readingProgress.clamp(0.0, 1.0);
+    return remaining * estimatedCharacterCount / readingCharactersPerMinute;
+  }
 
   ArticleTextDirection? get inferredTextDirection {
     return articleTextDirectionForLanguage(language) ??

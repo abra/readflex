@@ -42,7 +42,7 @@ void main() {
             ),
           ),
         );
-        final grid = tester.widget<GridView>(find.byType(GridView));
+        final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
         final delegate =
             grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
         expect(delegate.crossAxisCount, scale == 1 ? 3 : 2);
@@ -122,7 +122,7 @@ void main() {
   }
 
   test(
-    'large library derives filters once per state and keeps source inputs',
+    'large library derives scopes once per state and keeps source inputs',
     () {
       final books = libraryWorkload(20000);
       final state = LibraryState(
@@ -136,8 +136,14 @@ void main() {
       expect(filtered.visibleItems.single.id, 'workload-19999');
       expect(identical(filtered.sources, state.sources), isTrue);
       expect(state.visibleItems, hasLength(20000));
+      const unread = LibraryCollectionScope.smart(
+        type: LibraryCollectionScopeType.unread,
+        id: 'unread',
+        label: 'unread',
+        sourceCount: 10000,
+      );
       expect(
-        state.copyWith(filter: LibraryFilter.unread).visibleItems,
+        state.copyWith(selectedCollectionScope: unread).visibleItems,
         hasLength(10000),
       );
     },

@@ -3,12 +3,19 @@ import 'dart:async';
 import 'package:article_repository/article_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:library_feature/library_feature.dart';
+import 'package:library_feature/src/library_bloc.dart';
+import 'package:library_feature/src/library_continue_reading_card.dart';
 import 'package:library_feature/src/library_grid_view.dart';
+import 'package:library_feature/src/library_header.dart';
+import 'package:library_feature/src/library_layout.dart';
+import 'package:library_feature/src/library_list_tile.dart';
+import 'package:library_feature/src/library_selection_bar.dart';
 import 'package:library_feature/src/library_language_sheet.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_list_view.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -20,6 +27,33 @@ import 'helpers/fake_collection_repository.dart';
 
 const double _collectionSourcesMaxHeightForTest = 260;
 
+final _addButton = find.byKey(const ValueKey('libraryAddButton'));
+final _collectionsButton = find.byKey(
+  const ValueKey('libraryCollectionsButton'),
+);
+final _capsule = find.byKey(const ValueKey('libraryFloatingActions'));
+
+/// Opens the Collections picker from the bottom capsule once the Scaffold's
+/// entrance scale has settled; mid-scale the capsule is not hit-testable.
+Future<void> _openCollections(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+  await tester.tap(_collectionsButton);
+  await tester.pumpAndSettle();
+}
+
+/// [text] inside the header; the capsule repeats the collection name.
+Finder _headerText(String text) =>
+    find.descendant(of: find.byType(LibraryHeader), matching: find.text(text));
+
+/// The colour a capsule label is painted with.
+Color? _labelColor(WidgetTester tester, String label) => tester
+    .renderObject<RenderParagraph>(
+      find.descendant(of: _collectionsButton, matching: find.text(label)),
+    )
+    .text
+    .style
+    ?.color;
+
 final _book = Book(
   id: 'b-1',
   title: 'Flutter in Action',
@@ -28,6 +62,17 @@ final _book = Book(
   format: BookFormat.epub,
   addedAt: DateTime(2026),
 );
+
+final _comicBook = Book(
+  id: 'c-1',
+  title: 'Panel Studies',
+  filePath: '/books/panels.cbz',
+  format: BookFormat.cbz,
+  addedAt: DateTime(2026, 1, 3),
+);
+
+Finder _builtInRow(LibraryCollectionScopeType type) =>
+    find.byKey(ValueKey('collectionScopeRow-${type.name}-${type.name}'));
 
 final _secondBook = Book(
   id: 'b-2',
@@ -57,7 +102,9 @@ void main() {
     ArticleRepository? articleRepository,
     ThemeData? theme,
     bool isOffline = false,
+    bool openImportOnStart = false,
     LibraryImportLauncher? onAddPressed,
+    ValueChanged<LibrarySource>? onSourcePressed,
   }) => PreferencesScope(
     service: preferencesService,
     child: Builder(
@@ -72,8 +119,12 @@ void main() {
           collectionRepository: collectionRepository,
           preferencesService: preferencesService,
           isOffline: isOffline,
-          onSourcePressed: (_, {onSourceOpened}) async {},
-          onAddPressed: onAddPressed ?? ({required onImported}) async {},
+          openImportOnStart: openImportOnStart,
+          onSourcePressed: (source, {onSourceOpened}) async =>
+              onSourcePressed?.call(source),
+          onAddPressed:
+              onAddPressed ??
+              ({required onImported, entry = LibraryImportEntry.menu}) async {},
         ),
       ),
     ),
@@ -88,7 +139,7 @@ void main() {
     await tester.longPress(find.text(_book.title));
     await tester.pumpAndSettle();
     expect(find.text('Selected: 1'), findsOneWidget);
-    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(_addButton, findsNothing);
     await tester.ensureVisible(find.text(_secondBook.title));
     await tester.pumpAndSettle();
     await tester.tap(find.text(_secondBook.title));
@@ -97,7 +148,7 @@ void main() {
     await tester.tap(find.byTooltip('Cancel selection'));
     await tester.pumpAndSettle();
     expect(find.text('Selected: 2'), findsNothing);
-    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(_addButton, findsOneWidget);
     expect(bookRepository.getBooksCallCount, 1);
   });
 
@@ -231,13 +282,14 @@ void main() {
     late VoidCallback imported;
     await tester.pumpWidget(
       buildSubject(
-        onAddPressed: ({required onImported}) async {
-          imported = onImported;
-        },
+        onAddPressed:
+            ({required onImported, entry = LibraryImportEntry.menu}) async {
+              imported = onImported;
+            },
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(find.text('Upload a file'));
     await tester.pumpAndSettle();
     expect(
       bookRepository.getBooksCallCount,
@@ -287,13 +339,14 @@ void main() {
     expect(find.text('Reset filters'), findsNothing);
   });
 
-  testWidgets('empty search resets filters without reloading the library', (
-    tester,
-  ) async {
-    bookRepository.seedBooks([_book]);
+  testWidgets('Reset filters clears the search and the collection without '
+      'reloading the library', (tester) async {
+    bookRepository.seedBooks([_book, _comicBook]);
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Comics'));
+    await _openCollections(tester);
+    await tester.tap(_builtInRow(LibraryCollectionScopeType.comics));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'missing');
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pumpAndSettle();
@@ -304,7 +357,9 @@ void main() {
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       '',
     );
-    expect(find.text(_book.title), findsOneWidget);
+    expect(find.text(_book.title), findsWidgets);
+    expect(find.text(_comicBook.title), findsWidgets);
+    expect(_headerText('Library'), findsOneWidget);
     expect(find.text('Reset filters'), findsNothing);
     expect(bookRepository.getBooksCallCount, 1);
   });
@@ -319,15 +374,15 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pump();
 
-      expect(find.text('Library'), findsOneWidget);
-      expect(find.text('1'), findsOneWidget);
+      expect(_headerText('Library'), findsOneWidget);
+      expect(find.text('1 item'), findsOneWidget);
       expect(find.bySemanticsLabel('1 item'), findsOneWidget);
     } finally {
       semantics.dispose();
     }
   });
 
-  testWidgets('library item count stays compact with localized semantics', (
+  testWidgets('library item count is a localized subtitle', (
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
@@ -340,9 +395,8 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pump();
 
-      expect(find.text('Библиотека'), findsOneWidget);
-      expect(find.text('2'), findsOneWidget);
-      expect(find.text('2 элемента'), findsNothing);
+      expect(_headerText('Библиотека'), findsOneWidget);
+      expect(find.text('2 элемента'), findsOneWidget);
       expect(find.bySemanticsLabel('2 элемента'), findsOneWidget);
     } finally {
       semantics.dispose();
@@ -430,7 +484,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(preferencesService.current.locale, const Locale('ru'));
-    expect(find.text('Библиотека'), findsOneWidget);
+    expect(_headerText('Библиотека'), findsOneWidget);
     expect(
       find.descendant(
         of: find.byType(LibraryLanguageSheet),
@@ -683,7 +737,7 @@ void main() {
     await tester.pumpWidget(buildSubject(isOffline: true));
     await tester.pump();
 
-    final titleRect = tester.getRect(find.text('Library'));
+    final titleRect = tester.getRect(_headerText('Library'));
     final status = find.byIcon(AppIcons.offline);
     final statusRect = tester.getRect(status);
 
@@ -747,7 +801,8 @@ void main() {
               ),
             );
           },
-          onAddPressed: ({required onImported}) async {},
+          onAddPressed:
+              ({required onImported, entry = LibraryImportEntry.menu}) async {},
         ),
       ),
     );
@@ -774,50 +829,679 @@ void main() {
     navigatorKey.currentState!.pop();
     await tester.pumpAndSettle();
 
-    expect(find.text('Library'), findsOneWidget);
+    expect(_headerText('Library'), findsOneWidget);
     expect(searchFocusNode.hasFocus, isFalse);
     expect(searchFocusNode.canRequestFocus, isTrue);
   });
 
-  testWidgets('shows filter segments', (tester) async {
-    bookRepository.seedBooks([_book]);
+  group('built-in collections', () {
+    testWidgets('replace the filter chips: Books and Comics are picker rows', (
+      tester,
+    ) async {
+      bookRepository.seedBooks([_book, _comicBook]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      expect(find.byType(AppFilterChip), findsNothing);
 
-    await tester.pumpWidget(buildSubject());
-    await tester.pump();
+      await _openCollections(tester);
+      final books = _builtInRow(LibraryCollectionScopeType.books);
+      final comics = _builtInRow(LibraryCollectionScopeType.comics);
+      expect(books, findsOneWidget);
+      expect(comics, findsOneWidget);
+      // No articles; and New holds everything, which Library already shows.
+      expect(_builtInRow(LibraryCollectionScopeType.articles), findsNothing);
+      expect(_builtInRow(LibraryCollectionScopeType.unread), findsNothing);
+      // Favourites, then Library, then the built-ins.
+      final library = find.byKey(const ValueKey('collectionScopeRow-library'));
+      final favourites = find.byKey(
+        const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
+      );
+      expect(
+        tester.getTopLeft(library).dy,
+        greaterThan(tester.getTopLeft(favourites).dy),
+      );
+      expect(
+        tester.getTopLeft(books).dy,
+        greaterThan(tester.getTopLeft(library).dy),
+      );
+      expect(
+        tester.getTopLeft(comics).dy,
+        greaterThan(tester.getTopLeft(books).dy),
+      );
+      // Built-ins have no manage menu.
+      expect(
+        find.byKey(const ValueKey('collectionScopeManage-books-books')),
+        findsNothing,
+      );
 
-    expect(find.text('All'), findsOneWidget);
-    expect(find.text('Books'), findsOneWidget);
-    expect(find.text('Comics'), findsOneWidget);
-  });
-
-  testWidgets('shows FAB', (tester) async {
-    await tester.pumpWidget(buildSubject());
-    await tester.pump();
-
-    expect(find.byType(FloatingActionButton), findsOneWidget);
-  });
-
-  testWidgets('keeps FAB above the bottom edge', (tester) async {
-    await tester.pumpWidget(buildSubject());
-    await tester.pump();
-
-    final paddingAncestors = find.ancestor(
-      of: find.byIcon(AppIcons.add),
-      matching: find.byType(Padding),
-    );
-    final hasBottomLift = paddingAncestors.evaluate().any((element) {
-      final padding = (element.widget as Padding).padding;
-      return padding == const EdgeInsetsDirectional.only(bottom: AppSpacing.sm);
+      await tester.tap(books);
+      await tester.pumpAndSettle();
+      // The title and the capsule name the collection; the comic is
+      // filtered out.
+      expect(
+        _headerText('Books'),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: _collectionsButton, matching: find.text('Books')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: _collectionsButton,
+          matching: find.byIcon(AppIcons.book),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(_comicBook.title), findsNothing);
+      expect(find.text(_book.title), findsWidgets);
+      expect(
+        _labelColor(tester, 'Books'),
+        AppTheme.light().colorScheme.selectedControlForeground,
+      );
     });
 
-    expect(hasBottomLift, isTrue);
+    for (final (name, books, choose) in [
+      ('a single book: no built-ins', [_book], null),
+      ('a mixed library: built-ins listed', [_book, _comicBook], null),
+      (
+        'inside Comics',
+        [_book, _comicBook],
+        LibraryCollectionScopeType.comics,
+      ),
+    ]) {
+      testWidgets('Favourites is the first row, under the search field: '
+          '$name', (tester) async {
+        bookRepository.seedBooks(books);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        if (choose != null) {
+          await _openCollections(tester);
+          await tester.tap(_builtInRow(choose));
+          await tester.pumpAndSettle();
+        }
+        await _openCollections(tester);
+
+        final sheet = find.byType(ActionBottomSheetLayout);
+        final search = tester.getRect(
+          find.descendant(of: sheet, matching: find.byType(SearchField)),
+        );
+        final favourites = find.byKey(
+          const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
+        );
+        expect(
+          tester.getRect(favourites).top,
+          closeTo(search.bottom + AppSpacing.lg, .01),
+        );
+        expect(
+          tester
+              .getRect(find.byKey(const ValueKey('collectionScopeRow-library')))
+              .top,
+          closeTo(tester.getRect(favourites).bottom, .01),
+        );
+      });
+    }
+
+    testWidgets('a picker search that misses Favourites lists Library first', (
+      tester,
+    ) async {
+      bookRepository.seedBooks([_book, _comicBook]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await _openCollections(tester);
+      final sheet = find.byType(ActionBottomSheetLayout);
+      await tester.enterText(
+        find.descendant(of: sheet, matching: find.byType(TextField)),
+        'lib',
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(
+          const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
+        ),
+        findsNothing,
+      );
+      final search = tester.getRect(
+        find.descendant(of: sheet, matching: find.byType(SearchField)),
+      );
+      expect(
+        tester
+            .getRect(find.byKey(const ValueKey('collectionScopeRow-library')))
+            .top,
+        closeTo(search.bottom + AppSpacing.lg, .01),
+      );
+    });
+
+    testWidgets('New lists items never opened when some were', (tester) async {
+      bookRepository.seedBooks([
+        _book,
+        _secondBook.copyWith(lastOpenedAt: DateTime(2026, 2)),
+      ]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await _openCollections(tester);
+      final newRow = _builtInRow(LibraryCollectionScopeType.unread);
+      expect(newRow, findsOneWidget);
+      expect(
+        find.descendant(of: newRow, matching: find.text('1')),
+        findsOneWidget,
+      );
+      await tester.tap(newRow);
+      await tester.pumpAndSettle();
+      expect(find.text('New'), findsWidgets);
+      expect(find.text(_secondBook.title), findsNothing);
+    });
+
+    testWidgets('a picker search finds built-ins by their localized name', (
+      tester,
+    ) async {
+      await preferencesService.update(
+        (p) => p.copyWith(locale: const Locale('ru')),
+      );
+      bookRepository.seedBooks([_book, _comicBook]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await _openCollections(tester);
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(ActionBottomSheetLayout),
+          matching: find.byType(TextField),
+        ),
+        'комик',
+      );
+      await tester.pumpAndSettle();
+      expect(_builtInRow(LibraryCollectionScopeType.comics), findsOneWidget);
+      expect(_builtInRow(LibraryCollectionScopeType.books), findsNothing);
+    });
   });
 
-  testWidgets('FAB guards against double-tap while import is in-flight', (
+  testWidgets('"+" is the filled end of the bottom capsule and opens the '
+      'import menu', (tester) async {
+    final entries = <LibraryImportEntry>[];
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(
+      buildSubject(
+        onAddPressed:
+            ({required onImported, entry = LibraryImportEntry.menu}) async {
+              entries.add(entry);
+            },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_capsule, findsOneWidget);
+    expect(
+      find.descendant(of: _capsule, matching: _addButton),
+      findsOneWidget,
+    );
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).floatingActionButton,
+      isNotNull,
+    );
+    expect(tester.widget<IconButton>(_addButton).tooltip, 'Add to Library');
+    // Only one "+" on screen: the header keeps the title and Display.
+    expect(find.byIcon(AppIcons.add), findsOneWidget);
+    await tester.tap(_addButton);
+    await tester.pumpAndSettle();
+    expect(entries, [LibraryImportEntry.menu]);
+  });
+
+  for (final rtl in [false, true]) {
+    testWidgets('the capsule sits in the bottom trailing corner above the '
+        'home indicator, "+" at its outer end rtl=$rtl', (tester) async {
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1
+        ..padding = const FakeViewPadding(bottom: 34)
+        ..viewPadding = const FakeViewPadding(bottom: 34);
+      addTearDown(tester.view.reset);
+      if (rtl) {
+        await preferencesService.update(
+          (p) => p.copyWith(locale: const Locale('ar')),
+        );
+      }
+      bookRepository.seedBooks([_book]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      // The Scaffold places the capsule through a transform: compare with a
+      // sub-pixel tolerance.
+      final capsule = tester.getRect(_capsule);
+      final add = tester.getRect(_addButton);
+      final collections = tester.getRect(_collectionsButton);
+      expect(capsule.height, closeTo(kLibraryFloatingActionsHeight, .01));
+      // Scaffold's 16dp margin over the 34dp inset, plus the 8dp lift.
+      expect(
+        capsule.bottom,
+        closeTo(844 - 34 - AppSpacing.lg - kLibraryFloatingActionsLift, .01),
+      );
+      expect(add.width, closeTo(AppSizes.buttonHeight, .01));
+      expect(add.height, closeTo(AppSizes.buttonHeight, .01));
+      expect(collections.height, closeTo(AppSizes.buttonHeight, .01));
+      expect(add.center.dy, closeTo(capsule.center.dy, .01));
+      expect(collections.center.dy, closeTo(capsule.center.dy, .01));
+      // Controls sit 4dp inside the capsule and 4dp apart.
+      const inset = (kLibraryFloatingActionsHeight - AppSizes.buttonHeight) / 2;
+      if (rtl) {
+        expect(capsule.left, closeTo(AppSpacing.lg, .01));
+        expect(add.left - capsule.left, closeTo(inset, .01));
+        expect(collections.left - add.right, closeTo(inset, .01));
+        expect(capsule.right - collections.right, closeTo(inset, .01));
+      } else {
+        expect(capsule.right, closeTo(390 - AppSpacing.lg, .01));
+        expect(capsule.right - add.right, closeTo(inset, .01));
+        expect(add.left - collections.right, closeTo(inset, .01));
+        expect(collections.left - capsule.left, closeTo(inset, .01));
+      }
+    });
+  }
+
+  for (final dark in [false, true]) {
+    testWidgets('"+" is a primary circle with an onPrimary glyph dark=$dark', (
+      tester,
+    ) async {
+      bookRepository.seedBooks([_book]);
+      final theme = dark ? AppTheme.dark() : AppTheme.light();
+      await tester.pumpWidget(buildSubject(theme: theme));
+      await tester.pumpAndSettle();
+      final colors = theme.colorScheme;
+      final material = tester.widget<Material>(
+        find.descendant(of: _addButton, matching: find.byType(Material)),
+      );
+      expect(material.color, colors.primary);
+      expect(material.color!.a, 1);
+      expect(material.shape, const CircleBorder());
+      // The capsule carries the shadow; "+" lies flat inside it.
+      expect(material.elevation, 0);
+      final glyph = find.descendant(
+        of: _addButton,
+        matching: find.byIcon(AppIcons.add),
+      );
+      expect(tester.widget<Icon>(glyph).size, AppIconSize.md);
+      expect(IconTheme.of(tester.element(glyph)).color, colors.onPrimary);
+      expect(
+        _contrast(colors.onPrimary, colors.primary),
+        greaterThanOrEqualTo(3),
+      );
+    });
+  }
+
+  group('Collections switcher', () {
+    final dune = LibraryCollection(
+      id: 'collection-1',
+      name: 'Dune',
+      sourceCount: 1,
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+    LibraryCollection duneNamed(String name) => LibraryCollection(
+      id: dune.id,
+      name: name,
+      sourceCount: dune.sourceCount,
+      createdAt: dune.createdAt,
+      updatedAt: dune.updatedAt,
+    );
+
+    void seedDune() {
+      bookRepository.seedBooks([_book, _secondBook]);
+      collectionRepository.seedCollections([dune]);
+      collectionRepository.seedCollectionSourceIds({
+        dune.id: {_book.id},
+      });
+    }
+
+    Future<void> chooseDune(WidgetTester tester) async {
+      await _openCollections(tester);
+      await tester.tap(
+        find.byKey(
+          ValueKey('collectionScopeRow-manual-${dune.id}'),
+          skipOffstage: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('names the whole Library and reads like the header title', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      bookRepository.seedBooks([_book]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: _collectionsButton, matching: find.text('Library')),
+        findsOneWidget,
+      );
+      for (final icon in [AppIcons.library, AppIcons.chevronDown]) {
+        expect(
+          find.descendant(of: _collectionsButton, matching: find.byIcon(icon)),
+          findsOneWidget,
+        );
+      }
+      expect(
+        tester.getSemantics(_collectionsButton),
+        isSemantics(
+          label: 'Choose collection',
+          value: 'Library',
+          isButton: true,
+          isEnabled: true,
+          hasTapAction: true,
+        ),
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('opens the Collections picker and switches scope', (
+      tester,
+    ) async {
+      seedDune();
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      await _openCollections(tester);
+      expect(
+        find.byKey(const ValueKey('collectionScopeRow-library')),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Dune'));
+      await tester.pumpAndSettle();
+      expect(find.text(_secondBook.title), findsNothing);
+      expect(
+        find.descendant(of: _collectionsButton, matching: find.text('Dune')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: _collectionsButton,
+          matching: find.byIcon(AppIcons.collection),
+        ),
+        findsOneWidget,
+      );
+
+      await _openCollections(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('collectionScopeRow-library')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(_secondBook.title), findsWidgets);
+      expect(
+        find.descendant(of: _collectionsButton, matching: find.text('Library')),
+        findsOneWidget,
+      );
+      expect(bookRepository.getBooksCallCount, 1);
+    });
+
+    for (final dark in [false, true]) {
+      testWidgets('stays legible over any cover, tinted inside a collection '
+          'dark=$dark', (tester) async {
+        seedDune();
+        final theme = dark ? AppTheme.dark() : AppTheme.light();
+        await tester.pumpWidget(buildSubject(theme: theme));
+        await tester.pumpAndSettle();
+        final colors = theme.colorScheme;
+
+        Color? segmentFill() => tester
+            .widget<Material>(
+              find.descendant(
+                of: _collectionsButton,
+                matching: find.byType(Material),
+              ),
+            )
+            .color;
+        // The capsule is translucent: check text contrast over both a black
+        // and a white cover under it.
+        void expectReadable(String label, Color segment) {
+          for (final under in [
+            const Color(0xFF000000),
+            const Color(0xFFFFFFFF),
+          ]) {
+            final fill = Color.alphaBlend(
+              segment,
+              Color.alphaBlend(
+                colors.surface.withValues(alpha: kAppFloatingCapsuleOpacity),
+                under,
+              ),
+            );
+            expect(
+              _contrast(_labelColor(tester, label)!, fill),
+              greaterThanOrEqualTo(4.5),
+              reason: 'over $under',
+            );
+          }
+        }
+
+        expect(_labelColor(tester, 'Library'), colors.onSurface);
+        expect(segmentFill()?.a ?? 0, 0);
+        expectReadable('Library', const Color(0x00000000));
+
+        await chooseDune(tester);
+        expect(segmentFill(), colors.selectedControlBackground);
+        expect(_labelColor(tester, 'Dune'), colors.selectedControlForeground);
+        expectReadable('Dune', colors.selectedControlBackground);
+      });
+    }
+
+    testWidgets('a long name truncates; the capsule keeps its cap and the '
+        'start gutter', (tester) async {
+      const name = 'Books for a very long weekend in the mountains far away';
+      tester.view
+        ..physicalSize = const Size(390, 844)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      bookRepository.seedBooks([_book]);
+      collectionRepository.seedCollections([duneNamed(name)]);
+      collectionRepository.seedCollectionSourceIds({
+        dune.id: {_book.id},
+      });
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await chooseDune(tester);
+
+      final label = find.descendant(
+        of: _collectionsButton,
+        matching: find.text(name),
+      );
+      expect(
+        tester.renderObject<RenderParagraph>(label).didExceedMaxLines,
+        isTrue,
+      );
+      final capsule = tester.getRect(_capsule);
+      expect(capsule.width, closeTo(kLibraryFloatingActionsMaxWidth, .01));
+      expect(
+        tester.getSize(_addButton),
+        const Size.square(AppSizes.buttonHeight),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('on a 320dp phone at 200% text the capsule stops at the start '
+        'gutter', (tester) async {
+      tester.view
+        ..physicalSize = const Size(320, 568)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      bookRepository.seedBooks([_book]);
+      collectionRepository.seedCollections([
+        duneNamed('Weekend reading list'),
+      ]);
+      collectionRepository.seedCollectionSourceIds({
+        dune.id: {_book.id},
+      });
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await chooseDune(tester);
+
+      final capsule = tester.getRect(_capsule);
+      expect(capsule.left, greaterThanOrEqualTo(AppSpacing.lg - .01));
+      expect(capsule.right, closeTo(320 - AppSpacing.lg, .01));
+      expect(capsule.height, closeTo(kLibraryFloatingActionsHeight, .01));
+      expect(
+        tester.getSize(_addButton),
+        const Size.square(AppSizes.buttonHeight),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final (platform, expected) in [(1.5, 1.5), (3.0, 2.0)]) {
+      testWidgets('label text scales to 200% and no further: $platform', (
+        tester,
+      ) async {
+        tester.platformDispatcher.textScaleFactorTestValue = platform;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        bookRepository.seedBooks([_book]);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final label = find.descendant(
+          of: _collectionsButton,
+          matching: find.text('Library'),
+        );
+        expect(
+          MediaQuery.textScalerOf(tester.element(label)).scale(10),
+          closeTo(10 * expected, .01),
+        );
+        expect(
+          tester.getSize(_capsule).height,
+          closeTo(kLibraryFloatingActionsHeight, .01),
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    for (final reduceMotion in [false, true]) {
+      testWidgets('a new name resizes the capsule over the short motion, at '
+          'once with reduced motion=$reduceMotion', (tester) async {
+        if (reduceMotion) {
+          tester.platformDispatcher.accessibilityFeaturesTestValue =
+              const FakeAccessibilityFeatures(disableAnimations: true);
+          addTearDown(
+            tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+          );
+        }
+        seedDune();
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final resize = find.descendant(
+          of: _capsule,
+          matching: find.byType(AnimatedSize),
+        );
+        if (reduceMotion) {
+          expect(resize, findsNothing);
+        } else {
+          expect(tester.widget<AnimatedSize>(resize).duration, AppMotion.short);
+        }
+
+        // Switching scope settles without layout errors either way.
+        await _openCollections(tester);
+        await tester.tap(find.text('Dune'));
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(of: _collectionsButton, matching: find.text('Dune')),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('switching scope rebuilds the capsule, not the Scaffold', (
+      tester,
+    ) async {
+      seedDune();
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+
+      await chooseDune(tester);
+      expect(
+        find.descendant(of: _collectionsButton, matching: find.text('Dune')),
+        findsOneWidget,
+      );
+      expect(
+        identical(tester.widget<Scaffold>(find.byType(Scaffold)), scaffold),
+        isTrue,
+      );
+    });
+
+    testWidgets('stays inside an empty collection so it can be left', (
+      tester,
+    ) async {
+      bookRepository.seedBooks([_book]);
+      collectionRepository.seedCollections([
+        LibraryCollection(
+          id: 'empty',
+          name: 'Empty shelf',
+          sourceCount: 0,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+      ]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await _openCollections(tester);
+      await tester.tap(find.text('Empty shelf'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(_book.title), findsNothing);
+      expect(_collectionsButton, findsOneWidget);
+    });
+
+    testWidgets('hides with "+" in selection mode and returns after it', (
+      tester,
+    ) async {
+      bookRepository.seedBooks([_book]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await tester.longPress(find.text(_book.title));
+      await tester.pumpAndSettle();
+      expect(_capsule, findsNothing);
+
+      await tester.tap(find.byTooltip('Cancel selection'));
+      await tester.pumpAndSettle();
+      expect(_collectionsButton, findsOneWidget);
+      expect(_addButton, findsOneWidget);
+    });
+  });
+
+  testWidgets('an empty library has no "+": its body offers both imports', (
+    tester,
+  ) async {
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+    expect(_addButton, findsNothing);
+    // Nothing to narrow either: Collections hides with "+".
+    expect(_collectionsButton, findsNothing);
+    expect(
+      tester.widget<Scaffold>(find.byType(Scaffold)).floatingActionButton,
+      isNull,
+    );
+    expect(
+      find.byKey(const ValueKey('libraryEmptyUploadFile')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('"+" waits for the library to load', (tester) async {
+    final gate = Completer<void>();
+    bookRepository
+      ..seedBooks([_book])
+      ..getBooksGate = gate;
+    await tester.pumpWidget(buildSubject());
+    await tester.pump();
+    expect(_addButton, findsNothing);
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(_addButton, findsOneWidget);
+  });
+
+  testWidgets('"+" guards against double-tap while import is in-flight', (
     tester,
   ) async {
     final gate = Completer<void>();
     var invocations = 0;
+    bookRepository.seedBooks([_book]);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -827,18 +1511,19 @@ void main() {
           collectionRepository: collectionRepository,
           preferencesService: preferencesService,
           onSourcePressed: (_, {onSourceOpened}) async {},
-          onAddPressed: ({required onImported}) async {
-            invocations++;
-            await gate.future;
-          },
+          onAddPressed:
+              ({required onImported, entry = LibraryImportEntry.menu}) async {
+                invocations++;
+                await gate.future;
+              },
         ),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(_addButton);
     await tester.pump();
-    await tester.tap(find.byType(FloatingActionButton));
+    await tester.tap(_addButton);
     await tester.pump();
 
     expect(
@@ -851,57 +1536,84 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  // Visual counterpart to the guard test above. The behavioural guard
-  // alone (re-entry check inside the handler) made the second tap a
-  // silent no-op, but the FAB stayed visually enabled — confusing UX
-  // and the fragility flagged by audit ("if UI ever depends on the
-  // flag, it would silently desync"). Now `_addInFlight` is mutated
-  // through setState and passed down as a nullable onPressed, so
-  // FloatingActionButton renders greyed-out for the duration of the
-  // import.
-  testWidgets('FAB renders disabled while import is in-flight', (tester) async {
-    final gate = Completer<void>();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: LibraryScreen(
-          bookRepository: bookRepository,
-          collectionRepository: collectionRepository,
-          preferencesService: preferencesService,
-          onSourcePressed: (_, {onSourceOpened}) async {},
-          onAddPressed: ({required onImported}) async {
+  // The behavioural guard alone would leave the actions looking enabled;
+  // `_addInFlight` goes through setState as a nullable onPressed instead.
+  Widget gatedSubject(Completer<void> gate) => MaterialApp(
+    theme: AppTheme.light(),
+    home: LibraryScreen(
+      bookRepository: bookRepository,
+      collectionRepository: collectionRepository,
+      preferencesService: preferencesService,
+      onSourcePressed: (_, {onSourceOpened}) async {},
+      onAddPressed:
+          ({required onImported, entry = LibraryImportEntry.menu}) async {
             await gate.future;
           },
-        ),
-      ),
-    );
+    ),
+  );
+
+  testWidgets('"+" renders disabled while import is in-flight', (
+    tester,
+  ) async {
+    final gate = Completer<void>();
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(gatedSubject(gate));
+    await tester.pumpAndSettle();
+
+    VoidCallback? addPressed() =>
+        tester.widget<IconButton>(_addButton).onPressed;
+    Color? addFill() => tester
+        .widget<Material>(
+          find.descendant(of: _addButton, matching: find.byType(Material)),
+        )
+        .color;
+    final colors = AppTheme.light().colorScheme;
+
+    expect(addPressed(), isNotNull);
+    await tester.tap(_addButton);
     await tester.pump();
-
-    // Before the tap: FAB is enabled.
-    final initialFab = tester.widget<FloatingActionButton>(
-      find.byType(FloatingActionButton),
+    expect(addPressed(), isNull);
+    expect(addFill(), colors.onSurface.withValues(alpha: .12));
+    // Switching collections stays available meanwhile.
+    expect(
+      tester.widget<TextButton>(_collectionsButton).onPressed,
+      isNotNull,
     );
-    expect(initialFab.onPressed, isNotNull);
-
-    await tester.tap(find.byType(FloatingActionButton));
-    await tester.pump();
-
-    // While the awaited onAddPressed parks on the gate, the FAB's
-    // onPressed must be null — Material renders that state as disabled.
-    final inFlightFab = tester.widget<FloatingActionButton>(
-      find.byType(FloatingActionButton),
-    );
-    expect(inFlightFab.onPressed, isNull);
 
     gate.complete();
     await tester.pumpAndSettle();
+    expect(addPressed(), isNotNull);
+  });
 
-    // After the import resolves the FAB returns to its enabled state.
-    final settledFab = tester.widget<FloatingActionButton>(
-      find.byType(FloatingActionButton),
-    );
-    expect(settledFab.onPressed, isNotNull);
+  testWidgets('empty-library imports render disabled while import is '
+      'in-flight', (tester) async {
+    final gate = Completer<void>();
+    await tester.pumpWidget(gatedSubject(gate));
+    await tester.pumpAndSettle();
+
+    VoidCallback? uploadPressed() => tester
+        .widget<ButtonStyleButton>(
+          find.byKey(const ValueKey('libraryEmptyUploadFile')),
+        )
+        .onPressed;
+    VoidCallback? articlePressed() => tester
+        .widget<ButtonStyleButton>(
+          find.byKey(const ValueKey('libraryEmptySaveArticle')),
+        )
+        .onPressed;
+
+    expect(uploadPressed(), isNotNull);
+    expect(articlePressed(), isNotNull);
+
+    await tester.tap(find.byKey(const ValueKey('libraryEmptyUploadFile')));
+    await tester.pump();
+    expect(uploadPressed(), isNull);
+    expect(articlePressed(), isNull);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(uploadPressed(), isNotNull);
+    expect(articlePressed(), isNotNull);
   });
 
   testWidgets('refreshes and resorts after reader route return delay', (
@@ -949,7 +1661,8 @@ void main() {
               second,
             ]);
           },
-          onAddPressed: ({required onImported}) async {},
+          onAddPressed:
+              ({required onImported, entry = LibraryImportEntry.menu}) async {},
         ),
       ),
     );
@@ -1031,7 +1744,8 @@ void main() {
             notifySourceOpened = onSourceOpened;
             await routeCompleter.future;
           },
-          onAddPressed: ({required onImported}) async {},
+          onAddPressed:
+              ({required onImported, entry = LibraryImportEntry.menu}) async {},
         ),
       ),
     );
@@ -1106,7 +1820,7 @@ void main() {
     await tester.longPress(find.text('Flutter in Action'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(FloatingActionButton), findsNothing);
+    expect(_capsule, findsNothing);
     expect(find.text('Add to collection'), findsOneWidget);
     expect(find.byIcon(AppIcons.collectionAdd), findsOneWidget);
     expect(find.byIcon(AppIcons.delete), findsOneWidget);
@@ -1182,20 +1896,24 @@ void main() {
     expect(find.text('Flutter in Action'), findsOneWidget);
     expect(find.text('Domain-Driven Design'), findsOneWidget);
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
     await tester.tap(find.text('Dune'));
     await tester.pumpAndSettle();
 
     expect(find.text('Flutter in Action'), findsOneWidget);
     expect(find.text('Domain-Driven Design'), findsNothing);
-    expect(find.text('Dune'), findsOneWidget);
+    // The title names the scope.
+    expect(_headerText('Dune'), findsOneWidget);
+    expect(find.text('Library'), findsNothing);
 
-    await tester.tap(find.byIcon(AppIcons.close));
+    await _openCollections(tester);
+    await tester.tap(find.byKey(const ValueKey('collectionScopeRow-library')));
     await tester.pumpAndSettle();
 
     expect(find.text('Flutter in Action'), findsOneWidget);
     expect(find.text('Domain-Driven Design'), findsOneWidget);
+    expect(_headerText('Library'), findsOneWidget);
+    expect(bookRepository.getBooksCallCount, 1);
   });
 
   testWidgets(
@@ -1208,8 +1926,7 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pump();
 
-      await tester.tap(find.byIcon(AppIcons.collection));
-      await tester.pumpAndSettle();
+      await _openCollections(tester);
 
       final favouritesRow = find.byKey(
         const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
@@ -1245,8 +1962,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
 
     final sheet = find.byType(ActionBottomSheetLayout);
     final searchField = find.descendant(
@@ -1258,19 +1974,23 @@ void main() {
     );
 
     expect(favouritesRow, findsOneWidget);
-    expect(find.text('Избранное'), findsOneWidget);
+    final favouritesLabel = find.descendant(
+      of: favouritesRow,
+      matching: find.text('Избранное'),
+    );
+    expect(favouritesLabel, findsOneWidget);
     expect(find.text('Favourites'), findsNothing);
 
     await tester.enterText(searchField, 'избр');
     await tester.pumpAndSettle();
 
     expect(favouritesRow, findsOneWidget);
-    expect(find.text('Избранное'), findsOneWidget);
+    expect(favouritesLabel, findsOneWidget);
 
     await tester.tap(favouritesRow);
     await tester.pumpAndSettle();
 
-    expect(find.text('Избранное'), findsOneWidget);
+    expect(_headerText('Избранное'), findsOneWidget);
     expect(find.text('Favourites'), findsNothing);
   });
 
@@ -1305,8 +2025,7 @@ void main() {
     await tester.pumpWidget(buildSubject(articleRepository: articleRepository));
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
 
     final sheet = find.byType(ActionBottomSheetLayout);
     final sheetTopBeforeSearch = tester.getTopLeft(sheet).dy;
@@ -1373,8 +2092,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
 
     final sheet = find.byType(ActionBottomSheetLayout);
     final fadeStack = find.descendant(
@@ -1432,8 +2150,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
 
     final manualRow = find.byKey(
       const ValueKey('collectionScopeRow-manual-collection-1'),
@@ -1483,8 +2200,7 @@ void main() {
             });
             await tester.pumpWidget(buildSubject());
             await tester.pumpAndSettle();
-            await tester.tap(find.byIcon(AppIcons.collection));
-            await tester.pumpAndSettle();
+            await _openCollections(tester);
 
             final action = find.byKey(
               ValueKey('collectionScopeManage-$target'),
@@ -1550,8 +2266,7 @@ void main() {
       });
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(AppIcons.collection));
-      await tester.pumpAndSettle();
+      await _openCollections(tester);
       final sheet = tester.element(find.byType(BottomSheet));
       await tester.enterText(find.byType(TextField).last, 'Dune');
       await tester.pumpAndSettle();
@@ -1594,8 +2309,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
     final reads = bookRepository.getBooksCallCount;
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
     final action = find.byKey(
       const ValueKey('collectionScopeManage-manual-collection-10'),
     );
@@ -1645,8 +2359,7 @@ void main() {
     await tester.pumpWidget(buildSubject(articleRepository: articleRepository));
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
 
     final manualRow = find.byKey(
       const ValueKey('collectionScopeRow-manual-collection-1'),
@@ -1664,7 +2377,14 @@ void main() {
     expect(tester.getSize(manualRow).height, tester.getSize(siteRow).height);
     expect(tester.getSize(manualRow).height, tester.getSize(authorRow).height);
 
+    // Books and Articles rows make the list scroll; at its end the last row
+    // still keeps breathing room above the sheet edge.
     final sheet = find.byType(ActionBottomSheetLayout);
+    await tester.drag(
+      find.descendant(of: sheet, matching: find.byType(ListView)),
+      const Offset(0, -600),
+    );
+    await tester.pumpAndSettle();
     final visibleGapBelowAuthor =
         tester.getBottomLeft(sheet).dy - tester.getBottomLeft(authorRow).dy;
     expect(visibleGapBelowAuthor, greaterThanOrEqualTo(AppSpacing.lg));
@@ -1688,8 +2408,7 @@ void main() {
       });
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(AppIcons.collection));
-      await tester.pumpAndSettle();
+      await _openCollections(tester);
       await tester.tap(
         find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
       );
@@ -1772,8 +2491,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
     await tester.tap(
       find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
     );
@@ -1867,8 +2585,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
     await tester.tap(
       find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
     );
@@ -1908,8 +2625,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
     await tester.tap(
       find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
     );
@@ -1992,8 +2708,7 @@ void main() {
             buildSubject(articleRepository: articleRepository),
           );
           await tester.pump();
-          await tester.tap(find.byIcon(AppIcons.collection));
-          await tester.pumpAndSettle();
+          await _openCollections(tester);
           await tester.tap(
             find.byKey(
               const ValueKey('collectionScopeManage-manual-collection-1'),
@@ -2059,8 +2774,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
     await tester.tap(
       find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
     );
@@ -2135,8 +2849,7 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pump();
 
-      await tester.tap(find.byIcon(AppIcons.collection));
-      await tester.pumpAndSettle();
+      await _openCollections(tester);
       await tester.tap(
         find.byKey(
           const ValueKey(
@@ -2196,8 +2909,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
     await tester.tap(
       find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
     );
@@ -2287,8 +2999,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    await tester.tap(find.byIcon(AppIcons.collection));
-    await tester.pumpAndSettle();
+    await _openCollections(tester);
     await tester.tap(
       find.byKey(const ValueKey('collectionScopeManage-manual-collection-1')),
     );
@@ -2378,40 +3089,6 @@ void main() {
     );
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
-  });
-
-  testWidgets('import FAB takes colour, shape and elevation from the theme', (
-    tester,
-  ) async {
-    bookRepository.seedBooks([_book]);
-    await tester.pumpWidget(buildSubject());
-    await tester.pumpAndSettle();
-    final fab = tester.widget<FloatingActionButton>(
-      find.byType(FloatingActionButton),
-    );
-    expect(fab.backgroundColor, isNull);
-    expect(fab.foregroundColor, isNull);
-    expect(fab.shape, isNull);
-    expect(fab.elevation, isNull);
-    expect(fab.heroTag, isNull);
-    final theme = AppTheme.light();
-    final material = tester.widget<Material>(
-      find.descendant(
-        of: find.byType(FloatingActionButton),
-        matching: find.byType(Material),
-      ),
-    );
-    expect(material.color, theme.colorScheme.primary);
-    expect(material.color!.a, 1);
-    expect(material.shape, const CircleBorder());
-    expect(material.elevation, AppElevation.level2);
-    final icon = tester.widget<Icon>(
-      find.descendant(
-        of: find.byType(FloatingActionButton),
-        matching: find.byIcon(AppIcons.add),
-      ),
-    );
-    expect(icon.size, AppIconSize.md);
   });
 
   // Swipe-delete waits for the real write: the row only leaves the tree
@@ -2533,6 +3210,335 @@ void main() {
     expect(tester.getRect(listRow(_book)), restingRect);
     expect(await bookRepository.getBooks(), hasLength(1));
     expect(find.textContaining('deleted'), findsNothing);
+  });
+
+  group('Continue reading card', () {
+    final card = find.byType(LibraryContinueReadingCard);
+    final reading = Book(
+      id: 'b-reading',
+      title: 'Reading Now',
+      author: 'Current Author',
+      filePath: '/books/reading.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026),
+      readingProgress: .4,
+      lastOpenedAt: DateTime(2026, 3),
+    );
+    final earlier = Book(
+      id: 'b-earlier',
+      title: 'Read Earlier',
+      filePath: '/books/earlier.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026),
+      readingProgress: .7,
+      lastOpenedAt: DateTime(2026, 2),
+    );
+    final finished = Book(
+      id: 'b-finished',
+      title: 'Finished',
+      filePath: '/books/finished.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026),
+      readingProgress: 1,
+      isFinished: true,
+      lastOpenedAt: DateTime(2026, 4),
+    );
+
+    Future<void> useLayout(LibraryLayoutMode mode) => preferencesService.update(
+      (prefs) => prefs.copyWith(libraryLayoutMode: mode.id),
+    );
+
+    for (final mode in LibraryLayoutMode.values) {
+      testWidgets('shows the most recent eligible source first: ${mode.id}', (
+        tester,
+      ) async {
+        await useLayout(mode);
+        bookRepository.seedBooks([earlier, finished, reading, _book]);
+        final opened = <LibrarySource>[];
+        await tester.pumpWidget(buildSubject(onSourcePressed: opened.add));
+        await tester.pumpAndSettle();
+
+        expect(card, findsOneWidget);
+        expect(
+          tester.widget<LibraryContinueReadingCard>(card).source.id,
+          reading.id,
+        );
+        final scrollView = switch (mode) {
+          LibraryLayoutMode.list => find.byType(LibraryListView),
+          LibraryLayoutMode.grid => find.byType(LibraryGridView),
+        };
+        expect(find.descendant(of: scrollView, matching: card), findsOneWidget);
+        final header = tester.getRect(find.byType(LibraryHeader));
+        expect(
+          tester.getRect(card).top,
+          closeTo(header.bottom + kLibraryContentTopPadding, .01),
+        );
+
+        await tester.tap(card);
+        await tester.pump();
+        expect(opened.single.id, reading.id);
+        await tester.pump(const Duration(seconds: 1));
+        await tester.pumpAndSettle();
+      });
+    }
+
+    testWidgets('long-press on the card does not start selection', (
+      tester,
+    ) async {
+      bookRepository.seedBooks([reading]);
+      final opened = <LibrarySource>[];
+      await tester.pumpWidget(buildSubject(onSourcePressed: opened.add));
+      await tester.pumpAndSettle();
+      await tester.longPress(card);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Selected:'), findsNothing);
+      expect(opened, isEmpty);
+      expect(_addButton, findsOneWidget);
+    });
+
+    testWidgets('is absent when nothing is in progress', (tester) async {
+      bookRepository.seedBooks([
+        finished,
+        _book,
+        Book(
+          id: 'b-zero',
+          title: 'Opened at zero',
+          filePath: '/books/zero.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026),
+          lastOpenedAt: DateTime(2026, 5),
+        ),
+        Book(
+          id: 'b-unopened',
+          title: 'Progress without open date',
+          filePath: '/books/unopened.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026),
+          readingProgress: .5,
+        ),
+      ]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      expect(card, findsNothing);
+    });
+
+    testWidgets('hides while searching and returns when cleared', (
+      tester,
+    ) async {
+      bookRepository.seedBooks([reading, _book]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      expect(card, findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Reading');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      expect(card, findsNothing);
+      await tester.enterText(find.byType(TextField), '');
+      await tester.pumpAndSettle();
+      expect(card, findsOneWidget);
+    });
+
+    testWidgets('hides inside a built-in collection', (tester) async {
+      bookRepository.seedBooks([reading, _comicBook]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await _openCollections(tester);
+      await tester.tap(_builtInRow(LibraryCollectionScopeType.books));
+      await tester.pumpAndSettle();
+      expect(card, findsNothing);
+      await _openCollections(tester);
+      await tester.tap(
+        find.byKey(const ValueKey('collectionScopeRow-library')),
+      );
+      await tester.pumpAndSettle();
+      expect(card, findsOneWidget);
+    });
+
+    testWidgets('hides inside a collection', (tester) async {
+      final collection = LibraryCollection(
+        id: 'collection-1',
+        name: 'Dune',
+        sourceCount: 1,
+        createdAt: DateTime(2026),
+        updatedAt: DateTime(2026),
+      );
+      bookRepository.seedBooks([reading, _book]);
+      collectionRepository.seedCollections([collection]);
+      collectionRepository.seedCollectionSourceIds({
+        collection.id: {reading.id},
+      });
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      expect(card, findsOneWidget);
+      await _openCollections(tester);
+      await tester.tap(find.text('Dune'));
+      await tester.pumpAndSettle();
+      expect(card, findsNothing);
+    });
+
+    testWidgets('hides in selection mode', (tester) async {
+      await useLayout(LibraryLayoutMode.list);
+      bookRepository.seedBooks([reading, _book]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      expect(card, findsOneWidget);
+      await tester.longPress(
+        find.descendant(
+          of: find.byType(BookLibraryListTile),
+          matching: find.text(_book.title),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Selected: 1'), findsOneWidget);
+      expect(card, findsNothing);
+      await tester.tap(find.byTooltip('Cancel selection'));
+      await tester.pumpAndSettle();
+      expect(card, findsOneWidget);
+    });
+  });
+
+  group('empty library', () {
+    testWidgets('commands open import at the file and article steps', (
+      tester,
+    ) async {
+      final entries = <LibraryImportEntry>[];
+      await tester.pumpWidget(
+        buildSubject(
+          onAddPressed:
+              ({required onImported, entry = LibraryImportEntry.menu}) async {
+                entries.add(entry);
+              },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(_capsule, findsNothing);
+      expect(find.text('Books, comics and PDF'), findsOneWidget);
+      expect(
+        find.widgetWithText(FilledButton, 'Upload a file'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(OutlinedButton, 'Save an article'),
+        findsOneWidget,
+      );
+      expect(_addButton, findsNothing);
+      await tester.tap(find.text('Upload a file'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save an article'));
+      await tester.pumpAndSettle();
+      expect(entries, [LibraryImportEntry.file, LibraryImportEntry.article]);
+    });
+  });
+
+  group('openImportOnStart', () {
+    testWidgets('opens file import once after the first frame', (
+      tester,
+    ) async {
+      final entries = <LibraryImportEntry>[];
+      late VoidCallback imported;
+      Widget subject() => buildSubject(
+        openImportOnStart: true,
+        onAddPressed:
+            ({required onImported, entry = LibraryImportEntry.menu}) async {
+              entries.add(entry);
+              imported = onImported;
+            },
+      );
+      // pumpWidget renders the first frame; the post-frame callback follows.
+      await tester.pumpWidget(subject());
+      expect(entries, [LibraryImportEntry.file]);
+      await tester.pump();
+      expect(entries, [LibraryImportEntry.file]);
+      await tester.pumpAndSettle();
+
+      // Rebuilding the same screen does not reopen import.
+      await tester.pumpWidget(subject());
+      await tester.pumpAndSettle();
+      expect(entries, [LibraryImportEntry.file]);
+
+      // It is the ordinary import flow: a commit refreshes Library.
+      bookRepository.seedBooks([_book]);
+      imported();
+      await tester.pumpAndSettle();
+      expect(find.text(_book.title), findsWidgets);
+    });
+
+    testWidgets('does nothing by default', (tester) async {
+      final entries = <LibraryImportEntry>[];
+      await tester.pumpWidget(
+        buildSubject(
+          onAddPressed:
+              ({required onImported, entry = LibraryImportEntry.menu}) async {
+                entries.add(entry);
+              },
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(entries, isEmpty);
+    });
+  });
+
+  group('content bottom inset', () {
+    testWidgets('clears the bottom capsule and the home indicator; the space '
+        'stays while selecting', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = const FakeViewPadding(bottom: 34);
+      tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+      addTearDown(tester.view.reset);
+      await preferencesService.update(
+        (prefs) => prefs.copyWith(libraryLayoutMode: LibraryLayoutMode.list.id),
+      );
+      bookRepository.seedBooks([_book, _secondBook]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+
+      double bottomPadding() => tester
+          .widget<ListView>(
+            find.descendant(
+              of: find.byType(LibraryListView),
+              matching: find.byType(ListView),
+            ),
+          )
+          .padding!
+          .resolve(TextDirection.ltr)
+          .bottom;
+      // 56dp capsule + 8dp lift + 16dp Scaffold margin + 16dp gap.
+      const clearance =
+          kLibraryFloatingActionsHeight +
+          kLibraryFloatingActionsLift +
+          AppSpacing.lg +
+          AppSpacing.lg;
+
+      expect(
+        tester.widget<Scaffold>(find.byType(Scaffold)).bottomNavigationBar,
+        isNull,
+      );
+      // The inset beyond the Scaffold's margin lifts the button further.
+      expect(bottomPadding(), clearance + 34 - AppSpacing.lg);
+      final capsule = tester.getRect(_capsule);
+      final lastRow = tester.getRect(
+        find.ancestor(
+          of: find.text(_secondBook.title),
+          matching: find.byType(BookLibraryListTile),
+        ),
+      );
+      expect(lastRow.bottom, lessThanOrEqualTo(capsule.top));
+
+      await tester.longPress(find.text(_book.title));
+      await tester.pumpAndSettle();
+      expect(find.byType(LibrarySelectionBar), findsOneWidget);
+      expect(_addButton, findsNothing);
+      // The bar owns the inset; the button's space is kept, so the end of
+      // the list does not move.
+      expect(bottomPadding(), clearance);
+
+      await tester.tap(find.byTooltip('Cancel selection'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LibrarySelectionBar), findsNothing);
+      expect(_addButton, findsOneWidget);
+      expect(bottomPadding(), clearance + 34 - AppSpacing.lg);
+    });
   });
 }
 

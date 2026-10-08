@@ -192,22 +192,10 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get libraryResetFilters => 'フィルターをリセット';
 
   @override
-  String get libraryClearCollectionFilter => 'コレクションのフィルターを解除';
-
-  @override
   String get commonCopied => 'コピーしました';
 
   @override
   String get commonCopyFailed => 'コピーできませんでした';
-
-  @override
-  String get appSkip => 'スキップ';
-
-  @override
-  String get appNext => '次へ';
-
-  @override
-  String get appGetStarted => '始める';
 
   @override
   String get appInitializationFailed => '初期化に失敗しました';
@@ -237,9 +225,6 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   @override
   String get onboardingHighlightSaveDescription =>
       'テキストを選択してハイライトを作成し、理解を深めるためにメモを追加できます。';
-
-  @override
-  String get onboardingOrganizeLibraryTitle => 'ライブラリを整理';
 
   @override
   String get onboardingOrganizeLibraryDescription =>
@@ -301,19 +286,16 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get librarySearchHint => 'ライブラリを検索...';
 
   @override
-  String get libraryFilterAll => 'すべて';
+  String get libraryScopeBooks => '本';
 
   @override
-  String get libraryFilterBooks => '本';
+  String get libraryScopeArticles => '記事';
 
   @override
-  String get libraryFilterArticles => '記事';
+  String get libraryScopeComics => 'コミック';
 
   @override
-  String get libraryFilterComics => 'コミック';
-
-  @override
-  String get libraryFilterNew => '新規';
+  String get libraryScopeNew => '新規';
 
   @override
   String get libraryDisplayOptions => '表示オプション';
@@ -437,9 +419,6 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get libraryFavourites => 'お気に入り';
-
-  @override
-  String get libraryFavouritesBadge => 'お気に入り';
 
   @override
   String libraryCreateCollectionPrompt(int count) {
@@ -587,16 +566,7 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get importAddToLibraryTitle => 'ライブラリに追加';
 
   @override
-  String get importUploadBook => '本をアップロード';
-
-  @override
-  String get importUploadBookFormats => 'EPUB, FB2, MOBI, PDF, AZW3, CBZ';
-
-  @override
   String get importSaveArticle => '記事を保存';
-
-  @override
-  String get importSaveArticleDescription => 'オフライン読書用にWeb URLを貼り付けます';
 
   @override
   String get importBeforeUploadingTitle => 'アップロード前';
@@ -892,21 +862,6 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get readerPageTurn => 'ページめくり';
 
   @override
-  String get readerAlignStart => '先頭に揃える';
-
-  @override
-  String get readerJustifyText => '両端揃え';
-
-  @override
-  String get readerAlignEnd => '末尾に揃える';
-
-  @override
-  String get readerHorizontalPageTurn => '横方向ページめくり';
-
-  @override
-  String get readerVerticalPageTurn => '縦方向ページめくり';
-
-  @override
   String get readerResetTextSize => '文字サイズをリセット';
 
   @override
@@ -917,24 +872,6 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get readerIncreaseTextSize => '文字を大きく';
-
-  @override
-  String get readerResetLineSpacing => '行間をリセット';
-
-  @override
-  String get readerDecreaseLineSpacing => '行間を狭く';
-
-  @override
-  String get readerIncreaseLineSpacing => '行間を広く';
-
-  @override
-  String get readerResetPageMargins => '余白をリセット';
-
-  @override
-  String get readerDecreasePageMargins => '余白を狭く';
-
-  @override
-  String get readerIncreasePageMargins => '余白を広く';
 
   @override
   String get readerThemeSnow => 'スノー';
@@ -1073,4 +1010,77 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get importArticleOfflineSubtitle => 'インターネット接続が必要です';
+
+  @override
+  String get libraryContinueReading => '続きを読む';
+
+  @override
+  String readingTimeLeftMinutes(int count) {
+    return '残り$count分';
+  }
+
+  @override
+  String readingTimeLeftHours(int hours, int minutes) {
+    return '残り$hours時間$minutes分';
+  }
+
+  @override
+  String get libraryUploadFile => 'ファイルを追加';
+
+  @override
+  String get librarySaveArticleAction => '記事を保存';
+
+  @override
+  String get importFileKinds => '本、コミック、PDF';
+
+  @override
+  String get importFromDevice => '端末のファイル';
+
+  @override
+  String get importArticleFromLink => 'リンクから記事を追加';
+
+  @override
+  String get importArticleOffline => 'オフラインで読めるように保存';
+
+  @override
+  String get libraryChooseCollection => 'コレクションを選択';
+
+  @override
+  String get onboardingAddBook => '本を追加';
+
+  @override
+  String get onboardingNotNow => 'あとで';
+
+  @override
+  String get readerLineSpacingCompact => '狭い';
+
+  @override
+  String get readerLineSpacingNormal => '標準';
+
+  @override
+  String get readerLineSpacingRelaxed => '広い';
+
+  @override
+  String get readerMarginsNarrow => '狭い';
+
+  @override
+  String get readerMarginsMedium => '中';
+
+  @override
+  String get readerMarginsWide => '広い';
+
+  @override
+  String get readerAlignNormal => '標準';
+
+  @override
+  String get readerAlignJustified => '両端揃え';
+
+  @override
+  String get readerPageTurnHorizontalShort => '横';
+
+  @override
+  String get readerPageTurnVerticalShort => '縦';
+
+  @override
+  String get readerChapterRead => '既読';
 }

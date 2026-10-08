@@ -40,7 +40,9 @@ void main() {
         () => find.text(ReadingFixture.bookTitle).evaluate().isNotEmpty,
         description: 'Library',
       );
-      final context = tester.element(find.byType(FloatingActionButton));
+      final context = tester.element(
+        find.byKey(const ValueKey('libraryHeaderTitle')),
+      );
       final strings = ReadflexLocalizations.of(context)!;
       for (final type in NotificationType.values) {
         showToast(

@@ -61,7 +61,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Add to Library'), findsOneWidget);
       expect(find.byTooltip('Back'), findsNothing);
-      await tester.tap(find.text('Save Article'));
+      await tester.tap(find.text('Article from a link'));
       await tester.pumpAndSettle();
       expect(
         find.widgetWithText(TextField, 'https://example.com/draft'),
@@ -117,7 +117,7 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     for (final systemBack in [false, true]) {
-      await tester.tap(find.text('Upload Book'));
+      await tester.tap(find.text('File from device'));
       await tester.pumpAndSettle();
       expect(find.text('Cancel'), findsNothing);
       expect(find.byTooltip('Back'), findsOneWidget);
@@ -160,8 +160,8 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    await tester.ensureVisible(find.text('Save Article'));
-    await tester.tap(find.text('Save Article'));
+    await tester.ensureVisible(find.text('Article from a link'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     tester.view.viewInsets = const FakeViewPadding(bottom: 240);
@@ -199,7 +199,7 @@ void main() {
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
       final sheet = tester.getRect(find.byType(BottomSheet));
-      await tester.tap(find.text(l10n.importSaveArticle));
+      await tester.tap(find.text(l10n.importArticleFromLink));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
       if (reducedMotion) {
@@ -239,7 +239,7 @@ void main() {
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
     clipboardText = 'https://example.com/pasted';
     final paste = find.byKey(const ValueKey('articleUrlPasteButton'));
@@ -269,8 +269,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Add to Library'), findsOneWidget);
-    expect(find.text('Upload Book'), findsOneWidget);
-    expect(find.byIcon(AppIcons.book), findsOneWidget);
+    expect(find.text('File from device'), findsOneWidget);
+    expect(find.text('Books, comics and PDF'), findsOneWidget);
+    expect(find.text('Article from a link'), findsOneWidget);
+    expect(find.text('Saved for reading offline'), findsOneWidget);
+    // Retired copy: the menu describes outcomes, not formats or actions.
+    expect(find.text('Upload Book'), findsNothing);
+    expect(find.text('Save Article'), findsNothing);
+    expect(find.text('EPUB, FB2, MOBI, PDF, AZW3, CBZ'), findsNothing);
+    expect(find.text('Paste a web URL for offline reading'), findsNothing);
+    expect(find.byIcon(AppIcons.uploadFile), findsOneWidget);
+    expect(find.byIcon(AppIcons.book), findsNothing);
     expect(find.byIcon(AppIcons.link), findsOneWidget);
     expect(find.byIcon(AppIcons.chevronRight), findsNWidgets(2));
     expect(find.byType(AppActionCard), findsNothing);
@@ -284,6 +293,436 @@ void main() {
     final dividerWidget = tester.widget<Divider>(find.byType(Divider));
     expect(dividerWidget.color, isNull, reason: 'use the shared divider theme');
     expect(dividerWidget.thickness, isNull);
+  });
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    for (final brightness in Brightness.values) {
+      final rtl = locale.languageCode == 'ar';
+      testWidgets('menu glyphs sit in 40dp accent tiles on the gutter: '
+          '$locale ${brightness.name}', (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final theme = brightness == Brightness.light
+            ? AppTheme.light()
+            : AppTheme.dark();
+        late ReadflexLocalizations l10n;
+        await tester.pumpWidget(
+          _TestHost(
+            locale: locale,
+            theme: theme,
+            onOpen: (context) {
+              l10n = context.l10n;
+              return showImportFlowSheet(
+                context,
+                onPickBookFile: () async => null,
+                onImportBook: (_, {onProgress}) async => null,
+                onImportArticle: (_, {onStage}) async => null,
+              );
+            },
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        final sheet = tester.getRect(find.byType(BottomSheet));
+        for (final (key, icon, title, subtitle) in [
+          (
+            'book',
+            AppIcons.uploadFile,
+            l10n.importFromDevice,
+            l10n.importFileKinds,
+          ),
+          (
+            'article',
+            AppIcons.link,
+            l10n.importArticleFromLink,
+            l10n.importArticleOffline,
+          ),
+        ]) {
+          final row = tester.getRect(find.byKey(ValueKey('importMenu-$key')));
+          final glyph = find.byIcon(icon);
+          final tileFinder = find
+              .ancestor(of: glyph, matching: find.byType(DecoratedBox))
+              .first;
+          final tile = tester.getRect(tileFinder);
+          final decoration =
+              tester.widget<DecoratedBox>(tileFinder).decoration
+                  as BoxDecoration;
+          final titleRect = tester.getRect(find.text(title));
+          final subtitleRect = tester.getRect(find.text(subtitle));
+
+          expect(tile.size, const Size.square(40), reason: key);
+          expect(
+            decoration.borderRadius,
+            BorderRadius.circular(AppRadius.md),
+          );
+          expect(decoration.color, theme.colorScheme.selectedControlBackground);
+          expect(
+            tester.widget<Icon>(glyph).color,
+            theme.colorScheme.selectedControlForeground,
+          );
+          expect(tester.widget<Icon>(glyph).size, AppIconSize.sm);
+          expect(tester.getCenter(glyph), tile.center);
+          // The tile is the row's leading content: inside the ripple, on the
+          // 24dp gutter, vertically centred, with the labels 12dp after it.
+          expect(row.expandToInclude(tile), row);
+          expect(tile.center.dy, closeTo(row.center.dy, 0.5));
+          if (rtl) {
+            expect(tile.right, sheet.right - AppSpacing.xl);
+            expect(titleRect.right, tile.left - AppSpacing.md);
+            expect(subtitleRect.right, titleRect.right);
+          } else {
+            expect(tile.left, sheet.left + AppSpacing.xl);
+            expect(titleRect.left, tile.right + AppSpacing.md);
+            expect(subtitleRect.left, titleRect.left);
+          }
+          // Step height is unchanged: 24dp padding inside each row.
+          expect(row.height, greaterThanOrEqualTo(88));
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('menu rows keep drill-in semantics and 48dp targets', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      _TestHost(
+        onOpen: (context) => showImportFlowSheet(
+          context,
+          onPickBookFile: () async => null,
+          onImportBook: (_, {onProgress}) async => null,
+          onImportArticle: (_, {onStage}) async => null,
+        ),
+      ),
+    );
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    final semantics = tester.ensureSemantics();
+    try {
+      for (final (key, label, value) in [
+        ('book', 'File from device', 'Books, comics and PDF'),
+        ('article', 'Article from a link', 'Saved for reading offline'),
+      ]) {
+        final row = find.byKey(ValueKey('importMenu-$key'));
+        expect(tester.widget(row), isA<AppDrillInRow>());
+        expect(
+          tester.getSemantics(row),
+          matchesSemantics(
+            label: label,
+            value: value,
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(
+          tester.getSize(row).height,
+          greaterThanOrEqualTo(AppSizes.buttonHeight),
+        );
+      }
+      // The decorative tile adds no node of its own.
+      for (final icon in [AppIcons.uploadFile, AppIcons.link]) {
+        expect(tester.widget<Icon>(find.byIcon(icon)).semanticLabel, isNull);
+      }
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    } finally {
+      semantics.dispose();
+    }
+  });
+
+  for (final action in ['book', 'article']) {
+    testWidgets('$action icon tile forwards taps to its row', (tester) async {
+      var pickerCalls = 0;
+      await tester.pumpWidget(
+        _TestHost(
+          onOpen: (context) => showImportFlowSheet(
+            context,
+            onPickBookFile: () async {
+              pickerCalls++;
+              return null;
+            },
+            onImportBook: (_, {onProgress}) async => null,
+            onImportArticle: (_, {onStage}) async => null,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      // The tile ignores pointers itself; the row beneath takes the tap.
+      await tester.tapAt(
+        tester.getCenter(
+          find.byIcon(action == 'book' ? AppIcons.uploadFile : AppIcons.link),
+        ),
+      );
+      await tester.pumpAndSettle();
+      if (action == 'book') {
+        expect(pickerCalls, 1);
+        expect(find.text('Add to Library'), findsOneWidget);
+      } else {
+        expect(pickerCalls, 0);
+        expect(find.byType(TextField), findsOneWidget);
+        expect(find.text('Save Article'), findsOneWidget);
+      }
+    });
+  }
+
+  group('ImportFlowEntry', () {
+    testWidgets('menu is the default and the explicit entry', (tester) async {
+      for (final explicit in [false, true]) {
+        var pickerCalls = 0;
+        await tester.pumpWidget(
+          _TestHost(
+            key: UniqueKey(),
+            onOpen: (context) => explicit
+                ? showImportFlowSheet(
+                    context,
+                    entry: ImportFlowEntry.menu,
+                    onPickBookFile: () async {
+                      pickerCalls++;
+                      return null;
+                    },
+                    onImportBook: (_, {onProgress}) async => null,
+                    onImportArticle: (_, {onStage}) async => null,
+                  )
+                : showImportFlowSheet(
+                    context,
+                    onPickBookFile: () async {
+                      pickerCalls++;
+                      return null;
+                    },
+                    onImportBook: (_, {onProgress}) async => null,
+                    onImportArticle: (_, {onStage}) async => null,
+                  ),
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Add to Library'), findsOneWidget);
+        expect(find.byKey(const ValueKey('importMenu-book')), findsOneWidget);
+        expect(find.byTooltip('Back'), findsNothing);
+        expect(find.byType(TextField), findsNothing);
+        expect(pickerCalls, 0, reason: 'explicit=$explicit');
+      }
+    });
+
+    testWidgets('file with accepted terms opens the picker over the menu', (
+      tester,
+    ) async {
+      var pickerCalls = 0;
+      var termsChecks = 0;
+      await tester.pumpWidget(
+        _TestHost(
+          onOpen: (context) => showImportFlowSheet(
+            context,
+            entry: ImportFlowEntry.file,
+            isBookImportTermsAccepted: () {
+              termsChecks++;
+              return true;
+            },
+            onPickBookFile: () async {
+              pickerCalls++;
+              return null;
+            },
+            onImportBook: (_, {onProgress}) async => null,
+            onImportArticle: (_, {onStage}) async => null,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+      expect(pickerCalls, 1, reason: 'the picker opens with the sheet');
+      await tester.pumpAndSettle();
+      expect(pickerCalls, 1);
+      expect(termsChecks, 1);
+      // Cancelling the picker leaves the menu, as after a row tap.
+      expect(find.text('Add to Library'), findsOneWidget);
+      expect(find.text('Before uploading'), findsNothing);
+      expect(find.byTooltip('Back'), findsNothing);
+      await tester.tap(find.text('File from device'));
+      await tester.pumpAndSettle();
+      expect(pickerCalls, 2);
+    });
+
+    testWidgets('file with accepted terms imports the picked book', (
+      tester,
+    ) async {
+      final imported = <String>[];
+      ImportFlowResult? result;
+      await tester.pumpWidget(
+        _TestHost(
+          onOpen: (context) async {
+            result = await showImportFlowSheet(
+              context,
+              entry: ImportFlowEntry.file,
+              onPickBookFile: () async => File('/books/entry.epub'),
+              onImportBook: (file, {onProgress}) async {
+                imported.add(file.path);
+                return _fakeBook();
+              },
+              onImportArticle: (_, {onStage}) async => null,
+            );
+          },
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(imported, ['/books/entry.epub']);
+      expect(find.text('Book added!'), findsOneWidget);
+      expect(find.text('entry.epub'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+      await tester.pumpAndSettle();
+      expect(result, ImportFlowResult.bookImported);
+    });
+
+    for (final systemBack in [false, true]) {
+      testWidgets('file without accepted terms opens consent; '
+          'systemBack=$systemBack returns to the menu', (tester) async {
+        var pickerCalls = 0;
+        var accepted = 0;
+        await tester.pumpWidget(
+          _TestHost(
+            onOpen: (context) => showImportFlowSheet(
+              context,
+              entry: ImportFlowEntry.file,
+              isBookImportTermsAccepted: () => false,
+              acceptBookImportTerms: () async {
+                accepted++;
+              },
+              onPickBookFile: () async {
+                pickerCalls++;
+                return null;
+              },
+              onImportBook: (_, {onProgress}) async => null,
+              onImportArticle: (_, {onStage}) async => null,
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pump();
+        // The consent step is the first frame, not a slide from the menu.
+        expect(find.text('Before uploading'), findsOneWidget);
+        expect(find.text('Add to Library'), findsNothing);
+        await tester.pumpAndSettle();
+        expect(find.text('Before uploading'), findsOneWidget);
+        expect(find.byTooltip('Back'), findsOneWidget);
+        expect(pickerCalls, 0);
+
+        if (systemBack) {
+          await tester.binding.handlePopRoute();
+        } else {
+          await tester.tap(find.byTooltip('Back'));
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('Add to Library'), findsOneWidget);
+        expect(find.byType(BottomSheet), findsOneWidget);
+        expect(find.byTooltip('Back'), findsNothing);
+        expect(pickerCalls, 0);
+        expect(accepted, 0);
+
+        // The menu row still reaches consent, and Continue opens the picker.
+        await tester.tap(find.text('File from device'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byType(Checkbox));
+        await tester.pump();
+        await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+        await tester.pumpAndSettle();
+        expect(accepted, 1);
+        expect(pickerCalls, 1);
+      });
+    }
+
+    for (final systemBack in [false, true]) {
+      testWidgets('article opens the URL step; '
+          'systemBack=$systemBack returns to the menu', (tester) async {
+        await tester.pumpWidget(
+          _TestHost(
+            onOpen: (context) => showImportFlowSheet(
+              context,
+              entry: ImportFlowEntry.article,
+              onPickBookFile: () async => null,
+              onImportBook: (_, {onProgress}) async => null,
+              onImportArticle: (_, {onStage}) async => null,
+            ),
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pump();
+        expect(find.byType(TextField), findsOneWidget);
+        expect(find.text('Add to Library'), findsNothing);
+        await tester.pumpAndSettle();
+        expect(find.text('Save Article'), findsOneWidget);
+        expect(find.byTooltip('Back'), findsOneWidget);
+        expect(clipboardReadCount, 0, reason: 'Paste stays explicit');
+        await tester.enterText(
+          find.byType(TextField),
+          'https://example.com/entry',
+        );
+        tester.testTextInput.hide();
+
+        if (systemBack) {
+          await tester.binding.handlePopRoute();
+        } else {
+          await tester.tap(find.byTooltip('Back'));
+        }
+        await tester.pumpAndSettle();
+        expect(find.text('Add to Library'), findsOneWidget);
+        expect(find.byType(BottomSheet), findsOneWidget);
+        expect(find.byType(TextField), findsNothing);
+
+        // Same draft retention as a step opened from the menu row.
+        await tester.tap(find.text('Article from a link'));
+        await tester.pumpAndSettle();
+        expect(
+          find.widgetWithText(TextField, 'https://example.com/entry'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('article entry while offline keeps Save disabled', (
+      tester,
+    ) async {
+      var imports = 0;
+      await tester.pumpWidget(
+        _TestHost(
+          onOpen: (context) => showImportFlowSheet(
+            context,
+            entry: ImportFlowEntry.article,
+            isOffline: true,
+            onPickBookFile: () async => null,
+            onImportBook: (_, {onProgress}) async => null,
+            onImportArticle: (_, {onStage}) async {
+              imports++;
+              return null;
+            },
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text("You're offline"), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'https://example.com/a');
+      await tester.pump();
+      expect(
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Save'))
+            .onPressed,
+        isNull,
+      );
+      expect(imports, 0);
+    });
   });
 
   for (final locale in ReadflexSupportedLocales.locales) {
@@ -315,8 +754,8 @@ void main() {
           );
           await tester.tap(find.text('Open'));
           await tester.pumpAndSettle();
-          await tester.ensureVisible(find.text(l10n.importSaveArticle));
-          await tester.tap(find.text(l10n.importSaveArticle));
+          await tester.ensureVisible(find.text(l10n.importArticleFromLink));
+          await tester.tap(find.text(l10n.importArticleFromLink));
           await tester.pumpAndSettle();
           final field = find.byType(TextField);
           final paste = find.byKey(const ValueKey('articleUrlPasteButton'));
@@ -449,7 +888,7 @@ void main() {
         await tester.tap(find.text('Open'));
         await tester.pumpAndSettle();
         final sheet = tester.getRect(find.byType(BottomSheet));
-        await tester.tap(find.text(l10n.importSaveArticle));
+        await tester.tap(find.text(l10n.importArticleFromLink));
         await tester.pumpAndSettle();
 
         final field = tester.getRect(find.byType(TextField));
@@ -511,7 +950,7 @@ void main() {
         expect(below, inInclusiveRange(0, AppSpacing.xl));
         expect(book.height, greaterThanOrEqualTo(88));
         expect(article.height, greaterThanOrEqualTo(88));
-        await tester.tap(find.text(l10n.importSaveArticle));
+        await tester.tap(find.text(l10n.importArticleFromLink));
         await tester.pumpAndSettle();
         expect(tester.getRect(find.byType(BottomSheet)), sheet);
         await tester.tap(find.byTooltip(l10n.commonBack));
@@ -561,7 +1000,7 @@ void main() {
       expect(tester.getRect(close), closeRect);
       expect(close.hitTestable(), findsOneWidget);
       expect(
-        tester.getCenter(find.byIcon(AppIcons.book)).dx,
+        tester.getCenter(find.byIcon(AppIcons.uploadFile)).dx,
         greaterThan(
           tester.getCenter(find.byIcon(AppIcons.chevronLeft).first).dx,
         ),
@@ -598,16 +1037,65 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
 
+    final theme = AppTheme.light();
     final offlineIcon = tester.widget<Icon>(find.byIcon(AppIcons.offline));
-    expect(offlineIcon.color, AppTheme.light().ext.warning);
+    expect(offlineIcon.color, theme.ext.warning);
     expect(find.byIcon(AppIcons.link), findsNothing);
     expect(find.byIcon(AppIcons.chevronRight), findsOneWidget);
+    // The offline reason replaces the outcome subtitle.
+    expect(find.text('Needs an internet connection'), findsOneWidget);
+    expect(find.text('Saved for reading offline'), findsNothing);
+    expect(find.text('Article from a link'), findsOneWidget);
+    // Same 40dp tile, neutral behind the warning glyph; books stay accented.
+    BoxDecoration tileOf(IconData icon) =>
+        tester
+                .widget<DecoratedBox>(
+                  find
+                      .ancestor(
+                        of: find.byIcon(icon),
+                        matching: find.byType(DecoratedBox),
+                      )
+                      .first,
+                )
+                .decoration
+            as BoxDecoration;
+    final offlineTile = find
+        .ancestor(
+          of: find.byIcon(AppIcons.offline),
+          matching: find.byType(DecoratedBox),
+        )
+        .first;
+    expect(tester.getSize(offlineTile), const Size.square(40));
+    expect(
+      tileOf(AppIcons.offline).color,
+      theme.colorScheme.surfaceContainerHighest,
+    );
+    expect(
+      tileOf(AppIcons.uploadFile).color,
+      theme.colorScheme.selectedControlBackground,
+    );
+    // The disabled row keeps its full width and its offline-only trailing
+    // spacer instead of a chevron.
+    final articleRow = tester.getRect(
+      find.byKey(const ValueKey('importMenu-article')),
+    );
+    expect(
+      articleRow.width,
+      tester.getRect(find.byKey(const ValueKey('importMenu-book'))).width,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('importMenu-article')),
+        matching: find.byIcon(AppIcons.chevronRight),
+      ),
+      findsNothing,
+    );
     final semantics = tester.ensureSemantics();
     try {
       expect(
         tester.getSemantics(find.byKey(const ValueKey('importMenu-article'))),
         matchesSemantics(
-          label: 'Save Article',
+          label: 'Article from a link',
           value: 'Needs an internet connection',
           isButton: true,
           hasEnabledState: true,
@@ -618,7 +1106,9 @@ void main() {
       semantics.dispose();
     }
 
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(tester.getCenter(find.byIcon(AppIcons.offline)));
     await tester.pumpAndSettle();
 
     expect(find.text('Add to Library'), findsOneWidget);
@@ -627,7 +1117,7 @@ void main() {
       findsNothing,
     );
     expect(articleImportCalls, 0);
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pumpAndSettle();
     expect(pickerCalls, 1);
     expect(find.text('Add to Library'), findsOneWidget);
@@ -657,6 +1147,7 @@ void main() {
 
     expect(find.byIcon(AppIcons.offline), findsOneWidget);
     expect(find.byIcon(AppIcons.link), findsNothing);
+    expect(find.text('Needs an internet connection'), findsOneWidget);
 
     isOfflineController.add(false);
     await tester.pump();
@@ -664,8 +1155,10 @@ void main() {
 
     expect(find.byIcon(AppIcons.link), findsOneWidget);
     expect(find.byIcon(AppIcons.offline), findsNothing);
+    expect(find.text('Saved for reading offline'), findsOneWidget);
+    expect(find.text('Needs an internet connection'), findsNothing);
 
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
 
     expect(
@@ -696,7 +1189,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
 
     final fieldBefore = tester.getRect(find.byType(TextField));
@@ -752,7 +1245,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
 
     final saveButtonFinder = find.widgetWithText(FilledButton, 'Save');
@@ -821,15 +1314,18 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pump();
 
     expect(find.byType(FractionalTranslation), findsWidgets);
     expect(find.text('Add to Library'), findsOneWidget);
-    expect(find.text('Save Article'), findsWidgets);
+    expect(find.text('Article from a link'), findsOneWidget);
+    // The URL step keeps its own title while the menu slides out.
+    expect(find.text('Save Article'), findsOneWidget);
 
     await tester.pumpAndSettle();
     expect(find.text('Add to Library'), findsNothing);
+    expect(find.text('Article from a link'), findsNothing);
     expect(find.text('Save Article'), findsOneWidget);
   });
 
@@ -847,7 +1343,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
 
     expect(
@@ -876,7 +1372,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
 
     final pasteButtonFinder = find.byIcon(AppIcons.paste);
@@ -920,7 +1416,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
 
     expect(clipboardReadCount, 0);
@@ -975,7 +1471,7 @@ void main() {
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'example.com/article');
     await tester.pump();
@@ -1018,7 +1514,7 @@ void main() {
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
     expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -1065,7 +1561,7 @@ void main() {
       );
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Upload Book'));
+      await tester.tap(find.text('File from device'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       final iconBefore = tester.getRect(
@@ -1197,7 +1693,7 @@ void main() {
       clipboard.complete({'text': 'example.com/stale'});
       await tester.pumpAndSettle();
       expect(find.byType(TextField), findsNothing);
-      await tester.tap(find.text('Save Article'));
+      await tester.tap(find.text('Article from a link'));
       await tester.pumpAndSettle();
       expect(
         tester.widget<TextField>(find.byType(TextField)).controller!.text,
@@ -1240,7 +1736,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'https://example.com/a');
     await tester.pump();
@@ -1294,7 +1790,7 @@ void main() {
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'https://example.com/a');
     await tester.pump();
@@ -1345,7 +1841,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'https://example.com/a');
     await tester.pump();
@@ -1378,7 +1874,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
@@ -1423,7 +1919,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pumpAndSettle();
 
     expect(find.text('Before uploading'), findsOneWidget);
@@ -1494,7 +1990,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pumpAndSettle();
 
     expect(pickerCalls, 1);
@@ -1521,7 +2017,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pumpAndSettle();
 
     expect(find.text('Book added!'), findsOneWidget);
@@ -1547,7 +2043,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
@@ -1603,7 +2099,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pumpAndSettle();
 
     expect(find.text('Comic added!'), findsOneWidget);
@@ -1629,7 +2125,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pumpAndSettle();
 
     expect(find.text('Failed to import the book'), findsOneWidget);
@@ -1662,7 +2158,7 @@ void main() {
 
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pump();
 
     expect(find.text('Adding book'), findsOneWidget);
@@ -1698,7 +2194,7 @@ void main() {
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.text('Article from a link'));
     await tester.pumpAndSettle();
     final paste = find.byKey(const ValueKey('articleUrlPasteButton'));
     expect(tester.widget(paste), isA<AppPlainIconButton>());
@@ -1753,7 +2249,7 @@ void main() {
       await tester.pumpAndSettle();
       final menuSheet = tester.getRect(find.byType(BottomSheet));
 
-      await tester.tap(find.text('Upload Book'));
+      await tester.tap(find.text('File from device'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
       reportProgress?.call(0.45);
@@ -1829,7 +2325,7 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     final menuSheet = tester.getRect(find.byType(BottomSheet));
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
@@ -1875,7 +2371,7 @@ void main() {
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Upload Book'));
+    await tester.tap(find.text('File from device'));
     await tester.pump();
     imported.complete(_fakeBook());
     await tester.pumpAndSettle();
@@ -2049,7 +2545,7 @@ void main() {
       );
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.importUploadBook));
+      await tester.tap(find.text(l10n.importFromDevice));
       await tester.pumpAndSettle();
 
       final sheet = tester.getRect(find.byType(BottomSheet));
@@ -2117,7 +2613,7 @@ void main() {
       );
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.importSaveArticle));
+      await tester.tap(find.text(l10n.importArticleFromLink));
       await tester.pumpAndSettle();
       final semantics = tester.ensureSemantics();
       try {
@@ -2223,7 +2719,7 @@ Future<void> _openArticleForm(WidgetTester tester) async {
   );
   await tester.tap(find.text('Open'));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Save Article'));
+  await tester.tap(find.text('Article from a link'));
   await tester.pumpAndSettle();
 }
 
@@ -2246,15 +2742,18 @@ Article _fakeArticle({String title = 'Article'}) => Article(
 class _TestHost extends StatefulWidget {
   const _TestHost({
     required this.onOpen,
+    super.key,
     this.textScaler = TextScaler.noScaling,
     this.locale = const Locale('en'),
     this.reducedMotion = false,
+    this.theme,
   });
 
   final Future<void> Function(BuildContext context) onOpen;
   final TextScaler textScaler;
   final Locale locale;
   final bool reducedMotion;
+  final ThemeData? theme;
 
   @override
   State<_TestHost> createState() => _TestHostState();
@@ -2264,7 +2763,7 @@ class _TestHostState extends State<_TestHost> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: AppTheme.light(),
+      theme: widget.theme ?? AppTheme.light(),
       locale: widget.locale,
       supportedLocales: ReadflexSupportedLocales.locales,
       localizationsDelegates: ReadflexLocalizations.localizationsDelegates,

@@ -96,13 +96,31 @@ both steps' height; the picker scrolls only when its samples need more space.
 Selection applies immediately through `ReaderAppearanceCubit` and stays in the
 picker. Back returns to Appearance; Close or a scrim tap dismisses the whole
 flow. The hidden step cannot receive input, focus or accessibility actions.
-Font samples are localized and use their actual bundled typefaces. Page turn
-remains the existing row with horizontal/vertical icon choices (books only).
-Labels wrap/reflow without scaling down; all numeric stepper targets are at
-least 48dp. Large text uses a tooltip-labeled Reset icon and stacks setting
-label/control pairs. Numeric value areas grow with text scale. Controls keep
+Font samples are localized and use their actual bundled typefaces.
+Font size steps between a small and a large Literata "A" (14/22sp, following
+text scale until the large one fills its 48dp target); the percentage between
+them is a muted caption, accented while the source overrides it, and tapping
+it resets that override. Line spacing and Page margins are icon-only presets
+(`reader_layout_presets.dart`) drawn by `ReaderLineSpacingGlyph` and
+`ReaderMarginsGlyph`: Compact 1.4 / Normal 1.6 / Relaxed 1.8 line height and
+Narrow 4 / Medium 8 / Wide 12% side margin, where Normal and Medium are the
+defaults. A stored value between presets shows the nearest one (a midpoint
+shows the default) and is not rewritten; tapping a preset, including the one
+shown as nearest, commits its exact value through the existing preview/commit
+calls. The glyph segments are icon-only `AppChoiceControl`s with
+`AppChoiceOption.glyph` and `reselectable`, so tapping the preset shown as the
+nearest match applies its exact value. Alignment offers labeled Normal (start)
+and Justified choices; a legacy stored `end` reads back as start. Page turn (books only)
+offers labeled Horizontal and Vertical paging. The three compact controls
+share one width that grows with text scale and trail their label, moving below
+it for large text in a narrow sheet. The labeled choices always span the
+gutters below their label (16dp above the label, 8dp to the control), where
+`AppChoiceControl` reflows long translations instead of truncating them. Large
+text uses a tooltip-labeled Reset icon. Controls keep
 their narrow `context.select` subscriptions and existing preview/commit/reset
 callbacks; scrolling the sheet does not recreate the reading WebView.
+`test/reader_appearance_layout_test.dart` checks gutters in LTR/RTL, en/ru/de
+fit and 2x text at 320dp with the bundled faces.
 Root goldens cover portrait, landscape, 2x text and RTL, including access to
 the final page-turn control and font sample. Native reader flows check equal
 step heights, manual return, DOM style updates,
@@ -137,12 +155,23 @@ list caches that projection until its inputs change; reading-position updates
 do not refilter it. Quotes/notes expand in place without re-extracting content.
 Text and image rows share one interaction: tap the entry to navigate by its
 stored anchor. Neither has standalone copy/arrow buttons or a reserved action
-footer. Text rows keep the colored quote rule, optional note and location;
-text copying remains available in the reader's selection menu. A missing
-anchor disables navigation, not reading or expansion. Text rows retain
-document direction, and row semantics announce the navigation action.
-The quote rule/padding follows the document direction as one block; note text
-uses its own bidi direction, independent of the UI and book. Legacy page-only
+footer. A text row paints its highlight colour under the quote itself
+(`ReaderHighlightQuoteText`: a `TextSpan` background that wraps line by line,
+no start rule), then the note on its own row behind a 16dp pencil mark in
+`bodySmall` (`ReaderHighlightNoteRow`), then a footer with the location at the
+start and Read more / Show less at the end of the same row
+(`ReaderHighlightFooter`). The fill is the reader theme's highlight colour at
+the page's own highlight opacity, premixed over the drawer surface
+(`readerHighlightQuoteBackground`); because reader and app themes are chosen
+independently, it fades toward the surface until the quote keeps 4.5:1 (a
+dark theme's deep yellow on a light drawer is lightened, not dropped), and
+results are memoized per colour pair. Text copying remains available in the
+reader's selection menu. A missing anchor disables navigation, not reading or
+expansion. Text rows retain document direction, and row semantics announce the
+navigation action. The quote follows the document direction; the note row
+(mark and text) follows the note's own bidi direction, independent of the UI
+and book; the footer follows the app locale, with the location aligned to the
+app's leading edge while keeping the book's base direction. Legacy page-only
 labels are localized in presentation; filtering accepts both the displayed
 page label and the legacy English term. Locale changes invalidate the filtered
 projection, while unrelated reading-position updates do not.
@@ -158,8 +187,10 @@ note, a different outcome from Close. Close/system Back protect dirty text
 through the Keep editing/Discard confirmation; scrim/drag dismissal is
 disabled. Confirmation retains the draft field and its geometry.
 
-Image-area rows instead show a cropped preview, the localized page number as
-their primary line, and an optional expandable note. Comic "chapter titles"
+Image-area rows instead show a cropped preview on the gutter, the localized
+page number as their primary line with the same highlight fill under it, and
+an optional expandable note row (pencil mark, `bodySmall`, three lines) whose
+Read more sits at the end of its own footer row. Comic "chapter titles"
 are archive file names, so they are never surfaced: the bottom chrome header
 shows only the page counter for CBZ, image-area selections are saved without a
 chapter title, comic bookmarks store none, and image rows ignore any stored
@@ -175,7 +206,18 @@ switches, independently of the shorter-lived thumbnail cache.
 Titles/notes use their own text direction; page labels and row layout follow
 the app locale, so Latin filenames/notes remain readable in an RTL interface.
 Chapter rows indent with `EdgeInsetsDirectional` (app locale) while the chapter
-text keeps the book direction; active chapter, active search result and
+text keeps the book direction. After the indent every row reserves the same
+16dp mark slot plus 8dp, centred on the title's first line, so titles of one
+level align: chapters before the active one are read (muted title, 16dp check,
+semantics value `readerChapterRead`), the active chapter shows a dot in the
+selected foreground, later chapters and the parts containing the active
+chapter stay plain (`readerTocReadingStates`, cached per items/active index).
+Each row ends on the 16dp gutter with its start position as a muted
+`bodySmall` label in tabular figures, baseline-aligned with the title: the
+estimated start page (announced as "Page N"; the renderer's page 0 reads 1),
+else the whole start percent, else nothing. On the active row the label takes
+the selected foreground, since the dark selected fill is tonal. Active chapter,
+active search result and
 bookmark rows share the plain `ListTile(selected:)` fill, drawn edge to edge
 with an explicit rectangular shape: the app-wide 16dp tile radius is for inset
 rows and must not bleed into full-bleed panel rows. The highlight color
@@ -183,12 +225,25 @@ filter strip starts on the 16dp gutter like the search field above it, with
 8dp above and below its 48dp targets; its "All" entry is an `AppFilterChip`
 with a visible selected state and the swatches beside it paint 32dp circles
 (`ReaderHighlightColorButton(size:)`), while the selection popups keep 24dp.
-Highlight rows own their leading 16dp gutter inside the body so Read more /
-Show less (`ReaderHighlightExpandButton`, `AppButtonLabel`) starts its label on
-the gutter with the themed 16dp button padding and lets the ink extend past
-it; quote, note and location text keep their 16dp edge.
-Empty tabs render `EmptyState(compact: true)`. The drawer slides in from the
-leading edge of the app locale.
+Highlight rows own both 16dp gutters inside the body so Read more / Show less
+(`ReaderHighlightExpandButton`, `AppButtonLabel`) ends its label on the
+trailing gutter with the themed 16dp button padding and lets the ink and 48dp
+target extend to the drawer edge; quote, note and location text keep their 16dp
+edges. Beside a location the button is bounded to half the row, so a long or
+2x label wraps inside it instead of overflowing.
+Empty tabs render `EmptyState(compact: true)`, scrollable when a short sheet
+leaves it less room than it needs.
+
+Contents is an `AppInlineSheet` (component_library) in the reader's stack, not
+a route. It opens at 60% of the height below the status bar, so the title, tabs
+and search field land mid-screen and the current chapter is under the thumb;
+the page stays visible, dimmed, above it. Dragging the header or scrolling a
+list forward grows it to just below the status bar; a downward fling, pulling a
+list past its top, the scrim, Close and System Back step it down or close it.
+Landscape phones and large text open it at full. Hidden, it stays mounted
+offstage, so each tab's search text and scroll offset survive; opening reveals
+the active chapter in the list only (`ScrollPosition.ensureVisible`), never by
+scrolling the sheet itself.
 
 Deleting a bookmark persists immediately and atomically replaces its row with
 an Undo state. Undo restores the original ID, date and complete anchor. It is
@@ -196,11 +251,22 @@ available per row until Contents closes, not on an expiring toast. Multiple
 deletions can be restored independently; errors retain a retryable row. Delete,
 restore, normal bookmark toggles and dismissal share the existing serialized
 bookmark event bucket. Closing during deletion clears Undo after that write.
-The trailing trash changes to `AppIcons.undo`, never a text button or refresh
-icon. Both use the same 48dp target and 20dp glyph in every locale/text scale,
-with a localized tooltip/accessibility name. No label measurement is needed,
-and adjacent rows stay in place. Only the row whose write is in flight
-disables its own action; the serialized event bucket orders the rest.
+Bookmark rows show only their text (`bodyMedium`, two lines) and location
+(`bodySmall`, muted) on the 16dp gutters, with no leading icon or trailing
+button. Deleting is an end-to-start swipe (`ReaderSwipeToDelete`, a
+`Dismissible` like the Library list) that reveals a full-bleed error fill with
+the trash glyph on the trailing gutter and the localized "Delete bookmark"
+before it; because a swipe is unreachable with a screen reader, every row also
+carries the same delete as a `CustomSemanticsAction`. A completed swipe
+dispatches the existing `ReaderBookmarkDeleted` and springs back; the Undo row
+then replaces it in place, while a failed or queued write leaves an ordinary
+row (with its retryable error). Swipe keys are the bookmark id. Only the
+removed row has a trailing control, its `AppIcons.undo` button: 48dp target,
+20dp glyph on the gutter, localized tooltip. Only the row whose write is in
+flight disables its own action; the serialized event bucket orders the rest.
+Inside the Contents `TabBarView` a horizontal drag that starts on a bookmark
+row belongs to the row, so tab paging works from the tab bar or outside the
+rows.
 Oversized Contents tab labels scroll horizontally rather than overlapping;
 the scrolling bar is inset 8dp so the first glyph lands on the 16dp gutter.
 
@@ -250,8 +316,10 @@ benchmark under `benchmarks/` measures 1k/5k/20k-result workloads separately fro
 device frame performance. Continuous streams still publish cumulative snapshots,
 so the burst benchmark is not a claim of constant work for every stream shape.
 
-Search keeps its full-height side-sliding panel with the input above the lazy
-results list. The list avoids the keyboard. Closing the panel preserves the
+Search is the same inline sheet, with the input above the lazy results list.
+While typing, the sheet sits on the keyboard, so the field and recent queries
+stay near the thumb; after a search it rests at 60% over the page. Closing the
+sheet preserves the
 query, result snapshot, list offset and in-progress search; reopening a populated
 query neither focuses the input nor repeats the document scan.
 Search failures render the shared `ErrorState` with a filled Retry for the same
@@ -278,32 +346,37 @@ route pop only when nothing is layered over the page. Appearance and note
 sheets are modal routes and are popped by the navigator before the reader is
 consulted. Reopening the panel during match navigation scrolls the active
 result into view (an off-screen builder tile is approached in up to three
-extrapolated passes before `Scrollable.ensureVisible` aligns it); the field
+extrapolated passes before the list's own `ScrollPosition.ensureVisible`
+aligns it, leaving the sheet where it is); the field
 uses `TextInputAction.search`. Widget tests cover keyboard/large-text layouts and preserved
 state; native tests exercise navigation and return in the actual renderer.
 Navigation buttons are unfilled with 48dp tap targets. Widget and golden tests
 cover icon/text spacing, both themes, RTL and large text, including held presses.
 Search content uses a 16 logical-pixel horizontal inset inside the safe area:
 the header, field, recent queries, result count and excerpts share this inset.
-Close and history-removal buttons are `AppPlainIconButton`s with the default
-20dp glyph on the same trailing axis, with glyph edges aligned to the field. Their 48dp targets extend into the
-gutter (`readerDrawerActionEndPadding`) and stay inside the safe area,
-including RTL. The history delete glyph is `onSurfaceVariant` like the other
-inline row deletes. Result and history lists pad their bottom with
+Close is an `AppPlainIconButton` with the default 20dp glyph, its edge aligned
+to the field. Its 48dp target extends into the gutter
+(`readerDrawerActionEndPadding`) and stays inside the safe area, including
+RTL. Recent queries keep their leading clock (it separates history from
+results) and have no trailing control: removal is the same end-to-start swipe
+and custom semantics action as bookmark rows (`ReaderSwipeToDelete`, labelled
+"Remove from history"), and the row collapses with `AppMotion.short` (removed
+without resizing under reduced motion). Result and history lists pad their bottom with
 `readerDrawerListBottomPadding` (keyboard + system inset + 16dp), the same
-formula as the Contents drawer lists; the panel itself adds no keyboard inset.
+formula as the Contents lists; inside the sheet the keyboard inset reads as
+zero because the sheet itself sits on the keyboard.
 The bottom match-navigation bar's Close target extends into the trailing
 gutter so its glyph ends on the 16dp line shared with the return row's
 percentage.
-History removal uses the shared trash icon; Close and field clearing keep the
+The swipe fill uses the shared trash icon; Close and field clearing keep the
 cross. Removing a history entry does not run a search or close the panel.
 Geometry tests and search goldens cover narrow/wide layouts, large text, RTL,
 long queries and asymmetric landscape safe-area padding.
 Icon controls are `AppPlainIconButton`s with circular feedback. The query and
 return actions are themed `TextButton`s (padding only), so press feedback is
 the theme's overlay rather than a custom opacity or splash override.
-The panel slides in from the leading edge of the app locale
-(`readerSidePanelHiddenOffset`), like the Contents drawer.
+Both sheets rise from the bottom in every locale and mirror only their
+content in RTL.
 
 `ReaderBloc.reportError(e, st)` is a public facade over the protected
 `addError()` so widgets (e.g. the context panel) can route non-fatal errors
@@ -313,36 +386,77 @@ Bookmark edits are serialized independently of page-position events. A completed
 write updates the saved list but changes the current-page badge only if the
 position has not changed meanwhile. Bookmark revisions also prevent an older
 source-load snapshot from overwriting edits made while it was pending.
-Bookmark rows use the shared trash icon for deletion and retain the existing
-in-place icon-only Undo action; the cross in the header only closes the drawer.
-All three glyphs are the default 20dp, aligned to the Contents field's 16dp
-gutter with full 48dp targets (`readerDrawerActionEndPadding` in
-`reader_drawer_layout.dart`, defined from `AppSizes.iconActionOutset`). Geometry tests compare the visible icon boxes, not only button
-bounds; native flows also exercise deletion and Undo.
-The reader's bottom toolbar is built from `AppPlainIconButton` (48dp targets,
-circular pressed feedback), including its custom filled/outline bookmark glyph
-passed as `iconWidget`. Page-turn and active-bookmark glyphs, the page-bookmark
-indicator and the Contents tab indicator use `context.actionForeground`; only
-the filled progress slider keeps `colors.primary`. The article title in the top
-chrome is an ink button with button semantics and a 48dp-high target.
+Bookmark rows delete by swipe (trash glyph in the swipe fill) and retain the
+existing in-place icon-only Undo action; the cross in the header only closes
+the drawer. Undo and Close glyphs are the default 20dp, aligned to the
+Contents field's 16dp gutter with full 48dp targets
+(`readerDrawerActionEndPadding` in `reader_drawer_layout.dart`, defined from
+`AppSizes.iconActionOutset`). Geometry tests compare the visible icon boxes,
+not only button bounds; native flows also exercise deletion and Undo.
+The bottom chrome is a floating capsule with a progress row above it. The
+capsule is 60dp tall (stadium radius 30), 16dp from the screen edges and
+`appBottomSafeInset` (minimum 16dp) above the bottom, capped at 560dp wide on
+wide screens. It is the shared `AppFloatingCapsule`, like the Library's
+bottom capsule: the chrome surface (`colors.surface`, the colour of the
+brightness pill and context popups) at 92% with a hairline `outlineVariant`
+border and `AppShadows.popover`. It holds equal slots, each centring a 48dp
+`AppPlainIconButton` with circular feedback: Back, Contents, Appearance ("Aa"),
+Bookmark (custom filled/outline glyph passed as `iconWidget`) and Search; Row
+order mirrors in RTL. The page-turn toggle is not in the capsule for books or
+articles (the setting lives in Appearance). Comics have no Appearance action,
+so their capsule keeps the page-turn toggle as their only route to that
+setting. Page-turn and active-bookmark glyphs, the page-bookmark indicator and
+the Contents tab indicator use `context.actionForeground`.
+
+The progress row sits 8dp above the capsule, 28dp from the screen edges (the
+16dp gutter plus 12dp, inside the capsule's rounded ends), and follows the
+book's page progression like the slider itself. The scrubbing `Slider` (3dp
+track, 12dp thumb, 48dp-tall hit area) spans the whole row right above the
+capsule, under the thumb, with the same local drag preview and a single
+`goToFraction` on release; only this row rebuilds while dragging. The labels
+read on one line under it, inset by the slider's overlay radius
+(`readerProgressTrackInset`, 14dp) so they start and end with the track: at
+the start the current chapter title for books,
+for articles `readingTimeLeft` (minutes left in the whole article) or the
+chapter title when there is no estimate; comics show neither a time nor their
+archive file names. At the end is the percent/page label: short and numeric
+in every locale, it keeps its natural width, bounded only by the row, so its
+digits never truncate (`reader_chrome_progress_layout.dart`); the chapter
+takes the rest on one line and truncates first. Above 130% text each
+label takes its own line, the chapter up to two lines and the page label
+end-aligned below it, so the slider never shares its line.
+Text and slider use `readerChromeInkColor` (78% of the page text over the page,
+at least 4.5:1 on every reader theme) because they sit on the page, over a
+page-coloured band that fades in above the row so scrolled text never runs
+behind them. That band passes taps through to the page, which hides chrome.
+
+The top chrome is one centred `readerChromeLabel` line in the same ink, with
+no plate, shadow or divider: `chapter · title` once a chapter title is known,
+otherwise the title, ellipsized. It keeps the top safe-area inset and a 48dp
+line; for articles the line is an ink button with button semantics, the title
+as its value and a 48dp-high target that opens the original URL.
 Changing chrome visibility must not resize or recreate the WebView; the root
 search-overlay regression verifies both contracts under iOS/Android policies.
-Status-bar icon brightness follows the surface under the status bar: the app
-chrome while the toolbar or a full-height panel (Contents, Search) is shown,
-otherwise the page colour; the appearance sheet only scrims the page and keeps
-the page-derived brightness (`readerSystemUiOverlayStyle(panelVisible:)`).
+Status-bar icon brightness follows the page colour: the top line is drawn on
+the page, and the Appearance, Contents and Search sheets stop below the status
+bar and only scrim it (`readerSystemUiOverlayStyle`).
 Active bookmark/Undo icons and the tab indicator use the accessible action
 foreground. Active search results use the same selected color pair as Contents
 and settings controls; text and emphasized matches remain readable on that fill.
 The brightness pill beside the page uses `PositionedDirectional(end:)`, so it
 sits 16dp from the trailing edge (like the page-bookmark indicator and every
-other reader edge) and slides toward it in RTL. The top chrome shares the
-bottom bar's 16dp content gutter. The transient CBZ page pill sits
+other reader edge) and slides toward it in RTL. The top line shares the
+capsule's 16dp content gutter. The transient CBZ page pill sits
 `appBottomSafeInset` (minimum 16dp) plus 12dp above the bottom edge. Its step buttons are
 `AppPlainIconButton`s; the value button is a 48dp selected control
 (`selectedControlBackground/Foreground` while a custom level is active) whose
 "System" label comes from `readerBrightnessSystem`.
 Brightness diagnostic formatting/logging runs only in debug builds.
+
+`ReaderBookPositionUpdated.fromBookPosition` maps both WebViews' positions,
+including the article's `minutesLeft` (`BookPosition.minutesLeft`; books send
+none), which the bloc keeps as live state like the page metrics. It is never
+persisted.
 
 Position persistence keeps the 500ms trailing debounce and serializes writes,
 including the first immediate article position. Repository partial updates
@@ -388,7 +502,7 @@ load cannot erase a renderer failure.
   anchors in `content.html`, expose contents/search/bookmark chrome actions,
   and render text highlights through stable article anchors. Image-area
   selection remains specific to the foliate comic/fixed-layout path.
-- Every reader motion (chrome/drawer/search slides, brightness pill, loading
+- Every reader motion (chrome slides, Contents/Search sheets, brightness pill, loading
   scrim, dimming tween, swatch rings, page overlay) resolves its duration
   through `context.motion(AppMotion.x)`, so reduced motion settles in one
   frame; the appearance step and tap-zone hint controllers jump instead.

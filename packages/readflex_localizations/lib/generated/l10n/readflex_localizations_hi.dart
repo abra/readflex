@@ -196,22 +196,10 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get libraryResetFilters => 'फ़िल्टर रीसेट करें';
 
   @override
-  String get libraryClearCollectionFilter => 'संग्रह फ़िल्टर हटाएँ';
-
-  @override
   String get commonCopied => 'कॉपी किया गया';
 
   @override
   String get commonCopyFailed => 'कॉपी नहीं हो सका';
-
-  @override
-  String get appSkip => 'छोड़ें';
-
-  @override
-  String get appNext => 'आगे';
-
-  @override
-  String get appGetStarted => 'शुरू करें';
 
   @override
   String get appInitializationFailed => 'आरंभ करने में विफल';
@@ -242,9 +230,6 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   @override
   String get onboardingHighlightSaveDescription =>
       'हाइलाइट बनाने के लिए टेक्स्ट चुनें। बेहतर समझ के लिए नोट जोड़ें।';
-
-  @override
-  String get onboardingOrganizeLibraryTitle => 'अपनी लाइब्रेरी व्यवस्थित करें';
 
   @override
   String get onboardingOrganizeLibraryDescription =>
@@ -307,19 +292,16 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get librarySearchHint => 'लाइब्रेरी खोजें...';
 
   @override
-  String get libraryFilterAll => 'सभी';
+  String get libraryScopeBooks => 'किताबें';
 
   @override
-  String get libraryFilterBooks => 'किताबें';
+  String get libraryScopeArticles => 'लेख';
 
   @override
-  String get libraryFilterArticles => 'लेख';
+  String get libraryScopeComics => 'कॉमिक्स';
 
   @override
-  String get libraryFilterComics => 'कॉमिक्स';
-
-  @override
-  String get libraryFilterNew => 'नया';
+  String get libraryScopeNew => 'नया';
 
   @override
   String get libraryDisplayOptions => 'डिस्प्ले विकल्प';
@@ -446,9 +428,6 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get libraryFavourites => 'पसंदीदा';
-
-  @override
-  String get libraryFavouritesBadge => 'पसंदीदा';
 
   @override
   String libraryCreateCollectionPrompt(int count) {
@@ -600,17 +579,7 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get importAddToLibraryTitle => 'लाइब्रेरी में जोड़ें';
 
   @override
-  String get importUploadBook => 'किताब अपलोड करें';
-
-  @override
-  String get importUploadBookFormats => 'EPUB, FB2, MOBI, PDF, AZW3, CBZ';
-
-  @override
   String get importSaveArticle => 'लेख सहेजें';
-
-  @override
-  String get importSaveArticleDescription =>
-      'ऑफलाइन पढ़ने के लिए वेब URL पेस्ट करें';
 
   @override
   String get importBeforeUploadingTitle => 'अपलोड करने से पहले';
@@ -908,21 +877,6 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get readerPageTurn => 'पेज पलटना';
 
   @override
-  String get readerAlignStart => 'शुरुआत पर अलाइन करें';
-
-  @override
-  String get readerJustifyText => 'टेक्स्ट जस्टिफाई करें';
-
-  @override
-  String get readerAlignEnd => 'अंत पर अलाइन करें';
-
-  @override
-  String get readerHorizontalPageTurn => 'क्षैतिज पेज पलटना';
-
-  @override
-  String get readerVerticalPageTurn => 'लंबवत पेज पलटना';
-
-  @override
   String get readerResetTextSize => 'टेक्स्ट आकार रीसेट करें';
 
   @override
@@ -933,24 +887,6 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get readerIncreaseTextSize => 'टेक्स्ट बढ़ाएं';
-
-  @override
-  String get readerResetLineSpacing => 'लाइन स्पेसिंग रीसेट करें';
-
-  @override
-  String get readerDecreaseLineSpacing => 'लाइन स्पेसिंग घटाएं';
-
-  @override
-  String get readerIncreaseLineSpacing => 'लाइन स्पेसिंग बढ़ाएं';
-
-  @override
-  String get readerResetPageMargins => 'मार्जिन रीसेट करें';
-
-  @override
-  String get readerDecreasePageMargins => 'मार्जिन घटाएं';
-
-  @override
-  String get readerIncreasePageMargins => 'मार्जिन बढ़ाएं';
 
   @override
   String get readerThemeSnow => 'स्नो';
@@ -1092,4 +1028,77 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get importArticleOfflineSubtitle => 'इंटरनेट कनेक्शन आवश्यक है';
+
+  @override
+  String get libraryContinueReading => 'पढ़ना जारी रखें';
+
+  @override
+  String readingTimeLeftMinutes(int count) {
+    return '$count मिनट शेष';
+  }
+
+  @override
+  String readingTimeLeftHours(int hours, int minutes) {
+    return '$hours घं $minutes मि शेष';
+  }
+
+  @override
+  String get libraryUploadFile => 'फ़ाइल अपलोड करें';
+
+  @override
+  String get librarySaveArticleAction => 'लेख सहेजें';
+
+  @override
+  String get importFileKinds => 'किताबें, कॉमिक्स और PDF';
+
+  @override
+  String get importFromDevice => 'डिवाइस से फ़ाइल';
+
+  @override
+  String get importArticleFromLink => 'लिंक से लेख';
+
+  @override
+  String get importArticleOffline => 'ऑफ़लाइन पढ़ने के लिए सहेजा जाता है';
+
+  @override
+  String get libraryChooseCollection => 'कलेक्शन चुनें';
+
+  @override
+  String get onboardingAddBook => 'किताब जोड़ें';
+
+  @override
+  String get onboardingNotNow => 'अभी नहीं';
+
+  @override
+  String get readerLineSpacingCompact => 'सघन';
+
+  @override
+  String get readerLineSpacingNormal => 'सामान्य';
+
+  @override
+  String get readerLineSpacingRelaxed => 'खुला';
+
+  @override
+  String get readerMarginsNarrow => 'संकरा';
+
+  @override
+  String get readerMarginsMedium => 'मध्यम';
+
+  @override
+  String get readerMarginsWide => 'चौड़ा';
+
+  @override
+  String get readerAlignNormal => 'सामान्य';
+
+  @override
+  String get readerAlignJustified => 'दोनों ओर संरेखित';
+
+  @override
+  String get readerPageTurnHorizontalShort => 'क्षैतिज';
+
+  @override
+  String get readerPageTurnVerticalShort => 'लंबवत';
+
+  @override
+  String get readerChapterRead => 'पढ़ा गया';
 }

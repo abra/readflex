@@ -76,6 +76,7 @@ class ReaderState extends Equatable {
     this.sizeTotal,
     this.atStart = false,
     this.atEnd = false,
+    this.minutesLeft,
     this.currentPageBookmarked = false,
     this.currentPageBookmarkCfi,
     this.currentPageBookmarkId,
@@ -117,6 +118,11 @@ class ReaderState extends Equatable {
   final bool atStart;
   final bool atEnd;
 
+  /// Estimated minutes left in the whole article (null for books, whose
+  /// progress row names the chapter). Live like the page metrics above,
+  /// never persisted.
+  final double? minutesLeft;
+
   /// True when foliate-js reports that the visible page is already bookmarked.
   final bool currentPageBookmarked;
   final String? currentPageBookmarkCfi;
@@ -148,6 +154,7 @@ class ReaderState extends Equatable {
     Object? sizeTotal = _absent,
     bool? atStart,
     bool? atEnd,
+    Object? minutesLeft = _absent,
     bool? currentPageBookmarked,
     Object? currentPageBookmarkCfi = _absent,
     Object? currentPageBookmarkId = _absent,
@@ -185,6 +192,9 @@ class ReaderState extends Equatable {
     sizeTotal: sizeTotal == _absent ? this.sizeTotal : sizeTotal as int?,
     atStart: atStart ?? this.atStart,
     atEnd: atEnd ?? this.atEnd,
+    minutesLeft: minutesLeft == _absent
+        ? this.minutesLeft
+        : minutesLeft as double?,
     currentPageBookmarked: currentPageBookmarked ?? this.currentPageBookmarked,
     currentPageBookmarkCfi: currentPageBookmarkCfi == _absent
         ? this.currentPageBookmarkCfi
@@ -217,6 +227,7 @@ class ReaderState extends Equatable {
     sizeTotal,
     atStart,
     atEnd,
+    minutesLeft,
     currentPageBookmarked,
     currentPageBookmarkCfi,
     currentPageBookmarkId,

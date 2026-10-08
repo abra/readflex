@@ -6,9 +6,10 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_directional_layout.dart';
 import 'reader_drawer_layout.dart';
-import 'reader_highlight_color.dart';
-import 'reader_highlight_expand_button.dart';
+import 'reader_highlight_footer.dart';
 import 'reader_highlight_location_label.dart';
+import 'reader_highlight_note_row.dart';
+import 'reader_highlight_quote_text.dart';
 import 'reader_image_highlight_list_tile.dart';
 
 /// A saved passage opens on row tap; expansion never changes reading position.
@@ -57,7 +58,6 @@ class ReaderHighlightListTile extends StatelessWidget {
       );
     }
     final l10n = context.l10n;
-    final mutedColor = context.colors.onSurfaceVariant;
     final note = highlight.note?.trim();
     final hasNote = note != null && note.isNotEmpty;
     final text = highlight.text.trim();
@@ -83,7 +83,7 @@ class ReaderHighlightListTile extends StatelessWidget {
       pageProgressionRtl: pageProgressionRtl,
     );
     final style = context.text.bodyMedium.copyWith(
-      color: removed ? mutedColor : null,
+      color: removed ? context.colors.onSurfaceVariant : null,
     );
 
     return Column(
@@ -94,14 +94,12 @@ class ReaderHighlightListTile extends StatelessWidget {
           hint: hasLocation ? l10n.readerGoToPassage : null,
           child: InkWell(
             onTap: hasLocation ? onNavigate : null,
-            // The body owns the leading gutter so Read more can bleed its
-            // ink into it.
+            // The body owns both gutters so Read more can bleed its ink into
+            // the trailing one; a removed row ends on its Undo target instead.
             child: Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(
-                0,
-                AppSpacing.lg,
-                removed ? readerDrawerActionEndPadding : AppSpacing.lg,
-                AppSpacing.lg,
+              padding: EdgeInsetsDirectional.only(
+                top: AppSpacing.lg,
+                end: removed ? readerDrawerActionEndPadding : 0,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,11 +116,8 @@ class ReaderHighlightListTile extends StatelessWidget {
                       direction: direction,
                       align: align,
                       noteDirection: noteDirection,
-                      color: readerHighlightColor(
-                        highlight.color,
-                        readerTheme,
-                      ),
-                      mutedColor: mutedColor,
+                      color: highlight.color,
+                      readerTheme: readerTheme,
                       onExpanded: onExpanded,
                     ),
                   ),
@@ -165,7 +160,7 @@ class _ReaderHighlightTileBody extends StatelessWidget {
     required this.align,
     required this.noteDirection,
     required this.color,
-    required this.mutedColor,
+    required this.readerTheme,
     required this.onExpanded,
   });
 
@@ -179,131 +174,117 @@ class _ReaderHighlightTileBody extends StatelessWidget {
   final TextDirection direction;
   final TextAlign align;
   final TextDirection noteDirection;
-  final Color color;
-  final Color mutedColor;
+  final HighlightColor color;
+  final ReaderThemeData readerTheme;
   final VoidCallback onExpanded;
+
+  static const _quoteMaxLines = 3;
+  static const _noteMaxLines = 2;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final note = this.note;
-    final hasNote = note != null;
-    const gutter = EdgeInsetsDirectional.only(start: AppSpacing.lg);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // Only materialized list rows are measured. Use the actual width,
-            // font and scaler, not a character-count approximation of truncation.
-            final textWidth = (constraints.maxWidth - AppSpacing.lg).clamp(
-              0.0,
-              double.infinity,
-            );
-            final painter =
+    // A removed row ends at its Undo target, which supplies the spacing.
+    final endGutter = removed ? 0.0 : AppSpacing.lg;
+    final gutters = EdgeInsetsDirectional.only(
+      start: AppSpacing.lg,
+      end: endGutter,
+    );
+    final locationText = location != null || !hasLocation
+        ? [
+            ?location,
+            if (!hasLocation && !removed) l10n.readerLocationUnavailable,
+          ].join(' · ')
+        : null;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Removed rows are inert apart from Undo, so they skip measuring.
+        // Otherwise only materialized rows are measured, with the actual
+        // width, font and scaler rather than a character-count estimate.
+        var canExpand = false;
+        if (!removed) {
+          final quoteWidth = (constraints.maxWidth - AppSpacing.lg - endGutter)
+              .clamp(0.0, double.infinity);
+          final painter = TextPainter(
+            text: TextSpan(text: quote, style: style),
+            textDirection: direction,
+            textScaler: MediaQuery.textScalerOf(context),
+            locale: Localizations.localeOf(context),
+            maxLines: _quoteMaxLines,
+          )..layout(maxWidth: quoteWidth);
+          canExpand = painter.didExceedMaxLines;
+          painter.dispose();
+          if (note != null) {
+            final notePainter =
                 TextPainter(
-                  text: TextSpan(text: quote, style: style),
-                  textDirection: direction,
+                  text: TextSpan(text: note, style: context.text.bodySmall),
+                  textDirection: noteDirection,
                   textScaler: MediaQuery.textScalerOf(context),
                   locale: Localizations.localeOf(context),
-                  maxLines: 3,
+                  maxLines: _noteMaxLines,
                 )..layout(
-                  maxWidth: (textWidth - AppSpacing.md - 3).clamp(
-                    0,
+                  maxWidth: (quoteWidth - readerHighlightNoteIndent).clamp(
+                    0.0,
                     double.infinity,
                   ),
                 );
-            var canExpand = painter.didExceedMaxLines;
-            painter.dispose();
-            if (hasNote) {
-              final notePainter = TextPainter(
-                text: TextSpan(
-                  text: note,
-                  style: context.text.bodySmall,
-                ),
-                textDirection: noteDirection,
-                textScaler: MediaQuery.textScalerOf(context),
-                locale: Localizations.localeOf(context),
-                maxLines: 2,
-              )..layout(maxWidth: textWidth);
-              canExpand |= notePainter.didExceedMaxLines;
-              notePainter.dispose();
-            }
-            // Removed rows are inert apart from Undo.
-            canExpand &= !removed;
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: gutter,
-                  child: Directionality(
-                    textDirection: direction,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: BorderDirectional(
-                          start: BorderSide(width: 3, color: color),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.only(
-                          start: AppSpacing.md,
-                        ),
-                        child: Text(
-                          quote,
-                          style: style,
-                          textDirection: direction,
-                          textAlign: align,
-                          maxLines: expanded ? null : 3,
-                          overflow: expanded ? null : TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (hasNote)
-                  Padding(
-                    padding: gutter.add(
-                      const EdgeInsets.only(top: AppSpacing.sm),
-                    ),
-                    child: Text(
-                      note,
-                      style: context.text.bodySmall.copyWith(
-                        color: removed ? mutedColor : null,
-                      ),
-                      textDirection: noteDirection,
-                      textAlign: TextAlign.start,
-                      maxLines: expanded ? null : 2,
-                      overflow: expanded ? null : TextOverflow.ellipsis,
-                    ),
-                  ),
-                if (canExpand)
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: ReaderHighlightExpandButton(
-                      expanded: expanded,
-                      onPressed: onExpanded,
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-        if (location != null || !hasLocation)
-          Padding(
-            padding: gutter.add(const EdgeInsets.only(top: AppSpacing.sm)),
-            child: Text(
-              [
-                ?location,
-                if (!hasLocation && !removed) l10n.readerLocationUnavailable,
-              ].join(' · '),
-              style: context.text.bodySmall.copyWith(
-                color: mutedColor,
-              ),
-              textDirection: direction,
-              textAlign: align,
-            ),
+            canExpand |= notePainter.didExceedMaxLines;
+            notePainter.dispose();
+          }
+        }
+        final hasFooter = locationText != null || canExpand;
+        return Padding(
+          // The 48dp button carries its own space below the label.
+          padding: EdgeInsets.only(
+            bottom: canExpand ? AppSpacing.xs : AppSpacing.lg,
           ),
-      ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: gutters,
+                child: ReaderHighlightQuoteText(
+                  quote,
+                  color: color,
+                  readerTheme: readerTheme,
+                  style: style,
+                  textDirection: direction,
+                  textAlign: align,
+                  maxLines: expanded ? null : _quoteMaxLines,
+                ),
+              ),
+              if (note != null)
+                Padding(
+                  padding: gutters.add(
+                    const EdgeInsets.only(top: AppSpacing.sm),
+                  ),
+                  child: ReaderHighlightNoteRow(
+                    note: note,
+                    textDirection: noteDirection,
+                    maxLines: expanded ? null : _noteMaxLines,
+                    muted: removed,
+                  ),
+                ),
+              if (hasFooter)
+                Padding(
+                  padding: EdgeInsets.only(
+                    top: canExpand ? 0 : AppSpacing.sm,
+                  ),
+                  child: ReaderHighlightFooter(
+                    location: locationText,
+                    locationDirection: removed ? null : direction,
+                    canExpand: canExpand,
+                    expanded: expanded,
+                    onExpanded: onExpanded,
+                    endGutter: endGutter,
+                    maxButtonWidth: constraints.maxWidth / 2,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

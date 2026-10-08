@@ -7,7 +7,6 @@ const _unset = Object();
 
 enum ReaderTextAlignment {
   start('start'),
-  end('end'),
   justify('justify');
 
   const ReaderTextAlignment(this.id);
@@ -15,14 +14,14 @@ enum ReaderTextAlignment {
   final String id;
 
   static ReaderTextAlignment fromId(String? value) => switch (value) {
-    'end' => end,
     'justify' => justify,
     _ => start,
   };
 
+  /// Earlier builds stored `end`, which always rendered ragged like `start`;
+  /// it reads back as `start` so a per-book override keeps its meaning.
   static ReaderTextAlignment? tryFromId(String? value) => switch (value) {
-    'start' => start,
-    'end' => end,
+    'start' || 'end' => start,
     'justify' => justify,
     _ => null,
   };

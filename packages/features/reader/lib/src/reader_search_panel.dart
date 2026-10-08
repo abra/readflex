@@ -6,13 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-import 'reader_directional_layout.dart';
 import 'reader_drawer_layout.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_search_cubit.dart';
 import 'reader_search_result_tile.dart';
+import 'reader_swipe_to_delete.dart';
 
-/// The reader's side-sliding search surface, retained while hidden.
+/// The reader's search sheet. Retained while hidden so the query, results
+/// and scroll offset survive match navigation.
 class ReaderSearchPanel extends StatefulWidget {
   const ReaderSearchPanel({
     required this.visible,
@@ -81,9 +82,11 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
       final state = context.read<ReaderSearchCubit>().state;
       if (state.activeResultIndex != index) return;
       final tile = _activeTileKey.currentContext;
-      if (tile != null) {
-        Scrollable.ensureVisible(
-          tile,
+      final row = tile?.findRenderObject();
+      if (tile != null && row != null) {
+        // Only the results list, not a sheet scrolled as a whole.
+        Scrollable.of(tile).position.ensureVisible(
+          row,
           alignment: 0.5,
           duration: context.motion(AppMotion.short),
           curve: Curves.easeOutCubic,
@@ -132,27 +135,14 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
           selection: TextSelection.collapsed(offset: state.query.length),
         );
       },
-      child: IgnorePointer(
-        ignoring: !widget.visible,
-        child: ExcludeFocus(
-          excluding: !widget.visible,
-          child: ExcludeSemantics(
-            excluding: !widget.visible,
-            child: AnimatedSlide(
-              offset: widget.visible
-                  ? Offset.zero
-                  : readerSidePanelHiddenOffset(Directionality.of(context)),
-              duration: context.motion(AppMotion.short),
-              curve: Curves.easeOutCubic,
-              child: Material(
-                color: context.colors.surface,
-                // The list's bottom padding carries the keyboard inset, like
-                // the Contents drawer.
-                child: SafeArea(bottom: false, child: _content()),
-              ),
-            ),
-          ),
-        ),
+      child: AppInlineSheet(
+        visible: widget.visible,
+        onClose: widget.onClose,
+        semanticsLabel: context.l10n.readerSearchAction,
+        header: _ReaderSearchHeader(onClose: widget.onClose),
+        // The list's bottom padding carries the system inset, like the
+        // Contents sheet; the sheet itself sits on the keyboard.
+        body: _content(),
       ),
     );
   }
@@ -162,31 +152,6 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
       final l10n = context.l10n;
       return Column(
         children: [
-          Padding(
-            padding: const EdgeInsetsDirectional.fromSTEB(
-              AppSpacing.lg,
-              AppSpacing.sm,
-              readerDrawerActionEndPadding,
-              AppSpacing.xs,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.readerSearchAction,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.text.titleLarge,
-                  ),
-                ),
-                AppPlainIconButton(
-                  tooltip: l10n.commonClose,
-                  onPressed: widget.onClose,
-                  icon: AppIcons.close,
-                ),
-              ],
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: SearchField(
@@ -228,14 +193,18 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
           ),
           const Divider(height: 1),
           Expanded(
-            child: ClipRect(child: ScrollEdgeFadeStack(child: _results(state))),
+            child: ClipRect(
+              child: ScrollEdgeFadeStack(child: _results(context, state)),
+            ),
           ),
         ],
       );
     },
   );
 
-  Widget _results(ReaderSearchState state) {
+  /// [context] is the builder's, inside the sheet: its MediaQuery has the
+  /// keyboard inset removed, which the list padding must see.
+  Widget _results(BuildContext context, ReaderSearchState state) {
     final l10n = context.l10n;
     final bottom = EdgeInsets.only(
       bottom: readerDrawerListBottomPadding(context),
@@ -280,41 +249,23 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
             );
           }
           final query = state.recentQueries[index - 1];
-          return ListTile(
-            contentPadding: const EdgeInsetsDirectional.fromSTEB(
-              AppSpacing.lg,
-              AppSpacing.xs,
-              readerDrawerActionEndPadding,
-              AppSpacing.xs,
+          return ReaderSwipeToDelete(
+            id: query,
+            label: l10n.readerRemoveFromHistory,
+            collapse: true,
+            onDelete: () =>
+                context.read<ReaderSearchCubit>().recentQueryRemoved(query),
+            child: _ReaderRecentSearchTile(
+              query: query,
+              pageProgressionRtl: widget.pageProgressionRtl,
+              onTap: () {
+                _focus.unfocus();
+                context.read<ReaderSearchCubit>().recentQuerySelected(
+                  query,
+                  searchBook: widget.onSearch,
+                );
+              },
             ),
-            leading: Icon(
-              AppIcons.clock,
-              size: AppIconSize.xs,
-              color: context.colors.onSurfaceVariant,
-            ),
-            title: Text(
-              query,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textDirection: widget.pageProgressionRtl
-                  ? TextDirection.rtl
-                  : TextDirection.ltr,
-              style: context.text.bodyMedium,
-            ),
-            trailing: AppPlainIconButton(
-              tooltip: l10n.readerRemoveFromHistory,
-              icon: AppIcons.delete,
-              color: context.colors.onSurfaceVariant,
-              onPressed: () =>
-                  context.read<ReaderSearchCubit>().recentQueryRemoved(query),
-            ),
-            onTap: () {
-              _focus.unfocus();
-              context.read<ReaderSearchCubit>().recentQuerySelected(
-                query,
-                searchBook: widget.onSearch,
-              );
-            },
           );
         },
       );
@@ -356,6 +307,83 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
           child: placeholder,
         ),
       ),
+    );
+  }
+}
+
+/// Title and Close: the part of the search sheet that drags it.
+class _ReaderSearchHeader extends StatelessWidget {
+  const _ReaderSearchHeader({required this.onClose});
+
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Padding(
+      // The sheet's grab handle supplies the gap above the title.
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        AppSpacing.lg,
+        0,
+        readerDrawerActionEndPadding,
+        AppSpacing.xs,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              l10n.readerSearchAction,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.text.titleLarge,
+            ),
+          ),
+          AppPlainIconButton(
+            tooltip: l10n.commonClose,
+            onPressed: onClose,
+            icon: AppIcons.close,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A recent query: the clock marks history apart from results. Removal is
+/// the row's swipe and semantics action, so no trailing control is drawn.
+class _ReaderRecentSearchTile extends StatelessWidget {
+  const _ReaderRecentSearchTile({
+    required this.query,
+    required this.pageProgressionRtl,
+    required this.onTap,
+  });
+
+  final String query;
+  final bool pageProgressionRtl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsetsDirectional.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xs,
+      ),
+      leading: Icon(
+        AppIcons.clock,
+        size: AppIconSize.xs,
+        color: context.colors.onSurfaceVariant,
+      ),
+      title: Text(
+        query,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textDirection: pageProgressionRtl
+            ? TextDirection.rtl
+            : TextDirection.ltr,
+        style: context.text.bodyMedium,
+      ),
+      onTap: onTap,
     );
   }
 }

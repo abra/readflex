@@ -35,13 +35,12 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
           )
           .asyncExpand(mapper),
     );
-    on<LibraryFilterChanged>(_onFilterChanged);
     on<LibraryCollectionScopeChanged>(_onCollectionScopeChanged);
   }
 
   static const _searchDelay = Duration(milliseconds: 300);
 
-  // Reset shares the search stream so a debounced query cannot restore filters.
+  // Reset shares the search stream so a debounced query cannot come back.
   void _onQueryEvent(
     LibraryQueryEvent event,
     Emitter<LibraryState> emit,
@@ -50,21 +49,8 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       case LibrarySearchQueryChanged(:final query):
         emit(state.copyWith(searchQuery: query));
       case LibraryFiltersReset():
-        emit(
-          state.copyWith(
-            searchQuery: '',
-            filter: LibraryFilter.all,
-            selectedCollectionScope: null,
-          ),
-        );
+        emit(state.copyWith(searchQuery: '', selectedCollectionScope: null));
     }
-  }
-
-  void _onFilterChanged(
-    LibraryFilterChanged event,
-    Emitter<LibraryState> emit,
-  ) {
-    emit(state.copyWith(filter: event.filter));
   }
 
   void _onCollectionScopeChanged(
@@ -169,6 +155,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         return;
       }
       final scopes = [
+        ..._buildBuiltInScopes(snapshot.sources),
         // A failed read is not an empty collection. Keep the last valid data.
         ...snapshot.collectionScopes ??
             state.collectionScopes.where((scope) => scope.canManage),
@@ -269,6 +256,34 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
           ),
         )
         .toList(growable: false);
+  }
+
+  /// Book, article, comic and New scopes with their counts, in one pass.
+  /// Always all four, even when empty, so a selected one that empties (the
+  /// last new item opened) stays selected rather than jumping to Library.
+  List<LibraryCollectionScope> _buildBuiltInScopes(
+    List<LibrarySource> sources,
+  ) {
+    final counts = {
+      for (final type in LibraryCollectionScopeType.builtIn) type: 0,
+    };
+    for (final source in sources) {
+      for (final type in LibraryCollectionScopeType.builtIn) {
+        if (libraryBuiltInScopeMatches(type, source)) {
+          counts[type] = counts[type]! + 1;
+        }
+      }
+    }
+    return [
+      for (final type in LibraryCollectionScopeType.builtIn)
+        LibraryCollectionScope.smart(
+          type: type,
+          id: type.name,
+          // Shown localized; the id keeps the scope stable across locales.
+          label: type.name,
+          sourceCount: counts[type]!,
+        ),
+    ];
   }
 
   List<LibraryCollectionScope> _buildSiteScopes(List<LibrarySource> sources) {

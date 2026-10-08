@@ -57,8 +57,8 @@ void main() {
   ) async {
     await launch(tester);
     app.articleExtractionService.fail = true;
-    await tapUi(tester, find.byType(FloatingActionButton));
-    await tapUi(tester, find.text('Save Article'));
+    await tapUi(tester, find.byKey(const ValueKey('libraryAddButton')));
+    await tapUi(tester, find.byKey(const ValueKey('importMenu-article')));
     await tester.enterText(
       find.byType(TextField).last,
       ReadingFixture.articleUrl,
@@ -109,16 +109,16 @@ void main() {
     tester,
   ) async {
     await launch(tester);
-    await tapUi(tester, find.byType(FloatingActionButton));
+    await tapUi(tester, find.byKey(const ValueKey('libraryAddButton')));
     app.connectivityService.setStatus(ConnectivityStatus.offline);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save Article'));
+    await tester.tap(find.byKey(const ValueKey('importMenu-article')));
     await tester.pumpAndSettle();
     expect(find.byTooltip('Paste URL'), findsNothing);
     expect(app.articleExtractionService.requests, isEmpty);
     app.connectivityService.setStatus(ConnectivityStatus.online);
     await tester.pumpAndSettle();
-    await tapUi(tester, find.text('Save Article'));
+    await tapUi(tester, find.byKey(const ValueKey('importMenu-article')));
     expect(find.byTooltip('Paste URL'), findsOneWidget);
     await unmountUi(tester);
   });
@@ -147,7 +147,7 @@ void main() {
     final collection = collections!.single;
     expect(collection.name, 'Reading list');
     expect(collection.sourceCount, 1);
-    await tapUi(tester, find.byIcon(AppIcons.collection));
+    await tapUi(tester, find.byKey(const ValueKey('libraryCollectionsButton')));
     final manage = find.byKey(
       ValueKey('collectionScopeManage-manual-${collection.id}'),
     );

@@ -5,9 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'app_bottom_safe_area.dart';
 import 'app_sheet_dismiss_guard.dart';
-import 'theme/extensions/build_context_ext.dart';
-import 'theme/tokens/app_radius.dart';
-import 'theme/tokens/app_spacing.dart';
+import 'app_sheet_drag_handle.dart';
 
 /// Shows a modal bottom sheet using the app's standard configuration.
 ///
@@ -100,10 +98,10 @@ Future<T?> showAppBottomSheet<T>(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (draggable)
-                const _SheetDragHandle()
+                const AppSheetDragHandle()
               else
                 // Keep the title position without suggesting a disabled drag.
-                const SizedBox(height: AppSpacing.sm * 2 + 4),
+                const SizedBox(height: kAppSheetDragHandleExtent),
               body!,
             ],
           );
@@ -222,33 +220,5 @@ class _AppBottomSheetRoute<T> extends ModalBottomSheetRoute<T> {
       ),
       _ => barrier,
     };
-  }
-}
-
-/// 32×4 grab handle pill rendered at the very top of a dismissible
-/// sheet. Vertical spacing balances the iOS feel: a noticeable gap
-/// above the bar so the handle doesn't hug the rounded top edge,
-/// and a matching gap below before the title.
-class _SheetDragHandle extends StatelessWidget {
-  const _SheetDragHandle();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        top: AppSpacing.sm,
-        bottom: AppSpacing.sm,
-      ),
-      child: Center(
-        child: Container(
-          width: 32,
-          height: 4,
-          decoration: BoxDecoration(
-            color: context.colors.onSurfaceVariant.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(AppRadius.full),
-          ),
-        ),
-      ),
-    );
   }
 }

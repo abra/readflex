@@ -154,10 +154,114 @@ void main() {
       {0},
     );
   });
+
+  group('glyph options', () {
+    Widget host({
+      required int selected,
+      required ValueChanged<int> onChanged,
+      bool reselectable = false,
+      double width = 200,
+    }) => MaterialApp(
+      theme: AppTheme.light(),
+      home: Scaffold(
+        body: Center(
+          child: SizedBox(
+            width: width,
+            child: AppChoiceControl<int>(
+              selected: selected,
+              iconOnly: true,
+              reselectable: reselectable,
+              onChanged: onChanged,
+              options: [
+                for (final value in [0, 1, 2])
+                  AppChoiceOption(
+                    value: value,
+                    label: 'Preset $value',
+                    glyph: _ProbeGlyph(key: ValueKey('glyph-$value')),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    testWidgets('paint in the icon box with the segment icon color', (
+      tester,
+    ) async {
+      await tester.pumpWidget(host(selected: 1, onChanged: (_) {}));
+      final context = tester.element(find.byType(AppChoiceControl<int>));
+      Color glyphColor(int value) => tester
+          .widget<_ProbeColor>(
+            find.descendant(
+              of: find.byKey(ValueKey('glyph-$value')),
+              matching: find.byType(_ProbeColor),
+            ),
+          )
+          .color;
+
+      expect(glyphColor(1), context.colors.selectedControlForeground);
+      expect(glyphColor(0), isNot(glyphColor(1)));
+      for (final value in [0, 1, 2]) {
+        final glyph = tester.getRect(find.byKey(ValueKey('glyph-$value')));
+        expect(glyph.size, const Size.square(AppIconSize.sm));
+        final segment = tester.getRect(
+          find
+              .ancestor(
+                of: find.byKey(ValueKey('glyph-$value')),
+                matching: find.byType(InkWell),
+              )
+              .first,
+        );
+        expect(glyph.center.dx, closeTo(segment.center.dx, 0.5));
+        expect(segment.height, AppSizes.buttonHeight);
+        expect(find.byTooltip('Preset $value'), findsOneWidget);
+      }
+    });
+
+    testWidgets('tap on the selected glyph is ignored unless reselectable', (
+      tester,
+    ) async {
+      final changes = <int>[];
+      await tester.pumpWidget(host(selected: 1, onChanged: changes.add));
+      await tester.tap(find.byKey(const ValueKey('glyph-1')));
+      await tester.pumpAndSettle();
+      expect(changes, isEmpty);
+
+      await tester.pumpWidget(
+        host(selected: 1, reselectable: true, onChanged: changes.add),
+      );
+      await tester.tap(find.byKey(const ValueKey('glyph-1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('glyph-2')));
+      await tester.pumpAndSettle();
+      expect(changes, [1, 2]);
+    });
+  });
 }
 
 double _contrast(Color a, Color b) {
   final first = a.computeLuminance() + .05;
   final second = b.computeLuminance() + .05;
   return first > second ? first / second : second / first;
+}
+
+/// Reports the ambient icon color so tests can read the segment state.
+class _ProbeGlyph extends StatelessWidget {
+  const _ProbeGlyph({super.key});
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+    dimension: AppIconSize.sm,
+    child: _ProbeColor(color: IconTheme.of(context).color!),
+  );
+}
+
+class _ProbeColor extends StatelessWidget {
+  const _ProbeColor({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => ColoredBox(color: color);
 }

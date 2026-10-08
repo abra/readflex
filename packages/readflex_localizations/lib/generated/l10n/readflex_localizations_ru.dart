@@ -197,22 +197,10 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get libraryResetFilters => 'Сбросить фильтры';
 
   @override
-  String get libraryClearCollectionFilter => 'Сбросить фильтр коллекции';
-
-  @override
   String get commonCopied => 'Скопировано';
 
   @override
   String get commonCopyFailed => 'Не удалось скопировать';
-
-  @override
-  String get appSkip => 'Пропустить';
-
-  @override
-  String get appNext => 'Далее';
-
-  @override
-  String get appGetStarted => 'Начать';
 
   @override
   String get appInitializationFailed => 'Не удалось запустить приложение';
@@ -243,9 +231,6 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   @override
   String get onboardingHighlightSaveDescription =>
       'Сохраняйте выделенные фрагменты текста и добавляйте заметки.';
-
-  @override
-  String get onboardingOrganizeLibraryTitle => 'Организуйте библиотеку';
 
   @override
   String get onboardingOrganizeLibraryDescription =>
@@ -310,19 +295,16 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get librarySearchHint => 'Поиск в библиотеке...';
 
   @override
-  String get libraryFilterAll => 'Все';
+  String get libraryScopeBooks => 'Книги';
 
   @override
-  String get libraryFilterBooks => 'Книги';
+  String get libraryScopeArticles => 'Статьи';
 
   @override
-  String get libraryFilterArticles => 'Статьи';
+  String get libraryScopeComics => 'Комиксы';
 
   @override
-  String get libraryFilterComics => 'Комиксы';
-
-  @override
-  String get libraryFilterNew => 'Новые';
+  String get libraryScopeNew => 'Новые';
 
   @override
   String get libraryDisplayOptions => 'Настройки вида';
@@ -453,9 +435,6 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get libraryFavourites => 'Избранное';
-
-  @override
-  String get libraryFavouritesBadge => 'Избранное';
 
   @override
   String libraryCreateCollectionPrompt(int count) {
@@ -615,16 +594,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get importAddToLibraryTitle => 'Добавить в библиотеку';
 
   @override
-  String get importUploadBook => 'Загрузить книгу';
-
-  @override
-  String get importUploadBookFormats => 'EPUB, FB2, MOBI, PDF, AZW3, CBZ';
-
-  @override
   String get importSaveArticle => 'Сохранить статью';
-
-  @override
-  String get importSaveArticleDescription => 'Вставьте URL для офлайн-чтения';
 
   @override
   String get importBeforeUploadingTitle => 'Перед загрузкой';
@@ -923,21 +893,6 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerPageTurn => 'Листание';
 
   @override
-  String get readerAlignStart => 'По началу';
-
-  @override
-  String get readerJustifyText => 'По ширине';
-
-  @override
-  String get readerAlignEnd => 'По концу';
-
-  @override
-  String get readerHorizontalPageTurn => 'Горизонтальное листание';
-
-  @override
-  String get readerVerticalPageTurn => 'Вертикальное листание';
-
-  @override
   String get readerResetTextSize => 'Сбросить размер текста';
 
   @override
@@ -948,24 +903,6 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get readerIncreaseTextSize => 'Увеличить текст';
-
-  @override
-  String get readerResetLineSpacing => 'Сбросить интервал';
-
-  @override
-  String get readerDecreaseLineSpacing => 'Уменьшить интервал';
-
-  @override
-  String get readerIncreaseLineSpacing => 'Увеличить интервал';
-
-  @override
-  String get readerResetPageMargins => 'Сбросить поля';
-
-  @override
-  String get readerDecreasePageMargins => 'Уменьшить поля';
-
-  @override
-  String get readerIncreasePageMargins => 'Увеличить поля';
 
   @override
   String get readerThemeSnow => 'Снег';
@@ -1107,4 +1044,77 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get importArticleOfflineSubtitle => 'Нужно подключение к интернету';
+
+  @override
+  String get libraryContinueReading => 'Продолжить чтение';
+
+  @override
+  String readingTimeLeftMinutes(int count) {
+    return 'осталось $count мин';
+  }
+
+  @override
+  String readingTimeLeftHours(int hours, int minutes) {
+    return 'осталось $hours ч $minutes мин';
+  }
+
+  @override
+  String get libraryUploadFile => 'Загрузить файл';
+
+  @override
+  String get librarySaveArticleAction => 'Сохранить статью';
+
+  @override
+  String get importFileKinds => 'Книги, комиксы и PDF';
+
+  @override
+  String get importFromDevice => 'Файл с устройства';
+
+  @override
+  String get importArticleFromLink => 'Статья по ссылке';
+
+  @override
+  String get importArticleOffline => 'Сохраняется для чтения без сети';
+
+  @override
+  String get libraryChooseCollection => 'Выбрать коллекцию';
+
+  @override
+  String get onboardingAddBook => 'Добавить книгу';
+
+  @override
+  String get onboardingNotNow => 'Не сейчас';
+
+  @override
+  String get readerLineSpacingCompact => 'Плотно';
+
+  @override
+  String get readerLineSpacingNormal => 'Обычно';
+
+  @override
+  String get readerLineSpacingRelaxed => 'Свободно';
+
+  @override
+  String get readerMarginsNarrow => 'Узкие';
+
+  @override
+  String get readerMarginsMedium => 'Средние';
+
+  @override
+  String get readerMarginsWide => 'Широкие';
+
+  @override
+  String get readerAlignNormal => 'Обычно';
+
+  @override
+  String get readerAlignJustified => 'По ширине';
+
+  @override
+  String get readerPageTurnHorizontalShort => 'Горизонтально';
+
+  @override
+  String get readerPageTurnVerticalShort => 'Вертикально';
+
+  @override
+  String get readerChapterRead => 'Прочитано';
 }

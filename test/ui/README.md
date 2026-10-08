@@ -25,6 +25,7 @@ such as immediate settings versus explicitly saved collection drafts.
 | Consistency | Reuse semantic tokens, header, choice, input and action components from `component_library`; compare settings via `settings_consistency_test.dart`. Do not invent per-screen colors, typography or icon geometry. |
 | Stable layout | Errors and busy states must not unexpectedly displace controls. Verify geometry during transitions as well as after settling; import form and shared sheet tests cover these paths. Do not solve this with arbitrary empty fixed-height space. |
 | Navigation | Back unwinds a step; Close exits the flow subject to draft guards. Check system Back, scrim/drag, interrupted transitions and reduced motion in the owning feature tests. |
+| Thumb reach | On a 390x844 phone held in one hand, the screen's primary action (Library "+"), frequent switches (the Library's collection switcher, sharing the bottom capsule with "+") and controls used repeatedly in one session (the reader capsule, match navigation) sit in the bottom third. Secondary panels are bottom sheets whose header lands mid-screen; the in-place reader panels use `AppInlineSheet` at 60%. The top holds orientation and rare actions: titles (the Library title is a heading, not a second collection switcher), search entry, Display. Narrowing the Library has one place, the Collections picker; there are no filter chips at the top. Do not move a frequent action to the top for tidiness, or stack a second row of chrome at the bottom. |
 | Scrolling | Short content has no false overflow/fades; long content has reachable last actions and a fixed header where the component promises one. Test both ends, keyboard insets and rotation. |
 | Controls | Check enabled, selected, disabled and loading semantics, localized labels, hit targets and duplicate-command prevention, not just the visible icon or color. Shared accessibility tests exercise both mobile platform policies. |
 | Text and themes | Check real long translations, phone RTL, 200% text, light/dark themes and essential text visibility. Contrast tests cover named text/background pairs, not every possible rendering. |
@@ -107,13 +108,14 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Shared control accessibility | Named tap targets under iOS/Android policies, selected/disabled choice semantics, stable control geometry and named/noninteractive busy actions in LTR/RTL at normal/large text | `packages/component_library/test/control_accessibility_contract_test.dart` |
 | Toast feedback | 48dp circular/localized Close, full-message semantics, durations, independent swipe, idle insertion and responsive safe-area layout; full-screen success/error over Library in all profiles, with RTL overridden to 390 x 844 | Toast package tests, `toast_golden_test.dart`, `integration_test/toast_test.dart` |
 | Theme text roles | Primary/secondary text on surface, sheet and input backgrounds; foreground/fill contrast for primary, secondary and destructive controls in light/dark | `packages/component_library/test/app_theme_test.dart` |
-| Onboarding | Skip/complete, routing, saved preference after remount; all three pages in five visual profiles | `onboarding_test.dart` |
+| Onboarding | Add a book / Not now callbacks, page preview highlight in every locale, large-text scrolling, RTL; five visual profiles. Routing and the saved preference after remount live in `test/app/readflex_app_test.dart` | `onboarding_test.dart` |
 | Library | Search/clear, empty results, layout preference; UI changes do not issue new storage reads | `app_flows_test.dart` |
 | Library appearance | Grid, display sheet, empty search results and pressed Display/search-clear actions in all profiles; list and compact favourites badge in light/dark and on an Arabic phone | `library_golden_test.dart`, `collection_management_golden_test.dart` |
 | Settings consistency | Display and Appearance share header geometry, section typography/gaps, content gutters, 48dp stepper targets and full-width fades in light/dark themes | `settings_consistency_test.dart` |
 | Library scaling | Grid/list remain virtualized with 20k books, callbacks address the right item, cached projections are reused; 320/390dp grids adapt columns at 200% text | `library_scaling_test.dart` |
 | Collection recovery | Retain last loaded scopes on partial failure; Retry replaces the error inside the same sheet, including phone/landscape, 200% text and RTL | Library bloc and `collection_scope_recovery_test.dart` |
-| Collection button | Unselected folder paints a 32dp square inside its 48dp hit target; selected Favs keeps separately labelled open/clear actions | Library header tests, `integration_test/library_controls_test.dart` |
+| Library bottom capsule | One `AppFloatingCapsule`: collection switcher (icon, name, chevron; reads as Choose collection + name) then the filled "+" at the outer end in LTR/RTL; 4.5:1 label contrast over black and white covers, tinted inside a collection; 320dp cap and start gutter with long names and at 320dp/200%; text clamped at 200%; resize skipped under reduced motion; hidden in selection and in an empty library, kept in an empty collection; scope changes rebuild only the capsule | Library screen tests, Library goldens |
+| Built-in collections | Favourites as the first row directly under the picker search (with or without built-ins, inside a built-in), then Library, then Books, Comics and New rows of a mixed library, no manage menu, localized search, the title naming the chosen scope, rows that would repeat Library left out, in all visual profiles | Library state/bloc/screen tests, `library_home_golden_test.dart` |
 | Collections | Create with selected book, rename, cancel/confirm deletion; preserve book and clean membership | `app_flows_test.dart` |
 | Sheet navigation | Header/system Back vs whole-flow dismissal, URL draft retention, guarded collection Close; delete/discard headers across visual profiles | Feature widget tests, `collection_management_golden_test.dart`, `integration_test/library_controls_test.dart` |
 | Collection layout | Light/dark, 200%, landscape, RTL; selector menu alignment, active favourites badge, edit form and unsaved changes confirmation | `collection_management_golden_test.dart` |
@@ -125,10 +127,11 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Book import consent | Stable compact step height throughout forward/back animations at four phone widths; content grows without false overflow/fades; all locales at 1x/2x text, normal legal-paragraph line height, inline-link taps/semantics, explicit acceptance, rotation, reachable actions and return height | `import_book_terms_test.dart`, `import_flow_golden_test.dart` |
 | Translate | Success, error, pending result; word/text answers before context, unfilled language menus and collapsed/expanded details in all profiles | `surfaces_golden_test.dart` |
 | Contextual translation | Selected word/IPA, context-first answer with expression scope, separate word meaning, collapsed/expanded explanations in all visual profiles | `translation_word_golden_test.dart` |
-| Reader search surfaces | Side-sliding panel with shared 16px content insets, recent queries with long text, active result, previous/next controls and return action in all visual profiles | `reader_search_golden_test.dart` |
+| Reader search surfaces | Inline sheet at 60% (full in landscape and with large text) with shared 16px content insets, recent queries with long text, active result, previous/next controls and return action in all visual profiles | `reader_search_golden_test.dart` |
 | Native translation sheet | Real phone viewport, word/expression scopes including rather, IPA rendering, visible general meaning, native clipboard and target-language change with deterministic responses | `integration_test/translation_sheet_test.dart` |
 | Define | Single definition, inflected word plus contextual expression, and not-found surfaces in all profiles | `surfaces_golden_test.dart` |
 | Shared text tools | Search clear control and highlight palette in all profiles; import menu layout | `surfaces_golden_test.dart` |
+| Reader progress row | The page slider spans the row right above the capsule; under it the book's chapter (one line, truncating first) and the page label (never loses digits), inset to the track's ends; at 2x text the chapter takes up to two lines with the page label below; capsule-width cap on landscape and tablet, in all visual profiles | `reader_progress_golden_test.dart`, reader `reader_bottom_chrome_test.dart` |
 | Reader appearance | Portrait/landscape, 2x text and RTL; header/values readable, final control and font sample reachable, Appearance/Font retain equal height with manual return | `reader_appearance_golden_test.dart` |
 | Native book actions | Expand word to phrase, translate exact final range, copy result, Define fallback, dismiss selection menu | `integration_test/reader_flows_test.dart` |
 | Selected page continuation | Both endpoints in Slide/Vertical, one-page synthetic swipe, menu hides/reanchors, complete range reaches Translate | `integration_test/reader_flows_test.dart` |
@@ -144,7 +147,7 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Native translation controls | Expand details without a request; change target preserving auto source and exact range; return to selection in the same WebView | `integration_test/reader_flows_test.dart` |
 | Native definition controls | Keep selected form and canonical lemma; copy word and expression independently with one lookup; return to the same WebView | `integration_test/reader_flows_test.dart` |
 
-Existing package suites cover finer-grained contracts: library filters,
+Existing package suites cover finer-grained contracts: library built-in collections,
 favourites and undo, import validation and file-service failures, translation
 language selection and retries, definition copying, reader chrome/drawers,
 search, bookmarks, appearance, accessibility semantics, and lifecycle races.
@@ -191,7 +194,7 @@ that the action opens Display or clears the search.
 
 Only widget goldens use these dimensions. The native suite keeps the device's
 real viewport and records it in its results. Large-text onboarding content is
-scrollable; the navigation controls remain outside the scrolling content.
+scrollable; the Add a book / Not now actions remain outside the scrolling content.
 
 Fonts are explicitly registered from the component library and `test/fonts/`.
 Book IDs are fixed because cover colors depend on the ID. Backend responses,
@@ -322,7 +325,7 @@ directions and themes, retained query/scroll position through Manage, and
 Back/Close draft outcomes without extra Library reads. Reader tests cover mixed
 quote/note directions, localized page fallback labels and add/edit/clear notes.
 `reader_note_golden_test.dart` adds draft/discard states in all five profiles.
-Onboarding asserts the settled page/indicator and reduced-motion RTL behavior;
+Onboarding asserts the static RTL layout with no running animations;
 toast tests distinguish short success feedback from readable error duration and
 the non-expiring accessible-navigation error policy.
 

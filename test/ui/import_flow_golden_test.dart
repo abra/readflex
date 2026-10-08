@@ -72,7 +72,11 @@ void main() {
             collectionRepository: app.collectionRepository,
             preferencesService: app.preferencesService,
             onSourcePressed: (_, {onSourceOpened}) async {},
-            onAddPressed: ({required onImported}) async {},
+            onAddPressed:
+                ({
+                  required onImported,
+                  entry = LibraryImportEntry.menu,
+                }) async {},
           );
         },
         surfaceSize: size,
@@ -133,8 +137,8 @@ void main() {
       await snapshot('menu-offline');
       offline.add(false);
       await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text(l10n.importUploadBook));
-      await tester.tap(find.text(l10n.importUploadBook));
+      await tester.ensureVisible(find.text(l10n.importFromDevice));
+      await tester.tap(find.text(l10n.importFromDevice));
       await tester.pumpAndSettle();
       await snapshot('book-terms');
       if (profile.scale == 1) {
@@ -195,7 +199,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tapLabel(l10n.importSaveArticle);
+      await tapLabel(l10n.importArticleFromLink);
       expect(tester.getRect(find.byType(BottomSheet)), menuRect);
       if (profile.scale == 1) {
         expect(

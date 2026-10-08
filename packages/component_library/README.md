@@ -190,7 +190,7 @@ Reusable presentation-only widgets used across features:
 | `ActionBottomSheetLayout`           | Bottom sheet shell; optional constrained scroll body and wrapping header actions |
 | `AppPlainIconButton`                | Labeled 48dp utility action with transparent background and circular press feedback; `icon` or a custom `iconWidget` |
 | `AppActionCard`                     | Reusable command card for action pickers       |
-| `AppDrillInRow`                     | Row that opens a nested step: accent leading icon, `bodyMedium` title, muted subtitle, directional chevron, 48dp minimum, muted and ripple-free when disabled |
+| `AppDrillInRow`                     | Row that opens a nested step: accent leading icon (or a caller-framed `leading` widget, e.g. the import menu's tinted tile), `bodyMedium` title, muted subtitle, directional chevron, 48dp minimum, muted and ripple-free when disabled |
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
 | `AppButtonLabel`                    | Bounded label for localized button text        |
 | `AppBusyButtonLabel`                | Button child that swaps the label for a live-region spinner without changing the button size |
@@ -201,9 +201,11 @@ Reusable presentation-only widgets used across features:
 | `AppColorSwatchButton`              | Round color sample in a 48dp circular-ink target; selected ring plus a check inked by swatch luminance |
 | `AppStatusMessage`                  | Inline sheet status: start-aligned title/body, optional full-width filled action and progress |
 | `AppSettingsSection`                | Shared settings heading and label/control spacing |
-| `AppChoiceControl` / `AppChoiceOption` | Single-choice settings, with the same themed states for text, icons and font previews |
+| `AppChoiceControl` / `AppChoiceOption` | Single-choice settings, with the same themed states for text, icons, painted `glyph`s and font previews; `reselectable` reports a tap on the selected option for nearest-match presets |
 | `AppCopyButton`                     | 48px copy command with local success/error feedback |
 | `AppFilterChip`                     | App-styled filter chip with stable tap target  |
+| `AppFloatingCapsule`                | Stadium that floats a screen's bottom controls over content (reader chrome, Library collection switcher + "+"): `surface` at 92%, hairline `outlineVariant`, `AppShadows.popover`, radius from the caller's height; controls paint their own ink |
+| `AppInlineSheet` / `AppInlineSheetGeometry` | Bottom sheet drawn in a screen's `Stack` instead of a route, retained offstage while hidden; half (60%) and full positions, header drag, list-driven grow/collapse, keyboard-aware |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
 | `ButtonLoadingIndicator`            | Compact circular progress for buttons; takes the button's own foreground via `IconTheme` |
 | `CenteredCircularProgressIndicator` | Centered loading spinner                       |
@@ -360,6 +362,31 @@ with large text. Root Library goldens check the painted press feedback.
   system inset. The footer gap is 32dp with no system inset and 50dp with a 34dp
   inset; above the keyboard it is 32dp. This prevents nested collection forms
   from placing Save/Cancel against the home indicator or keyboard.
+- `AppInlineSheet` is the in-place counterpart for panels whose content must
+  survive closing (the reader's Contents and Search keep tab search text,
+  scroll offsets and result snapshots). The owner passes `visible` and
+  `onClose` and decides; the sheet only reports scrim taps, downward flings
+  from half and pulls past a list's top through `onClose`, and settles back
+  at half if the owner keeps it open. It shares the route's grab handle
+  (`AppSheetDragHandle`), `AppRadius.xl` corners, background, barrier colour
+  and 640dp width limit; side cutouts are padded only where the centered sheet
+  actually reaches them. `AppInlineSheetGeometry` (unit-tested on its own)
+  sets the positions: half is 60% of the height below the status bar and above
+  the keyboard, scaled with the text and never under 320dp; when half would
+  cover more than 75% of full (landscape phones, large text, small screens with
+  the keyboard) there is one position and the sheet opens at full; full stops
+  8dp below the status bar so the dimmed page stays visible. Opening and
+  closing only slide the half-height sheet, so content is never squeezed;
+  height changes only between half and full. The grip and `header` drag it;
+  in `body`, scrolling a list forward from half grows it, and a 64dp pull past
+  a list's top steps it down (bouncing and clamping physics both). A body with
+  nothing to scroll drags like the header, because scrollables win the gesture
+  arena only while they can scroll. The sheet sits on the keyboard and hands
+  its children a `MediaQuery` without that inset; below 320dp the content
+  scrolls as a whole and dragging is off. Its scroll wrapper is always present,
+  so crossing that threshold never re-inflates a focused field. Children that
+  reveal a row should scroll their own list (`ScrollPosition.ensureVisible`),
+  not every ancestor. Tests: `test/app_inline_sheet_test.dart`.
 - `AppSheetDismissGuard` registers with the route's `AppSheetDismissRegistry`;
   holders are ordered and the latest wins, so a step change that mounts the
   next guard before the previous one is disposed keeps the sheet guarded

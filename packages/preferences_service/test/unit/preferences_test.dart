@@ -280,15 +280,31 @@ void main() {
       );
     });
 
-    test('ReaderTextAlignment parses start end and justify IDs', () {
+    test('ReaderTextAlignment parses start and justify IDs', () {
       expect(ReaderTextAlignment.fromId('start'), ReaderTextAlignment.start);
-      expect(ReaderTextAlignment.fromId('end'), ReaderTextAlignment.end);
+      expect(ReaderTextAlignment.values, [
+        ReaderTextAlignment.start,
+        ReaderTextAlignment.justify,
+      ]);
       expect(
         ReaderTextAlignment.fromId('justify'),
         ReaderTextAlignment.justify,
       );
       expect(ReaderTextAlignment.fromId('unknown'), ReaderTextAlignment.start);
       expect(ReaderTextAlignment.tryFromId('unknown'), isNull);
+    });
+
+    test('legacy end alignment reads back as start', () {
+      // `end` always rendered ragged; keeping it as start keeps the sheet's
+      // selection and the page in agreement.
+      expect(ReaderTextAlignment.fromId('end'), ReaderTextAlignment.start);
+      expect(ReaderTextAlignment.tryFromId('end'), ReaderTextAlignment.start);
+      expect(
+        ReaderAppearanceOverride.fromJson(const {
+          'textAlignment': 'end',
+        }).textAlignment,
+        ReaderTextAlignment.start,
+      );
     });
   });
 

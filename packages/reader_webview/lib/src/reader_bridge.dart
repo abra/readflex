@@ -73,6 +73,11 @@ int? _int(Object? value) => value is num ? value.toInt() : null;
 
 double? _double(Object? value) => value is num ? value.toDouble() : null;
 
+double? _minutes(Object? value) {
+  final minutes = _double(value);
+  return minutes != null && minutes.isFinite && minutes >= 0 ? minutes : null;
+}
+
 bool? _bool(Object? value) => value is bool ? value : null;
 
 List<String> _stringList(Object? value) {
@@ -181,6 +186,7 @@ class BookPosition {
     this.pageProgressionRtl,
     this.atEnd = false,
     this.atStart = false,
+    this.minutesLeft,
     this.bookmarkExists = false,
     this.bookmarkCfi,
     this.bookmarkId,
@@ -227,6 +233,11 @@ class BookPosition {
   /// tap-zone availability; both this and [atEnd] can be false mid-document.
   final bool atStart;
 
+  /// Estimated reading minutes left in the whole article (`minutesLeft`, 1200
+  /// text characters per minute). Books send none: their progress row names
+  /// the chapter. Null when the renderer sent no usable estimate.
+  final double? minutesLeft;
+
   /// Current visible page has a bookmark annotation.
   final bool bookmarkExists;
   final String? bookmarkCfi;
@@ -250,6 +261,7 @@ class BookPosition {
           : pageProgressionDirection == 'rtl',
       atEnd: _bool(map['atEnd']) ?? false,
       atStart: _bool(map['atStart']) ?? false,
+      minutesLeft: _minutes(map['minutesLeft']),
       bookmarkExists: _bool(bookmark['exists']) ?? false,
       bookmarkCfi: _string(bookmark['cfi']),
       bookmarkId: _string(bookmark['id']),

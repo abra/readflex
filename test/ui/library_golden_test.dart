@@ -97,7 +97,8 @@ void main() {
           collectionRepository: app.collectionRepository,
           preferencesService: app.preferencesService,
           onSourcePressed: (_, {onSourceOpened}) async {},
-          onAddPressed: ({required onImported}) async {},
+          onAddPressed:
+              ({required onImported, entry = LibraryImportEntry.menu}) async {},
         ),
       );
       await waitForUi(
@@ -317,7 +318,8 @@ void main() {
         collectionRepository: app.collectionRepository,
         preferencesService: app.preferencesService,
         onSourcePressed: (_, {onSourceOpened}) async {},
-        onAddPressed: ({required onImported}) async {},
+        onAddPressed:
+            ({required onImported, entry = LibraryImportEntry.menu}) async {},
       ),
       locale: const Locale('ar'),
     );
@@ -347,7 +349,7 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle(const Duration(milliseconds: 400));
     expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
-    await tapUi(tester, find.byIcon(AppIcons.collection));
+    await tapUi(tester, find.byKey(const ValueKey('libraryCollectionsButton')));
     await expectUiGolden(
       tester,
       VisualProfile.dark,

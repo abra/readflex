@@ -20,6 +20,9 @@ class FakeBookRepository implements BookRepository {
   /// observe the UI while a delete is in flight.
   Completer<void>? deleteGate;
 
+  /// When set, `getBooks` waits for it, so a test can observe loading.
+  Completer<void>? getBooksGate;
+
   void seedBooks(List<Book> books) => _books
     ..clear()
     ..addAll(books);
@@ -27,6 +30,7 @@ class FakeBookRepository implements BookRepository {
   @override
   Future<List<Book>> getBooks({int? limit, int? offset}) async {
     getBooksCallCount++;
+    await getBooksGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     return List.unmodifiable(_books);
   }

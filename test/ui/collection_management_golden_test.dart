@@ -46,7 +46,10 @@ void main() {
         () => find.text(ReadingFixture.bookTitle).evaluate().isNotEmpty,
         description: 'library',
       );
-      await tapUi(tester, find.byIcon(AppIcons.collection));
+      await tapUi(
+        tester,
+        find.byKey(const ValueKey('libraryCollectionsButton')),
+      );
       await expectUiGolden(tester, profile, 'collection-picker');
       final pickerStrings = ReadflexLocalizations.of(
         tester.element(find.byType(BottomSheet)),
@@ -58,14 +61,45 @@ void main() {
         ),
       );
       await expectUiGolden(tester, profile, 'library-favourites-badge');
-      await tapUi(tester, find.byTooltip(pickerStrings.libraryFavourites));
-      await expectUiGolden(tester, profile, 'collection-picker-selected');
-      await tapUi(tester, find.byTooltip(pickerStrings.commonClose));
+      // The title names the collection; the switcher reopens the picker
+      // with Favourites selected.
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('libraryHeaderTitle')),
+          matching: find.text(pickerStrings.libraryFavourites),
+        ),
+        findsOneWidget,
+      );
       await tapUi(
         tester,
-        find.byTooltip(pickerStrings.libraryClearCollectionFilter),
+        find.byKey(const ValueKey('libraryCollectionsButton')),
       );
-      await tapUi(tester, find.byIcon(AppIcons.collection));
+      await expectUiGolden(tester, profile, 'collection-picker-selected');
+      await tapUi(tester, find.byTooltip(pickerStrings.commonClose));
+      // The picker's Library row clears the collection scope.
+      await tapUi(
+        tester,
+        find.byKey(const ValueKey('libraryCollectionsButton')),
+      );
+      await tapUi(
+        tester,
+        find.byKey(const ValueKey('collectionScopeRow-library')),
+      );
+      // The header title and the bottom switcher both name the Library.
+      for (final key in ['libraryHeaderTitle', 'libraryCollectionsButton']) {
+        expect(
+          find.descendant(
+            of: find.byKey(ValueKey(key)),
+            matching: find.text(pickerStrings.libraryTitle),
+          ),
+          findsOneWidget,
+          reason: key,
+        );
+      }
+      await tapUi(
+        tester,
+        find.byKey(const ValueKey('libraryCollectionsButton')),
+      );
       await tapUi(
         tester,
         find.byKey(ValueKey('collectionScopeManage-manual-${collection!.id}')),

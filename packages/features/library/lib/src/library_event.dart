@@ -40,14 +40,9 @@ final class LibrarySearchQueryChanged extends LibraryQueryEvent {
   final String query;
 }
 
+/// Clears the search and the collection scope ("Reset filters").
 final class LibraryFiltersReset extends LibraryQueryEvent {
   const LibraryFiltersReset();
-}
-
-final class LibraryFilterChanged extends LibraryEvent {
-  const LibraryFilterChanged(this.filter);
-
-  final LibraryFilter filter;
 }
 
 final class LibraryCollectionScopeChanged extends LibraryEvent {

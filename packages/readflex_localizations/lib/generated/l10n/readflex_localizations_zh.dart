@@ -192,22 +192,10 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryResetFilters => '重置筛选';
 
   @override
-  String get libraryClearCollectionFilter => '清除合集筛选';
-
-  @override
   String get commonCopied => '已复制';
 
   @override
   String get commonCopyFailed => '无法复制';
-
-  @override
-  String get appSkip => '跳过';
-
-  @override
-  String get appNext => '下一步';
-
-  @override
-  String get appGetStarted => '开始';
 
   @override
   String get appInitializationFailed => '初始化失败';
@@ -235,9 +223,6 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get onboardingHighlightSaveDescription => '选择文字创建高亮。添加笔记以加深理解。';
-
-  @override
-  String get onboardingOrganizeLibraryTitle => '整理你的书库';
 
   @override
   String get onboardingOrganizeLibraryDescription => '将图书和文章放在一处，并随时回到阅读进度。';
@@ -298,19 +283,16 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get librarySearchHint => '搜索书库...';
 
   @override
-  String get libraryFilterAll => '全部';
+  String get libraryScopeBooks => '图书';
 
   @override
-  String get libraryFilterBooks => '图书';
+  String get libraryScopeArticles => '文章';
 
   @override
-  String get libraryFilterArticles => '文章';
+  String get libraryScopeComics => '漫画';
 
   @override
-  String get libraryFilterComics => '漫画';
-
-  @override
-  String get libraryFilterNew => '新内容';
+  String get libraryScopeNew => '新内容';
 
   @override
   String get libraryDisplayOptions => '显示选项';
@@ -434,9 +416,6 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get libraryFavourites => '收藏';
-
-  @override
-  String get libraryFavouritesBadge => '收藏';
 
   @override
   String libraryCreateCollectionPrompt(int count) {
@@ -584,16 +563,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get importAddToLibraryTitle => '添加到书库';
 
   @override
-  String get importUploadBook => '上传图书';
-
-  @override
-  String get importUploadBookFormats => 'EPUB, FB2, MOBI, PDF, AZW3, CBZ';
-
-  @override
   String get importSaveArticle => '保存文章';
-
-  @override
-  String get importSaveArticleDescription => '粘贴网页 URL 以便离线阅读';
 
   @override
   String get importBeforeUploadingTitle => '上传前';
@@ -888,21 +858,6 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get readerPageTurn => '翻页';
 
   @override
-  String get readerAlignStart => '起始对齐';
-
-  @override
-  String get readerJustifyText => '两端对齐';
-
-  @override
-  String get readerAlignEnd => '末端对齐';
-
-  @override
-  String get readerHorizontalPageTurn => '水平翻页';
-
-  @override
-  String get readerVerticalPageTurn => '垂直翻页';
-
-  @override
   String get readerResetTextSize => '重置文字大小';
 
   @override
@@ -913,24 +868,6 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get readerIncreaseTextSize => '增大文字';
-
-  @override
-  String get readerResetLineSpacing => '重置行距';
-
-  @override
-  String get readerDecreaseLineSpacing => '减小行距';
-
-  @override
-  String get readerIncreaseLineSpacing => '增大行距';
-
-  @override
-  String get readerResetPageMargins => '重置页边距';
-
-  @override
-  String get readerDecreasePageMargins => '减小页边距';
-
-  @override
-  String get readerIncreasePageMargins => '增大页边距';
 
   @override
   String get readerThemeSnow => '雪白';
@@ -1069,4 +1006,77 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get importArticleOfflineSubtitle => '需要互联网连接';
+
+  @override
+  String get libraryContinueReading => '继续阅读';
+
+  @override
+  String readingTimeLeftMinutes(int count) {
+    return '剩余 $count 分钟';
+  }
+
+  @override
+  String readingTimeLeftHours(int hours, int minutes) {
+    return '剩余 $hours 小时 $minutes 分钟';
+  }
+
+  @override
+  String get libraryUploadFile => '上传文件';
+
+  @override
+  String get librarySaveArticleAction => '保存文章';
+
+  @override
+  String get importFileKinds => '图书、漫画和 PDF';
+
+  @override
+  String get importFromDevice => '设备中的文件';
+
+  @override
+  String get importArticleFromLink => '来自链接的文章';
+
+  @override
+  String get importArticleOffline => '保存后可离线阅读';
+
+  @override
+  String get libraryChooseCollection => '选择收藏集';
+
+  @override
+  String get onboardingAddBook => '添加图书';
+
+  @override
+  String get onboardingNotNow => '以后再说';
+
+  @override
+  String get readerLineSpacingCompact => '紧凑';
+
+  @override
+  String get readerLineSpacingNormal => '标准';
+
+  @override
+  String get readerLineSpacingRelaxed => '宽松';
+
+  @override
+  String get readerMarginsNarrow => '窄';
+
+  @override
+  String get readerMarginsMedium => '中';
+
+  @override
+  String get readerMarginsWide => '宽';
+
+  @override
+  String get readerAlignNormal => '常规';
+
+  @override
+  String get readerAlignJustified => '两端对齐';
+
+  @override
+  String get readerPageTurnHorizontalShort => '横向';
+
+  @override
+  String get readerPageTurnVerticalShort => '纵向';
+
+  @override
+  String get readerChapterRead => '已读';
 }

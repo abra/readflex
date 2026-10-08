@@ -3,7 +3,9 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:reader/src/reader_highlight_color.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
+import 'package:reader/src/reader_highlight_quote_background.dart';
 
 void main() {
   final longText = List.filled(30, 'A passage worth remembering.').join(' ');
@@ -21,6 +23,9 @@ void main() {
     createdAt: DateTime(2026),
   );
 
+  TextStyle spanStyle(WidgetTester tester, String text) =>
+      tester.widget<Text>(find.text(text)).textSpan!.style!;
+
   Future<void> pump(
     WidgetTester tester,
     Highlight value, {
@@ -28,15 +33,18 @@ void main() {
     Locale locale = const Locale('en'),
     bool? bookRtl,
     VoidCallback? onNavigate,
+    bool dark = false,
+    ReaderThemePreset readerTheme = ReaderThemePreset.paper,
+    Size size = const Size(320, 568),
   }) async {
-    tester.view.physicalSize = const Size(320, 568);
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     var expanded = false;
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.light(),
+        theme: dark ? AppTheme.dark() : AppTheme.light(),
         locale: locale,
         supportedLocales: ReadflexSupportedLocales.locales,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
@@ -51,7 +59,7 @@ void main() {
             child: StatefulBuilder(
               builder: (context, setState) => ReaderHighlightListTile(
                 highlight: value,
-                readerTheme: ReaderThemePreset.paper.data,
+                readerTheme: readerTheme.data,
                 pageProgressionRtl: bookRtl ?? locale.languageCode == 'ar',
                 expanded: expanded,
                 onExpanded: () => setState(() => expanded = !expanded),
@@ -65,7 +73,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('quote decoration and note follow their own content direction', (
+  testWidgets('quote and note rows follow their own content direction', (
     tester,
   ) async {
     await pump(
@@ -74,14 +82,22 @@ void main() {
       locale: const Locale('ar'),
       bookRtl: false,
     );
-    final quote = find.text('An English quote.');
-    final decoration = find
-        .ancestor(of: quote, matching: find.byType(DecoratedBox))
-        .first;
-    expect(Directionality.of(tester.element(decoration)), TextDirection.ltr);
+    expect(
+      tester.widget<Text>(find.text('An English quote.')).textDirection,
+      TextDirection.ltr,
+    );
     expect(
       tester.widget<Text>(find.text('ملاحظة')).textDirection,
       TextDirection.rtl,
+    );
+    // The pencil leads the RTL note even though the book is LTR.
+    final noteRow = tester.widget<Row>(
+      find.ancestor(of: find.text('ملاحظة'), matching: find.byType(Row)).first,
+    );
+    expect(noteRow.textDirection, TextDirection.rtl);
+    expect(
+      tester.getRect(find.byIcon(AppIcons.edit)).left,
+      greaterThan(tester.getRect(find.text('ملاحظة')).right),
     );
   });
 
@@ -241,29 +257,49 @@ void main() {
   for (final locale in [const Locale('en'), const Locale('ar')]) {
     final rtl = locale.languageCode == 'ar';
     testWidgets(
-      'Read more starts on the note gutter with ink past it $locale',
+      'location starts and Read more ends the footer on the gutters $locale',
       (
         tester,
       ) async {
         await pump(
           tester,
-          highlight().copyWith(note: 'Short note'),
+          highlight().copyWith(
+            note: 'Short note',
+            progress: .25,
+            chapterTitle: 'Chapter 1',
+          ),
           locale: locale,
         );
         final width = tester.getSize(find.byType(Scaffold)).width;
         double leading(Rect rect) => rtl ? width - rect.right : rect.left;
+        double trailing(Rect rect) => rtl ? rect.left : width - rect.right;
         final l10n = tester.element(find.byType(ReaderHighlightListTile)).l10n;
         final quote = tester.getRect(find.text(longText));
+        final noteIcon = tester.getRect(find.byIcon(AppIcons.edit));
         final note = tester.getRect(find.text('Short note'));
+        final location = tester.getRect(find.text('Chapter 1 · 25%'));
         final label = tester.getRect(find.text(l10n.readerExpandHighlight));
         final button = tester.getRect(find.byType(TextButton));
-        // The quote keeps its 12dp bar inset (the 3dp bar paints inside it)
-        // after the 16dp gutter.
-        expect(leading(quote), AppSpacing.lg + AppSpacing.md);
-        expect(leading(note), AppSpacing.lg);
-        expect(leading(label), AppSpacing.lg);
-        expect(leading(button), 0);
+        // No start rule: the quote sits on the gutter in the book's
+        // direction (LTR here) and the English note's mark leads its own
+        // LTR row in either UI direction.
+        expect(quote.left, AppSpacing.lg);
+        expect(width - quote.right, greaterThanOrEqualTo(AppSpacing.lg));
+        expect(noteIcon.left, AppSpacing.lg);
+        expect(noteIcon.size, const Size.square(AppIconSize.xs));
+        expect(note.left, AppSpacing.lg + AppIconSize.xs + AppSpacing.sm);
+        expect(width - note.right, greaterThanOrEqualTo(AppSpacing.lg));
+        expect(leading(location), AppSpacing.lg);
+        // Read more trails the same row: label on the 16dp gutter, ink and
+        // 48dp target reaching the drawer edge.
+        expect(trailing(label), AppSpacing.lg);
+        expect(trailing(button), 0);
         expect(button.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
+        expect(
+          location.center.dy,
+          moreOrLessEquals(button.center.dy, epsilon: 0.5),
+        );
+        expect(location.top, greaterThan(note.bottom));
         expect(
           find.descendant(
             of: find.byType(TextButton),
@@ -274,7 +310,11 @@ void main() {
         await tester.tap(find.byType(TextButton));
         await tester.pumpAndSettle();
         expect(
-          leading(tester.getRect(find.text(l10n.readerCollapseHighlight))),
+          trailing(tester.getRect(find.text(l10n.readerCollapseHighlight))),
+          AppSpacing.lg,
+        );
+        expect(
+          leading(tester.getRect(find.text('Chapter 1 · 25%'))),
           AppSpacing.lg,
         );
       },
@@ -301,16 +341,25 @@ void main() {
       await pump(tester, image, locale: locale);
       final width = tester.getSize(find.byType(Scaffold)).width;
       double leading(Rect rect) => rtl ? width - rect.right : rect.left;
+      double trailing(Rect rect) => rtl ? rect.left : width - rect.right;
       final l10n = tester.element(find.byType(ReaderHighlightListTile)).l10n;
       final note = tester.getRect(find.text(noteText));
+      final noteIcon = tester.getRect(find.byIcon(AppIcons.edit));
       final label = tester.getRect(find.text(l10n.readerExpandHighlight));
       final button = tester.getRect(find.byType(TextButton));
       final page = tester.getRect(find.text(l10n.readerPageNumber(1)));
-      expect(leading(note), AppSpacing.lg);
-      expect(leading(label), AppSpacing.lg);
-      expect(leading(button), 0);
-      // 8dp bar inset + 96dp preview + 12dp after the 16dp gutter.
-      expect(leading(page), AppSpacing.lg + AppSpacing.sm + 96 + AppSpacing.md);
+      // The English note keeps an LTR row in both UI directions.
+      expect(noteIcon.left, AppSpacing.lg);
+      expect(note.left, AppSpacing.lg + AppIconSize.xs + AppSpacing.sm);
+      expect(trailing(label), AppSpacing.lg);
+      expect(trailing(button), 0);
+      expect(button.top, greaterThanOrEqualTo(note.bottom));
+      // 96dp preview + 12dp after the 16dp gutter; no start rule.
+      expect(leading(page), AppSpacing.lg + 96 + AppSpacing.md);
+      expect(
+        tester.widget<Text>(find.text(noteText)).style?.fontSize,
+        tester.element(find.text(noteText)).text.bodySmall.fontSize,
+      );
       expect(
         find.descendant(
           of: find.byType(TextButton),
@@ -374,6 +423,191 @@ void main() {
     },
   );
 
+  for (final dark in [false, true]) {
+    for (final preset in [ReaderThemePreset.paper, ReaderThemePreset.mist]) {
+      testWidgets(
+        'quote paints the ${preset.id} highlight under its text at 4.5:1 '
+        'dark=$dark',
+        (tester) async {
+          await pump(
+            tester,
+            highlight(
+              text: 'A short quote.',
+            ).copyWith(color: HighlightColor.pink, note: 'A note.'),
+            dark: dark,
+            readerTheme: preset,
+          );
+          final context = tester.element(find.byType(ReaderHighlightListTile));
+          final colors = context.colors;
+          final style = spanStyle(tester, 'A short quote.');
+          final text = style.color!;
+          final background = style.backgroundColor!;
+          expect(text, colors.onSurface);
+          expect(
+            background,
+            readerHighlightQuoteBackground(
+              highlight: readerHighlightColor(HighlightColor.pink, preset.data),
+              surface: colors.surface,
+              text: text,
+              opacity: readerHighlightOpacity(preset.data),
+            ),
+          );
+          expect(background, isNot(colors.surface));
+          expect(
+            readerContrastRatio(text, background),
+            greaterThanOrEqualTo(readerHighlightQuoteMinContrast),
+          );
+          // The note is plain text; only the quote carries the colour.
+          expect(
+            tester.widget<Text>(find.text('A note.')).style?.backgroundColor,
+            isNull,
+          );
+          // The coloured start rule is gone (the divider keeps its border).
+          expect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is DecoratedBox &&
+                  widget.decoration is BoxDecoration &&
+                  (widget.decoration as BoxDecoration).border
+                      is BorderDirectional,
+            ),
+            findsNothing,
+          );
+        },
+      );
+    }
+  }
+
+  testWidgets('a removed quote keeps a readable fill under muted text', (
+    tester,
+  ) async {
+    for (final dark in [false, true]) {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: dark ? AppTheme.dark() : AppTheme.light(),
+          supportedLocales: ReadflexSupportedLocales.locales,
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          home: Scaffold(
+            body: ReaderHighlightListTile(
+              highlight: highlight(text: 'Gone passage'),
+              readerTheme: ReaderThemePreset.paper.data,
+              pageProgressionRtl: false,
+              expanded: false,
+              removed: true,
+              onUndo: () {},
+              onExpanded: () {},
+              onNavigate: () {},
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final colors = tester.element(find.byType(Scaffold)).colors;
+      final style = spanStyle(tester, 'Gone passage');
+      expect(style.color, colors.onSurfaceVariant);
+      expect(
+        readerContrastRatio(style.color!, style.backgroundColor!),
+        greaterThanOrEqualTo(readerHighlightQuoteMinContrast),
+        reason: 'dark=$dark',
+      );
+    }
+  });
+
+  testWidgets('the note mark centres on the first bodySmall line', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      highlight(text: 'Quote').copyWith(note: longText),
+      scale: 1.5,
+    );
+    final context = tester.element(find.byType(ReaderHighlightListTile));
+    final note = tester.widget<Text>(find.text(longText));
+    expect(note.style?.fontSize, context.text.bodySmall.fontSize);
+    expect(note.maxLines, 2);
+    final noteRect = tester.getRect(find.text(longText));
+    final icon = tester.getRect(find.byIcon(AppIcons.edit));
+    final lineHeight =
+        context.text.bodySmall.fontSize! * 1.5 * context.text.bodySmall.height!;
+    expect(icon.width, moreOrLessEquals(AppIconSize.xs));
+    expect(icon.height, moreOrLessEquals(AppIconSize.xs));
+    expect(
+      icon.center.dy,
+      moreOrLessEquals(noteRect.top + lineHeight / 2, epsilon: 0.5),
+    );
+    expect(
+      tester.widget<Icon>(find.byIcon(AppIcons.edit)).color,
+      context.colors.onSurfaceVariant,
+    );
+  });
+
+  testWidgets('rows without a note draw no note mark', (tester) async {
+    await pump(tester, highlight(text: 'Quote').copyWith(progress: .5));
+    expect(find.byIcon(AppIcons.edit), findsNothing);
+    expect(find.text('50%'), findsOneWidget);
+    expect(find.byType(TextButton), findsNothing);
+  });
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    testWidgets('390dp phone keeps the 16dp gutters and 48dp targets $locale', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final rtl = locale.languageCode == 'ar';
+      await pump(
+        tester,
+        highlight().copyWith(
+          note: 'Note',
+          progress: .4,
+          chapterTitle: 'Chapter',
+        ),
+        locale: locale,
+        size: const Size(390, 844),
+      );
+      final l10n = tester.element(find.byType(ReaderHighlightListTile)).l10n;
+      final quote = tester.getRect(find.text(longText));
+      final location = tester.getRect(find.text('Chapter · 40%'));
+      final label = tester.getRect(find.text(l10n.readerExpandHighlight));
+      // The book is RTL in the Arabic UI here, so the quote mirrors with it.
+      expect(rtl ? 390 - quote.right : quote.left, AppSpacing.lg);
+      expect(rtl ? quote.left : 390 - quote.right, greaterThanOrEqualTo(16));
+      expect(rtl ? 390 - location.right : location.left, AppSpacing.lg);
+      expect(rtl ? label.left : 390 - label.right, AppSpacing.lg);
+      expect(
+        tester.getSize(find.byType(TextButton)).height,
+        greaterThanOrEqualTo(AppSizes.buttonHeight),
+      );
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      semantics.dispose();
+    });
+  }
+
+  testWidgets('a long location at 2x shares the row without overflowing', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      highlight().copyWith(
+        progress: .4,
+        chapterTitle: 'A chapter title long enough to wrap in a narrow drawer',
+      ),
+      scale: 2,
+      locale: const Locale('de'),
+    );
+    expect(tester.takeException(), isNull);
+    final width = tester.getSize(find.byType(Scaffold)).width;
+    final location = tester.getRect(
+      find.textContaining('A chapter title long enough'),
+    );
+    final button = tester.getRect(find.byType(TextButton));
+    expect(location.left, AppSpacing.lg);
+    expect(location.right, lessThanOrEqualTo(button.left));
+    expect(button.right, width);
+    expect(button.width, lessThanOrEqualTo(width / 2));
+    expect(button.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
+  });
+
   group('removed rows', () {
     Future<void> pumpRemoved(
       WidgetTester tester,
@@ -429,7 +663,7 @@ void main() {
       expect(find.text('40%'), findsNothing);
       expect(find.text(l10n.readerExpandHighlight), findsNothing);
       expect(
-        tester.widget<Text>(find.text('Gone passage')).style?.color,
+        tester.widget<Text>(find.text('Gone passage')).textSpan?.style?.color,
         colors.onSurfaceVariant,
       );
       final undo = find.byTooltip(l10n.commonUndo);
@@ -505,7 +739,11 @@ void main() {
       expect(find.text(l10n.readerHighlightRemoved), findsOneWidget);
       expect(find.text('Image note'), findsOneWidget);
       expect(
-        tester.widget<Text>(find.text(l10n.readerPageNumber(3))).style?.color,
+        tester
+            .widget<Text>(find.text(l10n.readerPageNumber(3)))
+            .textSpan
+            ?.style
+            ?.color,
         context.colors.onSurfaceVariant,
       );
       await tester.tap(find.text(l10n.readerPageNumber(3)));

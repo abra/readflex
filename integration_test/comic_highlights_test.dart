@@ -76,8 +76,13 @@ void main() {
       final bookmark = bloc.state.bookmarks.single;
       await tapUi(tester, find.byTooltip('Contents'));
       await tapUi(tester, find.text('Bookmarks'));
-      final deleteIcon = tester.getRect(find.byIcon(AppIcons.delete));
-      await tapUi(tester, find.byTooltip('Delete bookmark'));
+      // Undo lands on the trailing gutter, under the drawer's Close glyph.
+      final closeIcon = tester.getRect(
+        find.byIcon(AppIcons.close).hitTestable(),
+      );
+      expect(find.byTooltip('Delete bookmark'), findsNothing);
+      await tester.drag(find.byType(Dismissible).first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
       await waitForUi(
         tester,
         () => bloc.state.bookmarkEdits.removed.length == 1,
@@ -91,7 +96,7 @@ void main() {
       expect(tester.getSize(undo), const Size.square(48));
       expect(
         tester.getRect(find.byIcon(AppIcons.undo)).center.dx,
-        closeTo(deleteIcon.center.dx, .01),
+        closeTo(closeIcon.center.dx, .01),
       );
       if (Platform.isAndroid) {
         await captureAndroidScreenshot('comic-bookmark-undo');

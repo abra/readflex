@@ -65,7 +65,7 @@ void main() {
   void expectTrailingActionAligned(
     WidgetTester tester,
     Finder action, {
-    IconData iconData = AppIcons.delete,
+    required IconData iconData,
   }) {
     final close = tester.getRect(find.byIcon(AppIcons.close).hitTestable());
     final icon = tester.getRect(
@@ -302,12 +302,11 @@ void main() {
       await tapUi(tester, find.byTooltip('Clear search'));
       expect(searchCubit.state.results, isEmpty);
       expect(searchCubit.state.recentQueries, contains('devices'));
-      expectTrailingActionAligned(
-        tester,
-        find.byTooltip('Remove from history'),
-      );
+      expect(find.byTooltip('Remove from history'), findsNothing);
       await capture(tester, 'book-search-history');
-      await tapUi(tester, find.byTooltip('Remove from history'));
+      // History rows have no delete button; the row swipes end-to-start.
+      await tester.drag(find.byType(Dismissible).first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
       expect(searchCubit.state.recentQueries, isEmpty);
       // Re-focus the retained field through a real gesture; enterText alone
       // reuses the test binding's old EditableText connection after unfocus.
@@ -360,9 +359,11 @@ void main() {
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Contents'));
       await tapUi(tester, find.text('Bookmarks'));
-      expectTrailingActionAligned(tester, find.byTooltip('Delete bookmark'));
+      expect(find.byTooltip('Delete bookmark'), findsNothing);
       await capture(tester, 'book-bookmarks');
-      await tapUi(tester, find.byTooltip('Delete bookmark'));
+      // Bookmark rows have no delete button; the row swipes end-to-start.
+      await tester.drag(find.byType(Dismissible).first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
       await waitForUi(
         tester,
         () => reopened.state.bookmarks.isEmpty,
@@ -385,7 +386,9 @@ void main() {
         description: 'bookmark and current-page badge restored',
       );
       expect(reopened.state.bookmarks.single, original);
-      await tapUi(tester, find.byTooltip('Delete bookmark'));
+      // Bookmark rows have no delete button; the row swipes end-to-start.
+      await tester.drag(find.byType(Dismissible).first, const Offset(-400, 0));
+      await tester.pumpAndSettle();
       await waitForUi(
         tester,
         () => reopened.state.bookmarks.isEmpty,

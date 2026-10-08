@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
+import 'library_collection_scope_icon.dart';
 import 'library_collection_scope_label.dart';
 
 const double _collectionScopeRowHeight = 48;
@@ -37,6 +38,12 @@ final class LibraryCollectionScopeManageRequested
   const LibraryCollectionScopeManageRequested(this.scope);
 
   final LibraryCollectionScope scope;
+}
+
+/// The Library row: show the whole library again.
+final class LibraryCollectionScopeCleared
+    extends LibraryCollectionScopeSheetResult {
+  const LibraryCollectionScopeCleared();
 }
 
 Future<LibraryCollectionScopeSheetResult?> showLibraryCollectionScopeSheet({
@@ -134,7 +141,12 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
       state.siteCollectionScopes,
       state.authorCollectionScopes,
     ].where((scopes) => scopes.isNotEmpty).length;
-    final rowCount = state.collectionScopes.length;
+    // Favourites and Library lead the list; built-in scopes count only when
+    // listed.
+    final rowCount =
+        1 +
+        state.pickerBuiltInCollectionScopes.length +
+        state.collectionScopes.where((scope) => !scope.isBuiltIn).length;
     final contentHeight =
         rowCount * _collectionScopeRowHeight +
         sectionCount * _collectionScopeSectionChromeHeight +
@@ -217,7 +229,10 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
   }
 }
 
-/// Filters and renders collection scopes grouped by source type.
+/// Filters and renders collection scopes. The first group has no title:
+/// Favourites directly under the search field, then Library and the
+/// built-in scopes. Manual collections, sites and authors follow under
+/// their titles.
 class _CollectionScopeSections extends StatelessWidget {
   const _CollectionScopeSections({
     required this.state,
@@ -233,6 +248,14 @@ class _CollectionScopeSections extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalizedQuery = query.trim().toLowerCase();
     final l10n = context.l10n;
+    final showsLibraryRow =
+        normalizedQuery.isEmpty ||
+        l10n.libraryTitle.toLowerCase().contains(normalizedQuery);
+    final builtInScopes = _filterScopes(
+      state.pickerBuiltInCollectionScopes,
+      normalizedQuery,
+      l10n,
+    );
     final favouriteScopes = _filterScopes(
       state.favouriteCollectionScopes,
       normalizedQuery,
@@ -254,6 +277,8 @@ class _CollectionScopeSections extends StatelessWidget {
       l10n,
     );
     final hasMatches =
+        showsLibraryRow ||
+        builtInScopes.isNotEmpty ||
         favouriteScopes.isNotEmpty ||
         manualScopes.isNotEmpty ||
         siteScopes.isNotEmpty ||
@@ -266,38 +291,68 @@ class _CollectionScopeSections extends StatelessWidget {
       );
     }
 
+    final selected = state.selectedCollectionScope;
     return ScrollEdgeFadeStack(
       showBottomFade: false,
       child: ListView(
         padding: _collectionScopeListPadding,
         children: [
           _ScopeSection(
-            onManage: onManage,
-            scopes: favouriteScopes,
-            selected: state.selectedCollectionScope,
+            rows: [
+              // Favourites stays first, under the search field, however many
+              // built-in scopes the library lists.
+              for (final scope in favouriteScopes)
+                _CollectionScopeRow(
+                  scope: scope,
+                  selected: _isSelected(scope, selected),
+                  onManage: () => onManage(scope),
+                ),
+              if (showsLibraryRow)
+                _ScopeOptionRow(
+                  keyId: 'library',
+                  icon: AppIcons.library,
+                  label: l10n.libraryTitle,
+                  count: state.totalCount,
+                  selected: selected == null,
+                  onTap: () => Navigator.of(
+                    context,
+                  ).pop(const LibraryCollectionScopeCleared()),
+                ),
+              // Books, Articles, Comics and New sit with Library: they
+              // narrow by what a source is.
+              for (final scope in builtInScopes)
+                _CollectionScopeRow(
+                  scope: scope,
+                  selected: _isSelected(scope, selected),
+                  onManage: () => onManage(scope),
+                ),
+            ],
           ),
-          _ScopeSection(
-            onManage: onManage,
-            title: l10n.libraryManualCollections,
-            scopes: manualScopes,
-            selected: state.selectedCollectionScope,
-          ),
-          _ScopeSection(
-            onManage: onManage,
-            title: l10n.librarySites,
-            scopes: siteScopes,
-            selected: state.selectedCollectionScope,
-          ),
-          _ScopeSection(
-            onManage: onManage,
-            title: l10n.libraryAuthors,
-            scopes: authorScopes,
-            selected: state.selectedCollectionScope,
-          ),
+          for (final (title, scopes) in [
+            (l10n.libraryManualCollections, manualScopes),
+            (l10n.librarySites, siteScopes),
+            (l10n.libraryAuthors, authorScopes),
+          ])
+            _ScopeSection(
+              title: title,
+              rows: [
+                for (final scope in scopes)
+                  _CollectionScopeRow(
+                    scope: scope,
+                    selected: _isSelected(scope, selected),
+                    onManage: () => onManage(scope),
+                  ),
+              ],
+            ),
         ],
       ),
     );
   }
+
+  bool _isSelected(
+    LibraryCollectionScope scope,
+    LibraryCollectionScope? selected,
+  ) => selected?.type == scope.type && selected?.id == scope.id;
 
   List<LibraryCollectionScope> _filterScopes(
     List<LibraryCollectionScope> scopes,
@@ -316,23 +371,16 @@ class _CollectionScopeSections extends StatelessWidget {
   }
 }
 
-/// Optional titled group inside the collection selector.
+/// Optional titled group of picker rows; renders nothing without rows.
 class _ScopeSection extends StatelessWidget {
-  const _ScopeSection({
-    required this.onManage,
-    required this.scopes,
-    required this.selected,
-    this.title,
-  });
+  const _ScopeSection({required this.rows, this.title});
 
   final String? title;
-  final List<LibraryCollectionScope> scopes;
-  final LibraryCollectionScope? selected;
-  final ValueChanged<LibraryCollectionScope> onManage;
+  final List<Widget> rows;
 
   @override
   Widget build(BuildContext context) {
-    if (scopes.isEmpty) return const SizedBox.shrink();
+    if (rows.isEmpty) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.lg),
@@ -353,14 +401,7 @@ class _ScopeSection extends StatelessWidget {
                 ),
               ),
             ),
-          ...scopes.map(
-            (scope) => _CollectionScopeRow(
-              onManage: () => onManage(scope),
-              scope: scope,
-              selected:
-                  selected?.type == scope.type && selected?.id == scope.id,
-            ),
-          ),
+          ...rows,
         ],
       ),
     );
@@ -381,9 +422,48 @@ class _CollectionScopeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final label = libraryCollectionScopeLabel(context.l10n, scope);
+    return _ScopeOptionRow(
+      keyId: '${scope.type.name}-${scope.id}',
+      icon: libraryCollectionScopeIcon(scope.type),
+      label: label,
+      count: scope.sourceCount,
+      selected: selected,
+      onTap: () =>
+          Navigator.of(context).pop(LibraryCollectionScopeSelected(scope)),
+      manageTooltip: scope.canManage
+          ? context.l10n.libraryManageCollection(label)
+          : null,
+      onManage: scope.canManage ? onManage : null,
+    );
+  }
+}
+
+/// One picker row: icon, label, count and an optional trailing ⋮ menu.
+class _ScopeOptionRow extends StatelessWidget {
+  const _ScopeOptionRow({
+    required this.keyId,
+    required this.icon,
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+    this.manageTooltip,
+    this.onManage,
+  });
+
+  final String keyId;
+  final IconData icon;
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+  final String? manageTooltip;
+  final VoidCallback? onManage;
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.colors;
-    final l10n = context.l10n;
-    final label = libraryCollectionScopeLabel(l10n, scope);
     final foreground = selected
         ? colors.selectedControlForeground
         : colors.onSurfaceVariant;
@@ -402,9 +482,7 @@ class _CollectionScopeRow extends StatelessWidget {
                 top: 0,
                 bottom: 0,
                 child: Ink(
-                  key: ValueKey(
-                    'collectionScopeSelection-${scope.type.name}-${scope.id}',
-                  ),
+                  key: ValueKey('collectionScopeSelection-$keyId'),
                   decoration: BoxDecoration(
                     color: colors.selectedControlBackground,
                     borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -413,13 +491,9 @@ class _CollectionScopeRow extends StatelessWidget {
               ),
             InkWell(
               borderRadius: BorderRadius.circular(AppRadius.sm),
-              onTap: () => Navigator.of(
-                context,
-              ).pop(LibraryCollectionScopeSelected(scope)),
+              onTap: onTap,
               child: SizedBox(
-                key: ValueKey(
-                  'collectionScopeRow-${scope.type.name}-${scope.id}',
-                ),
+                key: ValueKey('collectionScopeRow-$keyId'),
                 height: _collectionScopeRowHeight,
                 child: Padding(
                   padding: const EdgeInsetsDirectional.only(
@@ -428,7 +502,7 @@ class _CollectionScopeRow extends StatelessWidget {
                   child: Row(
                     children: [
                       Icon(
-                        selected ? AppIcons.check : _iconFor(scope.type),
+                        selected ? AppIcons.check : icon,
                         size: AppIconSize.sm,
                         color: foreground,
                       ),
@@ -447,7 +521,7 @@ class _CollectionScopeRow extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Text(
-                        '${scope.sourceCount}',
+                        '$count',
                         style: context.text.bodyMedium.copyWith(
                           color: foreground,
                         ),
@@ -455,16 +529,12 @@ class _CollectionScopeRow extends StatelessWidget {
                       const SizedBox(width: AppSpacing.md),
                       // Rows without a menu keep its 48dp slot so every
                       // count sits on one column.
-                      if (scope.canManage)
+                      if (onManage != null)
                         AppPlainIconButton(
-                          tooltip: l10n.libraryManageCollection(label),
-                          color: selected
-                              ? colors.selectedControlForeground
-                              : colors.onSurfaceVariant,
+                          tooltip: manageTooltip!,
+                          color: foreground,
                           icon: AppIcons.moreVertical,
-                          key: ValueKey(
-                            'collectionScopeManage-${scope.type.name}-${scope.id}',
-                          ),
+                          key: ValueKey('collectionScopeManage-$keyId'),
                           onPressed: onManage,
                         )
                       else
@@ -478,14 +548,5 @@ class _CollectionScopeRow extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  IconData _iconFor(LibraryCollectionScopeType type) {
-    return switch (type) {
-      LibraryCollectionScopeType.favourites => AppIcons.collectionFavourites,
-      LibraryCollectionScopeType.manual => AppIcons.collection,
-      LibraryCollectionScopeType.site => AppIcons.global,
-      LibraryCollectionScopeType.author => AppIcons.author,
-    };
   }
 }

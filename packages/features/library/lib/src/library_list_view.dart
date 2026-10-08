@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
+import 'library_continue_reading_card.dart';
 import 'library_list_tile.dart';
 import 'library_selection_cubit.dart';
 import 'library_layout.dart';
@@ -19,6 +20,9 @@ import 'library_layout.dart';
 /// the parent screen shows a confirmation bottom sheet, dispatches the
 /// delete on confirm, and resolves true only once the write succeeded so
 /// the row finishes dismissing (false on cancel or failure springs it back).
+///
+/// A non-null [continueReadingSource] puts its card first, on the 16dp
+/// gutter, scrolling with the rows.
 class LibraryListView extends StatelessWidget {
   const LibraryListView({
     required this.sources,
@@ -27,10 +31,12 @@ class LibraryListView extends StatelessWidget {
     required this.onSourcePressed,
     required this.onSourceLongPressed,
     required this.onConfirmSwipeDelete,
+    this.continueReadingSource,
     super.key,
   });
 
   final List<LibrarySource> sources;
+  final LibrarySource? continueReadingSource;
   final LibrarySelectionState selection;
   final ScrollController scrollController;
   final void Function(LibrarySource source) onSourcePressed;
@@ -39,6 +45,8 @@ class LibraryListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final continueReadingSource = this.continueReadingSource;
+    final leadingCount = continueReadingSource == null ? 0 : 1;
     // Rows own the 16dp gutter so selection tints and the swipe background
     // run edge to edge.
     return ListView.builder(
@@ -50,8 +58,24 @@ class LibraryListView extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
-      itemCount: sources.length,
-      itemBuilder: (context, index) {
+      itemCount: sources.length + leadingCount,
+      itemBuilder: (context, itemIndex) {
+        if (continueReadingSource != null && itemIndex == 0) {
+          // The first row's own top padding completes the gap below.
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              kLibraryContentTopPadding,
+              AppSpacing.lg,
+              kLibraryContinueReadingGap - kLibraryContentTopPadding,
+            ),
+            child: LibraryContinueReadingCard(
+              source: continueReadingSource,
+              onPressed: () => onSourcePressed(continueReadingSource),
+            ),
+          );
+        }
+        final index = itemIndex - leadingCount;
         final source = sources[index];
         final tile = BookLibraryListTile(
           source: source,

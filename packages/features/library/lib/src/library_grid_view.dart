@@ -2,11 +2,15 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
+import 'library_continue_reading_card.dart';
 import 'library_grid_tile.dart';
 import 'library_selection_cubit.dart';
 import 'library_layout.dart';
 
 /// Lazy grid with up to three columns, leaving room for scaled cover text.
+///
+/// A non-null [continueReadingSource] puts its full-width card above the
+/// grid, scrolling with it.
 class LibraryGridView extends StatelessWidget {
   const LibraryGridView({
     required this.sources,
@@ -14,10 +18,12 @@ class LibraryGridView extends StatelessWidget {
     required this.scrollController,
     required this.onSourcePressed,
     required this.onSourceLongPressed,
+    this.continueReadingSource,
     super.key,
   });
 
   final List<LibrarySource> sources;
+  final LibrarySource? continueReadingSource;
   final LibrarySelectionState selection;
   final ScrollController scrollController;
   final void Function(LibrarySource source) onSourcePressed;
@@ -25,6 +31,7 @@ class LibraryGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final continueReadingSource = this.continueReadingSource;
     final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -37,35 +44,61 @@ class LibraryGridView extends StatelessWidget {
                 // Phones stay at three columns; tablets get more instead of
                 // oversized covers.
                 .clamp(1, 6);
-        return GridView.builder(
+        return CustomScrollView(
           controller: scrollController,
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            kLibraryContentTopPadding,
-            AppSpacing.lg,
-            libraryContentBottomPadding(context),
-          ),
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: AppSpacing.md,
-            crossAxisSpacing: AppSpacing.md,
-            childAspectRatio: 2 / 3,
-          ),
-          itemCount: sources.length,
-          itemBuilder: (context, index) {
-            final source = sources[index];
-            return BookLibraryGridTile(
-              key: ValueKey('library-grid-${source.id}'),
-              source: source,
-              isSelected: selection.contains(source.id),
-              isSelectionMode: selection.isActive,
-              onTap: () => onSourcePressed(source),
-              onLongPress: () => onSourceLongPressed(source),
-            );
-          },
+          semanticChildCount: sources.length,
+          slivers: [
+            if (continueReadingSource != null)
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  kLibraryContentTopPadding,
+                  AppSpacing.lg,
+                  0,
+                ),
+                sliver: SliverToBoxAdapter(
+                  child: LibraryContinueReadingCard(
+                    source: continueReadingSource,
+                    onPressed: () => onSourcePressed(continueReadingSource),
+                  ),
+                ),
+              ),
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                continueReadingSource == null
+                    ? kLibraryContentTopPadding
+                    : kLibraryContinueReadingGap,
+                AppSpacing.lg,
+                libraryContentBottomPadding(context),
+              ),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  mainAxisSpacing: AppSpacing.md,
+                  crossAxisSpacing: AppSpacing.md,
+                  childAspectRatio: 2 / 3,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  childCount: sources.length,
+                  (context, index) {
+                    final source = sources[index];
+                    return BookLibraryGridTile(
+                      key: ValueKey('library-grid-${source.id}'),
+                      source: source,
+                      isSelected: selection.contains(source.id),
+                      isSelectionMode: selection.isActive,
+                      onTap: () => onSourcePressed(source),
+                      onLongPress: () => onSourceLongPressed(source),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
