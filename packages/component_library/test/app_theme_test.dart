@@ -43,6 +43,70 @@ void main() {
           _expectTextContrast(pair.$1, pair.$2, pair.$3);
         }
       });
+
+      testWidgets('text fields share the search field radius in '
+          '${theme.brightness.name}', (tester) async {
+        final input = theme.inputDecorationTheme;
+        for (final border in [
+          input.border,
+          input.enabledBorder,
+          input.focusedBorder,
+          input.errorBorder,
+          input.focusedErrorBorder,
+        ]) {
+          expect(
+            (border! as OutlineInputBorder).borderRadius,
+            BorderRadius.circular(AppRadius.md),
+          );
+        }
+        final controller = TextEditingController();
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: theme,
+            home: Scaffold(
+              body: SearchField(
+                hintText: 'Search',
+                clearButtonSemanticsLabel: 'Clear',
+                controller: controller,
+                onChanged: (_) {},
+              ),
+            ),
+          ),
+        );
+        final search = tester.widget<TextField>(find.byType(TextField));
+        expect(
+          (search.decoration!.border! as OutlineInputBorder).borderRadius,
+          BorderRadius.circular(AppRadius.md),
+        );
+      });
+
+      test('muted text is a quieter cool gray on every surface in '
+          '${theme.brightness.name}', () {
+        final colors = theme.colorScheme;
+        final dark = theme.brightness == Brightness.dark;
+        // The palette's muted gray, not the seed's wine-tinted variant.
+        expect(
+          colors.onSurfaceVariant,
+          dark ? PrimitiveColors.darkGray300 : PrimitiveColors.gray650,
+        );
+        expect(theme.listTileTheme.iconColor, colors.onSurfaceVariant);
+        for (final (name, surface) in [
+          ('surface', colors.surface),
+          ('surfaceContainerLowest', colors.surfaceContainerLowest),
+          ('surfaceContainerLow', colors.surfaceContainerLow),
+          ('surfaceContainer', colors.surfaceContainer),
+          ('surfaceContainerHighest', colors.surfaceContainerHighest),
+        ]) {
+          _expectTextContrast(colors.onSurfaceVariant, surface, name);
+        }
+        // Muted text keeps a clear step below primary text: the seed's
+        // dark variant reached 77% of it and read like a heading.
+        expect(
+          _contrast(colors.onSurfaceVariant, colors.surface),
+          lessThanOrEqualTo(_contrast(colors.onSurface, colors.surface) * .55),
+        );
+      });
     }
 
     test('light() returns ThemeData with light brightness', () {
@@ -207,4 +271,10 @@ void _expectTextContrast(Color foreground, Color background, String role) {
       ? (text + .05) / (surface + .05)
       : (surface + .05) / (text + .05);
   expect(ratio, greaterThanOrEqualTo(4.5), reason: role);
+}
+
+double _contrast(Color a, Color b) {
+  final first = a.computeLuminance() + .05;
+  final second = b.computeLuminance() + .05;
+  return first > second ? first / second : second / first;
 }

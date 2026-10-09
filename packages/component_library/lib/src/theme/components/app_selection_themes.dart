@@ -19,11 +19,8 @@ class AppSelectionThemes {
     return SegmentedButtonThemeData(
       style: ButtonStyle(
         backgroundColor: WidgetStateProperty.resolveWith((states) {
+          // Disabled keeps the selection wash; the foreground dims instead.
           if (states.contains(WidgetState.selected)) {
-            if (states.contains(WidgetState.disabled) &&
-                colors.brightness == Brightness.dark) {
-              return colors.onSurface.withValues(alpha: .12);
-            }
             return colors.selectedControlBackground;
           }
           return colors.surface;

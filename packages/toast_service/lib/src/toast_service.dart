@@ -1,12 +1,28 @@
+import 'dart:math' as math;
+import 'dart:ui' show FlutterView;
+
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:toastification/toastification.dart';
 
+import 'toast_avoid_area.dart';
+import 'toast_lift.dart';
+
 enum NotificationType { success, error }
 
-/// Shows top-anchored feedback using app tokens and a 48dp Close action.
-/// Success lasts 1 second; errors last 6 seconds or require explicit dismissal
-/// with accessible navigation. The overlay owns safe areas and width constraints.
+/// How long a success toast stays: long enough to read a book title, as a
+/// Material snackbar.
+const Duration toastSuccessDuration = Duration(seconds: 4);
+
+/// How long an error stays unless accessible navigation keeps it until
+/// dismissed.
+const Duration toastErrorDuration = Duration(seconds: 6);
+
+/// Shows bottom-anchored feedback on a neutral plate with a 48dp Close
+/// action, above the bottom controls marked with [ToastAvoidArea], where the
+/// thumb already is. Success lasts [toastSuccessDuration]; errors last
+/// [toastErrorDuration] or require explicit dismissal with accessible
+/// navigation. The overlay owns safe areas and width constraints.
 ///
 /// [messageSuffix] keeps a fixed verb/tail visible after an ellipsized title.
 /// It moves to another line when necessary, without reducing the text scale.
@@ -17,20 +33,21 @@ void showToast(
   String? messageSuffix,
 }) {
   final reduceMotion = MediaQuery.disableAnimationsOf(context);
+  toastLift.value = _liftAboveBottomControls(View.of(context));
   toastification.showCustom(
     context: context,
     autoCloseDuration: type == NotificationType.error
         ? (MediaQuery.accessibleNavigationOf(context)
               ? null
-              : const Duration(seconds: 6))
-        : const Duration(seconds: 1),
-    alignment: Alignment.topCenter,
+              : toastErrorDuration)
+        : toastSuccessDuration,
+    alignment: Alignment.bottomCenter,
     animationDuration: reduceMotion ? Duration.zero : null,
     animationBuilder: (context, animation, alignment, child) {
       if (MediaQuery.disableAnimationsOf(context)) return child;
       return SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0, -1),
+          begin: const Offset(0, 1),
           end: Offset.zero,
         ).animate(animation),
         child: child,
@@ -55,6 +72,19 @@ void showToast(
   // showCustom queues insertion after a frame but does not request one when
   // its overlay already exists (for example after an idle, persistent error).
   WidgetsBinding.instance.ensureVisualUpdate();
+}
+
+/// The overlay margin beyond its own [toastBottomMargin] that keeps the
+/// lowest toast [toastAvoidGap] above the highest marked bottom control. The
+/// overlay already adds the view padding and the keyboard inset, which the
+/// controls' positions include.
+double _liftAboveBottomControls(FlutterView view) {
+  final clearance = toastAvoidClearance(view);
+  if (clearance == 0) return 0;
+  final media = MediaQueryData.fromView(view);
+  final applied =
+      toastBottomMargin + media.viewPadding.bottom + media.viewInsets.bottom;
+  return math.max(0, clearance + toastAvoidGap - applied);
 }
 
 class _ToastContent extends StatelessWidget {
@@ -83,13 +113,13 @@ class _ToastContent extends StatelessWidget {
         (theme.brightness == Brightness.dark
             ? AppTheme.dark().ext
             : AppTheme.light().ext);
-    final (background, foreground, icon) = switch (type) {
-      NotificationType.success => (
-        appColors.successContainer,
-        appColors.onSuccessContainer,
-        AppIcons.check,
-      ),
-      NotificationType.error => (colors.error, colors.onError, AppIcons.error),
+    // A neutral plate in both types: only the glyph carries the status, so a
+    // confirmation does not flash a saturated banner over the page.
+    final background = colors.inverseSurface;
+    final foreground = colors.onInverseSurface;
+    final (icon, iconColor) = switch (type) {
+      NotificationType.success => (AppIcons.check, appColors.successOnInverse),
+      NotificationType.error => (AppIcons.error, appColors.errorOnInverse),
     };
     final radius = BorderRadius.circular(AppRadius.lg);
     return DecoratedBox(
@@ -109,7 +139,7 @@ class _ToastContent extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(icon, size: AppIconSize.md, color: foreground),
+              Icon(icon, size: AppIconSize.md, color: iconColor),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Semantics(

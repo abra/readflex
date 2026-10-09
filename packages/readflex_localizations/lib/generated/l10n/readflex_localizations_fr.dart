@@ -194,9 +194,6 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
       'Vérifiez la connexion réseau ou réessayez plus tard.';
 
   @override
-  String get libraryResetFilters => 'Réinitialiser les filtres';
-
-  @override
   String get commonCopied => 'Copié';
 
   @override
@@ -216,7 +213,7 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get appRetry => 'Réessayer';
 
   @override
-  String get appRetrying => 'Nouvelle tentative...';
+  String get appRetrying => 'Nouvelle tentative…';
 
   @override
   String get onboardingReadAnythingTitle => 'Lisez tout';
@@ -290,7 +287,7 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get libraryOffline => 'hors ligne';
 
   @override
-  String get librarySearchHint => 'Rechercher dans la bibliothèque...';
+  String get librarySearchHint => 'Rechercher dans la bibliothèque';
 
   @override
   String get libraryScopeBooks => 'Livres';
@@ -430,8 +427,13 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get libraryNoResultsTitle => 'Aucun résultat';
 
   @override
-  String get libraryNoResultsSubtitle =>
-      'Essayez une autre recherche ou un autre filtre';
+  String get libraryNoResultsSubtitle => 'Essayez une autre recherche';
+
+  @override
+  String get libraryEmptyCollectionTitle => 'Cette collection est vide';
+
+  @override
+  String get libraryShowWholeLibrary => 'Afficher toute la bibliothèque';
 
   @override
   String get libraryAddToCollectionTitle => 'Ajouter à une collection';
@@ -479,7 +481,7 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get libraryCollectionsTitle => 'Collections';
 
   @override
-  String get librarySearchCollectionsHint => 'Rechercher des collections...';
+  String get librarySearchCollectionsHint => 'Rechercher des collections';
 
   @override
   String get libraryNoCollectionsYet => 'Aucune collection pour le moment';
@@ -536,7 +538,7 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   }
 
   @override
-  String get libraryEmptySourceCount => '0 livre/article';
+  String get libraryEmptySourceCount => 'Aucun élément pour l\'instant';
 
   @override
   String get libraryNoItemsInCollection =>
@@ -598,7 +600,7 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
 
   @override
   String get importBookTermsBody =>
-      'Importez uniquement des livres, BD et documents que vous avez le droit d\'utiliser dans ReadFlex.';
+      'Importez uniquement des livres, BD et documents que vous avez le droit d\'utiliser dans Readflex.';
 
   @override
   String get importBookTermsConfirm =>
@@ -678,10 +680,10 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get libraryCreateAndAdd => 'Créer et ajouter';
 
   @override
-  String get importFetchingArticle => 'Récupération de l\'article...';
+  String get importFetchingArticle => 'Récupération de l\'article…';
 
   @override
-  String get importSavingArticle => 'Enregistrement de la copie hors ligne...';
+  String get importSavingArticle => 'Enregistrement de la copie hors ligne…';
 
   @override
   String get importComicAdded => 'BD ajoutée !';

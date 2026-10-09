@@ -410,29 +410,29 @@ void main() {
   ) async {
     final semantics = tester.ensureSemantics();
     try {
-      await pump(tester, const BottomSheetHeader(title: 'Save Article'));
+      await pump(tester, const BottomSheetHeader(title: 'Save article'));
       expect(
-        tester.getSemantics(find.text('Save Article')).flagsCollection.isHeader,
+        tester.getSemantics(find.text('Save article')).flagsCollection.isHeader,
         isTrue,
       );
-      final titleRect = tester.getRect(find.text('Save Article'));
+      final titleRect = tester.getRect(find.text('Save article'));
       final headerRect = tester.getRect(find.byType(BottomSheetHeader));
-      final style = tester.widget<Text>(find.text('Save Article')).style;
+      final style = tester.widget<Text>(find.text('Save article')).style;
       await pump(
         tester,
         BottomSheetHeader(
-          title: 'Save Article',
+          title: 'Save article',
           closeLabel: 'Close',
           onClose: () {},
         ),
       );
-      expect(tester.getTopLeft(find.text('Save Article')), titleRect.topLeft);
+      expect(tester.getTopLeft(find.text('Save article')), titleRect.topLeft);
       expect(
-        tester.getSize(find.text('Save Article')).height,
+        tester.getSize(find.text('Save article')).height,
         titleRect.height,
       );
       expect(tester.getRect(find.byType(BottomSheetHeader)), headerRect);
-      expect(tester.widget<Text>(find.text('Save Article')).style, style);
+      expect(tester.widget<Text>(find.text('Save article')).style, style);
       expect(headerRect.height, greaterThanOrEqualTo(48));
       expect(style?.fontSize, AppTheme.light().textTheme.titleMedium?.fontSize);
     } finally {

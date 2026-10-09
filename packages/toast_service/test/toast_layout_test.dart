@@ -129,7 +129,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 650));
     expect(
-      toastification.managers[Alignment.topCenter]!.notifications,
+      toastification.managers[Alignment.bottomCenter]!.notifications,
       hasLength(2),
       reason:
           'an idle overlay must schedule the second toast without user input',
@@ -161,9 +161,8 @@ void main() {
     }
   });
 
-  testWidgets('visible toast adapts to rotation and safe-area insets', (
-    tester,
-  ) async {
+  testWidgets('visible toast keeps to the bottom through rotation and '
+      'safe-area insets', (tester) async {
     final context = await _mount(tester, TextDirection.ltr, Brightness.light);
     showToast(context, type: NotificationType.error, message: 'Try again');
     addTearDown(tester.view.resetViewPadding);
@@ -180,12 +179,13 @@ void main() {
         left: 20,
         right: 12,
         top: 44,
+        bottom: 34,
       );
       await tester.pumpAndSettle();
       final rect = tester.getRect(find.byType(BuiltInContainer));
       expect(rect.left, greaterThanOrEqualTo(20 + AppSpacing.lg));
       expect(size.width - rect.right, greaterThanOrEqualTo(12 + AppSpacing.lg));
-      expect(rect.top, 44 + AppSpacing.md);
+      expect(rect.bottom, size.height - 34 - AppSpacing.lg);
       expect(rect.width, lessThanOrEqualTo(520));
       expect(find.byTooltip('Close').hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);

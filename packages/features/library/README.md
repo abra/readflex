@@ -91,10 +91,16 @@ file** (`LibraryImportEntry.file`) and outlined **Save an article**
 (`LibraryImportEntry.article`), followed by the muted file kinds caption. It
 applies the 16dp screen gutter once and disables both commands while an
 import flow is open.
-The filtered empty state offers **Reset filters**. It clears search text and
-the collection scope in one `LibraryFiltersReset` event without reading
-storage. Reset and query events share a switchable debounce stream so pending
-search text cannot come back after a reset. The collection scope is switched
+When a non-empty library lists nothing, the body says why and offers the one
+way out. A search without matches shows No results found / Try a different
+search with **Clear search** (`commonClearSearch`), which empties the field,
+drops focus and sends an empty `LibrarySearchQueryChanged`; the collection
+scope stays. Without a search only a collection can hide every source, so an
+empty collection shows This collection is empty with that collection's glyph
+and **Show entire Library**, which clears the scope. Neither reads storage.
+An empty query applies at once while other queries are debounced; the search
+stream is a `switchMap`, so clearing cancels a pending query and old text
+cannot come back. The collection scope is switched
 from the bottom capsule's collection switcher and cleared from the
 Collections picker's Library row.
 
@@ -223,15 +229,22 @@ wrapping to two lines. If its widest word (or the two lines) still overflow,
 the title font shrinks in 5% steps down to 0.7× the role; past that it wraps
 further rather than ellipsize.
 List rows own the 16dp screen gutter (the `ListView` has no horizontal
-padding): the cover sits on the gutter with the header title, the top hairline
+padding): the cover sits on the gutter with the header title. Beside it the
+title (two lines) and the author line (`bodySmall`, muted; for articles the
+author and the site, `Author · Site`) start at the cover's top, and the status
+line (kind glyph and label · percent, New or Done) ends at its bottom; the file
+format is left out, as it says nothing to a reader. The text column is at
+least as tall as the cover (a min-size `Column` under a `minHeight`, no
+intrinsic layout), so a long title or large text grows the row instead of
+clipping, with at least 6dp above the status line. The top hairline
 spans 16…16, while the selection tint and the swipe-delete background run
 edge to edge with the delete glyph ending 16dp from the screen edge.
 A selected row fills with `selectedControlBackground` and switches its title
 and metadata to `selectedControlForeground`; the cover itself keeps a shared
 translucent marker wash (`kLibraryCoverSelectionTintAlpha`) under the opaque
 `selectionMarker*` check so artwork stays visible. The grid's finished badge
-uses the `successContainer`/`onSuccessContainer` pair. Grid covers no longer
-show the file format (list rows and semantics keep it). Never-opened sources
+uses the `successContainer`/`onSuccessContainer` pair. Neither covers nor rows
+show the file format (semantics keep it). Never-opened sources
 (`LibrarySource.isNew`, the New collection's predicate) get a top-start New pill
 inside the cover: `surface` fill, `actionForeground` `labelSmall` w700, at
 least 20dp tall and growing with the text scale; generated cover text
@@ -276,11 +289,13 @@ padding comes from `libraryContentBottomPadding(context)`: the bottom capsule
 body's bottom padding (the safe inset the keyboard leaves uncovered), so the
 last row ends 16dp above the capsule with or without a home indicator and on
 every keyboard frame. "No results"
-pads its scroll view the same way so Reset filters can scroll clear of it;
+pads its scroll view the same way so its command can scroll clear of it;
 the empty library has no capsule and no padding. The selection bar is mounted
 in `bottomNavigationBar` only while selecting, because an occupied slot
 strips the body's bottom inset; while selecting the bar owns the safe area
 and the capsule's space stays reserved, so the end of the list never moves.
+The capsule and the selection bar are `ToastAvoidArea`s: toasts float above
+whichever is on screen and leave both tappable.
 
 ### Continue reading
 

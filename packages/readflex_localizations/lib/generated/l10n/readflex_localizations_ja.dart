@@ -189,9 +189,6 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get translationFailureBody => 'ネットワーク接続を確認するか、後でもう一度お試しください。';
 
   @override
-  String get libraryResetFilters => 'フィルターをリセット';
-
-  @override
   String get commonCopied => 'コピーしました';
 
   @override
@@ -210,7 +207,7 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get appRetry => '再試行';
 
   @override
-  String get appRetrying => '再試行中...';
+  String get appRetrying => '再試行中…';
 
   @override
   String get onboardingReadAnythingTitle => '何でも読む';
@@ -283,7 +280,7 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get libraryOffline => 'オフライン';
 
   @override
-  String get librarySearchHint => 'ライブラリを検索...';
+  String get librarySearchHint => 'ライブラリを検索';
 
   @override
   String get libraryScopeBooks => '本';
@@ -412,7 +409,13 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get libraryNoResultsTitle => '結果が見つかりません';
 
   @override
-  String get libraryNoResultsSubtitle => '別の検索またはフィルターを試してください';
+  String get libraryNoResultsSubtitle => '別の検索を試してください';
+
+  @override
+  String get libraryEmptyCollectionTitle => 'このコレクションは空です';
+
+  @override
+  String get libraryShowWholeLibrary => 'ライブラリ全体を表示';
 
   @override
   String get libraryAddToCollectionTitle => 'コレクションに追加';
@@ -457,7 +460,7 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get libraryCollectionsTitle => 'コレクション';
 
   @override
-  String get librarySearchCollectionsHint => 'コレクションを検索...';
+  String get librarySearchCollectionsHint => 'コレクションを検索';
 
   @override
   String get libraryNoCollectionsYet => 'コレクションはまだありません';
@@ -512,7 +515,7 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   }
 
   @override
-  String get libraryEmptySourceCount => '0 冊/記事';
+  String get libraryEmptySourceCount => 'まだ何もありません';
 
   @override
   String get libraryNoItemsInCollection => 'このコレクションに項目はありません';
@@ -573,7 +576,7 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get importBookTermsBody =>
-      'ReadFlexで使用する権利がある本、コミック、文書のみをアップロードしてください。';
+      'Readflexで使用する権利がある本、コミック、文書のみをアップロードしてください。';
 
   @override
   String get importBookTermsConfirm => 'このファイルをアップロードする権利があることを確認します。';
@@ -651,10 +654,10 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get libraryCreateAndAdd => '作成して追加';
 
   @override
-  String get importFetchingArticle => '記事を取得中...';
+  String get importFetchingArticle => '記事を取得中…';
 
   @override
-  String get importSavingArticle => 'オフラインコピーを保存中...';
+  String get importSavingArticle => 'オフラインコピーを保存中…';
 
   @override
   String get importComicAdded => 'コミックを追加しました！';

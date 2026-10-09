@@ -256,8 +256,15 @@ void main() {
             of: find.byKey(const ValueKey('libraryListRowMeta')),
             matching: find.byType(Text),
           );
+          final subtitles = find.byKey(
+            const ValueKey('libraryListRowSubtitle'),
+          );
           expect(metadata, findsWidgets);
-          for (final text in tester.widgetList<Text>(metadata)) {
+          expect(subtitles, findsWidgets);
+          for (final text in [
+            ...tester.widgetList<Text>(metadata),
+            ...tester.widgetList<Text>(subtitles),
+          ]) {
             final foreground = Color.alphaBlend(text.style!.color!, background);
             final a = foreground.computeLuminance();
             final b = background.computeLuminance();
@@ -347,9 +354,112 @@ void main() {
     expect(find.text('Example'), findsWidgets);
   });
 
-  testWidgets('list row title can wrap to four lines', (tester) async {
+  testWidgets('a two-line title and the author sit at the cover top, the '
+      'status at its bottom', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: SizedBox(
+            width: 360,
+            child: BookLibraryListTile(
+              source: LibrarySource.fromBook(_books.first),
+              showTopDivider: false,
+              onTap: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    final cover = tester.getRect(
+      find.byKey(const ValueKey('libraryListCoverSlot')),
+    );
+    final title = tester.getRect(find.text(_books.first.title));
+    final subtitle = tester.getRect(
+      find.byKey(const ValueKey('libraryListRowSubtitle')),
+    );
+    final status = tester.getRect(
+      find.byKey(const ValueKey('libraryListRowMeta')),
+    );
+    expect(title.top, closeTo(cover.top, .01));
+    expect(subtitle.top, greaterThanOrEqualTo(title.bottom));
+    expect(status.bottom, closeTo(cover.bottom, .01));
+    expect(status.top, greaterThan(subtitle.bottom));
+    // The author line, not the status line, names the author.
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('libraryListRowSubtitle')))
+          .data,
+      _books.first.author,
+    );
+    final rowHeight = tester.getSize(find.byType(GestureDetector)).height;
+    expect(rowHeight, kLibraryListCoverHeight + AppSpacing.md * 2);
+  });
+
+  testWidgets('the status line leaves out the file format', (tester) async {
+    final source = LibrarySource.fromBook(_books.first);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: BookLibraryListTile(
+            source: source,
+            showTopDivider: false,
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+    final status = find.byKey(const ValueKey('libraryListRowMeta'));
+    expect(
+      find.descendant(of: status, matching: find.text(source.typeLabel)),
+      findsNothing,
+    );
+    expect(find.text(source.typeLabel), findsNothing);
+    expect(
+      find.descendant(of: status, matching: find.text('Book')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('an article names its author and site on one line', (
+    tester,
+  ) async {
+    final source = LibrarySource.fromArticle(
+      Article(
+        id: 'a-by',
+        title: 'Signed article',
+        author: 'Jane Writer',
+        url: 'https://example.com/signed',
+        siteName: 'Example Times',
+        contentPath: '/articles/a-by/article.json',
+        addedAt: DateTime(2026),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: BookLibraryListTile(
+            source: source,
+            showTopDivider: false,
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey('libraryListRowSubtitle')))
+          .data,
+      'Jane Writer · Example Times',
+    );
+  });
+
+  testWidgets('a long title wraps to two lines; large text grows the row '
+      'instead of clipping', (tester) async {
     const longTitle =
-        'A very long saved article title that needs four readable lines in list mode';
+        'A very long saved article title that needs several readable lines';
     final source = LibrarySource.fromArticle(
       Article(
         id: 'a-long-title',
@@ -360,6 +470,8 @@ void main() {
         addedAt: DateTime(2026),
       ),
     );
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -378,9 +490,22 @@ void main() {
     );
 
     final title = tester.widget<Text>(find.text(longTitle));
-
-    expect(title.maxLines, 4);
+    expect(title.maxLines, 2);
     expect(title.overflow, TextOverflow.ellipsis);
+    final cover = tester.getRect(
+      find.byKey(const ValueKey('libraryListCoverSlot')),
+    );
+    final status = tester.getRect(
+      find.byKey(const ValueKey('libraryListRowMeta')),
+    );
+    // The text outgrows the cover: the status follows the title block and
+    // the row grows; the cover stays at the top.
+    expect(status.bottom, greaterThan(cover.bottom));
+    expect(
+      tester.getRect(find.byType(GestureDetector)).bottom,
+      closeTo(status.bottom + AppSpacing.md, .01),
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('RTL list row aligns source info to the right edge', (

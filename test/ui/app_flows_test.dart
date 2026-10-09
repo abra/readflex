@@ -3,6 +3,7 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_list_view.dart';
+import 'package:toast_service/toast_service.dart';
 
 import '../support/reading_fixture.dart';
 import '../support/ui_test_app.dart';
@@ -194,7 +195,8 @@ void main() {
     );
     expect(await tester.runAsync(app.bookRepository.getBooks), hasLength(1));
     expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
-    await tester.pump(const Duration(seconds: 4));
+    // Let the deletion toast expire and leave.
+    await tester.pump(toastSuccessDuration + const Duration(seconds: 1));
     await tester.pumpAndSettle();
     await unmountUi(tester);
   });

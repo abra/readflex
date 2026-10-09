@@ -106,11 +106,11 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Surface or contract | Automated checks | Where |
 | --- | --- | --- |
 | Shared control accessibility | Named tap targets under iOS/Android policies, selected/disabled choice semantics, stable control geometry and named/noninteractive busy actions in LTR/RTL at normal/large text | `packages/component_library/test/control_accessibility_contract_test.dart` |
-| Toast feedback | 48dp circular/localized Close, full-message semantics, durations, independent swipe, idle insertion and responsive safe-area layout; full-screen success/error over Library in all profiles, with RTL overridden to 390 x 844 | Toast package tests, `toast_golden_test.dart`, `integration_test/toast_test.dart` |
+| Toast feedback | Bottom placement 16dp above the safe inset or 8dp above the highest `ToastAvoidArea` (Library capsule and selection bar, reader chrome, selection panel, search bar), with the avoided control still tappable and a control mid-entrance counted at rest; neutral `inverseSurface` plate with a colored glyph in light/dark; 4s success and 6s/persistent error durations; 48dp circular/localized Close, full-message semantics, independent swipe, idle insertion and responsive safe-area layout; full-screen success/error over Library in all profiles, with RTL overridden to 390 x 844 | Toast package tests, `toast_golden_test.dart`, `integration_test/toast_test.dart` |
 | Theme text roles | Primary/secondary text on surface, sheet and input backgrounds; foreground/fill contrast for primary, secondary and destructive controls in light/dark | `packages/component_library/test/app_theme_test.dart` |
 | Onboarding | Add a book / Not now callbacks, page preview highlight in every locale, large-text scrolling, RTL; five visual profiles. Routing and the saved preference after remount live in `test/app/readflex_app_test.dart` | `onboarding_test.dart` |
 | Library | Search/clear, empty results, layout preference; UI changes do not issue new storage reads | `app_flows_test.dart` |
-| Library appearance | Grid, display sheet, empty search results and pressed Display/search-clear actions in all profiles; list and compact favourites badge in light/dark and on an Arabic phone | `library_golden_test.dart`, `collection_management_golden_test.dart` |
+| Library appearance | Grid, display sheet, empty search results (Clear search) and pressed Display/search-clear actions in all profiles; list rows with title and author at the cover top and the status at its bottom, without the file format, and the compact favourites badge in light/dark and on an Arabic phone; an empty collection offers Show entire Library | `library_golden_test.dart`, `collection_management_golden_test.dart` |
 | Settings consistency | Display and Appearance share header geometry, section typography/gaps, content gutters, 48dp stepper targets and full-width fades in light/dark themes | `settings_consistency_test.dart` |
 | Library scaling | Grid/list remain virtualized with 20k books, callbacks address the right item, cached projections are reused; 320/390dp grids adapt columns at 200% text | `library_scaling_test.dart` |
 | Collection recovery | Retain last loaded scopes on partial failure; Retry replaces the error inside the same sheet, including phone/landscape, 200% text and RTL | Library bloc and `collection_scope_recovery_test.dart` |
@@ -327,7 +327,7 @@ Back/Close draft outcomes without extra Library reads. Reader tests cover mixed
 quote/note directions, localized page fallback labels and add/edit/clear notes.
 `reader_note_golden_test.dart` adds draft/discard states in all five profiles.
 Onboarding asserts the static RTL layout with no running animations;
-toast tests distinguish short success feedback from readable error duration and
+toast tests distinguish 4s success feedback from the longer error duration and
 the non-expiring accessible-navigation error policy.
 
 `library/test/sheet_layout_contract_test.dart` measures footer gaps for standalone

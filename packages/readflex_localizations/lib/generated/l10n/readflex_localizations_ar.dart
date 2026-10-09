@@ -193,9 +193,6 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
       'تحقّق من اتصال الشبكة أو حاول مرة أخرى لاحقًا.';
 
   @override
-  String get libraryResetFilters => 'إعادة ضبط المرشحات';
-
-  @override
   String get commonCopied => 'تم النسخ';
 
   @override
@@ -215,7 +212,7 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get appRetry => 'إعادة المحاولة';
 
   @override
-  String get appRetrying => 'جار إعادة المحاولة...';
+  String get appRetrying => 'جار إعادة المحاولة…';
 
   @override
   String get onboardingReadAnythingTitle => 'اقرأ أي شيء';
@@ -293,7 +290,7 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get libraryOffline => 'غير متصل';
 
   @override
-  String get librarySearchHint => 'البحث في المكتبة...';
+  String get librarySearchHint => 'البحث في المكتبة';
 
   @override
   String get libraryScopeBooks => 'كتب';
@@ -431,7 +428,13 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get libraryNoResultsTitle => 'لم يتم العثور على نتائج';
 
   @override
-  String get libraryNoResultsSubtitle => 'جرب بحثًا أو مرشحًا مختلفًا';
+  String get libraryNoResultsSubtitle => 'جرب بحثًا مختلفًا';
+
+  @override
+  String get libraryEmptyCollectionTitle => 'هذه المجموعة فارغة';
+
+  @override
+  String get libraryShowWholeLibrary => 'عرض المكتبة كاملة';
 
   @override
   String get libraryAddToCollectionTitle => 'إضافة إلى مجموعة';
@@ -481,7 +484,7 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get libraryCollectionsTitle => 'المجموعات';
 
   @override
-  String get librarySearchCollectionsHint => 'البحث في المجموعات...';
+  String get librarySearchCollectionsHint => 'البحث في المجموعات';
 
   @override
   String get libraryNoCollectionsYet => 'لا توجد مجموعات بعد';
@@ -544,7 +547,7 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   }
 
   @override
-  String get libraryEmptySourceCount => '0 كتب/مقالات';
+  String get libraryEmptySourceCount => 'لا توجد عناصر بعد';
 
   @override
   String get libraryNoItemsInCollection => 'لا توجد عناصر في هذه المجموعة';
@@ -605,7 +608,7 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get importBookTermsBody =>
-      'ارفع فقط الكتب والقصص المصورة والمستندات التي تملك حق استخدامها في ReadFlex.';
+      'ارفع فقط الكتب والقصص المصورة والمستندات التي تملك حق استخدامها في Readflex.';
 
   @override
   String get importBookTermsConfirm => 'أؤكد أن لدي الحق في رفع هذا الملف.';
@@ -683,10 +686,10 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get libraryCreateAndAdd => 'إنشاء وإضافة';
 
   @override
-  String get importFetchingArticle => 'جار جلب المقالة...';
+  String get importFetchingArticle => 'جار جلب المقالة…';
 
   @override
-  String get importSavingArticle => 'جار حفظ نسخة دون اتصال...';
+  String get importSavingArticle => 'جار حفظ نسخة دون اتصال…';
 
   @override
   String get importComicAdded => 'تمت إضافة القصة المصورة!';

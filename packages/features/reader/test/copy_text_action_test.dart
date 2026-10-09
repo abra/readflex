@@ -49,7 +49,7 @@ void main() {
 
     expect(clipboardCall?.arguments, {'text': 'pow'});
 
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(toastSuccessDuration + const Duration(seconds: 1));
     await tester.pumpAndSettle();
   });
 }

@@ -106,7 +106,7 @@ void main() {
     expect(find.byKey(const ValueKey('articleUrlPasteButton')), findsOneWidget);
     expect(tester.getRect(find.byType(BottomSheet)), sheetRect);
     expect(
-      tester.getTopLeft(find.text('Save Article')).dy - sheetRect.top,
+      tester.getTopLeft(find.text('Save article')).dy - sheetRect.top,
       closeTo(menuTitleTop, .5),
     );
     expect(

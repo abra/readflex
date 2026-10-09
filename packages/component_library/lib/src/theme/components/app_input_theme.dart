@@ -13,7 +13,9 @@ class AppInputThemes {
     TextTheme textTheme,
     ColorScheme colors,
   ) {
-    final inputRadius = BorderRadius.circular(AppRadius.lg);
+    // The search field's and buttons' radius, so every field reads as one
+    // control family.
+    final inputRadius = BorderRadius.circular(AppRadius.md);
 
     return InputDecorationTheme(
       filled: true,

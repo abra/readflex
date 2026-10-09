@@ -24,6 +24,8 @@ void main() {
     WidgetTester tester,
     LibraryState state, {
     ValueChanged<LibraryImportEntry>? onImportPressed,
+    VoidCallback? onClearSearch,
+    VoidCallback? onShowWholeLibrary,
     bool importEnabled = true,
     double textScale = 2,
     ThemeData? theme,
@@ -50,7 +52,8 @@ void main() {
             onConfirmSwipeDelete: (_) async => false,
             onImportPressed: importEnabled ? onImportPressed ?? (_) {} : null,
             onRefresh: () async {},
-            onResetFilters: () {},
+            onClearSearch: onClearSearch ?? () {},
+            onShowWholeLibrary: onShowWholeLibrary ?? () {},
           ),
         ),
       ),
@@ -212,27 +215,113 @@ void main() {
     expect(subtitle.left, AppSpacing.lg);
     expect(subtitle.right, 320 - AppSpacing.lg);
     expect(
-      find.widgetWithText(TextButton, strings.libraryResetFilters),
+      find.widgetWithText(TextButton, strings.commonClearSearch),
       findsOneWidget,
     );
   });
 
-  testWidgets('Reset filters scrolls clear of the "+" button', (tester) async {
-    await pumpBody(
-      tester,
-      LibraryState(sources: [book], searchQuery: 'nothing matches'),
+  group('nothing listed in a non-empty library', () {
+    final clearSearch = find.byKey(const ValueKey('libraryClearSearchButton'));
+    final showWholeLibrary = find.byKey(
+      const ValueKey('libraryShowWholeLibraryButton'),
     );
-    final scroll = tester.widget<SingleChildScrollView>(
-      find.byType(SingleChildScrollView),
-    );
-    expect(
-      scroll.padding,
-      EdgeInsets.only(
-        bottom: libraryContentBottomPadding(
-          tester.element(find.byType(EmptyState)),
+    final favourites = LibraryCollectionScope.favourites();
+
+    testWidgets('a search without matches offers to clear the search, not '
+        'filters', (tester) async {
+      var cleared = 0;
+      var shownAll = 0;
+      final strings = await pumpBody(
+        tester,
+        LibraryState(sources: [book], searchQuery: 'nothing matches'),
+        textScale: 1,
+        onClearSearch: () => cleared++,
+        onShowWholeLibrary: () => shownAll++,
+      );
+      expect(find.text(strings.libraryNoResultsTitle), findsOneWidget);
+      expect(find.text(strings.libraryNoResultsSubtitle), findsOneWidget);
+      expect(find.byIcon(AppIcons.searchOff), findsOneWidget);
+      expect(showWholeLibrary, findsNothing);
+      expect(
+        find.descendant(
+          of: clearSearch,
+          matching: find.text(strings.commonClearSearch),
         ),
-      ),
-    );
+        findsOneWidget,
+      );
+      await tester.tap(clearSearch);
+      expect(cleared, 1);
+      expect(shownAll, 0);
+    });
+
+    testWidgets('a search inside a collection still clears only the search', (
+      tester,
+    ) async {
+      final strings = await pumpBody(
+        tester,
+        LibraryState(
+          sources: [book],
+          searchQuery: 'nothing matches',
+          selectedCollectionScope: favourites,
+        ),
+        textScale: 1,
+      );
+      expect(find.text(strings.libraryNoResultsTitle), findsOneWidget);
+      expect(clearSearch, findsOneWidget);
+      expect(showWholeLibrary, findsNothing);
+    });
+
+    testWidgets('an empty collection says so and leads back to the whole '
+        'Library', (tester) async {
+      var cleared = 0;
+      var shownAll = 0;
+      final strings = await pumpBody(
+        tester,
+        LibraryState(sources: [book], selectedCollectionScope: favourites),
+        textScale: 1,
+        onClearSearch: () => cleared++,
+        onShowWholeLibrary: () => shownAll++,
+      );
+      expect(find.text(strings.libraryEmptyCollectionTitle), findsOneWidget);
+      expect(find.text(strings.libraryNoResultsTitle), findsNothing);
+      expect(find.text(strings.libraryNoResultsSubtitle), findsNothing);
+      // The collection's own glyph, as on its picker row.
+      expect(find.byIcon(AppIcons.collectionFavourites), findsOneWidget);
+      expect(clearSearch, findsNothing);
+      expect(
+        find.descendant(
+          of: showWholeLibrary,
+          matching: find.text(strings.libraryShowWholeLibrary),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(showWholeLibrary);
+      expect(shownAll, 1);
+      expect(cleared, 0);
+    });
+
+    for (final state in [
+      LibraryState(sources: [book], searchQuery: 'nothing matches'),
+      LibraryState(sources: [book], selectedCollectionScope: favourites),
+    ]) {
+      testWidgets('the command scrolls clear of the "+" button: '
+          '${state.searchQuery.isEmpty ? 'empty collection' : 'search'}', (
+        tester,
+      ) async {
+        await pumpBody(tester, state);
+        final scroll = tester.widget<SingleChildScrollView>(
+          find.byType(SingleChildScrollView),
+        );
+        expect(
+          scroll.padding,
+          EdgeInsets.only(
+            bottom: libraryContentBottomPadding(
+              tester.element(find.byType(EmptyState)),
+            ),
+          ),
+        );
+      });
+    }
   });
 
   testWidgets('an empty library has no "+" to clear', (tester) async {

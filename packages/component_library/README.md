@@ -75,7 +75,7 @@ Colors that go beyond `ColorScheme`, delivered via `ThemeExtension`:
 |--------------|------------------------------------------------------------------------------------------|
 | Highlights   | `highlightYellow`, `highlightBlue`, `highlightGreen`, `highlightPink`, `highlightPurple` |
 | FSRS ratings | `ratingAgain`, `ratingHard`, `ratingGood`, `ratingEasy`                                  |
-| Status       | `warning`/`warningForeground`, `info`, `success`/`successForeground`, `successContainer`/`onSuccessContainer` |
+| Status       | `warning`/`warningForeground`, `info`, `success`/`successForeground`, `successContainer`/`onSuccessContainer`, `successOnInverse`/`errorOnInverse` (glyphs on `inverseSurface`) |
 | Pro badge    | `proBadge`, `proBadgeForeground`                                                         |
 | Swatch inks  | `onLightSwatch`, `onDarkSwatch` — check/glyph drawn over a sample color                  |
 | Other        | `divider`                                                                                |
@@ -258,15 +258,32 @@ an RTL interface. Definition/Translation use it for Copy; other body sections
 retain their 24dp padding. `AppCopyButton` delegates appearance to
 `AppPlainIconButton`, including circular feedback and disabled hit semantics.
 
-Filled success notifications use `AppColorsExt.successContainer` with
-`onSuccessContainer`; `successForeground` remains the text/icon role on ordinary
-surfaces. Error notifications use the existing `ColorScheme.error` / `onError`
-pair. The toast service owns notification layout and lifecycle, not this package.
+Notifications sit on the neutral `ColorScheme.inverseSurface` /
+`onInverseSurface` plate (gray900 on light, darkGray50 on dark, overriding the
+seed's warm inverse roles); only their glyph is colored, with
+`AppColorsExt.successOnInverse` / `errorOnInverse`, the other theme's success
+and error tones. `successContainer` / `onSuccessContainer` remain the filled
+success pair (the grid's finished badge) and `successForeground` the text/icon
+role on ordinary surfaces. The toast service owns notification layout and
+lifecycle, not this package.
 
-Selected controls use the paired `selectedControlBackground/Foreground` colors.
-Opaque `selectionMarkerBackground/Foreground` is for small checks on cover art;
-normal multi-selection must not use the destructive error color. Custom rows
-also expose `Semantics(selected: ...)`; color is not their only selection cue.
+Selected controls use the paired `selectedControlBackground/Foreground` colors:
+in both themes a translucent wash of the accent (wine at 8% in light,
+`primaryFixedDim` at 16% in dark) with the accent itself as text, at least
+4.5:1 on every surface. Dark mode used to paint an opaque `primaryFixedDim`
+block, the brightest thing on a dark screen; the 16% wash still separates the
+selected option more than the light theme's 8% does. Disabled keeps the wash
+and dims the text. Opaque `selectionMarkerBackground/Foreground` is for small
+checks on cover art; normal multi-selection must not use the destructive error
+color. Custom rows also expose `Semantics(selected: ...)`; color is not their
+only selection cue.
+
+Muted text and icons (`onSurfaceVariant`, `ListTile` icons) use the palette's
+`mutedForeground` gray (gray650 #5B616D, darkGray300 #9AA0AA) instead of the
+seed's wine-tinted variant: at least 4.5:1 on every surface, and at most 55% of
+primary text's contrast, so it stays clearly secondary in dark mode.
+
+Text fields share the search field's and buttons' `AppRadius.md` (12dp).
 
 ### Generic States
 
@@ -489,7 +506,10 @@ identity, rather than treating a matching screenshot as functional proof.
 the iOS/Android policies, selected/disabled choice semantics and busy-action
 labels with stable geometry in LTR/RTL at regular/large text sizes.
 `test/app_theme_test.dart` checks normal-text contrast for the named surface,
-sheet, input and filled-control pairs in both themes. These are bounded
+sheet, input and filled-control pairs in both themes, muted text on every
+surface and its step below primary text, and the shared field radius.
+`test/app_selection_colors_test.dart` checks the selected-control wash and its
+text on every surface. These are bounded
 component contracts, not a complete screen-reader or rendered-pixel audit.
 From the repository root, `make test-ui-contracts` runs these and the existing
 shared/layout/representative-flow tests without updating visual baselines.

@@ -22,6 +22,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:toast_service/toast_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -35,6 +36,13 @@ final _collectionsButton = find.byKey(
   const ValueKey('libraryCollectionsButton'),
 );
 final _capsule = find.byKey(const ValueKey('libraryFloatingActions'));
+
+/// Lets every toast expire and leave. The toast overlay outlives a test, so a
+/// toast still showing at its end would break the next test's toasts.
+Future<void> _expireToasts(WidgetTester tester) async {
+  await tester.pump(toastErrorDuration + const Duration(seconds: 1));
+  await tester.pumpAndSettle();
+}
 
 /// Opens the Collections picker from the bottom capsule once the Scaffold's
 /// entrance scale has settled; mid-scale the capsule is not hit-testable.
@@ -128,6 +136,8 @@ void main() {
         supportedLocales: ReadflexSupportedLocales.locales,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         theme: theme ?? AppTheme.light(),
+        // As in the app: a new sheet clears toasts that would cover it.
+        navigatorObservers: [ToastNavigatorObserver()],
         home: LibraryScreen(
           bookRepository: bookRepository,
           articleRepository: articleRepository,
@@ -195,10 +205,16 @@ void main() {
         _contrast(foreground, background),
         greaterThanOrEqualTo(4.5),
       );
+      // The selected option is the accent wash with accent text, as in the
+      // light theme, rather than an opaque bright block.
       expect(
-        _contrast(background, theme.colorScheme.surface),
-        greaterThanOrEqualTo(3),
+        background,
+        Color.alphaBlend(
+          theme.colorScheme.selectedControlBackground,
+          theme.colorScheme.surface,
+        ),
       );
+      expect(foreground, theme.colorScheme.selectedControlForeground);
     }
     final picker = find.byKey(const ValueKey('libraryLanguagePicker'));
     await tester.ensureVisible(picker);
@@ -220,10 +236,7 @@ void main() {
       _contrast(label.style!.color!, background),
       greaterThanOrEqualTo(4.5),
     );
-    expect(
-      _contrast(background, theme.colorScheme.surface),
-      greaterThanOrEqualTo(3),
-    );
+    expect(label.style!.color, theme.colorScheme.selectedControlForeground);
   });
 
   testWidgets(
@@ -354,8 +367,8 @@ void main() {
     expect(find.text('Reset filters'), findsNothing);
   });
 
-  testWidgets('Reset filters clears the search and the collection without '
-      'reloading the library', (tester) async {
+  testWidgets('Clear search clears only the search, keeps the collection and '
+      'does not reload the library', (tester) async {
     bookRepository.seedBooks([_book, _comicBook]);
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
@@ -365,17 +378,53 @@ void main() {
     await tester.enterText(find.byType(TextField), 'missing');
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pumpAndSettle();
+    expect(find.text('No results found'), findsOneWidget);
+    expect(find.text('Try a different search'), findsOneWidget);
 
-    await tester.tap(find.text('Reset filters'));
+    await tester.tap(find.byKey(const ValueKey('libraryClearSearchButton')));
     await tester.pumpAndSettle();
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller!.text,
       '',
     );
-    expect(find.text(_book.title), findsWidgets);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus,
+      isFalse,
+    );
+    // Still inside Comics: the comic is back, the book stays out.
+    expect(_headerText('Comics'), findsOneWidget);
     expect(find.text(_comicBook.title), findsWidgets);
+    expect(find.text(_book.title), findsNothing);
+    expect(find.text('No results found'), findsNothing);
+    expect(bookRepository.getBooksCallCount, 1);
+  });
+
+  testWidgets('an empty collection says so and Show entire Library leaves '
+      'it', (tester) async {
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(buildSubject());
+    await tester.pumpAndSettle();
+    await _openCollections(tester);
+    await tester.tap(
+      find.byKey(
+        const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(_headerText('Favourites'), findsOneWidget);
+    expect(find.text('This collection is empty'), findsOneWidget);
+    expect(find.text('No results found'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('libraryClearSearchButton')),
+      findsNothing,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey('libraryShowWholeLibraryButton')),
+    );
+    await tester.pumpAndSettle();
     expect(_headerText('Library'), findsOneWidget);
-    expect(find.text('Reset filters'), findsNothing);
+    expect(find.text(_book.title), findsWidgets);
     expect(bookRepository.getBooksCallCount, 1);
   });
 
@@ -790,7 +839,7 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.text('Search library...'), findsOneWidget);
+    expect(find.text('Search library'), findsOneWidget);
   });
 
   testWidgets('source tap keeps search unfocused after reader route returns', (
@@ -823,7 +872,7 @@ void main() {
     );
     await tester.pump();
 
-    final searchField = find.widgetWithText(TextField, 'Search library...');
+    final searchField = find.widgetWithText(TextField, 'Search library');
     await tester.tap(searchField);
     await tester.pump();
 
@@ -2045,7 +2094,7 @@ void main() {
     final sheet = find.byType(ActionBottomSheetLayout);
     final sheetTopBeforeSearch = tester.getTopLeft(sheet).dy;
     final sheetHeightBeforeSearch = tester.getSize(sheet).height;
-    final searchField = find.widgetWithText(TextField, 'Search collections...');
+    final searchField = find.widgetWithText(TextField, 'Search collections');
     final manualRow = find.byKey(
       const ValueKey('collectionScopeRow-manual-collection-1'),
     );
@@ -2649,7 +2698,7 @@ void main() {
     final sheet = find.byKey(const ValueKey('manageCollectionContent'));
     final countLabel = find.descendant(
       of: sheet,
-      matching: find.text('0 books/articles'),
+      matching: find.text('No items yet'),
     );
     final emptyLabel = find.descendant(
       of: sheet,
@@ -2991,8 +3040,7 @@ void main() {
     expect(await collectionRepository.getCollections(), isEmpty);
     expect(await collectionRepository.getCollectionSourceIds(), isEmpty);
 
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
+    await _expireToasts(tester);
   });
 
   testWidgets('manual collection management renames from footer action', (
@@ -3063,8 +3111,7 @@ void main() {
     expect(collectionRepository.favouriteSourceIds, {_book.id});
     expect(find.text('Add to collection'), findsNothing);
 
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
+    await _expireToasts(tester);
   });
 
   testWidgets('creates collection from selected source', (tester) async {
@@ -3102,8 +3149,7 @@ void main() {
       collectionRepository.addedSourceIdsByCollection.values.single,
       contains(_book.id),
     );
-    await tester.pump(const Duration(seconds: 4));
-    await tester.pumpAndSettle();
+    await _expireToasts(tester);
   });
 
   // Swipe-delete waits for the real write: the row only leaves the tree
@@ -3180,8 +3226,7 @@ void main() {
     expect(listRow(_secondBook), findsOneWidget);
     await pumpUntilToast(tester, find.textContaining('deleted'));
     expect(tester.takeException(), isNull);
-    await tester.pump(const Duration(seconds: 2));
-    await tester.pumpAndSettle();
+    await _expireToasts(tester);
   });
 
   testWidgets('swipe delete failure keeps the row and shows the toast', (
@@ -3207,8 +3252,7 @@ void main() {
     await swipeAndConfirmDelete(tester, _book);
     expect(listRow(_book), findsNothing);
     expect(listRows(), findsOneWidget);
-    await tester.pump(const Duration(seconds: 7));
-    await tester.pumpAndSettle();
+    await _expireToasts(tester);
   });
 
   testWidgets('swipe delete cancel springs the row back without a write', (

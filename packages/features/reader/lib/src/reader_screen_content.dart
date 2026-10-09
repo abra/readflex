@@ -665,16 +665,20 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  child: BlocBuilder<ReaderSearchCubit, ReaderSearchState>(
-                    builder: (_, state) => ReaderSearchNavigationBar(
-                      state: state,
-                      onOpenSearch: _openSearchDrawer,
-                      onPrevious: () =>
-                          _goToSearchResult((state.activeResultIndex ?? 0) - 1),
-                      onNext: () =>
-                          _goToSearchResult((state.activeResultIndex ?? 0) + 1),
-                      onEndSearch: _endSearch,
-                      onReturn: _returnToReading,
+                  child: ToastAvoidArea(
+                    child: BlocBuilder<ReaderSearchCubit, ReaderSearchState>(
+                      builder: (_, state) => ReaderSearchNavigationBar(
+                        state: state,
+                        onOpenSearch: _openSearchDrawer,
+                        onPrevious: () => _goToSearchResult(
+                          (state.activeResultIndex ?? 0) - 1,
+                        ),
+                        onNext: () => _goToSearchResult(
+                          (state.activeResultIndex ?? 0) + 1,
+                        ),
+                        onEndSearch: _endSearch,
+                        onReturn: _returnToReading,
+                      ),
                     ),
                   ),
                 ),

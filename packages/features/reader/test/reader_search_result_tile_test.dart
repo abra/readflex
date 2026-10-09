@@ -46,12 +46,18 @@ void main() {
         (excerpt.text as TextSpan).children![1].style?.color,
         colors.selectedControlForeground,
       );
-      final ink = colors.selectedControlForeground.computeLuminance();
-      final fill = Color.alphaBlend(
-        colors.selectedControlBackground,
-        colors.surface,
-      ).computeLuminance();
-      expect((fill + .05) / (ink + .05), greaterThanOrEqualTo(4.5));
+      final ink = colors.selectedControlForeground.computeLuminance() + .05;
+      final fill =
+          Color.alphaBlend(
+            colors.selectedControlBackground,
+            colors.surface,
+          ).computeLuminance() +
+          .05;
+      // Either side may be the lighter one: dark mode tints a dark surface.
+      expect(
+        fill > ink ? fill / ink : ink / fill,
+        greaterThanOrEqualTo(4.5),
+      );
     });
   }
 

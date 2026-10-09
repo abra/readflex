@@ -24,12 +24,13 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     on<LibrarySourceDeleted>(_onSourceDeleted);
     on<LibrarySourcesDeleted>(_onSourcesDeleted);
     on<LibraryRefreshRequested>(_onRefreshRequested);
-    on<LibraryQueryEvent>(
-      _onQueryEvent,
+    on<LibrarySearchQueryChanged>(
+      _onSearchQueryChanged,
+      // switchMap drops a pending debounced query once a newer one arrives,
+      // so clearing the search cannot be overtaken by the old text.
       transformer: (events, mapper) => events
           .switchMap(
-            (event) =>
-                event is LibrarySearchQueryChanged && event.query.isNotEmpty
+            (event) => event.query.isNotEmpty
                 ? Stream.value(event).debounce(_searchDelay)
                 : Stream.value(event),
           )
@@ -40,17 +41,11 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
 
   static const _searchDelay = Duration(milliseconds: 300);
 
-  // Reset shares the search stream so a debounced query cannot come back.
-  void _onQueryEvent(
-    LibraryQueryEvent event,
+  void _onSearchQueryChanged(
+    LibrarySearchQueryChanged event,
     Emitter<LibraryState> emit,
   ) {
-    switch (event) {
-      case LibrarySearchQueryChanged(:final query):
-        emit(state.copyWith(searchQuery: query));
-      case LibraryFiltersReset():
-        emit(state.copyWith(searchQuery: '', selectedCollectionScope: null));
-    }
+    emit(state.copyWith(searchQuery: event.query));
   }
 
   void _onCollectionScopeChanged(

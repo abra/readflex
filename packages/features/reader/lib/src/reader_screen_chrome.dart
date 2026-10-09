@@ -1098,21 +1098,32 @@ class _ReaderBottomChrome extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const SizedBox(height: _kReaderChromeBackdropFade),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: _kReaderProgressRowInset,
+                          // Toasts float above the slider and the capsule
+                          // while they show; the hidden chrome stays mounted.
+                          ToastAvoidArea(
+                            enabled: visible,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: _kReaderProgressRowInset,
+                                  ),
+                                  child: progress,
+                                ),
+                                const SizedBox(height: AppSpacing.sm),
+                                Padding(
+                                  padding: EdgeInsets.fromLTRB(
+                                    AppSpacing.lg,
+                                    0,
+                                    AppSpacing.lg,
+                                    appBottomSafeInset(context),
+                                  ),
+                                  child: capsule,
+                                ),
+                              ],
                             ),
-                            child: progress,
-                          ),
-                          const SizedBox(height: AppSpacing.sm),
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              AppSpacing.lg,
-                              0,
-                              AppSpacing.lg,
-                              appBottomSafeInset(context),
-                            ),
-                            child: capsule,
                           ),
                         ],
                       ),

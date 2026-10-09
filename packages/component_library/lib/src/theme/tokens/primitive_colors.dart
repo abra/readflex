@@ -17,7 +17,7 @@ abstract final class PrimitiveColors {
   static const Color gray300 = Color(0xFFE1E2E5);
   static const Color gray350 = Color(0xFFDEE0E3);
   static const Color gray500 = Color(0xFF8B919C);
-  static const Color gray600 = Color(0xFF6C727F);
+  static const Color gray650 = Color(0xFF5B616D);
   static const Color gray700 = Color(0xFF434956);
   static const Color gray900 = Color(0xFF21242C);
 
@@ -25,7 +25,7 @@ abstract final class PrimitiveColors {
   static const Color darkGray50 = Color(0xFFDEE0E3);
   static const Color darkGray100 = Color(0xFFCDD0D5);
   static const Color darkGray200 = Color(0xFFB2B6BD);
-  static const Color darkGray400 = Color(0xFF757C8A);
+  static const Color darkGray300 = Color(0xFF9AA0AA);
   static const Color darkGray500 = Color(0xFF636874);
   static const Color darkGray600 = Color(0xFF282C33);
   static const Color darkGray700 = Color(0xFF24272E);
@@ -44,6 +44,8 @@ abstract final class PrimitiveColors {
   // ── Red / Destructive ──────────────────────────────────────
   static const Color red500 = Color(0xFFD22D2D);
   static const Color red600 = Color(0xFFB23434);
+  // Error glyphs on a dark notification plate.
+  static const Color red300 = Color(0xFFF28B82);
 
   // ── Warm tints (paper/reading) ─────────────────────────────
   static const Color warmWhite = Color(0xFFF5F3EF);

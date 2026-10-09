@@ -12,11 +12,16 @@ const double _kArticleIconAlpha = 0.4;
 const double _kListRowHorizontalPadding = AppSpacing.lg;
 const double _kListRowVerticalPadding = AppSpacing.md;
 const double _kListSelectionBackgroundInset = AppSpacing.xs;
+// Least space between the title block and the status line once a long title
+// or large text has used up the cover's height.
+const double _kListStatusGap = AppSpacing.xs + AppSpacing.xxs;
+const int _kListTitleMaxLines = 2;
 
 /// List-mode row for a library source.
 ///
-/// Layout: 60×90 cover on the left, title/metadata column on the right,
-/// and a top hairline except on the first row (see [showTopDivider]).
+/// Layout: 60×90 cover at the start; beside it the title (two lines) and the
+/// author or site at the cover's top, and the kind and reading status at its
+/// bottom; a top hairline except on the first row (see [showTopDivider]).
 class BookLibraryListTile extends StatelessWidget {
   const BookLibraryListTile({
     required this.source,
@@ -41,6 +46,7 @@ class BookLibraryListTile extends StatelessWidget {
     final coverImage = appSourceCoverImageFromPath(source.coverImagePath);
     final isArticle = source.sourceType == SourceType.article;
     final subtitle = _subtitleFor(source);
+    final sourceName = _secondarySourceName(source, subtitle);
     final coverTextDirection = _sourceTextDirection(source);
     final articleIconColor = Colors.white.withValues(alpha: _kArticleIconAlpha);
     final l10n = context.l10n;
@@ -76,7 +82,7 @@ class BookLibraryListTile extends StatelessWidget {
             : sourceCover,
       ),
       title: source.title,
-      subtitle: subtitle,
+      subtitle: [?subtitle, ?sourceName].join(' · '),
       textDirection: coverTextDirection,
       showTopDivider: showTopDivider,
       isSelected: isSelected,
@@ -94,71 +100,46 @@ class BookLibraryListTile extends StatelessWidget {
       ),
       onTap: onTap,
       onLongPress: onLongPress,
-      metaBuilder: (context, mutedColor, emphasisColor) {
-        final sourceName = _secondarySourceName(source, subtitle);
-
-        return [
-          // No sub-sm icon token exists, so we bypass AppIconSize and use
-          // the exact row-tuned literal (10).
-          Icon(_sourceIcon(source), size: 10, color: mutedColor),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
+      // The file format is left out: it says nothing to a reader.
+      statusBuilder: (context, mutedColor, emphasisColor) => [
+        // No sub-sm icon token exists, so we bypass AppIconSize and use the
+        // exact row-tuned literal (10).
+        Icon(_sourceIcon(source), size: 10, color: mutedColor),
+        const SizedBox(width: AppSpacing.xs),
+        Flexible(
+          child: Text(
             librarySourceKindLabel(source, l10n),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: _metaStyle(context, mutedColor),
           ),
-          if (sourceName != null) ...[
-            _MetaDot(mutedColor: mutedColor),
-            Flexible(
-              child: Text(
-                sourceName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _metaStyle(context, mutedColor),
-              ),
-            ),
-          ],
-          if (!isArticle) ...[
-            _MetaDot(mutedColor: mutedColor),
-            Text(
-              source.typeLabel,
-              style: _metaStyle(context, mutedColor),
-            ),
-          ],
-          _MetaDot(mutedColor: mutedColor),
-          if (source.isFinished)
-            ..._doneBadge(
+        ),
+        _MetaDot(mutedColor: mutedColor),
+        if (source.isFinished)
+          // A selected row's tonal fill needs the paired foreground.
+          _DoneStatus(
+            color: isSelected
+                ? emphasisColor
+                : context.appColors.successForeground,
+          )
+        else if (source.lastOpenedAt == null)
+          Text(l10n.librarySourceNew, style: _metaStyle(context, mutedColor))
+        else
+          // Once the user has opened the source, show the progress % even if
+          // it's 0 — they may have navigated back to the cover. Showing "New"
+          // again would lie about it never having been read.
+          Text(
+            '$progress%',
+            style: _metaStyle(
               context,
-              // A selected row's tonal fill needs the paired foreground.
-              color: isSelected
-                  ? emphasisColor
-                  : context.appColors.successForeground,
-            )
-          else if (source.lastOpenedAt == null)
-            Text(l10n.librarySourceNew, style: _metaStyle(context, mutedColor))
-          else
-            // Once the user has opened the source, show the progress %
-            // even if it's 0 — they may have navigated back to the
-            // cover. Showing "New" again would lie about it never
-            // having been read.
-            Text(
-              '$progress%',
-              style: _metaStyle(
-                context,
-                emphasisColor,
-              ).copyWith(fontWeight: FontWeight.w500),
-            ),
-        ];
-      },
+              emphasisColor,
+            ).copyWith(fontWeight: FontWeight.w500),
+          ),
+      ],
     );
   }
 }
 
-/// Layout scaffold for the source list tile. Owns the row geometry
-/// (60×90 cover, 14dp gap, title/meta column).
-///
-/// Layout: up-to-4-line title on top, single combined meta strip
-/// underneath (subtitle prepended in front of the type-specific
-/// segments). Top hairline drawn for all rows except the first.
 TextDirection _sourceTextDirection(LibrarySource source) {
   return switch (source.inferredTextDirection) {
     ArticleTextDirection.rtl => TextDirection.rtl,
@@ -166,13 +147,17 @@ TextDirection _sourceTextDirection(LibrarySource source) {
   };
 }
 
+/// Layout scaffold for the source list tile. Owns the row geometry: the
+/// 60×90 cover, the 14dp gap and a text column at least as tall as the
+/// cover, with the title block at its top and the status line at its
+/// bottom. A long title or large text grows the row instead of clipping.
 class _ListRowShell extends StatelessWidget {
   const _ListRowShell({
     required this.cover,
     required this.title,
     required this.subtitle,
     required this.textDirection,
-    required this.metaBuilder,
+    required this.statusBuilder,
     required this.showTopDivider,
     required this.semanticsLabel,
     required this.semanticsValue,
@@ -193,7 +178,7 @@ class _ListRowShell extends StatelessWidget {
     Color mutedColor,
     Color emphasisColor,
   )
-  metaBuilder;
+  statusBuilder;
   final bool showTopDivider;
   final bool isSelected;
   final String semanticsLabel;
@@ -208,7 +193,7 @@ class _ListRowShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     // The row fill is a selected control: its paired foreground keeps text
-    // readable on the opaque dark-mode tonal accent.
+    // readable on the accent wash.
     final rowTint = colors.selectedControlBackground;
     final emphasisColor = isSelected
         ? colors.selectedControlForeground
@@ -217,9 +202,11 @@ class _ListRowShell extends StatelessWidget {
         ? colors.selectedControlForeground
         : colors.onSurfaceVariant;
 
-    final metaSegments = metaBuilder(context, mutedColor, emphasisColor);
-    final hasSubtitle = subtitle != null && subtitle!.isNotEmpty;
-    final isRtl = textDirection == TextDirection.rtl;
+    final status = statusBuilder(context, mutedColor, emphasisColor);
+    final subtitle = this.subtitle;
+    final textAlignment = textDirection == TextDirection.rtl
+        ? CrossAxisAlignment.end
+        : CrossAxisAlignment.start;
 
     return Semantics(
       container: true,
@@ -239,11 +226,11 @@ class _ListRowShell extends StatelessWidget {
         child: Stack(
           children: [
             if (isSelected)
+              // Hugs the cover, which sits at the top of a row that may grow.
               Positioned(
                 left: 0,
                 right: 0,
-                bottom:
-                    _kListRowVerticalPadding - _kListSelectionBackgroundInset,
+                top: _kListRowVerticalPadding - _kListSelectionBackgroundInset,
                 height:
                     kLibraryListCoverHeight +
                     (_kListSelectionBackgroundInset * 2),
@@ -258,7 +245,7 @@ class _ListRowShell extends StatelessWidget {
                 horizontal: _kListRowHorizontalPadding,
               ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   LibraryListCoverSlot(
                     key: const ValueKey('libraryListCoverSlot'),
@@ -267,50 +254,64 @@ class _ListRowShell extends StatelessWidget {
                   ),
                   const SizedBox(width: kLibraryListCoverToTextGap),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: isRtl
-                          ? CrossAxisAlignment.end
-                          : CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title,
-                          textAlign: TextAlign.start,
-                          textDirection: textDirection,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.text.sourceListTitle.copyWith(
-                            color: emphasisColor,
-                          ),
-                        ),
-                        // Demo uses 6dp title-to-meta gap (between xs=4 and
-                        // sm=8). Composed from xs + xxs to stay token-based.
-                        const SizedBox(height: AppSpacing.xs + AppSpacing.xxs),
-                        Directionality(
-                          textDirection: textDirection,
-                          child: Row(
-                            key: const ValueKey('libraryListRowMeta'),
-                            textDirection: textDirection,
+                    // A min-size Column is as tall as its children but at
+                    // least the cover; spaceBetween puts that free space
+                    // between the title block and the status line.
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        minHeight: kLibraryListCoverHeight,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: textAlignment,
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: textAlignment,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (hasSubtitle) ...[
-                                Flexible(
-                                  child: Text(
-                                    subtitle!,
-                                    textAlign: TextAlign.start,
-                                    textDirection: textDirection,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: _metaStyle(context, mutedColor),
+                              Text(
+                                title,
+                                textAlign: TextAlign.start,
+                                textDirection: textDirection,
+                                maxLines: _kListTitleMaxLines,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.text.sourceListTitle.copyWith(
+                                  color: emphasisColor,
+                                ),
+                              ),
+                              if (subtitle != null && subtitle.isNotEmpty) ...[
+                                const SizedBox(height: AppSpacing.xxs),
+                                Text(
+                                  subtitle,
+                                  key: const ValueKey('libraryListRowSubtitle'),
+                                  textAlign: TextAlign.start,
+                                  textDirection: textDirection,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: context.text.bodySmall.copyWith(
+                                    color: mutedColor,
                                   ),
                                 ),
-                                _MetaDot(mutedColor: mutedColor),
                               ],
-                              ...metaSegments,
                             ],
                           ),
-                        ),
-                      ],
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              top: _kListStatusGap,
+                            ),
+                            child: Directionality(
+                              textDirection: textDirection,
+                              child: Row(
+                                key: const ValueKey('libraryListRowMeta'),
+                                textDirection: textDirection,
+                                mainAxisSize: MainAxisSize.min,
+                                children: status,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -333,10 +334,6 @@ class _ListRowShell extends StatelessWidget {
   }
 }
 
-/// Filled selection marker with a contrasting check icon, sitting in the
-/// top-end corner of the cover when the row is selected. Same visual
-/// vocabulary as the grid tile's selection check so list/grid selection
-/// reads identically.
 /// Thin ` · ` glyph used to separate segments in the meta strip. Extracted
 /// so individual call sites don't repeat the fontSize/color wiring.
 class _MetaDot extends StatelessWidget {
@@ -377,18 +374,28 @@ String? _secondarySourceName(LibrarySource source, String? subtitle) {
 IconData _sourceIcon(LibrarySource source) =>
     source.sourceType == SourceType.article ? AppIcons.article : AppIcons.book;
 
-/// Builds the ` ✓ Done` kicker that replaces the progress segment when an
-/// item is fully read.
-List<Widget> _doneBadge(BuildContext context, {required Color color}) {
-  return [
-    Icon(AppIcons.check, size: 10, color: color),
-    const SizedBox(width: 2),
-    Text(
-      context.l10n.librarySourceDone,
-      style: context.text.sourceMetadata.copyWith(
-        fontWeight: FontWeight.w500,
-        color: color,
-      ),
-    ),
-  ];
+/// The ` ✓ Done` status that replaces the progress segment when an item is
+/// fully read.
+class _DoneStatus extends StatelessWidget {
+  const _DoneStatus({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(AppIcons.check, size: 10, color: color),
+        const SizedBox(width: AppSpacing.xxs),
+        Text(
+          context.l10n.librarySourceDone,
+          style: context.text.sourceMetadata.copyWith(
+            fontWeight: FontWeight.w500,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
 }

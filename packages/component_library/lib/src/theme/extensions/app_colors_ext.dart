@@ -22,6 +22,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     required this.successForeground,
     required this.successContainer,
     required this.onSuccessContainer,
+    required this.successOnInverse,
+    required this.errorOnInverse,
     required this.proBadge,
     required this.proBadgeForeground,
     required this.divider,
@@ -45,6 +47,12 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
   final Color successForeground;
   final Color successContainer;
   final Color onSuccessContainer;
+
+  /// Status glyphs on [ColorScheme.inverseSurface], the neutral plate of a
+  /// notification: the other theme's success and error tones, so they read
+  /// on the inverted background.
+  final Color successOnInverse;
+  final Color errorOnInverse;
   final Color proBadge;
   final Color proBadgeForeground;
   final Color divider;
@@ -72,6 +80,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     Color? successForeground,
     Color? successContainer,
     Color? onSuccessContainer,
+    Color? successOnInverse,
+    Color? errorOnInverse,
     Color? proBadge,
     Color? proBadgeForeground,
     Color? divider,
@@ -95,6 +105,8 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
       successForeground: successForeground ?? this.successForeground,
       successContainer: successContainer ?? this.successContainer,
       onSuccessContainer: onSuccessContainer ?? this.onSuccessContainer,
+      successOnInverse: successOnInverse ?? this.successOnInverse,
+      errorOnInverse: errorOnInverse ?? this.errorOnInverse,
       proBadge: proBadge ?? this.proBadge,
       proBadgeForeground: proBadgeForeground ?? this.proBadgeForeground,
       divider: divider ?? this.divider,
@@ -142,6 +154,12 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
         other.onSuccessContainer,
         t,
       )!,
+      successOnInverse: Color.lerp(
+        successOnInverse,
+        other.successOnInverse,
+        t,
+      )!,
+      errorOnInverse: Color.lerp(errorOnInverse, other.errorOnInverse, t)!,
       proBadge: Color.lerp(proBadge, other.proBadge, t)!,
       proBadgeForeground: Color.lerp(
         proBadgeForeground,

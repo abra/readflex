@@ -453,12 +453,6 @@ abstract class ReadflexLocalizations {
   /// **'Check the network connection or try again later.'**
   String get translationFailureBody;
 
-  /// No description provided for @libraryResetFilters.
-  ///
-  /// In en, this message translates to:
-  /// **'Reset filters'**
-  String get libraryResetFilters;
-
   /// No description provided for @commonCopied.
   ///
   /// In en, this message translates to:
@@ -498,7 +492,7 @@ abstract class ReadflexLocalizations {
   /// No description provided for @appRetrying.
   ///
   /// In en, this message translates to:
-  /// **'Retrying...'**
+  /// **'Retrying…'**
   String get appRetrying;
 
   /// No description provided for @onboardingReadAnythingTitle.
@@ -624,7 +618,7 @@ abstract class ReadflexLocalizations {
   /// No description provided for @librarySearchHint.
   ///
   /// In en, this message translates to:
-  /// **'Search library...'**
+  /// **'Search library'**
   String get librarySearchHint;
 
   /// Built-in collection of books (not comics).
@@ -840,8 +834,20 @@ abstract class ReadflexLocalizations {
   /// No description provided for @libraryNoResultsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Try a different search or filter'**
+  /// **'Try a different search'**
   String get libraryNoResultsSubtitle;
+
+  /// No description provided for @libraryEmptyCollectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This collection is empty'**
+  String get libraryEmptyCollectionTitle;
+
+  /// No description provided for @libraryShowWholeLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Show entire Library'**
+  String get libraryShowWholeLibrary;
 
   /// No description provided for @libraryAddToCollectionTitle.
   ///
@@ -888,7 +894,7 @@ abstract class ReadflexLocalizations {
   /// No description provided for @librarySearchCollectionsHint.
   ///
   /// In en, this message translates to:
-  /// **'Search collections...'**
+  /// **'Search collections'**
   String get librarySearchCollectionsHint;
 
   /// No description provided for @libraryNoCollectionsYet.
@@ -966,7 +972,7 @@ abstract class ReadflexLocalizations {
   /// No description provided for @libraryEmptySourceCount.
   ///
   /// In en, this message translates to:
-  /// **'0 books/articles'**
+  /// **'No items yet'**
   String get libraryEmptySourceCount;
 
   /// No description provided for @libraryNoItemsInCollection.
@@ -1062,7 +1068,7 @@ abstract class ReadflexLocalizations {
   /// No description provided for @importSaveArticle.
   ///
   /// In en, this message translates to:
-  /// **'Save Article'**
+  /// **'Save article'**
   String get importSaveArticle;
 
   /// No description provided for @importBeforeUploadingTitle.
@@ -1074,7 +1080,7 @@ abstract class ReadflexLocalizations {
   /// No description provided for @importBookTermsBody.
   ///
   /// In en, this message translates to:
-  /// **'Only upload books, comics, and documents you have the right to use in ReadFlex.'**
+  /// **'Only upload books, comics, and documents you have the right to use in Readflex.'**
   String get importBookTermsBody;
 
   /// No description provided for @importBookTermsConfirm.
@@ -1230,13 +1236,13 @@ abstract class ReadflexLocalizations {
   /// No description provided for @importFetchingArticle.
   ///
   /// In en, this message translates to:
-  /// **'Fetching article...'**
+  /// **'Fetching article…'**
   String get importFetchingArticle;
 
   /// No description provided for @importSavingArticle.
   ///
   /// In en, this message translates to:
-  /// **'Saving offline copy...'**
+  /// **'Saving offline copy…'**
   String get importSavingArticle;
 
   /// No description provided for @importComicAdded.

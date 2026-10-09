@@ -17,6 +17,7 @@ import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:toast_service/toast_service.dart';
 
 import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
@@ -814,6 +815,25 @@ void main() {
       ),
     );
     expect(bottom.duration, AppMotion.short);
+  });
+
+  testWidgets('toasts avoid the slider and the capsule only while the chrome '
+      'shows', (tester) async {
+    await pump(tester);
+    final area = find.ancestor(
+      of: find.byKey(_capsuleKey),
+      matching: find.byType(ToastAvoidArea),
+    );
+    expect(area, findsOneWidget);
+    expect(tester.widget<ToastAvoidArea>(area).enabled, isTrue);
+    // The marked area starts at the slider, under the backdrop's fade.
+    expect(
+      find.descendant(of: area, matching: find.byType(Slider)),
+      findsOneWidget,
+    );
+    uiCubit.hideChrome();
+    await tester.pumpAndSettle();
+    expect(tester.widget<ToastAvoidArea>(area).enabled, isFalse);
   });
 
   testWidgets('hidden chrome ignores pointers', (tester) async {

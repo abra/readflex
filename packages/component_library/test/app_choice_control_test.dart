@@ -4,11 +4,14 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  for (final width in [190.0, 400.0]) {
-    testWidgets('dark selected choices stand out at width $width', (
-      tester,
-    ) async {
-      final theme = AppTheme.dark();
+  for (final (theme, width) in [
+    (AppTheme.light(), 190.0),
+    (AppTheme.light(), 400.0),
+    (AppTheme.dark(), 190.0),
+    (AppTheme.dark(), 400.0),
+  ]) {
+    testWidgets('the selected choice is an accent wash with readable accent '
+        'text: ${theme.brightness} at width $width', (tester) async {
       var enabled = true;
       late StateSetter update;
       await tester.pumpWidget(
@@ -42,18 +45,32 @@ void main() {
             .color!,
         theme.colorScheme.surface,
       );
+      Color foreground(String label) =>
+          DefaultTextStyle.of(tester.element(find.text(label))).style.color!;
+      final colors = theme.colorScheme;
       final selectedFill = background('System');
-      final foreground = DefaultTextStyle.of(
-        tester.element(find.text('System')),
-      ).style.color!;
+      // Both themes tint the accent behind the selected option; dark mode
+      // no longer paints the brightest opaque block on the screen.
       expect(
-        _contrast(selectedFill, background('Light')),
-        greaterThanOrEqualTo(3),
+        selectedFill,
+        Color.alphaBlend(colors.selectedControlBackground, colors.surface),
       );
-      expect(_contrast(foreground, selectedFill), greaterThanOrEqualTo(4.5));
+      expect(selectedFill.computeLuminance(), lessThan(.9));
+      expect(_contrast(selectedFill, background('Light')), greaterThan(1.05));
+      expect(foreground('System'), colors.selectedControlForeground);
+      expect(foreground('Light'), isNot(foreground('System')));
+      expect(
+        _contrast(foreground('System'), selectedFill),
+        greaterThanOrEqualTo(4.5),
+      );
       update(() => enabled = false);
       await tester.pumpAndSettle();
-      expect(background('System'), isNot(selectedFill));
+      // Disabled keeps which option is chosen and dims its text.
+      expect(background('System'), selectedFill);
+      expect(
+        foreground('System'),
+        colors.onSurface.withValues(alpha: .38),
+      );
       expect(tester.takeException(), isNull);
     });
   }

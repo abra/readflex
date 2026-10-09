@@ -17,6 +17,7 @@ import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:translate/translate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:toast_service/toast_service.dart';
 
 // Bump when the book import terms text changes so users are asked to accept
 // the updated terms before importing another local book.
@@ -46,6 +47,9 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
     // Route transition / redirect logs are noisy — keep them on only in dev
     // builds so production logs stay focused on actual errors.
     debugLogDiagnostics: deps.config.isDev,
+    // Sheets and dialogs open on the root navigator; a new one clears toasts
+    // that would cover its bottom commands.
+    observers: [ToastNavigatorObserver()],
     initialLocation: AppRoutes.root,
     redirect: (context, state) {
       final location = state.uri.path;

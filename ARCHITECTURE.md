@@ -264,7 +264,7 @@ vocabulary features is `189e2cc1`.
 | `reader_server` | Localhost HTTP server for reader assets and book/article files. | Supports range requests for books and local article HTML/assets for WebView readers. |
 | `reader_webview` | Foliate book WebView wrapper, vertical article HTML wrapper, JS bridges, asset extraction, metadata extraction. | Used by Reader and Import Flow. |
 | `screen_control_service` | Keep-awake and brightness coordination for active reading sessions. | Wraps low-level brightness plugin. |
-| `toast_service` | Thin toastification wrapper. | Feature packages do not import toastification directly. |
+| `toast_service` | Thin toastification wrapper: bottom-anchored toasts that float above controls marked with `ToastAvoidArea`; `ToastNavigatorObserver` on the root navigator clears them when a sheet or dialog opens. | Feature packages do not import toastification directly. |
 
 Some infrastructure packages are used by only one feature today. That is still
 valid when the package boundary hides a platform/backend/lifecycle concern that

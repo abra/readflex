@@ -30,19 +30,12 @@ final class LibrarySourcesDeleted extends LibraryEvent {
   final BookDeletionScope scope;
 }
 
-sealed class LibraryQueryEvent extends LibraryEvent {
-  const LibraryQueryEvent();
-}
-
-final class LibrarySearchQueryChanged extends LibraryQueryEvent {
+/// A new search query. An empty query (clearing the search) applies at once
+/// and cancels a pending debounced one.
+final class LibrarySearchQueryChanged extends LibraryEvent {
   const LibrarySearchQueryChanged(this.query);
 
   final String query;
-}
-
-/// Clears the search and the collection scope ("Reset filters").
-final class LibraryFiltersReset extends LibraryQueryEvent {
-  const LibraryFiltersReset();
 }
 
 final class LibraryCollectionScopeChanged extends LibraryEvent {

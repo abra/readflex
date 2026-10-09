@@ -189,9 +189,6 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get translationFailureBody => '请检查网络连接或稍后重试。';
 
   @override
-  String get libraryResetFilters => '重置筛选';
-
-  @override
   String get commonCopied => '已复制';
 
   @override
@@ -210,7 +207,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get appRetry => '重试';
 
   @override
-  String get appRetrying => '正在重试...';
+  String get appRetrying => '正在重试…';
 
   @override
   String get onboardingReadAnythingTitle => '阅读任何内容';
@@ -280,7 +277,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryOffline => '离线';
 
   @override
-  String get librarySearchHint => '搜索书库...';
+  String get librarySearchHint => '搜索书库';
 
   @override
   String get libraryScopeBooks => '图书';
@@ -409,7 +406,13 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryNoResultsTitle => '未找到结果';
 
   @override
-  String get libraryNoResultsSubtitle => '尝试其他搜索或筛选条件';
+  String get libraryNoResultsSubtitle => '尝试其他搜索';
+
+  @override
+  String get libraryEmptyCollectionTitle => '此收藏集为空';
+
+  @override
+  String get libraryShowWholeLibrary => '显示整个书库';
 
   @override
   String get libraryAddToCollectionTitle => '添加到收藏集';
@@ -454,7 +457,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryCollectionsTitle => '收藏集';
 
   @override
-  String get librarySearchCollectionsHint => '搜索收藏集...';
+  String get librarySearchCollectionsHint => '搜索收藏集';
 
   @override
   String get libraryNoCollectionsYet => '还没有收藏集';
@@ -509,7 +512,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   }
 
   @override
-  String get libraryEmptySourceCount => '0 本书/文章';
+  String get libraryEmptySourceCount => '暂无内容';
 
   @override
   String get libraryNoItemsInCollection => '此收藏集中没有项目';
@@ -569,7 +572,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get importBeforeUploadingTitle => '上传前';
 
   @override
-  String get importBookTermsBody => '请只上传你有权在 ReadFlex 中使用的图书、漫画和文档。';
+  String get importBookTermsBody => '请只上传你有权在 Readflex 中使用的图书、漫画和文档。';
 
   @override
   String get importBookTermsConfirm => '我确认我有权上传此文件。';
@@ -647,10 +650,10 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryCreateAndAdd => '创建并添加';
 
   @override
-  String get importFetchingArticle => '正在获取文章...';
+  String get importFetchingArticle => '正在获取文章…';
 
   @override
-  String get importSavingArticle => '正在保存离线副本...';
+  String get importSavingArticle => '正在保存离线副本…';
 
   @override
   String get importComicAdded => '漫画已添加！';

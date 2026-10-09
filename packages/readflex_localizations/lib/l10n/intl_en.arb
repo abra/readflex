@@ -104,14 +104,13 @@
     }
   },
   "@@locale": "en",
-  "libraryResetFilters": "Reset filters",
   "commonCopied": "Copied",
   "commonCopyFailed": "Could not copy",
   "appInitializationFailed": "Initialization failed",
   "appInitializationFailedBody": "Readflex could not start. Try again.",
   "appTechnicalDetails": "Technical details",
   "appRetry": "Retry",
-  "appRetrying": "Retrying...",
+  "appRetrying": "Retrying…",
   "onboardingReadAnythingTitle": "Read anything",
   "onboardingReadAnythingDescription": "Import books and read comfortably with a customizable reader.",
   "onboardingHighlightSaveTitle": "Highlight & save",
@@ -142,7 +141,7 @@
     }
   },
   "libraryOffline": "offline",
-  "librarySearchHint": "Search library...",
+  "librarySearchHint": "Search library",
   "libraryScopeBooks": "Books",
   "@libraryScopeBooks": {
     "description": "Built-in collection of books (not comics)."
@@ -205,7 +204,9 @@
   "libraryEmptyTitle": "Your library is empty",
   "libraryEmptySubtitle": "Add your first book or article to get started",
   "libraryNoResultsTitle": "No results found",
-  "libraryNoResultsSubtitle": "Try a different search or filter",
+  "libraryNoResultsSubtitle": "Try a different search",
+  "libraryEmptyCollectionTitle": "This collection is empty",
+  "libraryShowWholeLibrary": "Show entire Library",
   "libraryAddToCollectionTitle": "Add to collection",
   "libraryFavourites": "Favourites",
   "libraryCreateCollectionPrompt": "{count, plural, one{Create a collection for 1 selected item.} other{Create a collection for {count} selected items.}}",
@@ -234,7 +235,7 @@
     }
   },
   "libraryCollectionsTitle": "Collections",
-  "librarySearchCollectionsHint": "Search collections...",
+  "librarySearchCollectionsHint": "Search collections",
   "libraryNoCollectionsYet": "No collections yet",
   "libraryNoMatchingCollections": "No matching collections",
   "libraryManualCollections": "Manual collections",
@@ -268,7 +269,7 @@
       }
     }
   },
-  "libraryEmptySourceCount": "0 books/articles",
+  "libraryEmptySourceCount": "No items yet",
   "libraryNoItemsInCollection": "No items in this collection",
   "libraryDeleteCollectionBody": "This removes \"{name}\" only. Books and articles stay in your library.",
   "@libraryDeleteCollectionBody": {
@@ -305,9 +306,9 @@
     }
   },
   "importAddToLibraryTitle": "Add to Library",
-  "importSaveArticle": "Save Article",
+  "importSaveArticle": "Save article",
   "importBeforeUploadingTitle": "Before uploading",
-  "importBookTermsBody": "Only upload books, comics, and documents you have the right to use in ReadFlex.",
+  "importBookTermsBody": "Only upload books, comics, and documents you have the right to use in Readflex.",
   "importBookTermsConfirm": "I confirm I have the right to upload this file.",
   "importLegalPrefix": "By continuing, you accept the ",
   "importLegalAnd": " and ",
@@ -333,8 +334,8 @@
   "readerThumbnailUnavailable": "Preview unavailable",
   "libraryNewCollection": "New collection",
   "libraryCreateAndAdd": "Create and add",
-  "importFetchingArticle": "Fetching article...",
-  "importSavingArticle": "Saving offline copy...",
+  "importFetchingArticle": "Fetching article…",
+  "importSavingArticle": "Saving offline copy…",
   "importComicAdded": "Comic added!",
   "importBookAdded": "Book added!",
   "importArticleSaved": "Article saved!",

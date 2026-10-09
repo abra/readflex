@@ -269,7 +269,8 @@ void main() {
     );
 
     blocTest<LibraryBloc, LibraryState>(
-      'reset cancels a pending search and clears search and scope without IO',
+      'clearing the search cancels a pending query and keeps the scope, '
+      'without IO',
       build: () => LibraryBloc(bookRepository: repository),
       seed: () => LibraryState(
         status: LibraryStatus.success,
@@ -280,13 +281,14 @@ void main() {
       act: (bloc) async {
         bloc.add(const LibrarySearchQueryChanged('pending'));
         await Future<void>.delayed(const Duration(milliseconds: 50));
-        bloc.add(const LibraryFiltersReset());
+        bloc.add(const LibrarySearchQueryChanged(''));
       },
       wait: const Duration(milliseconds: 400),
       expect: () => [
         LibraryState(
           status: LibraryStatus.success,
           sources: [_book].map(LibrarySource.fromBook).toList(),
+          selectedCollectionScope: _builtIns(comics: 0)[2],
         ),
       ],
       verify: (_) => expect(repository.getBooksCallCount, 0),

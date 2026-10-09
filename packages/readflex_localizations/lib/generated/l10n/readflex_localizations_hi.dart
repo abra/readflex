@@ -193,9 +193,6 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
       'नेटवर्क कनेक्शन जाँचें या बाद में फिर कोशिश करें।';
 
   @override
-  String get libraryResetFilters => 'फ़िल्टर रीसेट करें';
-
-  @override
   String get commonCopied => 'कॉपी किया गया';
 
   @override
@@ -215,7 +212,7 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get appRetry => 'फिर कोशिश करें';
 
   @override
-  String get appRetrying => 'फिर कोशिश हो रही है...';
+  String get appRetrying => 'फिर कोशिश हो रही है…';
 
   @override
   String get onboardingReadAnythingTitle => 'कुछ भी पढ़ें';
@@ -289,7 +286,7 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get libraryOffline => 'ऑफलाइन';
 
   @override
-  String get librarySearchHint => 'लाइब्रेरी खोजें...';
+  String get librarySearchHint => 'लाइब्रेरी खोजें';
 
   @override
   String get libraryScopeBooks => 'किताबें';
@@ -421,7 +418,13 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get libraryNoResultsTitle => 'कोई परिणाम नहीं मिला';
 
   @override
-  String get libraryNoResultsSubtitle => 'दूसरी खोज या फ़िल्टर आज़माएं';
+  String get libraryNoResultsSubtitle => 'दूसरी खोज आज़माएं';
+
+  @override
+  String get libraryEmptyCollectionTitle => 'यह कलेक्शन खाली है';
+
+  @override
+  String get libraryShowWholeLibrary => 'पूरी लाइब्रेरी दिखाएं';
 
   @override
   String get libraryAddToCollectionTitle => 'कलेक्शन में जोड़ें';
@@ -468,7 +471,7 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get libraryCollectionsTitle => 'कलेक्शन';
 
   @override
-  String get librarySearchCollectionsHint => 'कलेक्शन खोजें...';
+  String get librarySearchCollectionsHint => 'कलेक्शन खोजें';
 
   @override
   String get libraryNoCollectionsYet => 'अभी कोई कलेक्शन नहीं';
@@ -525,7 +528,7 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   }
 
   @override
-  String get libraryEmptySourceCount => '0 किताबें/लेख';
+  String get libraryEmptySourceCount => 'अभी कोई आइटम नहीं';
 
   @override
   String get libraryNoItemsInCollection => 'इस कलेक्शन में कोई आइटम नहीं';
@@ -586,7 +589,7 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get importBookTermsBody =>
-      'केवल वे किताबें, कॉमिक्स और दस्तावेज़ अपलोड करें जिन्हें ReadFlex में उपयोग करने का अधिकार आपके पास है।';
+      'केवल वे किताबें, कॉमिक्स और दस्तावेज़ अपलोड करें जिन्हें Readflex में उपयोग करने का अधिकार आपके पास है।';
 
   @override
   String get importBookTermsConfirm =>
@@ -665,10 +668,10 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get libraryCreateAndAdd => 'बनाएं और जोड़ें';
 
   @override
-  String get importFetchingArticle => 'लेख लाया जा रहा है...';
+  String get importFetchingArticle => 'लेख लाया जा रहा है…';
 
   @override
-  String get importSavingArticle => 'ऑफलाइन कॉपी सहेजी जा रही है...';
+  String get importSavingArticle => 'ऑफलाइन कॉपी सहेजी जा रही है…';
 
   @override
   String get importComicAdded => 'कॉमिक जोड़ी गई!';

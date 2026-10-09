@@ -69,6 +69,8 @@ const _lightColorsExt = AppColorsExt(
   successForeground: PrimitiveColors.successFgLight,
   successContainer: PrimitiveColors.successFgLight,
   onSuccessContainer: PrimitiveColors.white,
+  successOnInverse: PrimitiveColors.successFgDark,
+  errorOnInverse: PrimitiveColors.red300,
   proBadge: PrimitiveColors.proBadgeLight,
   proBadgeForeground: PrimitiveColors.proBadgeFgLight,
   divider: PrimitiveColors.gray250,
@@ -100,6 +102,12 @@ ThemeData _buildLight() {
         onError: palette.onError,
         outline: palette.border,
         outlineVariant: palette.border,
+        // The seed would tint muted text toward the wine accent; keep it in
+        // the same cool gray family as the surfaces.
+        onSurfaceVariant: palette.mutedForeground,
+        // Notification plates: neutral grays, not the seed's warm inverse.
+        inverseSurface: PrimitiveColors.gray900,
+        onInverseSurface: PrimitiveColors.gray50,
         surfaceContainerLowest: palette.surfaceElevated,
         surfaceContainerLow: palette.card,
         surfaceContainer: palette.secondary,
@@ -148,6 +156,8 @@ const _darkColorsExt = AppColorsExt(
   successForeground: PrimitiveColors.successFgDark,
   successContainer: PrimitiveColors.successFgDark,
   onSuccessContainer: PrimitiveColors.darkGray900,
+  successOnInverse: PrimitiveColors.successFgLight,
+  errorOnInverse: PrimitiveColors.red600,
   proBadge: PrimitiveColors.proBadgeDark,
   proBadgeForeground: PrimitiveColors.proBadgeFgDark,
   divider: PrimitiveColors.darkGray700,
@@ -179,6 +189,11 @@ ThemeData _buildDark() {
         onError: palette.onError,
         outline: palette.border,
         outlineVariant: palette.border,
+        // The seed would tint muted text toward the wine accent; keep it in
+        // the same cool gray family as the surfaces.
+        onSurfaceVariant: palette.mutedForeground,
+        inverseSurface: PrimitiveColors.darkGray50,
+        onInverseSurface: PrimitiveColors.darkGray900,
         surfaceContainerLowest: palette.surfaceElevated,
         surfaceContainerLow: palette.card,
         surfaceContainer: palette.secondary,

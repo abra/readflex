@@ -33,7 +33,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 10));
     expect(
-      toastification.managers[Alignment.topCenter]!.notifications,
+      toastification.managers[Alignment.bottomCenter]!.notifications,
       hasLength(1),
     );
     expect(find.text('Could not save'), findsOneWidget);
@@ -77,7 +77,16 @@ void main() {
       returnsNormally,
     );
     await tester.pump();
-    await tester.pumpAndSettle(const Duration(seconds: 4));
+    await tester.pump();
+    await tester.pump(toastSuccessDuration);
+    // Allow the exit animation and overlay cleanup to finish.
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+  });
+
+  test('success stays long enough to read a title; errors stay longer', () {
+    expect(toastSuccessDuration, const Duration(seconds: 4));
+    expect(toastErrorDuration, greaterThan(toastSuccessDuration));
   });
 
   for (final type in NotificationType.values) {
@@ -101,10 +110,13 @@ void main() {
       showToast(capturedContext, type: type, message: 'Toast message');
       await tester.pump();
       await tester.pump();
-      final milliseconds = type == NotificationType.error ? 6000 : 1000;
+      final milliseconds = switch (type) {
+        NotificationType.error => toastErrorDuration.inMilliseconds,
+        NotificationType.success => toastSuccessDuration.inMilliseconds,
+      };
       await tester.pump(Duration(milliseconds: milliseconds - 1));
       expect(find.text('Toast message'), findsOneWidget);
-      final manager = toastification.managers[Alignment.topCenter]!;
+      final manager = toastification.managers[Alignment.bottomCenter]!;
       expect(manager.notifications, hasLength(1));
 
       await tester.pump(const Duration(milliseconds: 1));

@@ -398,16 +398,19 @@ class _ContextPanelDriver extends StatelessWidget {
       left: 0,
       right: 0,
       bottom: 0,
-      child: _ContextPanel(
-        textActions: fallbackActions,
-        panelColor: colors.surface,
-        iconColor: colors.onSurface,
-        dividerColor: colors.outlineVariant,
-        resolveSelection: resolveCurrentSelection,
-        onExecuteAction: executeTextAction,
-        onActionError: (e, st) {
-          if (!bloc.isClosed) bloc.reportError(e, st);
-        },
+      // Toasts float above the selection actions while they show.
+      child: ToastAvoidArea(
+        child: _ContextPanel(
+          textActions: fallbackActions,
+          panelColor: colors.surface,
+          iconColor: colors.onSurface,
+          dividerColor: colors.outlineVariant,
+          resolveSelection: resolveCurrentSelection,
+          onExecuteAction: executeTextAction,
+          onActionError: (e, st) {
+            if (!bloc.isClosed) bloc.reportError(e, st);
+          },
+        ),
       ),
     );
   }

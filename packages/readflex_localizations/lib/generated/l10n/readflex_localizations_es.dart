@@ -194,9 +194,6 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
       'Comprueba la conexión de red o inténtalo de nuevo más tarde.';
 
   @override
-  String get libraryResetFilters => 'Restablecer filtros';
-
-  @override
   String get commonCopied => 'Copiado';
 
   @override
@@ -216,7 +213,7 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   String get appRetry => 'Reintentar';
 
   @override
-  String get appRetrying => 'Reintentando...';
+  String get appRetrying => 'Reintentando…';
 
   @override
   String get onboardingReadAnythingTitle => 'Lee cualquier cosa';
@@ -290,7 +287,7 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   String get libraryOffline => 'sin conexión';
 
   @override
-  String get librarySearchHint => 'Buscar en la biblioteca...';
+  String get librarySearchHint => 'Buscar en la biblioteca';
 
   @override
   String get libraryScopeBooks => 'Libros';
@@ -427,7 +424,13 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   String get libraryNoResultsTitle => 'No se encontraron resultados';
 
   @override
-  String get libraryNoResultsSubtitle => 'Prueba otra búsqueda o filtro';
+  String get libraryNoResultsSubtitle => 'Prueba otra búsqueda';
+
+  @override
+  String get libraryEmptyCollectionTitle => 'Esta colección está vacía';
+
+  @override
+  String get libraryShowWholeLibrary => 'Mostrar toda la biblioteca';
 
   @override
   String get libraryAddToCollectionTitle => 'Añadir a colección';
@@ -475,7 +478,7 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   String get libraryCollectionsTitle => 'Colecciones';
 
   @override
-  String get librarySearchCollectionsHint => 'Buscar colecciones...';
+  String get librarySearchCollectionsHint => 'Buscar colecciones';
 
   @override
   String get libraryNoCollectionsYet => 'Aún no hay colecciones';
@@ -532,7 +535,7 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   }
 
   @override
-  String get libraryEmptySourceCount => '0 libros/artículos';
+  String get libraryEmptySourceCount => 'Aún no hay elementos';
 
   @override
   String get libraryNoItemsInCollection => 'No hay elementos en esta colección';
@@ -593,7 +596,7 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
 
   @override
   String get importBookTermsBody =>
-      'Sube solo libros, cómics y documentos que tengas derecho a usar en ReadFlex.';
+      'Sube solo libros, cómics y documentos que tengas derecho a usar en Readflex.';
 
   @override
   String get importBookTermsConfirm =>
@@ -673,10 +676,10 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   String get libraryCreateAndAdd => 'Crear y añadir';
 
   @override
-  String get importFetchingArticle => 'Obteniendo artículo...';
+  String get importFetchingArticle => 'Obteniendo artículo…';
 
   @override
-  String get importSavingArticle => 'Guardando copia sin conexión...';
+  String get importSavingArticle => 'Guardando copia sin conexión…';
 
   @override
   String get importComicAdded => '¡Cómic añadido!';

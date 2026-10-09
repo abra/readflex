@@ -102,6 +102,10 @@ asserted in semantics, not inferred from color. Loading actions retain their
 name but expose no tap action; disabling a choice retains its selected state.
 Theme tests check named foreground/background pairs in light and dark mode;
 they do not establish contrast over arbitrary images, overlays or book styles.
+Selected controls are an accent wash with accent text (at least 4.5:1 on every
+surface) in both themes, together with selected semantics; rows that select
+also show a check. Muted text keeps at least 4.5:1 and stays clearly quieter
+than primary text.
 The [UI review checklist](test/ui/README.md#review-checklist) links these checks
 to layout, navigation and performance contracts.
 
@@ -111,7 +115,10 @@ pairs in both themes. Quote direction, note direction and interface direction
 are independent. Onboarding is one static screen: its page preview tilt mirrors
 in RTL, nothing animates, and both actions stay outside the scrolling content
 at large text. Errors do not expire automatically
-when accessible navigation is enabled; short success notifications remain 1s.
+when accessible navigation is enabled; success notifications stay 4s, long
+enough to read a book title. Toasts sit at the bottom above the screen's bottom
+controls (`ToastAvoidArea`) and never cover them, so those controls stay
+tappable while a toast shows.
 Toasts expose the full message as a live region, separately from the localized
 48dp Close action. Large-text suffixes wrap instead of leaving the viewport;
 ordinary messages may be visually ellipsized without truncating semantics.

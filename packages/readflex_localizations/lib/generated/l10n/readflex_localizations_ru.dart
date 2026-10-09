@@ -194,9 +194,6 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
       'Проверьте подключение к сети или попробуйте позже.';
 
   @override
-  String get libraryResetFilters => 'Сбросить фильтры';
-
-  @override
   String get commonCopied => 'Скопировано';
 
   @override
@@ -216,7 +213,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get appRetry => 'Повторить';
 
   @override
-  String get appRetrying => 'Повторяем...';
+  String get appRetrying => 'Повторяем…';
 
   @override
   String get onboardingReadAnythingTitle => 'Читайте что угодно';
@@ -292,7 +289,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get libraryOffline => 'офлайн';
 
   @override
-  String get librarySearchHint => 'Поиск в библиотеке...';
+  String get librarySearchHint => 'Поиск в библиотеке';
 
   @override
   String get libraryScopeBooks => 'Книги';
@@ -428,7 +425,13 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get libraryNoResultsTitle => 'Ничего не найдено';
 
   @override
-  String get libraryNoResultsSubtitle => 'Попробуйте другой поиск или фильтр';
+  String get libraryNoResultsSubtitle => 'Попробуйте другой запрос';
+
+  @override
+  String get libraryEmptyCollectionTitle => 'В этой коллекции пока пусто';
+
+  @override
+  String get libraryShowWholeLibrary => 'Показать всю библиотеку';
 
   @override
   String get libraryAddToCollectionTitle => 'Добавить в коллекцию';
@@ -479,7 +482,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get libraryCollectionsTitle => 'Коллекции';
 
   @override
-  String get librarySearchCollectionsHint => 'Поиск коллекций...';
+  String get librarySearchCollectionsHint => 'Поиск коллекций';
 
   @override
   String get libraryNoCollectionsYet => 'Коллекций пока нет';
@@ -540,7 +543,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   }
 
   @override
-  String get libraryEmptySourceCount => '0 книг/статей';
+  String get libraryEmptySourceCount => 'Пока пусто';
 
   @override
   String get libraryNoItemsInCollection => 'В этой коллекции нет элементов';
@@ -601,7 +604,7 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get importBookTermsBody =>
-      'Загружайте только книги, комиксы и документы, которые вы имеете право использовать в ReadFlex.';
+      'Загружайте только книги, комиксы и документы, которые вы имеете право использовать в Readflex.';
 
   @override
   String get importBookTermsConfirm =>
@@ -681,10 +684,10 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get libraryCreateAndAdd => 'Создать и добавить';
 
   @override
-  String get importFetchingArticle => 'Получаем статью...';
+  String get importFetchingArticle => 'Получаем статью…';
 
   @override
-  String get importSavingArticle => 'Сохраняем офлайн-копию...';
+  String get importSavingArticle => 'Сохраняем офлайн-копию…';
 
   @override
   String get importComicAdded => 'Комикс добавлен!';

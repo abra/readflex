@@ -448,10 +448,12 @@ class _LibraryViewState extends State<_LibraryView> {
                   // strips the body's bottom safe inset, which the content
                   // padding relies on.
                   bottomNavigationBar: selectionActive
-                      ? LibrarySelectionBar(
-                          onAddToCollection: () =>
-                              _handleAddSelectedToCollection(context),
-                          onDelete: () => _handleDeleteSelected(context),
+                      ? ToastAvoidArea(
+                          child: LibrarySelectionBar(
+                            onAddToCollection: () =>
+                                _handleAddSelectedToCollection(context),
+                            onDelete: () => _handleDeleteSelected(context),
+                          ),
                         )
                       : null,
                   floatingActionButtonLocation: LibraryFloatingActionsLocation(
@@ -460,37 +462,40 @@ class _LibraryViewState extends State<_LibraryView> {
                   // The selection bar takes the bottom while selecting.
                   // Swapping to null lets the Scaffold scale the capsule out
                   // and back in.
+                  // Toasts float above the capsule and the selection bar.
                   floatingActionButton: hasItems && !selectionActive
-                      ? Padding(
-                          padding: const EdgeInsetsDirectional.only(
-                            bottom: kLibraryFloatingActionsLift,
-                          ),
-                          // Only the capsule follows the scope; the Scaffold
-                          // rebuilds for visibility alone.
-                          child:
-                              BlocSelector<
-                                LibraryBloc,
-                                LibraryState,
-                                LibraryCollectionScope?
-                              >(
-                                selector: (state) =>
-                                    state.selectedCollectionScope,
-                                builder: (context, scope) =>
-                                    LibraryFloatingActions(
-                                      scope: scope,
-                                      onCollectionsPressed: () =>
-                                          _handleCollectionScopePressed(
-                                            context,
-                                            context.read<LibraryBloc>().state,
-                                          ),
-                                      onAddPressed: _addInFlight
-                                          ? null
-                                          : () => _handleAdd(
+                      ? ToastAvoidArea(
+                          child: Padding(
+                            padding: const EdgeInsetsDirectional.only(
+                              bottom: kLibraryFloatingActionsLift,
+                            ),
+                            // Only the capsule follows the scope; the Scaffold
+                            // rebuilds for visibility alone.
+                            child:
+                                BlocSelector<
+                                  LibraryBloc,
+                                  LibraryState,
+                                  LibraryCollectionScope?
+                                >(
+                                  selector: (state) =>
+                                      state.selectedCollectionScope,
+                                  builder: (context, scope) =>
+                                      LibraryFloatingActions(
+                                        scope: scope,
+                                        onCollectionsPressed: () =>
+                                            _handleCollectionScopePressed(
                                               context,
-                                              LibraryImportEntry.menu,
+                                              context.read<LibraryBloc>().state,
                                             ),
-                                    ),
-                              ),
+                                        onAddPressed: _addInFlight
+                                            ? null
+                                            : () => _handleAdd(
+                                                context,
+                                                LibraryImportEntry.menu,
+                                              ),
+                                      ),
+                                ),
+                          ),
                         )
                       : null,
                   body: SafeArea(
@@ -559,11 +564,16 @@ class _LibraryViewState extends State<_LibraryView> {
                                       );
                                       return done.future;
                                     },
-                                    onResetFilters: () {
+                                    onClearSearch: () {
                                       _searchController.clear();
                                       _searchFocusNode.unfocus();
-                                      bloc.add(const LibraryFiltersReset());
+                                      bloc.add(
+                                        const LibrarySearchQueryChanged(''),
+                                      );
                                     },
+                                    onShowWholeLibrary: () => bloc.add(
+                                      const LibraryCollectionScopeChanged(null),
+                                    ),
                                   ),
                                 ),
                               ),

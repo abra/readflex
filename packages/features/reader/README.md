@@ -394,6 +394,10 @@ Contents field's 16dp gutter with full 48dp targets
 `AppSizes.iconActionOutset`). Geometry tests compare the visible icon boxes,
 not only button bounds; native flows also exercise deletion and Undo.
 The bottom chrome is a floating capsule with a progress row above it. The
+progress row and the capsule form one `ToastAvoidArea`, enabled only while the
+chrome shows (the hidden chrome stays mounted, slid out); the fallback
+selection panel and the search navigation bar are marked too, so a toast
+(Copied, Highlight saved) floats above whichever is on screen. The
 capsule is 60dp tall (stadium radius 30), 16dp from the screen edges and
 `appBottomSafeInset` (minimum 16dp) above the bottom, capped at 560dp wide on
 wide screens. It is the shared `AppFloatingCapsule`, like the Library's

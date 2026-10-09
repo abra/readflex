@@ -275,7 +275,7 @@ void main() {
     expect(find.text('Saved for reading offline'), findsOneWidget);
     // Retired copy: the menu describes outcomes, not formats or actions.
     expect(find.text('Upload Book'), findsNothing);
-    expect(find.text('Save Article'), findsNothing);
+    expect(find.text('Save article'), findsNothing);
     expect(find.text('EPUB, FB2, MOBI, PDF, AZW3, CBZ'), findsNothing);
     expect(find.text('Paste a web URL for offline reading'), findsNothing);
     expect(find.byIcon(AppIcons.uploadFile), findsOneWidget);
@@ -471,7 +471,7 @@ void main() {
       } else {
         expect(pickerCalls, 0);
         expect(find.byType(TextField), findsOneWidget);
-        expect(find.text('Save Article'), findsOneWidget);
+        expect(find.text('Save article'), findsOneWidget);
       }
     });
   }
@@ -660,7 +660,7 @@ void main() {
         expect(find.byType(TextField), findsOneWidget);
         expect(find.text('Add to Library'), findsNothing);
         await tester.pumpAndSettle();
-        expect(find.text('Save Article'), findsOneWidget);
+        expect(find.text('Save article'), findsOneWidget);
         expect(find.byTooltip('Back'), findsOneWidget);
         expect(clipboardReadCount, 0, reason: 'Paste stays explicit');
         await tester.enterText(
@@ -1267,8 +1267,8 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
     expect(find.text('Enter a valid article URL'), findsOneWidget);
-    expect(find.text('Save Article'), findsOneWidget);
-    expect(find.text('Fetching article...'), findsNothing);
+    expect(find.text('Save article'), findsOneWidget);
+    expect(find.text('Fetching article…'), findsNothing);
 
     await tester.enterText(find.byType(TextField), 'example.com/article');
     await tester.pump();
@@ -1321,12 +1321,12 @@ void main() {
     expect(find.text('Add to Library'), findsOneWidget);
     expect(find.text('Article from a link'), findsOneWidget);
     // The URL step keeps its own title while the menu slides out.
-    expect(find.text('Save Article'), findsOneWidget);
+    expect(find.text('Save article'), findsOneWidget);
 
     await tester.pumpAndSettle();
     expect(find.text('Add to Library'), findsNothing);
     expect(find.text('Article from a link'), findsNothing);
-    expect(find.text('Save Article'), findsOneWidget);
+    expect(find.text('Save article'), findsOneWidget);
   });
 
   testWidgets('article url entry shows import hints', (tester) async {
@@ -1743,7 +1743,7 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pump();
 
-    expect(find.text('Fetching article...'), findsOneWidget);
+    expect(find.text('Fetching article…'), findsOneWidget);
     expect(
       find.byWidgetPredicate(
         (widget) => widget is Text && widget.data == 'https://example.com/a',
@@ -1752,7 +1752,7 @@ void main() {
     );
     final uploadingTitleTop = tester
         .getTopLeft(
-          find.text('Fetching article...'),
+          find.text('Fetching article…'),
         )
         .dy;
 
@@ -1925,7 +1925,7 @@ void main() {
     expect(find.text('Before uploading'), findsOneWidget);
     expect(
       find.text(
-        'Only upload books, comics, and documents you have the right to use in ReadFlex.',
+        'Only upload books, comics, and documents you have the right to use in Readflex.',
       ),
       findsOneWidget,
     );
