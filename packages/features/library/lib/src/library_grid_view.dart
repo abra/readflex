@@ -10,7 +10,7 @@ import 'library_layout.dart';
 /// Lazy grid with up to three columns, leaving room for scaled cover text.
 ///
 /// A non-null [continueReadingSource] puts its full-width card above the
-/// grid, scrolling with it.
+/// grid, scrolling with it; [sources] leave it out.
 class LibraryGridView extends StatelessWidget {
   const LibraryGridView({
     required this.sources,
@@ -49,20 +49,20 @@ class LibraryGridView extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
-          semanticChildCount: sources.length,
+          semanticChildCount:
+              sources.length + (continueReadingSource == null ? 0 : 1),
           slivers: [
             if (continueReadingSource != null)
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  kLibraryContentTopPadding,
-                  AppSpacing.lg,
-                  0,
-                ),
+                padding: const EdgeInsets.only(top: kLibraryContentTopPadding),
                 sliver: SliverToBoxAdapter(
                   child: LibraryContinueReadingCard(
                     source: continueReadingSource,
+                    isSelectionMode: selection.isActive,
+                    isSelected: selection.contains(continueReadingSource.id),
                     onPressed: () => onSourcePressed(continueReadingSource),
+                    onLongPressed: () =>
+                        onSourceLongPressed(continueReadingSource),
                   ),
                 ),
               ),

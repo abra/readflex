@@ -21,8 +21,8 @@ import 'library_layout.dart';
 /// delete on confirm, and resolves true only once the write succeeded so
 /// the row finishes dismissing (false on cancel or failure springs it back).
 ///
-/// A non-null [continueReadingSource] puts its card first, on the 16dp
-/// gutter, scrolling with the rows.
+/// A non-null [continueReadingSource] puts its full-width card first,
+/// scrolling with the rows; [sources] leave it out.
 class LibraryListView extends StatelessWidget {
   const LibraryListView({
     required this.sources,
@@ -63,15 +63,16 @@ class LibraryListView extends StatelessWidget {
         if (continueReadingSource != null && itemIndex == 0) {
           // The first row's own top padding completes the gap below.
           return Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              kLibraryContentTopPadding,
-              AppSpacing.lg,
-              kLibraryContinueReadingGap - kLibraryContentTopPadding,
+            padding: const EdgeInsets.only(
+              top: kLibraryContentTopPadding,
+              bottom: kLibraryContinueReadingGap - kLibraryContentTopPadding,
             ),
             child: LibraryContinueReadingCard(
               source: continueReadingSource,
+              isSelectionMode: selection.isActive,
+              isSelected: selection.contains(continueReadingSource.id),
               onPressed: () => onSourcePressed(continueReadingSource),
+              onLongPressed: () => onSourceLongPressed(continueReadingSource),
             ),
           );
         }

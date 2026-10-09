@@ -3,17 +3,14 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-import 'library_selection_tint.dart';
+import 'library_layout.dart';
+import 'library_list_cover_slot.dart';
 import 'library_source_semantics.dart';
 
 const double _kArticleIconAlpha = 0.4;
-const double _kListCoverWidth = 60;
-const double _kListCoverHeight = 90;
-const double _kCoverToTextGap = AppSpacing.md + AppSpacing.xxs;
 // Content sits on the screen gutter; the selection tint is full-bleed.
 const double _kListRowHorizontalPadding = AppSpacing.lg;
 const double _kListRowVerticalPadding = AppSpacing.md;
-const double _kListSelectionCheckInset = AppSpacing.xs;
 const double _kListSelectionBackgroundInset = AppSpacing.xs;
 
 /// List-mode row for a library source.
@@ -210,10 +207,6 @@ class _ListRowShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final selectionColor = colors.selectionMarkerBackground;
-    final coverTint = selectionColor.withValues(
-      alpha: kLibraryCoverSelectionTintAlpha,
-    );
     // The row fill is a selected control: its paired foreground keeps text
     // readable on the opaque dark-mode tonal accent.
     final rowTint = colors.selectedControlBackground;
@@ -252,7 +245,8 @@ class _ListRowShell extends StatelessWidget {
                 bottom:
                     _kListRowVerticalPadding - _kListSelectionBackgroundInset,
                 height:
-                    _kListCoverHeight + (_kListSelectionBackgroundInset * 2),
+                    kLibraryListCoverHeight +
+                    (_kListSelectionBackgroundInset * 2),
                 child: ColoredBox(
                   key: const ValueKey('libraryListSelectionBackground'),
                   color: rowTint,
@@ -266,44 +260,12 @@ class _ListRowShell extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Fixed 60x90 cover slot (2:3 book aspect). AppCoverArt clips
-                  // its own corners (Container.clipBehavior), so no outer
-                  // ClipRRect needed.
-                  SizedBox(
+                  LibraryListCoverSlot(
                     key: const ValueKey('libraryListCoverSlot'),
-                    width: _kListCoverWidth,
-                    height: _kListCoverHeight,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(child: cover),
-                        if (isSelected) ...[
-                          Positioned.fill(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(
-                                  AppRadius.xs,
-                                ),
-                                border: Border.all(
-                                  color: selectionColor,
-                                  width: 2,
-                                ),
-                                color: coverTint,
-                              ),
-                            ),
-                          ),
-                          PositionedDirectional(
-                            top: _kListSelectionCheckInset,
-                            end: _kListSelectionCheckInset,
-                            child: _SelectionCheck(color: selectionColor),
-                          ),
-                        ],
-                      ],
-                    ),
+                    cover: cover,
+                    isSelected: isSelected,
                   ),
-                  // Demo uses 14dp cover-to-text gap — sits between our
-                  // md(12) and lg(16) tokens. `md + xxs` = 14 exactly and
-                  // composes from real tokens, so we don't add a new one.
-                  const SizedBox(width: _kCoverToTextGap),
+                  const SizedBox(width: kLibraryListCoverToTextGap),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: isRtl
@@ -375,27 +337,6 @@ class _ListRowShell extends StatelessWidget {
 /// top-end corner of the cover when the row is selected. Same visual
 /// vocabulary as the grid tile's selection check so list/grid selection
 /// reads identically.
-class _SelectionCheck extends StatelessWidget {
-  const _SelectionCheck({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: const ValueKey('libraryListSelectionCheck'),
-      width: 18,
-      height: 18,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      child: Icon(
-        AppIcons.check,
-        size: 10,
-        color: context.colors.selectionMarkerForeground,
-      ),
-    );
-  }
-}
-
 /// Thin ` · ` glyph used to separate segments in the meta strip. Extracted
 /// so individual call sites don't repeat the fontSize/color wiring.
 class _MetaDot extends StatelessWidget {

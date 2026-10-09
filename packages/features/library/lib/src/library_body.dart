@@ -24,8 +24,9 @@ const _layoutTransitionOffset = 8.0;
 ///   2. Library has items but the current filter/search hides them all —
 ///      tell the user to relax the filter.
 ///
-/// In the default view (no search, filter or collection, not selecting)
-/// the Continue reading card leads the content in both layouts.
+/// In the default view (no search or collection) the Continue reading card
+/// leads the content in both layouts, in place of its source's row or tile,
+/// also while selecting.
 ///
 /// Wrapping [RefreshIndicator] is always present (even for the empty
 /// states) so pull-to-refresh stays available.
@@ -102,13 +103,12 @@ class LibraryBody extends StatelessWidget {
           >(
             selector: (state) => state,
             builder: (context, selection) {
-              final continueReadingSource =
-                  state.isDefaultView && !selection.isActive
-                  ? state.continueReadingSource
-                  : null;
+              // The card stays while selecting, so entering selection never
+              // moves the covers under it.
+              final continueReadingSource = state.continueReadingCardSource;
               final child = switch (layoutMode) {
                 LibraryLayoutMode.list => LibraryListView(
-                  sources: visibleItems,
+                  sources: state.listedItems,
                   continueReadingSource: continueReadingSource,
                   selection: selection,
                   scrollController: scrollController,
@@ -117,7 +117,7 @@ class LibraryBody extends StatelessWidget {
                   onConfirmSwipeDelete: onConfirmSwipeDelete,
                 ),
                 LibraryLayoutMode.grid => LibraryGridView(
-                  sources: visibleItems,
+                  sources: state.listedItems,
                   continueReadingSource: continueReadingSource,
                   selection: selection,
                   scrollController: scrollController,

@@ -135,6 +135,62 @@ void main() {
     });
   });
 
+  group('continueReadingCardSource and listedItems', () {
+    final reading = _source(
+      'reading',
+      progress: .4,
+      openedAt: DateTime(2026, 3),
+    );
+    final earlier = _source(
+      'earlier',
+      progress: .2,
+      openedAt: DateTime(2026, 2),
+    );
+    final unread = _source('unread');
+
+    test('the default view shows the card and lists the rest in order', () {
+      final state = LibraryState(sources: [unread, reading, earlier]);
+      expect(state.continueReadingCardSource, reading);
+      expect(state.visibleItems, [reading, earlier, unread]);
+      expect(state.listedItems, [earlier, unread]);
+    });
+
+    test('searching or a scope drops the card and lists the source again', () {
+      for (final state in [
+        LibraryState(sources: [reading, earlier], searchQuery: 'Title'),
+        LibraryState(
+          sources: [reading, earlier],
+          selectedCollectionScope: _builtIn(
+            LibraryCollectionScopeType.books,
+            2,
+          ),
+        ),
+      ]) {
+        expect(state.continueReadingSource, reading);
+        expect(state.continueReadingCardSource, isNull);
+        expect(state.listedItems, state.visibleItems);
+        expect(state.listedItems, contains(reading));
+      }
+    });
+
+    test('nothing in progress lists everything', () {
+      final state = LibraryState(sources: [unread]);
+      expect(state.continueReadingCardSource, isNull);
+      expect(identical(state.listedItems, state.visibleItems), isTrue);
+    });
+
+    test('a library of only the card source lists nothing under it', () {
+      final state = LibraryState(sources: [reading]);
+      expect(state.visibleItems, [reading]);
+      expect(state.listedItems, isEmpty);
+    });
+
+    test('is computed once per state', () {
+      final state = LibraryState(sources: [reading, earlier]);
+      expect(identical(state.listedItems, state.listedItems), isTrue);
+    });
+  });
+
   group('scopeItemCount', () {
     final sources = [_source('a'), _source('b'), _source('c')];
 

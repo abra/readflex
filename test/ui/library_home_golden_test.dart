@@ -80,8 +80,20 @@ void main() {
         ),
         findsOneWidget,
       );
+      // The card is the book's place: it is not repeated as a cover below.
+      expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
       expect(tester.takeException(), isNull);
       await expectUiGolden(tester, profile, 'library-continue-reading');
+
+      // Long-press selects the card's book in place, like a row.
+      await tester.longPress(card);
+      await tester.pumpAndSettle();
+      expect(card, findsOneWidget);
+      await expectUiGolden(
+        tester,
+        profile,
+        'library-continue-reading-selected',
+      );
       await unmountUi(tester);
     }, tags: ['golden']);
 

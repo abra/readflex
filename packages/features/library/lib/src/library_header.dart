@@ -5,6 +5,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
 import 'library_collection_scope_label.dart';
+import 'library_layout.dart';
 import 'library_layout_cubit.dart';
 import 'library_display_sheet.dart';
 import 'library_locale_cubit.dart';
@@ -20,7 +21,8 @@ const double _titleChromeWidth = _offlineGap + AppIconSize.xs;
 
 /// Top-of-screen sticky header for the library: the serif title naming the
 /// shown collection, its item count, the Display action and the search
-/// field. The title is a heading, not a control: what the Library shows is
+/// field, over a [kLibraryHeaderBottomPadding] band the content scrolls
+/// under. The title is a heading, not a control: what the Library shows is
 /// chosen in one place, the Collections picker (Books, Articles, Comics and
 /// New are collections there), opened from the bottom capsule beside "+",
 /// under the thumb.
@@ -81,6 +83,7 @@ class LibraryHeader extends StatelessWidget {
               onChanged: onSearchChanged,
             ),
           ),
+          const SizedBox(height: kLibraryHeaderBottomPadding),
         ],
       ),
     );

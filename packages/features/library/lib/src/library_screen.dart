@@ -16,6 +16,7 @@ import 'add_to_collection_sheet.dart';
 import 'library_bloc.dart';
 import 'library_body.dart';
 import 'library_floating_actions.dart';
+import 'library_floating_actions_location.dart';
 import 'library_header.dart';
 import 'library_import_entry.dart';
 import 'library_layout.dart';
@@ -453,6 +454,9 @@ class _LibraryViewState extends State<_LibraryView> {
                           onDelete: () => _handleDeleteSelected(context),
                         )
                       : null,
+                  floatingActionButtonLocation: LibraryFloatingActionsLocation(
+                    bottomViewPadding: MediaQuery.viewPaddingOf(context).bottom,
+                  ),
                   // The selection bar takes the bottom while selecting.
                   // Swapping to null lets the Scaffold scale the capsule out
                   // and back in.

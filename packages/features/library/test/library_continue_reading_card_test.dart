@@ -1,11 +1,11 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
 import 'package:library_feature/src/library_grid_view.dart';
 import 'package:library_feature/src/library_layout.dart';
+import 'package:library_feature/src/library_list_cover_slot.dart';
 import 'package:library_feature/src/library_list_view.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -47,6 +47,9 @@ void main() {
     WidgetTester tester,
     LibrarySource source, {
     VoidCallback? onPressed,
+    VoidCallback? onLongPressed,
+    bool isSelectionMode = false,
+    bool isSelected = false,
     ThemeData? theme,
     TextDirection direction = TextDirection.ltr,
   }) async {
@@ -61,10 +64,13 @@ void main() {
             body: Align(
               alignment: Alignment.topLeft,
               child: SizedBox(
-                width: 358,
+                width: 390,
                 child: LibraryContinueReadingCard(
                   source: source,
+                  isSelectionMode: isSelectionMode,
+                  isSelected: isSelected,
                   onPressed: onPressed ?? () {},
+                  onLongPressed: onLongPressed ?? () {},
                 ),
               ),
             ),
@@ -76,28 +82,38 @@ void main() {
 
   group('LibraryContinueReadingCard', () {
     for (final theme in [AppTheme.light(), AppTheme.dark()]) {
-      testWidgets('card surface, radius, padding and cover size: '
+      testWidgets('a full-width band with the row cover on the 16dp gutter: '
           '${theme.brightness}', (tester) async {
         await pumpCard(tester, _article, theme: theme);
         final material = tester.widget<Material>(
           find.byKey(const ValueKey('libraryContinueReadingCard')),
         );
         expect(material.color, theme.colorScheme.surfaceContainerLow);
-        expect(material.borderRadius, BorderRadius.circular(AppRadius.lg));
+        expect(material.borderRadius, isNull);
         final ink = tester.widget<InkWell>(
           find.descendant(of: _card, matching: find.byType(InkWell)),
         );
-        expect(ink.borderRadius, BorderRadius.circular(AppRadius.lg));
-        expect(ink.onLongPress, isNull);
+        expect(ink.borderRadius, isNull);
 
         final card = tester.getRect(_card);
         final cover = tester.getRect(
           find.byKey(const ValueKey('libraryContinueReadingCover')),
         );
-        expect(cover.size, const Size(64, 96));
-        expect(cover.left - card.left, AppSpacing.md);
-        expect(cover.top - card.top, AppSpacing.md);
-        expect(card.bottom - cover.bottom, AppSpacing.md);
+        expect(card.width, 390);
+        expect(
+          cover.size,
+          const Size(kLibraryListCoverWidth, kLibraryListCoverHeight),
+        );
+        expect(cover.left - card.left, AppSpacing.lg);
+        expect(cover.center.dy, closeTo(card.center.dy, .01));
+        expect(cover.top - card.top, greaterThanOrEqualTo(AppSpacing.md));
+        expect(
+          find.descendant(
+            of: _card,
+            matching: find.byType(LibraryListCoverSlot),
+          ),
+          findsOneWidget,
+        );
         expect(
           find.descendant(
             of: _card,
@@ -137,7 +153,7 @@ void main() {
       final overlineRect = tester.getRect(
         find.text(strings.libraryContinueReading),
       );
-      expect(overlineRect.left - cover.right, AppSpacing.md);
+      expect(overlineRect.left - cover.right, kLibraryListCoverToTextGap);
       expect(
         tester.getRect(find.text('The Long Read')).top,
         greaterThan(overlineRect.bottom),
@@ -258,6 +274,7 @@ void main() {
       final semantics = tester.ensureSemantics();
       try {
         await pumpCard(tester, _article);
+        final strings = tester.element(_card).l10n;
         expect(
           tester.getSemantics(_card),
           matchesSemantics(
@@ -265,10 +282,11 @@ void main() {
             value: '42 percent read, 6 min left',
             isButton: true,
             hasTapAction: true,
+            hasLongPressAction: true,
+            onTapHint: strings.librarySourceOpenReader,
+            onLongPressHint: strings.librarySourceSelect,
           ),
         );
-        final data = tester.getSemantics(_card).getSemanticsData();
-        expect(data.hasAction(SemanticsAction.longPress), isFalse);
 
         await pumpCard(tester, _book);
         expect(
@@ -281,17 +299,122 @@ void main() {
       }
     });
 
-    testWidgets('tap opens the source; long-press does nothing', (
+    testWidgets('tap opens the source; long-press selects without opening', (
       tester,
     ) async {
       var pressed = 0;
-      await pumpCard(tester, _article, onPressed: () => pressed++);
+      var longPressed = 0;
+      await pumpCard(
+        tester,
+        _article,
+        onPressed: () => pressed++,
+        onLongPressed: () => longPressed++,
+      );
       await tester.longPress(_card);
       await tester.pumpAndSettle();
+      expect(longPressed, 1);
       expect(pressed, 0, reason: 'releasing a long-press does not open');
       await tester.tap(_card);
       expect(pressed, 1);
+      expect(longPressed, 1);
     });
+
+    for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+      testWidgets('selects like a row: ${theme.brightness}', (tester) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          final colors = theme.colorScheme;
+          Color? textColor(String text) =>
+              tester.widget<Text>(find.text(text)).style!.color;
+          final check = find.descendant(
+            of: _card,
+            matching: find.byKey(const ValueKey('libraryListSelectionCheck')),
+          );
+
+          await pumpCard(tester, _article, theme: theme, isSelectionMode: true);
+          final strings = tester.element(_card).l10n;
+          expect(
+            tester
+                .widget<Material>(
+                  find.byKey(const ValueKey('libraryContinueReadingCard')),
+                )
+                .color,
+            colors.surfaceContainerLow,
+          );
+          expect(check, findsNothing);
+          expect(textColor('The Long Read'), colors.onSurface);
+          expect(
+            tester.getSemantics(_card),
+            matchesSemantics(
+              label: 'The Long Read',
+              value: '42 percent read, 6 min left',
+              isButton: true,
+              hasSelectedState: true,
+              hasTapAction: true,
+              hasLongPressAction: true,
+              onTapHint: strings.librarySourceSelect,
+            ),
+          );
+
+          await pumpCard(
+            tester,
+            _article,
+            theme: theme,
+            isSelectionMode: true,
+            isSelected: true,
+          );
+          expect(
+            tester
+                .widget<Material>(
+                  find.byKey(const ValueKey('libraryContinueReadingCard')),
+                )
+                .color,
+            colors.selectedControlBackground,
+          );
+          expect(check, findsOneWidget);
+          final fill = tester.widget<ColoredBox>(
+            find.byKey(const ValueKey('libraryContinueReadingProgressFill')),
+          );
+          expect(fill.color, colors.selectedControlForeground);
+          // Light mode's selected fill is translucent over the page.
+          final band = Color.alphaBlend(
+            colors.selectedControlBackground,
+            theme.scaffoldBackgroundColor,
+          );
+          expect(
+            _contrast(fill.color, band),
+            greaterThanOrEqualTo(3),
+            reason: 'the fill stays visible on the selected band',
+          );
+          for (final text in [
+            'The Long Read',
+            'Ada Writer',
+            strings.libraryContinueReading,
+          ]) {
+            expect(
+              textColor(text),
+              colors.selectedControlForeground,
+              reason: text,
+            );
+          }
+          expect(
+            tester.getSemantics(_card),
+            matchesSemantics(
+              label: 'The Long Read',
+              value: '42 percent read, 6 min left',
+              isButton: true,
+              hasSelectedState: true,
+              isSelected: true,
+              hasTapAction: true,
+              hasLongPressAction: true,
+              onTapHint: strings.librarySourceDeselect,
+            ),
+          );
+        } finally {
+          semantics.dispose();
+        }
+      });
+    }
   });
 
   group('placement', () {
@@ -340,13 +463,23 @@ void main() {
         ),
       );
       final card = tester.getRect(_card);
-      expect(card.left, AppSpacing.lg);
-      expect(card.right, 390 - AppSpacing.lg);
+      expect(card.left, 0);
+      expect(card.right, 390);
       expect(card.top, kLibraryContentTopPadding);
       final firstCover = tester.getRect(
         find.byKey(const ValueKey('libraryListCoverSlot')).first,
       );
       expect(firstCover.top - card.bottom, kLibraryContinueReadingGap);
+      // The card's cover and title sit on the rows' cover and title lines.
+      final cardCover = tester.getRect(
+        find.byKey(const ValueKey('libraryContinueReadingCover')),
+      );
+      expect(cardCover.left, firstCover.left);
+      expect(cardCover.size, firstCover.size);
+      expect(
+        tester.getRect(find.text('The Long Read')).left,
+        tester.getRect(find.text('Row r-1')).left,
+      );
       // The first source row still has no top hairline.
       expect(
         find.byKey(const ValueKey('libraryListRowTopDivider')),
@@ -409,9 +542,12 @@ void main() {
           ),
         );
         final card = tester.getRect(_card);
-        expect(card.left, AppSpacing.lg);
-        expect(card.right, 390 - AppSpacing.lg);
+        expect(card.left, 0);
+        expect(card.right, 390);
         expect(card.top, kLibraryContentTopPadding);
+        final cardCover = tester.getRect(
+          find.byKey(const ValueKey('libraryContinueReadingCover')),
+        );
         final covers = find.descendant(
           of: find.byType(SliverGrid),
           matching: find.byType(AppSourceCoverFrame),
@@ -420,8 +556,10 @@ void main() {
         expect(firstCover.top - card.bottom, kLibraryContinueReadingGap);
         if (direction == TextDirection.ltr) {
           expect(firstCover.left, AppSpacing.lg);
+          expect(cardCover.left, firstCover.left);
         } else {
           expect(firstCover.right, 390 - AppSpacing.lg);
+          expect(cardCover.right, firstCover.right);
         }
         await tester.tap(_card);
         expect(opened, _article);
@@ -431,4 +569,10 @@ void main() {
       });
     }
   });
+}
+
+double _contrast(Color a, Color b) {
+  final first = a.computeLuminance() + .05;
+  final second = b.computeLuminance() + .05;
+  return first > second ? first / second : second / first;
 }

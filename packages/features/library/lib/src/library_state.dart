@@ -230,6 +230,24 @@ class LibraryState extends Equatable {
     searchQuery: searchQuery,
   );
 
+  /// The source the Continue reading card shows: [continueReadingSource] in
+  /// the default view, `null` while searching or inside a collection.
+  late final LibrarySource? continueReadingCardSource = isDefaultView
+      ? continueReadingSource
+      : null;
+
+  /// [visibleItems] for the list or grid under the Continue reading card,
+  /// which is its source's place, so that source is not listed twice.
+  /// Cached per state like [visibleItems].
+  late final List<LibrarySource> listedItems =
+      switch (continueReadingCardSource) {
+        null => visibleItems,
+        final card => [
+          for (final source in visibleItems)
+            if (source.id != card.id) source,
+        ],
+      };
+
   static List<LibrarySource> _applyCollectionScope({
     required List<LibrarySource> sources,
     required LibraryCollectionScope? collectionScope,

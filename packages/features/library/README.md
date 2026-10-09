@@ -151,7 +151,10 @@ screen has no second, out-of-reach way to do it. Under it a muted `bodySmall`
 subtitle counts the current scope (`LibraryState.scopeItemCount`: the whole
 library or the selected collection, ignoring search). There is no count pill,
 collection pill, folder button or chip row; the header ends with the search
-field. The compact offline icon stays reserved after the title.
+field and a `kLibraryHeaderBottomPadding` (12dp) background band under it.
+The scroll view starts below the band, so scrolled covers clip at its lower
+edge and the top scroll fade starts there, never flush against the field.
+The compact offline icon stays reserved after the title.
 
 The header's only action is Display (⋮), the shared `AppPlainIconButton`: a
 transparent resting surface, circular pressed feedback and a 48dp target. The
@@ -168,6 +171,15 @@ popover shadow, as the reader chrome), `kLibraryFloatingActionsHeight` (56dp)
 tall and lifted `kLibraryFloatingActionsLift` (8dp) above the Scaffold's
 margin. Two 48dp controls sit 4dp inside it and 4dp apart; the row follows
 the reading direction, so "+" keeps the outer corner in RTL too.
+
+`LibraryFloatingActionsLocation` places it like `endFloat`, 16dp above the
+bottom safe inset or the keyboard, whichever is higher. `endFloat` alone
+loses the safe inset while any keyboard inset is reported (the Scaffold
+zeroes its `minViewPadding.bottom`), so it rode a closing keyboard into the
+home indicator area and jumped back up on the last frame; the location gets
+the view's bottom padding from the screen instead, so the capsule follows
+the keyboard continuously both ways. It compares by that inset, because the
+Scaffold animates the button to every new location.
 
 - `LibraryCollectionsButton`, at the start: the shown collection's icon
   (`libraryCollectionScopeIcon`, the same glyph as its picker row; Library
@@ -257,11 +269,13 @@ The header reserves only the compact offline icon, not a hidden localized word.
 The lazy grid uses up to three columns, reducing the count on narrow viewports
 and with enlarged text. Covers sit directly on the 16dp gutter with no tile
 inset, and both layouts start their first cover `kLibraryContentTopPadding`
-(12dp) below the header's search field: the list row's own padding supplies it,
-the grid adds it as top padding. Content bottom padding comes from
-`libraryContentBottomPadding(context)`: the bottom capsule (56dp), its 8dp lift,
-the Scaffold's 16dp margin and a 16dp gap, plus any bottom safe inset beyond
-16dp, so the last row's progress bar is never under the capsule. "No results"
+(12dp) below the header's band, 24dp under the search field: the list row's
+own padding supplies it, the grid adds it as top padding. Content bottom
+padding comes from `libraryContentBottomPadding(context)`: the bottom capsule
+(56dp), its 8dp lift, the Scaffold's 16dp margin and a 16dp gap over the
+body's bottom padding (the safe inset the keyboard leaves uncovered), so the
+last row ends 16dp above the capsule with or without a home indicator and on
+every keyboard frame. "No results"
 pads its scroll view the same way so Reset filters can scroll clear of it;
 the empty library has no capsule and no padding. The selection bar is mounted
 in `bottomNavigationBar` only while selecting, because an occupied slot
@@ -270,22 +284,39 @@ and the capsule's space stays reserved, so the end of the list never moves.
 
 ### Continue reading
 
-In the default view (no search, no collection scope, not
-selecting) the first item of both the list and the grid scroll view is
-`LibraryContinueReadingCard` for `LibraryState.continueReadingSource`: the
-source with the latest `lastOpenedAt` among unfinished sources with
-`0 < readingProgress < 1`, computed once per state. The card sits on the
-16dp gutter, `kLibraryContentTopPadding` below the search field and
-`kLibraryContinueReadingGap` (16dp) above the first cover, and scrolls with
-the content. It uses the card surface (`surfaceContainerLow`), `AppRadius.lg`
-and 12dp padding: a 64×96 shared cover, the Continue reading overline, a serif
+In the default view (no search, no collection scope) the first item of both
+the list and the grid scroll view is `LibraryContinueReadingCard` for
+`LibraryState.continueReadingCardSource`: `continueReadingSource`, the source
+with the latest `lastOpenedAt` among unfinished sources with
+`0 < readingProgress < 1`, computed once per state. The card is that source's
+place: `LibraryState.listedItems` (cached like `visibleItems`) leaves it out of
+the list and grid below, so the book is never shown twice; searching or a
+collection drops the card and lists the source in its place again. The item
+count still includes it.
+
+The card is a full-width band in the card surface (`surfaceContainerLow`), no
+radius, 12dp above and below its content, `kLibraryContentTopPadding` below
+the header's band and `kLibraryContinueReadingGap` (16dp) above the first
+cover; it scrolls with the content. Its content sits on the list rows' lines:
+the row's `LibraryListCoverSlot` (60×90) on the 16dp gutter, then
+`kLibraryListCoverToTextGap` (14dp), so in the grid its cover lines up with the
+first column. The text column holds the Continue reading overline, a serif
 `titleMedium` title (two lines), the muted author, a 4dp rounded
 `actionForeground` progress bar on a muted track and a
 "{percent}% · {time left}" caption. Time left is
 `readingTimeLeft(LibrarySource.estimatedMinutesLeft)` and is omitted when
-unknown (books have no character count). The whole card is one button
-(label: title; value: percent read and time left) that calls the same
-`onSourcePressed` as tiles; long-press does nothing.
+unknown (books have no character count).
+
+It behaves like a row through the same `onSourcePressed` /
+`onSourceLongPressed`: tap opens the source, long-press starts selection with
+it, and releasing a long-press never opens it. The card stays while selecting,
+so entering selection never moves the covers under it; there a tap toggles it,
+and a selected card takes the selected-control pair
+(`selectedControlBackground` / `…Foreground`) for its fill, text and progress
+bar (the accent fill would vanish on dark mode's accent fill), with the row's
+outline, wash and check on the cover. It is one button (label: title; value:
+percent read and time left) with the rows' tap and long-press hints and
+selected state.
 Generated cover titles budget the actual TextScaler height rather than the
 unscaled font size.
 

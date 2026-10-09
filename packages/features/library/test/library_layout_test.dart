@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -62,16 +60,15 @@ void main() {
     );
 
     // The capsule (56) + its 8dp lift + the Scaffold's 16dp margin + a 16dp
-    // gap.
+    // gap, all over the safe inset the capsule sits on.
     const clearance = 96.0;
     for (final (inset, expected) in [
       (0.0, clearance),
-      (16.0, clearance),
-      (34.0, clearance + 18),
-      (48.0, clearance + 32),
+      (16.0, clearance + 16),
+      (34.0, clearance + 34),
+      (48.0, clearance + 48),
     ]) {
-      testWidgets('clears the capsule and the safe inset beyond 16dp: '
-          'inset=$inset', (
+      testWidgets('clears the capsule over the safe inset: inset=$inset', (
         tester,
       ) async {
         final controller = ScrollController();
@@ -89,7 +86,7 @@ void main() {
           kLibraryFloatingActionsHeight +
               kLibraryFloatingActionsLift +
               AppSpacing.lg * 2 +
-              math.max(0, inset - AppSpacing.lg),
+              inset,
         );
         final list = tester.widget<ListView>(find.byType(ListView));
         expect(list.padding!.resolve(TextDirection.ltr).bottom, expected);

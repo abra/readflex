@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:article_repository/article_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_bloc.dart';
+import 'package:library_feature/src/library_body.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
+import 'package:library_feature/src/library_grid_tile.dart';
 import 'package:library_feature/src/library_grid_view.dart';
 import 'package:library_feature/src/library_header.dart';
 import 'package:library_feature/src/library_layout.dart';
@@ -82,6 +85,18 @@ final _secondBook = Book(
   format: BookFormat.epub,
   addedAt: DateTime(2026, 1, 2),
 );
+
+/// More rows than a phone shows, so the list scrolls.
+final _longList = [
+  for (var i = 0; i < 12; i++)
+    Book(
+      id: 'long-$i',
+      title: 'Long list book $i',
+      filePath: '/books/long-$i.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 1 + i),
+    ),
+];
 
 void main() {
   late FakeBookRepository bookRepository;
@@ -3247,6 +3262,12 @@ void main() {
     Future<void> useLayout(LibraryLayoutMode mode) => preferencesService.update(
       (prefs) => prefs.copyWith(libraryLayoutMode: mode.id),
     );
+    // A source's row or tile in either layout.
+    Finder listed(String id) => find.byWidgetPredicate(
+      (widget) =>
+          (widget is BookLibraryListTile && widget.source.id == id) ||
+          (widget is BookLibraryGridTile && widget.source.id == id),
+    );
 
     for (final mode in LibraryLayoutMode.values) {
       testWidgets('shows the most recent eligible source first: ${mode.id}', (
@@ -3268,6 +3289,11 @@ void main() {
           LibraryLayoutMode.grid => find.byType(LibraryGridView),
         };
         expect(find.descendant(of: scrollView, matching: card), findsOneWidget);
+        // The card is the book's place; the rest stay in their order.
+        expect(listed(reading.id), findsNothing);
+        for (final other in [earlier, finished, _book]) {
+          expect(listed(other.id), findsOneWidget, reason: other.title);
+        }
         final header = tester.getRect(find.byType(LibraryHeader));
         expect(
           tester.getRect(card).top,
@@ -3282,19 +3308,41 @@ void main() {
       });
     }
 
-    testWidgets('long-press on the card does not start selection', (
-      tester,
-    ) async {
-      bookRepository.seedBooks([reading]);
-      final opened = <LibrarySource>[];
-      await tester.pumpWidget(buildSubject(onSourcePressed: opened.add));
-      await tester.pumpAndSettle();
-      await tester.longPress(card);
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Selected:'), findsNothing);
-      expect(opened, isEmpty);
-      expect(_addButton, findsOneWidget);
-    });
+    for (final mode in LibraryLayoutMode.values) {
+      testWidgets('long-press on the card selects its book in place: '
+          '${mode.id}', (tester) async {
+        await useLayout(mode);
+        bookRepository.seedBooks([reading, _book, earlier]);
+        final opened = <LibrarySource>[];
+        await tester.pumpWidget(buildSubject(onSourcePressed: opened.add));
+        await tester.pumpAndSettle();
+        final firstListed = tester.getRect(listed(earlier.id));
+
+        await tester.longPress(card);
+        await tester.pumpAndSettle();
+        expect(find.text('Selected: 1'), findsOneWidget);
+        expect(opened, isEmpty);
+        expect(
+          tester.widget<LibraryContinueReadingCard>(card).isSelected,
+          isTrue,
+        );
+        expect(listed(reading.id), findsNothing);
+        expect(tester.getRect(listed(earlier.id)), firstListed);
+
+        // A tap toggles it like a row, without opening the reader.
+        await tester.tap(listed(_book.id));
+        await tester.pumpAndSettle();
+        expect(find.text('Selected: 2'), findsOneWidget);
+        await tester.tap(card);
+        await tester.pumpAndSettle();
+        expect(find.text('Selected: 1'), findsOneWidget);
+        expect(
+          tester.widget<LibraryContinueReadingCard>(card).isSelected,
+          isFalse,
+        );
+        expect(opened, isEmpty);
+      });
+    }
 
     testWidgets('is absent when nothing is in progress', (tester) async {
       bookRepository.seedBooks([
@@ -3333,6 +3381,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
       expect(card, findsNothing);
+      // Without the card the book is listed again.
+      expect(listed(reading.id), findsOneWidget);
       await tester.enterText(find.byType(TextField), '');
       await tester.pumpAndSettle();
       expect(card, findsOneWidget);
@@ -3346,6 +3396,7 @@ void main() {
       await tester.tap(_builtInRow(LibraryCollectionScopeType.books));
       await tester.pumpAndSettle();
       expect(card, findsNothing);
+      expect(listed(reading.id), findsOneWidget);
       await _openCollections(tester);
       await tester.tap(
         find.byKey(const ValueKey('collectionScopeRow-library')),
@@ -3376,25 +3427,36 @@ void main() {
       expect(card, findsNothing);
     });
 
-    testWidgets('hides in selection mode', (tester) async {
-      await useLayout(LibraryLayoutMode.list);
-      bookRepository.seedBooks([reading, _book]);
-      await tester.pumpWidget(buildSubject());
-      await tester.pumpAndSettle();
-      expect(card, findsOneWidget);
-      await tester.longPress(
-        find.descendant(
-          of: find.byType(BookLibraryListTile),
-          matching: find.text(_book.title),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Selected: 1'), findsOneWidget);
-      expect(card, findsNothing);
-      await tester.tap(find.byTooltip('Cancel selection'));
-      await tester.pumpAndSettle();
-      expect(card, findsOneWidget);
-    });
+    for (final mode in LibraryLayoutMode.values) {
+      testWidgets('stays while selecting, so the covers under it do not '
+          'move: ${mode.id}', (tester) async {
+        await useLayout(mode);
+        bookRepository.seedBooks([reading, _book, earlier]);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final cardRect = tester.getRect(card);
+        final bookRect = tester.getRect(listed(_book.id));
+
+        await tester.longPress(listed(_book.id));
+        await tester.pumpAndSettle();
+        expect(find.text('Selected: 1'), findsOneWidget);
+        expect(tester.getRect(card), cardRect);
+        expect(tester.getRect(listed(_book.id)), bookRect);
+        expect(listed(reading.id), findsNothing);
+        expect(
+          tester.widget<LibraryContinueReadingCard>(card).isSelectionMode,
+          isTrue,
+        );
+
+        await tester.tap(find.byTooltip('Cancel selection'));
+        await tester.pumpAndSettle();
+        expect(tester.getRect(card), cardRect);
+        expect(
+          tester.widget<LibraryContinueReadingCard>(card).isSelectionMode,
+          isFalse,
+        );
+      });
+    }
   });
 
   group('empty library', () {
@@ -3514,8 +3576,8 @@ void main() {
         tester.widget<Scaffold>(find.byType(Scaffold)).bottomNavigationBar,
         isNull,
       );
-      // The inset beyond the Scaffold's margin lifts the button further.
-      expect(bottomPadding(), clearance + 34 - AppSpacing.lg);
+      // The capsule sits on the inset; the content clears both.
+      expect(bottomPadding(), clearance + 34);
       final capsule = tester.getRect(_capsule);
       final lastRow = tester.getRect(
         find.ancestor(
@@ -3537,8 +3599,179 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(LibrarySelectionBar), findsNothing);
       expect(_addButton, findsOneWidget);
-      expect(bottomPadding(), clearance + 34 - AppSpacing.lg);
+      expect(bottomPadding(), clearance + 34);
     });
+  });
+
+  group('content top edge', () {
+    final topFade = find.byWidgetPredicate(
+      (widget) => widget is ScrollEdgeFade && widget.edge == ScrollFadeEdge.top,
+    );
+
+    for (final mode in LibraryLayoutMode.values) {
+      testWidgets('a long list scrolls under a band below the search field, '
+          'never flush against it: ${mode.id}', (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await preferencesService.update(
+          (prefs) => prefs.copyWith(libraryLayoutMode: mode.id),
+        );
+        bookRepository.seedBooks(_longList);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+
+        final scrollView = switch (mode) {
+          LibraryLayoutMode.list => find.byType(LibraryListView),
+          LibraryLayoutMode.grid => find.byType(LibraryGridView),
+        };
+        final viewport = find.descendant(
+          of: scrollView,
+          matching: find.byType(Scrollable),
+        );
+        final firstCover = find.byType(AppSourceCoverFrame).first;
+        final search = tester.getRect(find.byType(SearchField));
+        final header = tester.getRect(find.byType(LibraryHeader));
+
+        expect(
+          header.bottom,
+          closeTo(search.bottom + kLibraryHeaderBottomPadding, .01),
+        );
+        expect(tester.getRect(viewport).top, closeTo(header.bottom, .01));
+        expect(
+          tester.getRect(firstCover).top,
+          closeTo(header.bottom + kLibraryContentTopPadding, .01),
+        );
+        expect(tester.widget<ScrollEdgeFade>(topFade).visible, isFalse);
+
+        await tester.drag(scrollView, const Offset(0, -120));
+        await tester.pumpAndSettle();
+
+        // The first cover has passed under the band's lower edge, where the
+        // viewport clips it and the fade starts, clear of the field.
+        expect(tester.getRect(firstCover).top, lessThan(header.bottom));
+        expect(tester.getRect(viewport).top, closeTo(header.bottom, .01));
+        expect(tester.widget<ScrollEdgeFade>(topFade).visible, isTrue);
+        expect(tester.getRect(topFade).top, closeTo(header.bottom, .01));
+        // A 12dp band, the same gap the content starts below it.
+        expect(
+          tester.getRect(topFade).top - search.bottom,
+          closeTo(AppSpacing.md, .01),
+        );
+      });
+    }
+  });
+
+  group('bottom capsule and the keyboard', () {
+    const height = 844.0;
+    const safeInset = 34.0;
+    // The capsule's distance from the screen edge: the Scaffold's 16dp margin
+    // and its 8dp lift on whichever is higher, the keyboard or the safe inset.
+    double expectedCapsuleGap(double keyboard) =>
+        math.max(keyboard, safeInset) +
+        AppSpacing.lg +
+        kLibraryFloatingActionsLift;
+
+    Future<void> pumpPhone(WidgetTester tester, LibraryLayoutMode mode) async {
+      tester.view.physicalSize = const Size(390, height);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewPadding = const FakeViewPadding(bottom: safeInset);
+      tester.view.padding = const FakeViewPadding(bottom: safeInset);
+      addTearDown(tester.view.reset);
+      await preferencesService.update(
+        (prefs) => prefs.copyWith(libraryLayoutMode: mode.id),
+      );
+      bookRepository.seedBooks(_longList);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+    }
+
+    // One keyboard frame. dart:ui reports padding as the part of the view
+    // padding the keyboard leaves uncovered.
+    Future<void> setKeyboard(WidgetTester tester, double keyboard) async {
+      tester.view.viewInsets = FakeViewPadding(bottom: keyboard);
+      tester.view.padding = FakeViewPadding(
+        bottom: math.max(0, safeInset - keyboard),
+      );
+      await tester.pump();
+    }
+
+    double capsuleGap(WidgetTester tester) =>
+        height - tester.getRect(_capsule).bottom;
+
+    testWidgets('rides the keyboard down to its place without dipping into '
+        'the safe inset and jumping back', (tester) async {
+      await pumpPhone(tester, LibraryLayoutMode.list);
+      final resting = capsuleGap(tester);
+      expect(resting, closeTo(expectedCapsuleGap(0), .01));
+
+      var previous = double.infinity;
+      for (final keyboard in [320.0, 200.0, 60.0, safeInset, 20, 1, 0]) {
+        await setKeyboard(tester, keyboard.toDouble());
+        final gap = capsuleGap(tester);
+        expect(
+          gap,
+          closeTo(expectedCapsuleGap(keyboard.toDouble()), .01),
+          reason: 'keyboard $keyboard',
+        );
+        expect(gap, lessThanOrEqualTo(previous + .01), reason: '$keyboard');
+        expect(gap, greaterThanOrEqualTo(resting - .01), reason: '$keyboard');
+        previous = gap;
+      }
+      expect(capsuleGap(tester), closeTo(resting, .01));
+
+      // An opening keyboard lifts it the same way, never below its place.
+      for (final keyboard in [1.0, 20.0, 60.0, 320.0]) {
+        await setKeyboard(tester, keyboard);
+        expect(
+          capsuleGap(tester),
+          closeTo(expectedCapsuleGap(keyboard), .01),
+          reason: 'keyboard $keyboard',
+        );
+        expect(capsuleGap(tester), greaterThanOrEqualTo(resting - .01));
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final mode in LibraryLayoutMode.values) {
+      testWidgets('the last row ends 16dp above the capsule over the safe '
+          'inset and the keyboard: ${mode.id}', (tester) async {
+        await pumpPhone(tester, mode);
+        final tiles = switch (mode) {
+          LibraryLayoutMode.list => find.byType(BookLibraryListTile),
+          LibraryLayoutMode.grid => find.byWidgetPredicate(
+            (widget) =>
+                widget.key is ValueKey<String> &&
+                (widget.key! as ValueKey<String>).value.startsWith(
+                  'library-grid-',
+                ),
+          ),
+        };
+        final position = tester
+            .state<ScrollableState>(
+              find.descendant(
+                of: find.byType(LibraryBody),
+                matching: find.byType(Scrollable),
+              ),
+            )
+            .position;
+
+        for (final keyboard in [0.0, 20.0, 320.0]) {
+          await setKeyboard(tester, keyboard);
+          position.jumpTo(position.maxScrollExtent);
+          await tester.pump();
+          final lastBottom = tester
+              .widgetList<Widget>(tiles)
+              .map((widget) => tester.getRect(find.byWidget(widget)).bottom)
+              .reduce(math.max);
+          expect(
+            tester.getRect(_capsule).top - lastBottom,
+            closeTo(AppSpacing.lg, .01),
+            reason: 'keyboard $keyboard',
+          );
+        }
+      });
+    }
   });
 }
 
