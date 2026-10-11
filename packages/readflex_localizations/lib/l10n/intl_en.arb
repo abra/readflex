@@ -159,34 +159,6 @@
   "@onboardingFeatureHighlightsDescription": {
     "description": "Onboarding feature row detail. The reader offers five highlight colors; a note can be added to any highlight."
   },
-  "onboardingSelectionSampleSentence": "In the lamplight every page felt {word}.",
-  "@onboardingSelectionSampleSentence": {
-    "description": "Sample sentence on the onboarding book page; {word} is onboardingSelectionSampleWord, shown as selected text.",
-    "placeholders": {
-      "word": {
-        "type": "String"
-      }
-    }
-  },
-  "onboardingSelectionSampleWord": "weightless",
-  "@onboardingSelectionSampleWord": {
-    "description": "The selected word in the onboarding sample sentence; must read naturally where {word} sits in onboardingSelectionSampleSentence."
-  },
-  "onboardingSelectionSampleLabel": "Example of a selected word with the {copy}, {translate} and {define} actions",
-  "@onboardingSelectionSampleLabel": {
-    "description": "Screen reader description of the onboarding sample page. The placeholders are the reader selection menu labels.",
-    "placeholders": {
-      "copy": {
-        "type": "String"
-      },
-      "translate": {
-        "type": "String"
-      },
-      "define": {
-        "type": "String"
-      }
-    }
-  },
   "commonCancel": "Cancel",
   "commonSave": "Save",
   "commonDelete": "Delete",

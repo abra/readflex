@@ -555,28 +555,6 @@ abstract class ReadflexLocalizations {
   /// **'Five colors, and a note on any highlight'**
   String get onboardingFeatureHighlightsDescription;
 
-  /// Sample sentence on the onboarding book page; {word} is onboardingSelectionSampleWord, shown as selected text.
-  ///
-  /// In en, this message translates to:
-  /// **'In the lamplight every page felt {word}.'**
-  String onboardingSelectionSampleSentence(String word);
-
-  /// The selected word in the onboarding sample sentence; must read naturally where {word} sits in onboardingSelectionSampleSentence.
-  ///
-  /// In en, this message translates to:
-  /// **'weightless'**
-  String get onboardingSelectionSampleWord;
-
-  /// Screen reader description of the onboarding sample page. The placeholders are the reader selection menu labels.
-  ///
-  /// In en, this message translates to:
-  /// **'Example of a selected word with the {copy}, {translate} and {define} actions'**
-  String onboardingSelectionSampleLabel(
-    String copy,
-    String translate,
-    String define,
-  );
-
   /// No description provided for @commonCancel.
   ///
   /// In en, this message translates to:

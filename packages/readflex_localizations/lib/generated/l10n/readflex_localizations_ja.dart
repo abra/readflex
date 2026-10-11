@@ -242,23 +242,6 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get onboardingFeatureHighlightsDescription => '5色のハイライトと、どれにでも付けられるメモ';
 
   @override
-  String onboardingSelectionSampleSentence(String word) {
-    return 'ランプの明かりの下、どのページも$word感じられた。';
-  }
-
-  @override
-  String get onboardingSelectionSampleWord => '軽やかに';
-
-  @override
-  String onboardingSelectionSampleLabel(
-    String copy,
-    String translate,
-    String define,
-  ) {
-    return '選択した単語と「$copy」「$translate」「$define」アクションの例';
-  }
-
-  @override
   String get commonCancel => 'キャンセル';
 
   @override

@@ -114,9 +114,8 @@ Reader active-result text and action icons use tested foreground/background
 pairs in both themes. Quote direction, note direction and interface direction
 are independent. Onboarding is one static screen: the app icon is decorative,
 the heading is a header that shrinks rather than break a word at large text,
-the sample page is announced as one described image (its copied selection menu
-takes no input and is not read as buttons), its tilt mirrors in RTL, nothing
-animates, and both actions stay outside the scrolling content at large text.
+each feature row reads as one item, the rows mirror in RTL, nothing animates,
+and both actions stay outside the scrolling content at large text.
 The reader's one-time selection tip is a live region with a 48dp "Got it"; its
 inks keep 4.5:1 on the inverse plate, "Got it" moves below the message at
 large text, and the tip appears without animation under reduced motion. Errors do not expire automatically

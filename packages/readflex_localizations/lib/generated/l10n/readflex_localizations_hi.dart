@@ -251,23 +251,6 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
       'पाँच रंग, और किसी भी हाइलाइट पर नोट';
 
   @override
-  String onboardingSelectionSampleSentence(String word) {
-    return 'दीये की रोशनी में हर पन्ना $word लग रहा था।';
-  }
-
-  @override
-  String get onboardingSelectionSampleWord => 'भारहीन';
-
-  @override
-  String onboardingSelectionSampleLabel(
-    String copy,
-    String translate,
-    String define,
-  ) {
-    return '“$copy”, “$translate” और “$define” कार्रवाइयों के साथ चुने गए शब्द का उदाहरण';
-  }
-
-  @override
   String get commonCancel => 'रद्द करें';
 
   @override

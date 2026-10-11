@@ -108,7 +108,7 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
 
-  # Onboarding shows the app icon at 64dp. The 2.0x/3.0x variants beside it
+  # Onboarding shows the app icon at 80dp. The 2.0x/3.0x variants beside it
   # are picked by device pixel ratio, so the 1024px source is never decoded.
   assets:
     - assets/onboarding/app_icon.png

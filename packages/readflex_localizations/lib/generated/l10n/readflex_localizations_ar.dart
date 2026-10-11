@@ -251,23 +251,6 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
       'خمسة ألوان، وملاحظة على أي تظليل';
 
   @override
-  String onboardingSelectionSampleSentence(String word) {
-    return 'في ضوء المصباح بدت كل صفحة $word.';
-  }
-
-  @override
-  String get onboardingSelectionSampleWord => 'خفيفة';
-
-  @override
-  String onboardingSelectionSampleLabel(
-    String copy,
-    String translate,
-    String define,
-  ) {
-    return 'مثال على كلمة محددة مع إجراءات «$copy» و«$translate» و«$define»';
-  }
-
-  @override
   String get commonCancel => 'إلغاء';
 
   @override

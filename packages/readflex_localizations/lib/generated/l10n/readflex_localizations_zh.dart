@@ -243,23 +243,6 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get onboardingFeatureHighlightsDescription => '五种颜色，每处高亮都能添加笔记';
 
   @override
-  String onboardingSelectionSampleSentence(String word) {
-    return '在灯光下，每一页都显得$word。';
-  }
-
-  @override
-  String get onboardingSelectionSampleWord => '轻盈';
-
-  @override
-  String onboardingSelectionSampleLabel(
-    String copy,
-    String translate,
-    String define,
-  ) {
-    return '示例：选中的单词及“$copy”“$translate”“$define”操作';
-  }
-
-  @override
   String get commonCancel => '取消';
 
   @override

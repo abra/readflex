@@ -57,27 +57,6 @@ void main() {
         ].map(tip.indexOf).toList();
         expect(order, everyElement(isNonNegative), reason: tip);
         expect(order, orderedEquals([...order]..sort()), reason: tip);
-
-        final sample = l10n.onboardingSelectionSampleLabel(
-          copy,
-          translate,
-          define,
-        );
-        expect(
-          sample,
-          allOf(contains(copy), contains(translate), contains(define)),
-        );
-      });
-
-      test('the sample sentence holds its selected word once: $locale', () {
-        final l10n = lookupReadflexLocalizations(locale);
-        final word = l10n.onboardingSelectionSampleWord;
-        final sentence = l10n.onboardingSelectionSampleSentence(word);
-
-        expect(word.trim(), isNotEmpty);
-        expect(sentence.indexOf(word), isNonNegative);
-        expect(sentence.indexOf(word), sentence.lastIndexOf(word));
-        expect(sentence.length, greaterThan(word.length));
       });
 
       test('the same-language copy names the language and Define: '

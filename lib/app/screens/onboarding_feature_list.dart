@@ -2,9 +2,9 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-/// What Readflex does, as four short rows under the onboarding sample page:
-/// the files it opens, saved articles, translation and dictionary lookup,
-/// highlights with notes.
+/// What Readflex does, as four short rows of equal weight under the
+/// onboarding greeting: the files it opens, saved articles, translation and
+/// dictionary lookup, highlights with notes.
 ///
 /// The lookup row names the reader's real selection menu labels, so the copy
 /// matches the buttons the reader will see.
@@ -16,7 +16,7 @@ class OnboardingFeatureList extends StatelessWidget {
     final l10n = context.l10n;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: AppSpacing.md,
+      spacing: AppSpacing.lg,
       children: [
         OnboardingFeatureRow(
           icon: AppIcons.book,

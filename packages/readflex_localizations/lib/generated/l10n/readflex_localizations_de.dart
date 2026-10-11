@@ -252,23 +252,6 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
       'Fünf Farben und eine Notiz zu jeder Markierung';
 
   @override
-  String onboardingSelectionSampleSentence(String word) {
-    return 'Im Lampenlicht fühlte sich jede Seite $word an.';
-  }
-
-  @override
-  String get onboardingSelectionSampleWord => 'schwerelos';
-
-  @override
-  String onboardingSelectionSampleLabel(
-    String copy,
-    String translate,
-    String define,
-  ) {
-    return 'Beispiel für ein ausgewähltes Wort mit den Aktionen „$copy“, „$translate“ und „$define“';
-  }
-
-  @override
   String get commonCancel => 'Abbrechen';
 
   @override

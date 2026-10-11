@@ -5,14 +5,14 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'onboarding_app_icon.dart';
 import 'onboarding_feature_list.dart';
 import 'onboarding_heading.dart';
-import 'onboarding_selection_sample.dart';
 
 /// Single onboarding screen shown on the first app launch.
 ///
-/// It greets the reader as Readflex (the app icon and "Welcome to Readflex"),
-/// shows the reader's selection menu on a sample page, and lists what the app
-/// does. Both actions finish onboarding; the caller persists completion and
-/// decides where each one leads.
+/// It greets the reader as Readflex (the app icon and "Welcome to Readflex")
+/// and lists what the app does, every feature with the same weight. How to
+/// select text is taught later, in the reader, by its one-time tip. Both
+/// actions finish onboarding; the caller persists completion and decides
+/// where each one leads.
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({
     required this.onAddBook,
@@ -24,9 +24,8 @@ class OnboardingScreen extends StatelessWidget {
   /// phone's single column instead of stretching rows and buttons.
   static const maxContentWidth = 480.0;
 
-  /// Space around the sample page; it also leaves room for its tilted
-  /// corners and shadow.
-  static const sampleSpacing = AppSpacing.xl + AppSpacing.xs;
+  /// Space between the greeting and the feature list.
+  static const featuresSpacing = AppSpacing.xl + AppSpacing.sm;
 
   /// Primary action: finish onboarding and start adding a book.
   final VoidCallback onAddBook;
@@ -79,9 +78,7 @@ class OnboardingScreen extends StatelessWidget {
                               ),
                               textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: sampleSpacing),
-                            const OnboardingSelectionSample(),
-                            const SizedBox(height: sampleSpacing),
+                            const SizedBox(height: featuresSpacing),
                             const OnboardingFeatureList(),
                             const SizedBox(height: AppSpacing.lg),
                           ],

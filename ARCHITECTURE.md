@@ -596,11 +596,10 @@ feature package      UI and state management
 - It passes repositories/services from `DependenciesContainer`.
 - It creates navigation callbacks and result callbacks.
 - It gates entry routes such as onboarding. Onboarding is one welcome screen
-  (`lib/app/screens/`): the app icon, a sample page with the reader's text
-  selection menu, and what the app does. Both Add your first book and Not now
-  mark it completed before going to Library. The sample's menu commands must
-  match the reader's text actions composed here;
-  `test/app/onboarding_selection_sample_test.dart` compares them.
+  (`lib/app/screens/`): the app icon, "Welcome to Readflex" and four feature
+  rows of equal weight. Selecting text is taught in the reader by its one-time
+  tip, not drawn here. Both Add your first book and Not now mark it completed
+  before going to Library.
 Features should express navigation needs through callbacks. They should not
 call GoRouter to navigate to sibling features directly.
 

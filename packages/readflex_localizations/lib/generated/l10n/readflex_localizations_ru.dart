@@ -252,23 +252,6 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
       'Пять цветов и заметка к любому выделению';
 
   @override
-  String onboardingSelectionSampleSentence(String word) {
-    return 'В свете лампы каждая страница казалась $word.';
-  }
-
-  @override
-  String get onboardingSelectionSampleWord => 'невесомой';
-
-  @override
-  String onboardingSelectionSampleLabel(
-    String copy,
-    String translate,
-    String define,
-  ) {
-    return 'Пример отмеченного слова с действиями «$copy», «$translate» и «$define»';
-  }
-
-  @override
   String get commonCancel => 'Отмена';
 
   @override

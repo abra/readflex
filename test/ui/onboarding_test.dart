@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +7,6 @@ import 'package:readflex/app/screens/onboarding_app_icon.dart';
 import 'package:readflex/app/screens/onboarding_feature_list.dart';
 import 'package:readflex/app/screens/onboarding_heading.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
-import 'package:readflex/app/screens/onboarding_selection_sample.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'golden_support.dart';
@@ -55,40 +52,7 @@ void main() {
   Finder notNow(ReadflexLocalizations l10n) =>
       find.widgetWithText(TextButton, l10n.onboardingNotNow);
 
-  final sample = find.byType(OnboardingSelectionSample);
-  final menu = find.byKey(const ValueKey('onboardingSelectionMenu'));
   final featureRows = find.byType(OnboardingFeatureRow);
-
-  /// The paper card: the sample's first decorated box.
-  final card = find
-      .descendant(of: sample, matching: find.byType(DecoratedBox))
-      .first;
-
-  double tiltOf(WidgetTester tester) {
-    final transform = tester
-        .widget<Transform>(
-          find.descendant(of: sample, matching: find.byType(Transform)).first,
-        )
-        .transform;
-    return math.atan2(transform.entry(1, 0), transform.entry(0, 0));
-  }
-
-  /// The span painted as selected text in the sample sentence.
-  TextSpan selectedSpan(WidgetTester tester) {
-    TextSpan? selected;
-    for (final paragraph in tester.widgetList<RichText>(
-      find.descendant(of: sample, matching: find.byType(RichText)),
-    )) {
-      paragraph.text.visitChildren((span) {
-        if (span is TextSpan && span.style?.backgroundColor != null) {
-          selected = span;
-          return false;
-        }
-        return true;
-      });
-    }
-    return selected ?? (throw StateError('no selected span'));
-  }
 
   group('welcome', () {
     testWidgets('greets as Readflex with the app icon above the heading', (
@@ -120,12 +84,11 @@ void main() {
       expect(find.byType(PageView), findsNothing);
       expect(find.byType(TextButton), findsOneWidget);
 
-      // Top to bottom: icon, heading, subtitle, sample, features, actions.
+      // Top to bottom: icon, heading, subtitle, features, actions.
       final order = [
         find.byType(OnboardingAppIcon),
         heading,
         subtitle,
-        menu,
         featureRows.first,
         featureRows.last,
         addBook(l10n),
@@ -337,209 +300,57 @@ void main() {
     });
   });
 
-  group('sample', () {
-    testWidgets('a tilted Paper page with the real selection menu', (
+  group('equal weight', () {
+    testWidgets('every feature row has the same tile, glyph and type', (
       tester,
     ) async {
       await pumpOnboarding(tester);
-      final l10n = l10nOf(tester);
-      final page = ReaderThemePreset.paper.data;
-      final colors = Theme.of(tester.element(sample)).colorScheme;
+      final rows = featureRows.evaluate().toList();
+      expect(rows, hasLength(4));
 
-      final cardDecoration =
-          tester.widget<DecoratedBox>(card).decoration as BoxDecoration;
-      expect(cardDecoration.color, page.backgroundColor);
-      expect(cardDecoration.borderRadius, BorderRadius.circular(AppRadius.lg));
-      expect(cardDecoration.boxShadow, AppShadows.popover);
-      expect(tiltOf(tester), closeTo(OnboardingSelectionSample.tilt, 1e-9));
-
-      // The menu: app surface, outline hairline, 16dp radius, popover shadow,
-      // and the reader's 304dp width over two 52dp rows.
-      final menuDecoration =
-          tester.widget<DecoratedBox>(menu).decoration as BoxDecoration;
-      expect(menuDecoration.color, colors.surface);
-      expect(
-        menuDecoration.border!.top.color,
-        colors.outlineVariant.withValues(alpha: 0.72),
+      Size tileOf(int index) => tester.getSize(
+        find
+            .descendant(
+              of: featureRows.at(index),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
       );
-      expect(menuDecoration.borderRadius, BorderRadius.circular(AppRadius.lg));
-      expect(menuDecoration.boxShadow, AppShadows.popover);
-      expect(
-        tester.getSize(menu),
-        const Size(
-          OnboardingSelectionSample.menuWidth,
-          OnboardingSelectionSample.menuRowHeight * 2 + 1,
-        ),
-      );
-
-      // Five swatches in the reader's order and Paper colors, yellow chosen.
-      final swatches = tester.widgetList<AppColorSwatchButton>(
-        find.descendant(of: menu, matching: find.byType(AppColorSwatchButton)),
-      );
-      expect(swatches.map((swatch) => swatch.color), [
-        page.highlightYellow,
-        page.highlightGreen,
-        page.highlightBlue,
-        page.highlightPink,
-        page.highlightPurple,
-      ]);
-      expect(swatches.map((swatch) => swatch.selected), [
-        true,
-        false,
-        false,
-        false,
-        false,
-      ]);
-      expect(swatches.map((swatch) => swatch.size), everyElement(24));
-      expect(
-        find.descendant(of: menu, matching: find.byIcon(AppIcons.highlight)),
-        findsOneWidget,
-      );
-
-      // Then Copy, Translate and Define, start to end, in the app's ink.
-      final labels = [
-        for (final action in onboardingSelectionMenuActions) action.label(l10n),
-      ];
-      expect(labels, [
-        l10n.commonCopy,
-        l10n.translationAction,
-        l10n.dictionaryAction,
-      ]);
-      final starts = labels
-          .map((label) => tester.getRect(find.text(label)).center.dx)
-          .toList();
-      expect(starts, orderedEquals([...starts]..sort()));
-      for (final action in onboardingSelectionMenuActions) {
-        final icon = tester.widget<Icon>(
-          find.descendant(of: menu, matching: find.byIcon(action.icon)),
-        );
-        expect(icon.color, colors.onSurface);
-        final label = tester.widget<Text>(find.text(action.label(l10n)));
-        expect(label.style!.color, colors.onSurface);
-      }
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('the sentence selects its word in the app selection color', (
-      tester,
-    ) async {
-      await pumpOnboarding(tester);
-      final l10n = l10nOf(tester);
-      final word = l10n.onboardingSelectionSampleWord;
-      final page = ReaderThemePreset.paper.data;
-
-      final sentence = tester
-          .widget<RichText>(
+      double? glyphOf(int index) => tester
+          .widget<Icon>(
             find.descendant(
-              of: sample,
-              matching: find.byWidgetPredicate(
-                (widget) =>
-                    widget is RichText &&
-                    widget.text.toPlainText() ==
-                        l10n.onboardingSelectionSampleSentence(word),
-              ),
+              of: featureRows.at(index),
+              matching: find.byType(Icon),
             ),
           )
-          .text;
-      expect(sentence.style!.fontFamily, AppTypography.fontFamilySerif);
-      expect(sentence.style!.color, page.primaryTextColor);
-
-      final selected = selectedSpan(tester);
-      expect(selected.text, word);
-      expect(
-        selected.style!.backgroundColor,
-        DefaultSelectionStyle.of(tester.element(sample)).selectionColor,
-      );
-    });
-
-    testWidgets('dark mode keeps the Paper page and themes the menu', (
-      tester,
-    ) async {
-      await pumpOnboarding(tester, profile: VisualProfile.dark);
-      final colors = Theme.of(tester.element(sample)).colorScheme;
-      expect(colors.brightness, Brightness.dark);
-
-      final cardDecoration =
-          tester.widget<DecoratedBox>(card).decoration as BoxDecoration;
-      expect(
-        cardDecoration.color,
-        ReaderThemePreset.paper.data.backgroundColor,
-      );
-      final menuDecoration =
-          tester.widget<DecoratedBox>(menu).decoration as BoxDecoration;
-      expect(menuDecoration.color, colors.surface);
-      final copy = tester.widget<Text>(
-        find.text(l10nOf(tester).commonCopy),
-      );
-      expect(copy.style!.color, colors.onSurface);
-    });
-
-    testWidgets('is one described image that never takes input', (
-      tester,
-    ) async {
-      await pumpOnboarding(tester);
-      final l10n = l10nOf(tester);
-      expect(
-        tester
-            .widget<IgnorePointer>(
-              find.descendant(of: sample, matching: find.byType(IgnorePointer)),
-            )
-            .ignoring,
-        isTrue,
-      );
-      expect(menu.hitTestable(), findsNothing);
-
-      final semantics = tester.ensureSemantics();
-      try {
-        expect(
-          tester.getSemantics(sample),
-          matchesSemantics(
-            label: l10n.onboardingSelectionSampleLabel(
-              l10n.commonCopy,
-              l10n.translationAction,
-              l10n.dictionaryAction,
+          .size;
+      TextStyle titleOf(int index) => tester
+          .widget<Text>(
+            find.text(
+              tester.widget<OnboardingFeatureRow>(featureRows.at(index)).title,
             ),
-            isImage: true,
-          ),
-        );
-        // The copied menu commands are not announced as buttons.
-        expect(find.bySemanticsLabel(l10n.translationAction), findsNothing);
-      } finally {
-        semantics.dispose();
+          )
+          .style!;
+
+      for (var index = 1; index < rows.length; index++) {
+        expect(tileOf(index), tileOf(0), reason: 'row $index');
+        expect(glyphOf(index), glyphOf(0), reason: 'row $index');
+        expect(titleOf(index), titleOf(0), reason: 'row $index');
       }
     });
 
-    testWidgets('ignores text scaling and scales down whole on 320dp phones', (
-      tester,
-    ) async {
-      await pumpOnboarding(tester, profile: VisualProfile.largeText);
-      final l10n = l10nOf(tester);
-      final label = find.text(l10n.commonCopy);
+    testWidgets('no feature is staged as the hero', (tester) async {
+      await pumpOnboarding(tester);
+      // The app icon is the only picture; the reader's selection menu is
+      // taught in the reader by its tip, not drawn here.
+      expect(find.byType(Image), findsOneWidget);
+      expect(find.byType(AppColorSwatchButton), findsNothing);
       expect(
-        MediaQuery.textScalerOf(tester.element(label)),
-        TextScaler.noScaling,
+        find.text(l10nOf(tester).commonCopy),
+        findsNothing,
+        reason: 'no copied menu commands',
       );
-
-      // At 320dp the 336dp card scales down to the gutters, menu and all.
-      final menuWidth = tester.getRect(menu).width;
-      expect(menuWidth, lessThan(OnboardingSelectionSample.menuWidth));
-      final painted = tester.getRect(card);
-      expect(painted.left, greaterThan(0));
-      expect(painted.right, lessThan(320));
-      expect(tester.takeException(), isNull);
     });
-
-    for (final locale in ReadflexSupportedLocales.locales) {
-      testWidgets('selects the localized word: $locale', (tester) async {
-        await pumpOnboarding(tester, locale: locale);
-        final l10n = l10nOf(tester);
-        expect(selectedSpan(tester).text, l10n.onboardingSelectionSampleWord);
-        for (final action in onboardingSelectionMenuActions) {
-          expect(find.text(action.label(l10n)), findsOneWidget);
-        }
-        expect(tester.takeException(), isNull);
-      });
-    }
   });
 
   group('actions', () {
@@ -632,23 +443,14 @@ void main() {
         expect(rect.left, AppSpacing.lg, reason: '$target');
         expect(rect.right, 390 - AppSpacing.lg, reason: '$target');
       }
-      // The card is centered, unscaled, and its tilted corners stay on screen.
-      final slot = find
-          .descendant(of: sample, matching: find.byType(Transform))
-          .first;
+      // The icon is centered; the list follows the greeting at its spacing.
+      final icon = tester.getRect(find.byType(OnboardingAppIcon));
+      expect(icon.center.dx, closeTo(195, 0.01));
       expect(
-        tester.getRect(slot).width,
-        OnboardingSelectionSample.cardWidth,
+        tester.getRect(featureRows.first).top -
+            tester.getRect(find.text(l10n.onboardingWelcomeSubtitle)).bottom,
+        closeTo(OnboardingScreen.featuresSpacing, 0.5),
       );
-      expect(tester.getRect(slot).center.dx, closeTo(195, 0.01));
-      final painted = tester.getRect(card);
-      expect(painted.left, greaterThan(0));
-      expect(painted.right, lessThan(390));
-      expect(
-        tester.getRect(find.text(l10n.onboardingWelcomeSubtitle)).bottom,
-        lessThan(painted.top),
-      );
-      expect(painted.bottom, lessThan(tester.getRect(featureRows.first).top));
     });
 
     testWidgets('a tablet keeps one centered column for content and actions', (
@@ -721,7 +523,7 @@ void main() {
       });
     }
 
-    testWidgets('phone RTL mirrors the tilt, rows and the button icon', (
+    testWidgets('phone RTL mirrors the rows and the button icon', (
       tester,
     ) async {
       await pumpOnboarding(
@@ -730,8 +532,10 @@ void main() {
         locale: const Locale('ar'),
       );
       final l10n = l10nOf(tester);
-      expect(Directionality.of(tester.element(sample)), TextDirection.rtl);
-      expect(tiltOf(tester), closeTo(-OnboardingSelectionSample.tilt, 1e-9));
+      expect(
+        Directionality.of(tester.element(featureRows.first)),
+        TextDirection.rtl,
+      );
 
       final icon = tester.getRect(
         find.descendant(of: addBook(l10n), matching: find.byIcon(AppIcons.add)),
@@ -744,7 +548,7 @@ void main() {
       );
       expect(icon.left, greaterThan(label.right));
 
-      // The tile leads on the right; the copy commands run right to left.
+      // The tile leads on the right.
       final row = featureRows.first;
       final tile = tester.getRect(
         find.descendant(of: row, matching: find.byType(DecoratedBox)).first,
@@ -753,9 +557,6 @@ void main() {
         find.text(tester.widget<OnboardingFeatureRow>(row).title),
       );
       expect(tile.left, greaterThan(title.right));
-      final copy = tester.getRect(find.text(l10n.commonCopy)).center.dx;
-      final define = tester.getRect(find.text(l10n.dictionaryAction)).center.dx;
-      expect(copy, greaterThan(define));
       expect(tester.takeException(), isNull);
     });
 
@@ -774,11 +575,9 @@ void main() {
         );
         await tester.pump();
         expect(tester.hasRunningAnimations, isFalse);
-        final tilt = tiltOf(tester);
 
         await pumpOnboarding(tester);
         expect(tester.hasRunningAnimations, isFalse);
-        expect(tiltOf(tester), tilt, reason: 'the tilt is static decoration');
       },
     );
   });

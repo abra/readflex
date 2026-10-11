@@ -13,11 +13,12 @@ const onboardingAppIconAsset = 'assets/onboarding/app_icon.png';
 class OnboardingAppIcon extends StatelessWidget {
   const OnboardingAppIcon({super.key});
 
-  /// Logical size; the bundled variants match it at 1x, 2x and 3x.
-  static const size = 64.0;
+  /// Logical size; the bundled variants match it at 1x, 2x and 3x. Large
+  /// enough to anchor the screen on its own.
+  static const size = 80.0;
 
   /// The iOS icon mask is about 22% of the side.
-  static const cornerRadius = 14.0;
+  static const cornerRadius = 18.0;
 
   @override
   Widget build(BuildContext context) {
