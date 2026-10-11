@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'app_icons.dart';
 import 'app_plain_icon_button.dart';
+import 'bottom_sheet_title_bar.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_icon_size.dart';
 import 'theme/tokens/app_sizes.dart';
@@ -18,10 +19,17 @@ class BottomSheetHeader extends StatelessWidget {
     this.onBack,
     this.backLabel,
     this.trailing,
+    this.compactTrailing,
     this.padding = EdgeInsets.zero,
     super.key,
   }) : assert(onClose == null || closeLabel != null),
-       assert(onBack == null || backLabel != null);
+       assert(onBack == null || backLabel != null),
+       assert(compactTrailing == null || trailing != null);
+
+  /// A title may shrink to this share of its size to keep [trailing] beside
+  /// it, then [compactTrailing]; a longer title wraps and moves [trailing]
+  /// below it.
+  static const double minTitleScale = 0.8;
 
   final String title;
   final VoidCallback? onClose;
@@ -29,6 +37,10 @@ class BottomSheetHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final String? backLabel;
   final Widget? trailing;
+
+  /// [trailing] in less width, such as an icon button for a labeled one,
+  /// shown when [trailing] does not fit beside the title.
+  final Widget? compactTrailing;
 
   /// Gutters for the title and close icon, not the close button's hit target.
   /// The target extends into the trailing gutter where space is available.
@@ -86,12 +98,13 @@ class BottomSheetHeader extends StatelessWidget {
         Expanded(
           child: trailing == null
               ? heading
-              : OverflowBar(
-                  alignment: MainAxisAlignment.spaceBetween,
-                  overflowAlignment: OverflowBarAlignment.start,
+              : BottomSheetTitleBar(
+                  title: heading,
+                  trailing: trailing!,
+                  compactTrailing: compactTrailing,
                   spacing: AppSpacing.md,
                   overflowSpacing: AppSpacing.xs,
-                  children: [heading, trailing!],
+                  minTitleScale: minTitleScale,
                 ),
         ),
         if (closeLabel != null) ...[

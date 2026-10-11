@@ -213,8 +213,8 @@ Reusable presentation-only widgets used across features:
 | `ErrorState`                        | Centered failure with filled Retry, optional title/icon/secondary exit and busy geometry |
 | `AppSourceCover` / `AppSourceCoverFrame` | Shared source cover rendering and frame |
 | `appSourceCoverImageFromPath`       | Resolves an optional local cover image path    |
-| `SearchField`                       | App search field with an adaptive primary-tone clear action and circular press feedback |
-| `ScrollEdgeFadeStack`               | Scroll-edge fade/scrim wrapper                 |
+| `SearchField`                       | App search field with an adaptive primary-tone clear action and circular press feedback; optional `compactHintText` replaces a hint that would be cut |
+| `ScrollEdgeFadeStack`               | Scroll-edge fade/scrim wrapper; `axis: Axis.horizontal` fades the start/end of a scrolling strip (tab bar), `enabled` turns the fades off when the child stops scrolling |
 | `ScrollEdgeFade`                    | Scroll-edge fade: top/bottom darken (0.14 alpha in light mode); start/end dissolve a horizontal strip into `surfaceColor` (default scaffold background) |
 | `SelectionPreviewCard`              | Compact preview of selected text with its own `textDirection` |
 | `showAppBottomSheet`                | Shared modal bottom-sheet presentation helper  |
@@ -370,6 +370,23 @@ reserved so the text area and field bounds do not jump. Tests in
 pressed states under iOS/Android widget policies, both themes and phone LTR/RTL
 with large text. Root Library goldens check the painted press feedback.
 
+With `compactHintText`, a hint that would be ellipsized on one line is replaced
+by the short one (Contents: "Search chapters" becomes "Search" on a 320dp phone
+at 2x text); the short hint ellipsizes only if it does not fit either. Screen
+readers always hear the full hint. `SearchFieldHint` is a render object, not a
+`LayoutBuilder`, because the input decorator asks its hint for intrinsics, dry
+layout and baselines. It resolves the decorator's `hintText` style chain itself
+and lays out at the minimum width like a paragraph, so a hint that fits paints
+pixel-identically to a plain `hintText` in LTR and RTL
+(`test/search_field_hint_test.dart`).
+
+A horizontal `ScrollEdgeFadeStack` places its fades by reading direction: the
+end fade marks hidden content after the visible part, on the right in LTR and
+the left in RTL. `fadeInsets` keeps a divider under the strip whole. A child
+that stops scrolling sends no notification, so its owner passes
+`enabled: false`; the wrapper itself stays in the tree, keeping the child's
+state (a `TabBar` stays mounted when it switches to scrolling).
+
 ### Bottom Sheet Contract
 
 - `showAppBottomSheet` owns the 20dp handle area, keyboard lift and safe areas.
@@ -410,7 +427,17 @@ with large text. Root Library goldens check the painted press feedback.
   whichever post-frame callback runs first.
 - `BottomSheetHeader` uses `titleMedium`, a minimum 48dp row and a heading
   semantics node. Adding Close does not change the title baseline. Long titles
-  wrap; trailing actions wrap independently when needed.
+  wrap. A title too long to keep its `trailing` action beside it first shrinks,
+  down to `BottomSheetHeader.minTitleScale` (0.8), scaled when painted like a
+  scale-down `FittedBox` because the room depends on the action's laid-out
+  width. Below that, an optional `compactTrailing` (the same action in less
+  width, such as an icon button for a labeled one) takes its place under the
+  same rule; past that, `trailing` wraps below the title. Only the action on
+  screen is painted, hit tested and announced; the hidden one also leaves focus
+  traversal once the frame that swapped them is done.
+  `ActionBottomSheetLayout` passes it as `headerCompactTrailing`. The layout is
+  `BottomSheetTitleBar` (internal), which answers intrinsics, dry layout and
+  baselines. Tests: `test/bottom_sheet_title_bar_test.dart`.
   Pass gutters through its `padding`, not an outer `Padding`: the 20dp close
   icon aligns with the content edge while its 48dp hit target extends into the
   trailing gutter. With the standard 24dp gutter, the target ends 10dp from the

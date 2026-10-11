@@ -175,10 +175,10 @@ for (const importing of [false, true]) {
         assert.ok(!requests.includes('/foliate-js/src/epub.js'))
         assert.ok(!requests.includes('/foliate-js/src/vendor/zip.js'))
         if (!importing) {
+            // Pages are drawn straight into a canvas, without an encoded image.
             assert.equal(await page.evaluate(() => {
                 const doc = reader.view.renderer.getContents().find(({ index }) => index === 0).doc
-                const image = doc.querySelector('img')
-                return image.complete && image.naturalWidth > 0
+                return doc.querySelector('canvas.readflex-pdf-page')?.width > 0 && !doc.querySelector('img')
             }), true)
         }
     })

@@ -336,5 +336,14 @@
   "readerAlignJustified": "दोनों ओर संरेखित",
   "readerPageTurnHorizontalShort": "क्षैतिज",
   "readerPageTurnVerticalShort": "लंबवत",
-  "readerChapterRead": "पढ़ा गया"
+  "readerChapterRead": "पढ़ा गया",
+  "readerPdfMargins": "मार्जिन",
+  "readerPdfMarginsWhole": "पूरा पेज",
+  "readerPdfMarginsTrimmed": "कटे हुए",
+  "readerPdfPageColors": "पेज के रंग",
+  "readerPdfPageColorsTheme": "थीम",
+  "readerPdfPageColorsOriginal": "मूल",
+  "readerExternalLinkTitle": "लिंक खोलें?",
+  "readerExternalLinkOpen": "खोलें",
+  "readerExternalLinkCopy": "लिंक कॉपी करें"
 }

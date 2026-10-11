@@ -62,6 +62,11 @@ abstract final class AppIcons {
   static const IconData back = chevronLeft;
   static const IconData toc = LucideIcons.list;
   static const IconData font = LucideIcons.type;
+  // PDF page appearance choices.
+  static const IconData pageWhole = LucideIcons.file;
+  static const IconData pageTrimmed = LucideIcons.crop;
+  static const IconData pageColorsTheme = LucideIcons.palette;
+  static const IconData pageColorsOriginal = LucideIcons.image;
   static const IconData pageTurnHorizontal = LucideIcons.arrowLeftRight;
   static const IconData pageTurnVertical = LucideIcons.arrowUpDown;
   static const IconData alignStart = LucideIcons.alignLeft;

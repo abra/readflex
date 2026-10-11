@@ -2143,6 +2143,60 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Read'**
   String get readerChapterRead;
+
+  /// PDF appearance: label of the choice between whole pages and pages with blank margins cropped
+  ///
+  /// In en, this message translates to:
+  /// **'Margins'**
+  String get readerPdfMargins;
+
+  /// PDF appearance: option that shows each page with its margins
+  ///
+  /// In en, this message translates to:
+  /// **'Whole page'**
+  String get readerPdfMarginsWhole;
+
+  /// PDF appearance: option that crops blank page margins so the text is larger
+  ///
+  /// In en, this message translates to:
+  /// **'Trimmed'**
+  String get readerPdfMarginsTrimmed;
+
+  /// PDF appearance: label of the choice between theme colors and the original page colors
+  ///
+  /// In en, this message translates to:
+  /// **'Page colors'**
+  String get readerPdfPageColors;
+
+  /// PDF appearance: option that tints or inverts pages into the reader theme colors
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get readerPdfPageColorsTheme;
+
+  /// PDF appearance: option that keeps the colors the PDF was published with
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get readerPdfPageColorsOriginal;
+
+  /// Reader: title of the sheet that asks before a link in a book, article or PDF opens a web page, email or phone number outside the reader
+  ///
+  /// In en, this message translates to:
+  /// **'Open link?'**
+  String get readerExternalLinkTitle;
+
+  /// Reader: primary button of the link sheet; opens the link (web pages in the in-app browser)
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get readerExternalLinkOpen;
+
+  /// Reader: secondary button of the link sheet; copies the link without opening it
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get readerExternalLinkCopy;
 }
 
 class _ReadflexLocalizationsDelegate

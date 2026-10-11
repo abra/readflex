@@ -228,7 +228,7 @@ void main() {
       expect(tester.widget<Text>(find.text(quote)).maxLines, isNull);
       await tester.ensureVisible(find.text(l10n.readerCollapseHighlight));
       await tapUi(tester, find.text(l10n.readerCollapseHighlight));
-      await tester.ensureVisible(find.text(l10n.readerSearchHighlights));
+      await tester.ensureVisible(find.byType(SearchField).hitTestable());
       final blue = find.byTooltip(l10n.highlightColorBlue);
       await tester.ensureVisible(blue);
       await tapUi(tester, blue);

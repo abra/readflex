@@ -102,6 +102,10 @@ class PreferencesRepository {
         readerPageTurnStyle: _readReaderPageTurnStyle(
           map['readerPageTurnStyle'],
         ),
+        readerTrimPageMargins: map['readerTrimPageMargins'] as bool? ?? true,
+        readerPageColors: ReaderPageColors.fromId(
+          map['readerPageColors'] as String?,
+        ),
         readerSearchHistory: _readStringList(map['readerSearchHistory']),
         readerBrightness: _readReaderBrightness(map['readerBrightness']),
         readerLastCustomBrightness:
@@ -163,6 +167,8 @@ class PreferencesRepository {
       'readerOverrideColor': prefs.readerOverrideColor,
       'readerUseBookLayout': prefs.readerUseBookLayout,
       'readerPageTurnStyle': prefs.readerPageTurnStyle.id,
+      'readerTrimPageMargins': prefs.readerTrimPageMargins,
+      'readerPageColors': prefs.readerPageColors.id,
       'readerSearchHistory': prefs.readerSearchHistory,
       'readerBrightness': prefs.readerBrightness,
       'readerLastCustomBrightness': prefs.readerLastCustomBrightness,

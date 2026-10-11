@@ -9,7 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
-import 'package:reader/src/reader_comic_thumbnail_cubit.dart';
+import 'package:reader/src/reader_page_thumbnail_cubit.dart';
 import 'package:reader/src/reader_image_highlight_preview.dart';
 
 void main() {
@@ -53,7 +53,7 @@ void main() {
 
   Future<void> pump(
     WidgetTester tester,
-    ReaderComicThumbnailCubit cubit,
+    ReaderPageThumbnailCubit cubit,
     HighlightImageArea area,
   ) async {
     await tester.pumpWidget(
@@ -115,7 +115,7 @@ void main() {
     'different areas share one page decode and paint only their crop',
     (tester) async {
       var calls = 0;
-      final cubit = ReaderComicThumbnailCubit((_) async {
+      final cubit = ReaderPageThumbnailCubit((_) async {
         calls++;
         return bytes;
       });
@@ -137,7 +137,7 @@ void main() {
   testWidgets('preserves aspect ratio and clamps legacy areas to the image', (
     tester,
   ) async {
-    final cubit = ReaderComicThumbnailCubit((_) async => bytes);
+    final cubit = ReaderPageThumbnailCubit((_) async => bytes);
     addTearDown(cubit.close);
     await pump(
       tester,
@@ -170,7 +170,7 @@ void main() {
     (tester) async {
       final pending = Completer<Uint8List?>();
       var calls = 0;
-      final cubit = ReaderComicThumbnailCubit(
+      final cubit = ReaderPageThumbnailCubit(
         (_) async => ++calls == 1 ? null : pending.future,
       );
       addTearDown(cubit.close);
@@ -195,7 +195,7 @@ void main() {
     (tester) async {
       final calls = <int>[];
       final pending = Completer<Uint8List?>();
-      final cubit = ReaderComicThumbnailCubit((page) async {
+      final cubit = ReaderPageThumbnailCubit((page) async {
         calls.add(page);
         return page == 0 ? pending.future : bytes;
       });

@@ -77,6 +77,8 @@ void main() {
         readerOverrideColor: false,
         readerUseBookLayout: false,
         readerPageTurnStyle: ReaderPageTurnStyle.vertical,
+        readerTrimPageMargins: false,
+        readerPageColors: ReaderPageColors.original,
         readerSearchHistory: ['design patterns', 'bloc'],
         readerBrightness: 0.65,
         readerLastCustomBrightness: 0.8,
@@ -89,6 +91,8 @@ void main() {
             sideMargin: 9,
             textAlignment: ReaderTextAlignment.justify,
             pageTurnStyle: ReaderPageTurnStyle.horizontal,
+            trimPageMargins: true,
+            pageColors: ReaderPageColors.theme,
             brightnessOverride: 0.42,
           ),
         },
@@ -110,6 +114,8 @@ void main() {
               lineHeight: 1.8,
               sideMargin: 9,
               pageTurnStyle: ReaderPageTurnStyle.horizontal,
+              trimPageMargins: true,
+              pageColors: ReaderPageColors.theme,
               brightnessOverride: 0.42,
             ),
           },
@@ -142,6 +148,8 @@ void main() {
       expect(map['readerOverrideFont'], isFalse);
       expect(map['readerOverrideColor'], isFalse);
       expect(map['readerUseBookLayout'], isFalse);
+      expect(map['readerTrimPageMargins'], isTrue);
+      expect(map['readerPageColors'], 'theme');
       expect(map['readerPageTurnStyle'], 'vertical');
       expect(map.containsKey('readerBrightnessOverride'), isFalse);
       expect(map['readerBrightness'], isNull);
@@ -225,6 +233,8 @@ void main() {
         expect(prefs.readerOverrideColor, isTrue);
         expect(prefs.readerUseBookLayout, isTrue);
         expect(prefs.readerPageTurnStyle, ReaderPageTurnStyle.horizontal);
+        expect(prefs.readerTrimPageMargins, isTrue);
+        expect(prefs.readerPageColors, ReaderPageColors.theme);
         expect(prefs.readerSearchHistory, isEmpty);
         expect(prefs.readerBrightness, isNull);
         expect(prefs.readerLastCustomBrightness, 0.7);

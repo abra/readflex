@@ -6,14 +6,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
-import 'package:reader_webview/reader_webview.dart';
 
-import 'reader_comic_thumbnail_cubit.dart';
+import 'reader_page_thumbnail_cubit.dart';
 
-/// Instantiated only while the comic Pages tab is visible.
-class ReaderComicPages extends StatelessWidget {
-  const ReaderComicPages({
-    required this.items,
+/// Thumbnails of every page (comics, PDF) in reading order, with the
+/// current page selected and scrolled into view.
+///
+/// Instantiated only while the Pages tab is visible; tiles request previews
+/// as they are built and release them when scrolled away.
+class ReaderPageGrid extends StatelessWidget {
+  const ReaderPageGrid({
+    required this.pageCount,
     required this.currentIndex,
     required this.loadThumbnail,
     required this.onSelected,
@@ -21,17 +24,21 @@ class ReaderComicPages extends StatelessWidget {
     super.key,
   });
 
-  final List<ReaderTocItem> items;
+  final int pageCount;
+
+  /// Zero-based index of the page on screen.
   final int currentIndex;
-  final ComicThumbnailLoader loadThumbnail;
-  final ValueChanged<ReaderTocItem> onSelected;
+  final PageThumbnailLoader loadThumbnail;
+
+  /// Receives the zero-based index of the tapped page.
+  final ValueChanged<int> onSelected;
   final bool pageProgressionRtl;
 
   @override
   Widget build(BuildContext context) => BlocProvider(
-    create: (_) => ReaderComicThumbnailCubit(loadThumbnail),
-    child: _ComicPagesView(
-      items: items,
+    create: (_) => ReaderPageThumbnailCubit(loadThumbnail),
+    child: _PageGridView(
+      pageCount: pageCount,
       currentIndex: currentIndex,
       onSelected: onSelected,
       pageProgressionRtl: pageProgressionRtl,
@@ -39,23 +46,23 @@ class ReaderComicPages extends StatelessWidget {
   );
 }
 
-class _ComicPagesView extends StatefulWidget {
-  const _ComicPagesView({
-    required this.items,
+class _PageGridView extends StatefulWidget {
+  const _PageGridView({
+    required this.pageCount,
     required this.currentIndex,
     required this.onSelected,
     required this.pageProgressionRtl,
   });
-  final List<ReaderTocItem> items;
+  final int pageCount;
   final int currentIndex;
-  final ValueChanged<ReaderTocItem> onSelected;
+  final ValueChanged<int> onSelected;
   final bool pageProgressionRtl;
 
   @override
-  State<_ComicPagesView> createState() => _ComicPagesViewState();
+  State<_PageGridView> createState() => _PageGridViewState();
 }
 
-class _ComicPagesViewState extends State<_ComicPagesView> {
+class _PageGridViewState extends State<_PageGridView> {
   ScrollController? _scroll;
 
   @override
@@ -67,9 +74,9 @@ class _ComicPagesViewState extends State<_ComicPagesView> {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      // TOC arrives asynchronously. Do not fix the initial offset to zero before
-      // its pages and the restored location are available.
-      if (widget.items.isEmpty) return const SizedBox.shrink();
+      // Page lists arrive asynchronously. Do not fix the initial offset to
+      // zero before the pages and the restored location are available.
+      if (widget.pageCount <= 0) return const SizedBox.shrink();
       final scale = MediaQuery.textScalerOf(context);
       final columns = (constraints.maxWidth / math.max(150, scale.scale(120)))
           .floor()
@@ -83,7 +90,7 @@ class _ComicPagesViewState extends State<_ComicPagesView> {
       final extent = width * 1.5 + scale.scale(24) + AppSpacing.md;
       final maxOffset = math.max(
         0.0,
-        (widget.items.length / columns).ceil() * (extent + AppSpacing.md) -
+        (widget.pageCount / columns).ceil() * (extent + AppSpacing.md) -
             constraints.maxHeight,
       );
       _scroll ??= ScrollController(
@@ -116,14 +123,14 @@ class _ComicPagesViewState extends State<_ComicPagesView> {
               mainAxisSpacing: AppSpacing.md,
               crossAxisSpacing: AppSpacing.md,
             ),
-            itemCount: widget.items.length,
+            itemCount: widget.pageCount,
             itemBuilder: (context, index) => Directionality(
               key: ValueKey(index),
               textDirection: labelDirection,
-              child: _ComicPageTile(
+              child: _PageGridTile(
                 index: index,
                 selected: index == widget.currentIndex,
-                onTap: () => widget.onSelected(widget.items[index]),
+                onTap: () => widget.onSelected(index),
               ),
             ),
           ),
@@ -133,8 +140,8 @@ class _ComicPagesViewState extends State<_ComicPagesView> {
   );
 }
 
-class _ComicPageTile extends StatefulWidget {
-  const _ComicPageTile({
+class _PageGridTile extends StatefulWidget {
+  const _PageGridTile({
     required this.index,
     required this.selected,
     required this.onTap,
@@ -144,11 +151,11 @@ class _ComicPageTile extends StatefulWidget {
   final VoidCallback onTap;
 
   @override
-  State<_ComicPageTile> createState() => _ComicPageTileState();
+  State<_PageGridTile> createState() => _PageGridTileState();
 }
 
-class _ComicPageTileState extends State<_ComicPageTile> {
-  late final _thumbnails = context.read<ReaderComicThumbnailCubit>();
+class _PageGridTileState extends State<_PageGridTile> {
+  late final _thumbnails = context.read<ReaderPageThumbnailCubit>();
 
   @override
   void initState() {
@@ -165,7 +172,7 @@ class _ComicPageTileState extends State<_ComicPageTile> {
   @override
   Widget build(BuildContext context) =>
       BlocSelector<
-        ReaderComicThumbnailCubit,
+        ReaderPageThumbnailCubit,
         Map<int, Uint8List?>,
         ({bool loaded, Uint8List? bytes})
       >(

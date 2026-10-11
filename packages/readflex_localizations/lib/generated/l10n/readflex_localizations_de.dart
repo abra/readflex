@@ -1167,4 +1167,31 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
 
   @override
   String get readerChapterRead => 'Gelesen';
+
+  @override
+  String get readerPdfMargins => 'Ränder';
+
+  @override
+  String get readerPdfMarginsWhole => 'Ganze Seite';
+
+  @override
+  String get readerPdfMarginsTrimmed => 'Beschnitten';
+
+  @override
+  String get readerPdfPageColors => 'Seitenfarben';
+
+  @override
+  String get readerPdfPageColorsTheme => 'Design';
+
+  @override
+  String get readerPdfPageColorsOriginal => 'Original';
+
+  @override
+  String get readerExternalLinkTitle => 'Link öffnen?';
+
+  @override
+  String get readerExternalLinkOpen => 'Öffnen';
+
+  @override
+  String get readerExternalLinkCopy => 'Link kopieren';
 }

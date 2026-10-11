@@ -5,7 +5,43 @@ import 'package:reader/src/reader_progress_label.dart';
 String _format(int page, int total) => '$page / $total';
 
 void main() {
+  group('readerHasZoomablePages', () {
+    test('comics and PDF zoom; reflowable books do not', () {
+      expect(readerHasZoomablePages(BookFormat.cbz), isTrue);
+      expect(readerHasZoomablePages(BookFormat.pdf), isTrue);
+      for (final format in [
+        BookFormat.epub,
+        BookFormat.fb2,
+        BookFormat.mobi,
+        BookFormat.azw3,
+        null,
+      ]) {
+        expect(readerHasZoomablePages(format), isFalse, reason: '$format');
+      }
+    });
+
+    test('PDF keeps text-book progress while it zooms', () {
+      expect(isImagePageFormat(BookFormat.pdf), isFalse);
+    });
+  });
+
   group('readerProgressLabel', () {
+    test('PDF pages count from one on the zero-based page index', () {
+      String label(int pageIndex) => readerProgressLabel(
+        format: BookFormat.pdf,
+        progress: 0.5,
+        chapterCurrentPage: pageIndex,
+        chapterTotalPages: 834,
+        isDragging: false,
+        formatPageOfTotal: _format,
+      );
+
+      expect(label(0), '50% · 1 / 834');
+      expect(label(1), '50% · 2 / 834');
+      expect(label(833), '50% · 834 / 834');
+      expect(label(900), '50% · 834 / 834', reason: 'clamped to the last page');
+    });
+
     test('shows global percent and visual section page for text books', () {
       expect(
         readerProgressLabel(

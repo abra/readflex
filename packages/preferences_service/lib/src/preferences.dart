@@ -49,6 +49,28 @@ enum ReaderPageTurnStyle {
   };
 }
 
+/// Colors of fixed image pages (PDF).
+enum ReaderPageColors {
+  /// Paper takes the reader background and ink the reader text color; dark
+  /// themes invert the page into those colors.
+  theme('theme'),
+
+  /// As published.
+  original('original');
+
+  const ReaderPageColors(this.id);
+
+  final String id;
+
+  static ReaderPageColors fromId(String? value) => tryFromId(value) ?? theme;
+
+  static ReaderPageColors? tryFromId(String? value) => switch (value) {
+    'theme' => theme,
+    'original' => original,
+    _ => null,
+  };
+}
+
 /// Reader-scoped appearance slice of [Preferences] (theme / font / layout
 /// IDs plus per-trait toggles). Exposed separately so widgets that only
 /// care about reader look can subscribe via
@@ -68,6 +90,8 @@ class ReaderAppearancePreferences {
     required this.overrideColor,
     required this.useBookLayout,
     required this.pageTurnStyle,
+    required this.trimPageMargins,
+    required this.pageColors,
   });
 
   static const defaultLineHeight = 1.6;
@@ -101,6 +125,8 @@ class ReaderAppearancePreferences {
     overrideColor: true,
     useBookLayout: true,
     pageTurnStyle: ReaderPageTurnStyle.horizontal,
+    trimPageMargins: true,
+    pageColors: ReaderPageColors.theme,
   );
 
   final String themeId;
@@ -123,6 +149,13 @@ class ReaderAppearancePreferences {
 
   final ReaderPageTurnStyle pageTurnStyle;
 
+  /// Fixed image pages (PDF) drop their blank margins so the printed area
+  /// fills a phone screen. On by default; sparse pages keep the whole page.
+  final bool trimPageMargins;
+
+  /// Colors of fixed image pages (PDF).
+  final ReaderPageColors pageColors;
+
   ReaderAppearancePreferences copyWith({
     String? themeId,
     String? fontId,
@@ -136,6 +169,8 @@ class ReaderAppearancePreferences {
     bool? overrideColor,
     bool? useBookLayout,
     ReaderPageTurnStyle? pageTurnStyle,
+    bool? trimPageMargins,
+    ReaderPageColors? pageColors,
   }) => ReaderAppearancePreferences(
     themeId: themeId ?? this.themeId,
     fontId: fontId ?? this.fontId,
@@ -149,6 +184,8 @@ class ReaderAppearancePreferences {
     overrideColor: overrideColor ?? this.overrideColor,
     useBookLayout: useBookLayout ?? this.useBookLayout,
     pageTurnStyle: pageTurnStyle ?? this.pageTurnStyle,
+    trimPageMargins: trimPageMargins ?? this.trimPageMargins,
+    pageColors: pageColors ?? this.pageColors,
   );
 
   @override
@@ -166,7 +203,9 @@ class ReaderAppearancePreferences {
           overrideFont == other.overrideFont &&
           overrideColor == other.overrideColor &&
           useBookLayout == other.useBookLayout &&
-          pageTurnStyle == other.pageTurnStyle;
+          pageTurnStyle == other.pageTurnStyle &&
+          trimPageMargins == other.trimPageMargins &&
+          pageColors == other.pageColors;
 
   @override
   int get hashCode => Object.hash(
@@ -182,6 +221,8 @@ class ReaderAppearancePreferences {
     overrideColor,
     useBookLayout,
     pageTurnStyle,
+    trimPageMargins,
+    pageColors,
   );
 }
 
@@ -204,6 +245,8 @@ class ReaderAppearanceOverride {
     this.overrideColor,
     this.useBookLayout,
     this.pageTurnStyle,
+    this.trimPageMargins,
+    this.pageColors,
     this.brightnessOverride,
   });
 
@@ -219,6 +262,8 @@ class ReaderAppearanceOverride {
   final bool? overrideColor;
   final bool? useBookLayout;
   final ReaderPageTurnStyle? pageTurnStyle;
+  final bool? trimPageMargins;
+  final ReaderPageColors? pageColors;
   final double? brightnessOverride;
 
   bool get isEmpty =>
@@ -234,6 +279,8 @@ class ReaderAppearanceOverride {
       overrideColor == null &&
       useBookLayout == null &&
       pageTurnStyle == null &&
+      trimPageMargins == null &&
+      pageColors == null &&
       brightnessOverride == null;
 
   ReaderAppearancePreferences applyTo(ReaderAppearancePreferences base) =>
@@ -250,6 +297,8 @@ class ReaderAppearanceOverride {
         overrideColor: overrideColor,
         useBookLayout: useBookLayout,
         pageTurnStyle: pageTurnStyle,
+        trimPageMargins: trimPageMargins,
+        pageColors: pageColors,
       );
 
   ReaderAppearanceOverride copyWith({
@@ -265,6 +314,8 @@ class ReaderAppearanceOverride {
     Object? overrideColor = _unset,
     Object? useBookLayout = _unset,
     Object? pageTurnStyle = _unset,
+    Object? trimPageMargins = _unset,
+    Object? pageColors = _unset,
     Object? brightnessOverride = _unset,
   }) => ReaderAppearanceOverride(
     themeId: identical(themeId, _unset) ? this.themeId : themeId as String?,
@@ -291,6 +342,12 @@ class ReaderAppearanceOverride {
     pageTurnStyle: identical(pageTurnStyle, _unset)
         ? this.pageTurnStyle
         : pageTurnStyle as ReaderPageTurnStyle?,
+    trimPageMargins: identical(trimPageMargins, _unset)
+        ? this.trimPageMargins
+        : trimPageMargins as bool?,
+    pageColors: identical(pageColors, _unset)
+        ? this.pageColors
+        : pageColors as ReaderPageColors?,
     brightnessOverride: _copyOptionalDouble(
       brightnessOverride,
       this.brightnessOverride,
@@ -311,6 +368,8 @@ class ReaderAppearanceOverride {
     if (overrideColor != null) 'overrideColor': overrideColor,
     if (useBookLayout != null) 'useBookLayout': useBookLayout,
     if (pageTurnStyle != null) 'pageTurnStyle': pageTurnStyle!.id,
+    if (trimPageMargins != null) 'trimPageMargins': trimPageMargins,
+    if (pageColors != null) 'pageColors': pageColors!.id,
     if (brightnessOverride != null) 'brightnessOverride': brightnessOverride,
   };
 
@@ -328,6 +387,8 @@ class ReaderAppearanceOverride {
       overrideColor: _readBool(json['overrideColor']),
       useBookLayout: _readBool(json['useBookLayout']),
       pageTurnStyle: _readPageTurnStyle(json['pageTurnStyle']),
+      trimPageMargins: _readBool(json['trimPageMargins']),
+      pageColors: ReaderPageColors.tryFromId(_readString(json['pageColors'])),
       brightnessOverride: _readBrightness(json['brightnessOverride']),
     );
   }
@@ -382,6 +443,8 @@ class ReaderAppearanceOverride {
           overrideColor == other.overrideColor &&
           useBookLayout == other.useBookLayout &&
           pageTurnStyle == other.pageTurnStyle &&
+          trimPageMargins == other.trimPageMargins &&
+          pageColors == other.pageColors &&
           brightnessOverride == other.brightnessOverride;
 
   @override
@@ -398,6 +461,8 @@ class ReaderAppearanceOverride {
     overrideColor,
     useBookLayout,
     pageTurnStyle,
+    trimPageMargins,
+    pageColors,
     brightnessOverride,
   );
 
@@ -418,6 +483,10 @@ class ReaderAppearanceOverride {
     overrideColor: overrideColor == base.overrideColor ? null : overrideColor,
     useBookLayout: useBookLayout == base.useBookLayout ? null : useBookLayout,
     pageTurnStyle: pageTurnStyle == base.pageTurnStyle ? null : pageTurnStyle,
+    trimPageMargins: trimPageMargins == base.trimPageMargins
+        ? null
+        : trimPageMargins,
+    pageColors: pageColors == base.pageColors ? null : pageColors,
     brightnessOverride: brightnessOverride,
   );
 }
@@ -443,6 +512,8 @@ class Preferences {
     this.readerOverrideColor = true,
     this.readerUseBookLayout = true,
     this.readerPageTurnStyle = ReaderPageTurnStyle.horizontal,
+    this.readerTrimPageMargins = true,
+    this.readerPageColors = ReaderPageColors.theme,
     this.readerSearchHistory = const [],
     this.readerBrightness,
     this.readerLastCustomBrightness = 0.7,
@@ -469,6 +540,8 @@ class Preferences {
   final bool readerOverrideColor;
   final bool readerUseBookLayout;
   final ReaderPageTurnStyle readerPageTurnStyle;
+  final bool readerTrimPageMargins;
+  final ReaderPageColors readerPageColors;
   final List<String> readerSearchHistory;
   final double? readerBrightness;
   final double readerLastCustomBrightness;
@@ -503,6 +576,8 @@ class Preferences {
         overrideColor: readerOverrideColor,
         useBookLayout: readerUseBookLayout,
         pageTurnStyle: readerPageTurnStyle,
+        trimPageMargins: readerTrimPageMargins,
+        pageColors: readerPageColors,
       );
 
   ReaderAppearanceOverride? readerAppearanceOverrideFor(String sourceId) {
@@ -538,6 +613,8 @@ class Preferences {
     bool? readerOverrideColor,
     bool? readerUseBookLayout,
     ReaderPageTurnStyle? readerPageTurnStyle,
+    bool? readerTrimPageMargins,
+    ReaderPageColors? readerPageColors,
     List<String>? readerSearchHistory,
     Object? readerBrightness = _unset,
     double? readerLastCustomBrightness,
@@ -564,6 +641,8 @@ class Preferences {
     readerOverrideColor: readerOverrideColor ?? this.readerOverrideColor,
     readerUseBookLayout: readerUseBookLayout ?? this.readerUseBookLayout,
     readerPageTurnStyle: readerPageTurnStyle ?? this.readerPageTurnStyle,
+    readerTrimPageMargins: readerTrimPageMargins ?? this.readerTrimPageMargins,
+    readerPageColors: readerPageColors ?? this.readerPageColors,
     readerSearchHistory: readerSearchHistory ?? this.readerSearchHistory,
     readerBrightness: identical(readerBrightness, _unset)
         ? this.readerBrightness
@@ -603,6 +682,8 @@ class Preferences {
           readerOverrideColor == other.readerOverrideColor &&
           readerUseBookLayout == other.readerUseBookLayout &&
           readerPageTurnStyle == other.readerPageTurnStyle &&
+          readerTrimPageMargins == other.readerTrimPageMargins &&
+          readerPageColors == other.readerPageColors &&
           listEquals(readerSearchHistory, other.readerSearchHistory) &&
           readerBrightness == other.readerBrightness &&
           readerLastCustomBrightness == other.readerLastCustomBrightness &&
@@ -635,6 +716,8 @@ class Preferences {
     readerOverrideColor,
     readerUseBookLayout,
     readerPageTurnStyle,
+    readerTrimPageMargins,
+    readerPageColors,
     Object.hashAll(readerSearchHistory),
     readerBrightness,
     readerLastCustomBrightness,

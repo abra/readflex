@@ -48,6 +48,7 @@ import {
   registerGesture as readflexRegisterGesture,
 } from './readflex_gestures.js'
 import { applyTextContrastGuard } from './readflex_contrast_guard.js'
+import { pageColorsFor } from './readflex_page_colors.js'
 import { normalizeLoadedDocument } from './readflex_document_normalizer.js'
 import {
   normalizeSelectionRange,
@@ -3467,6 +3468,8 @@ const open = async (file, cfi, progress) => {
     finishReaderStartup('location-ready')
     callFlutter('onLoadEnd')
     onSetToc()
+    // PDF learns whether it has text only as pages render.
+    if (reader.view.book) reader.view.book.onFeaturesChange = emitDocumentFeatures
     scheduleDocumentFeatureDetection()
     callFlutter('renderAnnotations')
   }
@@ -3630,6 +3633,7 @@ const setStyle = (oldStyle) => {
 
   turn.animated ? setRendererAttribute(renderer, 'animated', 'true')
     : removeRendererAttribute(renderer, 'animated')
+  applyImagePageStyle(renderer)
 
   const newStyle = {
     fontSize: style.fontSize,
@@ -3661,6 +3665,21 @@ const setStyle = (oldStyle) => {
   }
 
   if (shouldRefreshLayoutForStyle(oldStyle, style)) refreshLayout()
+}
+
+// Image pages (PDF) can drop blank margins and take the reader theme colors.
+// Formats without these hooks ignore both settings.
+const applyImagePageStyle = renderer => {
+  const book = reader.view.book
+  if (!book?.setPageColors) return
+  style.cropPageMargins ? setRendererAttribute(renderer, 'crop-margins', 'true')
+    : removeRendererAttribute(renderer, 'crop-margins')
+  book.setCropMargins?.(style.cropPageMargins === true)
+  book.setPageColors(pageColorsFor({
+    mode: style.pageColors,
+    backgroundColor: style.backgroundColor,
+    fontColor: style.fontColor,
+  }))
 }
 
 const shouldRefreshLayoutForStyle = (oldStyle, nextStyle) => {
@@ -3800,7 +3819,7 @@ window.pageLeft = () => reader.view.goLeft()
 
 window.pageRight = () => reader.view.goRight()
 
-window.handleComicTouchTap = (x, y) => reader.view.renderer.handleHostTap?.({ x, y })
+window.handlePageTouchTap = (x, y) => reader.view.renderer.handleHostTap?.({ x, y })
 
 window.setScroll = () => {
   style.scroll = true
@@ -4094,7 +4113,7 @@ window.renderAnnotations = (annotations) => reader.renderAnnotation(annotations)
 
 window.refreshBookmarkState = () => reader.refreshBookmarkState()
 
-window.readflexComicThumbnail = index => reader.view.book?.getThumbnail?.(index) ?? null
+window.readflexPageThumbnail = index => reader.view.book?.getThumbnail?.(index) ?? null
 
 window.theChapterContent = () => reader.getChapterContent()
 

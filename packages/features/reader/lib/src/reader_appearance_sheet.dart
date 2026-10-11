@@ -9,30 +9,32 @@ import 'reader_font_sheet.dart';
 import 'reader_layout_presets.dart';
 import 'reader_line_spacing_glyph.dart';
 import 'reader_margins_glyph.dart';
+import 'reader_theme_swatches.dart';
 
-const double _compactControlWidth = 152;
-const double _themeSwatchHeight = 36;
 const double _textScaleEpsilon = 0.001;
 const double _smallTextSizeGlyph = 14;
 const double _largeTextSizeGlyph = 22;
+const int _compactLabelMaxLines = 2;
 
-/// The theme swatches keep a 4dp ink inset around their samples. The body
-/// gutter is reduced by that inset so the sample borders land on 24dp, and
-/// every other section adds it back. This is the only place that owns it.
-const double _swatchInkInset = AppSpacing.xs;
+/// The body gutter is reduced by the theme swatches' ink inset so the sample
+/// borders land on 24dp; every other section adds it back.
 const EdgeInsets _appearanceBodyPadding = EdgeInsets.fromLTRB(
-  AppSpacing.xl - _swatchInkInset,
+  AppSpacing.xl - ReaderThemeSwatches.inkInset,
   0,
-  AppSpacing.xl - _swatchInkInset,
+  AppSpacing.xl - ReaderThemeSwatches.inkInset,
   AppSpacing.lg,
 );
 const EdgeInsets _sectionGutterInset = EdgeInsets.symmetric(
-  horizontal: _swatchInkInset,
+  horizontal: ReaderThemeSwatches.inkInset,
 );
 
+/// Opens the reader Appearance sheet. [pdfControls] swaps the text controls
+/// (font, size, spacing, alignment, margins) for the PDF page controls:
+/// margin crop and page colors. The theme and page turn rows stay.
 Future<void> showReaderAppearanceSheet(
   BuildContext context, {
   bool showPageTurnControls = true,
+  bool pdfControls = false,
   VoidCallback? onFullyHidden,
 }) {
   final cubit = context.read<ReaderAppearanceCubit>();
@@ -44,6 +46,7 @@ Future<void> showReaderAppearanceSheet(
       value: cubit,
       child: _ReaderAppearanceSheet(
         showPageTurnControls: showPageTurnControls,
+        pdfControls: pdfControls,
       ),
     ),
   );
@@ -51,9 +54,13 @@ Future<void> showReaderAppearanceSheet(
 
 /// Bottom sheet shell for per-source reader appearance overrides.
 class _ReaderAppearanceSheet extends StatefulWidget {
-  const _ReaderAppearanceSheet({required this.showPageTurnControls});
+  const _ReaderAppearanceSheet({
+    required this.showPageTurnControls,
+    required this.pdfControls,
+  });
 
   final bool showPageTurnControls;
+  final bool pdfControls;
 
   @override
   State<_ReaderAppearanceSheet> createState() => _ReaderAppearanceSheetState();
@@ -159,19 +166,22 @@ class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
             maintainSize: true,
             child: _AppearanceSettings(
               showPageTurnControls: widget.showPageTurnControls,
+              pdfControls: widget.pdfControls,
               onFont: () => _showFont(true),
             ),
           ),
-          Positioned.fill(
-            child: _step(
-              active: _fontVisible,
-              position: _fontOffset,
-              child: ReaderFontSheet(
-                onBack: () => _showFont(false),
-                onClose: () => Navigator.of(context).pop(),
+          // PDF pages have no font; skip building the font samples.
+          if (!widget.pdfControls)
+            Positioned.fill(
+              child: _step(
+                active: _fontVisible,
+                position: _fontOffset,
+                child: ReaderFontSheet(
+                  onBack: () => _showFont(false),
+                  onClose: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
-          ),
         ],
       ),
     ),
@@ -181,10 +191,12 @@ class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
 class _AppearanceSettings extends StatelessWidget {
   const _AppearanceSettings({
     required this.showPageTurnControls,
+    required this.pdfControls,
     required this.onFont,
   });
 
   final bool showPageTurnControls;
+  final bool pdfControls;
   final VoidCallback onFont;
 
   @override
@@ -192,26 +204,33 @@ class _AppearanceSettings extends StatelessWidget {
     return ActionBottomSheetLayout.scrollable(
       title: context.l10n.readerAppearanceTitle,
       headerTrailing: const _ResetAppearanceButton(),
+      headerCompactTrailing: const _ResetAppearanceButton(compact: true),
       closeLabel: context.l10n.commonClose,
       onClose: () => Navigator.of(context).pop(),
       bodyPadding: _appearanceBodyPadding,
-      child: _LayeredAppearanceControls(
-        showPageTurnControls: showPageTurnControls,
-        onFont: onFont,
-      ),
+      child: pdfControls
+          ? _PdfAppearanceControls(showPageTurnControls: showPageTurnControls)
+          : _LayeredAppearanceControls(
+              showPageTurnControls: showPageTurnControls,
+              onFont: onFont,
+            ),
     );
   }
 }
 
+/// Reset with its label, or [compact], the icon alone: the header shows the
+/// labeled one while it fits beside the title.
 class _ResetAppearanceButton extends StatelessWidget {
-  const _ResetAppearanceButton();
+  const _ResetAppearanceButton({this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final canReset = context.select<ReaderAppearanceCubit, bool>(
       (c) => c.state.hasOverride,
     );
-    if (MediaQuery.textScalerOf(context).scale(15) > 20) {
+    if (compact) {
       return AppPlainIconButton(
         icon: AppIcons.refresh,
         tooltip: context.l10n.readerReset,
@@ -228,7 +247,8 @@ class _ResetAppearanceButton extends StatelessWidget {
   }
 }
 
-/// Vertical stack of compact appearance control rows.
+/// Book and article controls: the theme, the compact rows (font, size,
+/// spacing, margins), then the labeled choices.
 class _LayeredAppearanceControls extends StatelessWidget {
   const _LayeredAppearanceControls({
     required this.showPageTurnControls,
@@ -240,6 +260,7 @@ class _LayeredAppearanceControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -248,13 +269,24 @@ class _LayeredAppearanceControls extends StatelessWidget {
         const SizedBox(height: AppSpacing.lg),
         Padding(
           padding: _sectionGutterInset,
-          child: _FontPickerRow(onPressed: onFont),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Padding(
-          padding: _sectionGutterInset,
-          child: _ReaderLayoutSettingsPanel(
-            showPageTurnControls: showPageTurnControls,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _CompactSettingRows(onFont: onFont),
+              const SizedBox(height: AppSpacing.lg),
+              AppSettingsSection(
+                title: l10n.readerTextAlignment,
+                child: const _AlignmentControl(),
+              ),
+              if (showPageTurnControls) ...[
+                const SizedBox(height: AppSpacing.lg),
+                AppSettingsSection(
+                  title: l10n.readerPageTurn,
+                  child: const _PageTurnControl(),
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -262,23 +294,114 @@ class _LayeredAppearanceControls extends StatelessWidget {
   }
 }
 
-/// Theme label on the 24dp gutter; the swatch grid bleeds its ink inset past
-/// it, so only the title takes the gutter inset.
-class _ThemeSection extends StatelessWidget {
-  const _ThemeSection();
+/// PDF pages: the theme, margin crop, page colors and page turn. Text
+/// controls do not apply to page images.
+class _PdfAppearanceControls extends StatelessWidget {
+  const _PdfAppearanceControls({required this.showPageTurnControls});
+
+  final bool showPageTurnControls;
 
   @override
   Widget build(BuildContext context) {
-    return AppSettingsSection(
-      title: context.l10n.readerTheme,
-      titlePadding: _sectionGutterInset,
-      child: const _ThemeSwatchLevel(),
+    final l10n = context.l10n;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _ThemeSection(),
+        const SizedBox(height: AppSpacing.lg),
+        Padding(
+          padding: _sectionGutterInset,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppSettingsSection(
+                title: l10n.readerPdfMargins,
+                child: const _PdfMarginsControl(),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              AppSettingsSection(
+                title: l10n.readerPdfPageColors,
+                child: const _PdfPageColorsControl(),
+              ),
+              if (showPageTurnControls) ...[
+                const SizedBox(height: AppSpacing.lg),
+                AppSettingsSection(
+                  title: l10n.readerPageTurn,
+                  child: const _PageTurnControl(),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _ThemeSwatchLevel extends StatelessWidget {
-  const _ThemeSwatchLevel();
+class _PdfMarginsControl extends StatelessWidget {
+  const _PdfMarginsControl();
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmed = context.select<ReaderAppearanceCubit, bool>(
+      (c) => c.state.effectiveAppearance.trimPageMargins,
+    );
+    final cubit = context.read<ReaderAppearanceCubit>();
+    return AppChoiceControl<bool>(
+      key: const ValueKey('reader-pdf-margins-control'),
+      selected: trimmed,
+      onChanged: (value) => cubit.setTrimPageMargins(value),
+      options: [
+        AppChoiceOption(
+          value: false,
+          icon: AppIcons.pageWhole,
+          label: context.l10n.readerPdfMarginsWhole,
+        ),
+        AppChoiceOption(
+          value: true,
+          icon: AppIcons.pageTrimmed,
+          label: context.l10n.readerPdfMarginsTrimmed,
+        ),
+      ],
+    );
+  }
+}
+
+class _PdfPageColorsControl extends StatelessWidget {
+  const _PdfPageColorsControl();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.select<ReaderAppearanceCubit, ReaderPageColors>(
+      (c) => c.state.effectiveAppearance.pageColors,
+    );
+    final cubit = context.read<ReaderAppearanceCubit>();
+    return AppChoiceControl<ReaderPageColors>(
+      key: const ValueKey('reader-pdf-page-colors-control'),
+      selected: colors,
+      onChanged: (value) => cubit.setPageColors(value),
+      options: [
+        AppChoiceOption(
+          value: ReaderPageColors.theme,
+          icon: AppIcons.pageColorsTheme,
+          label: context.l10n.readerPdfPageColorsTheme,
+        ),
+        AppChoiceOption(
+          value: ReaderPageColors.original,
+          icon: AppIcons.pageColorsOriginal,
+          label: context.l10n.readerPdfPageColorsOriginal,
+        ),
+      ],
+    );
+  }
+}
+
+/// Theme label on the 24dp gutter; the swatches bleed their ink inset past
+/// it, so only the title takes the gutter inset.
+class _ThemeSection extends StatelessWidget {
+  const _ThemeSection();
 
   @override
   Widget build(BuildContext context) {
@@ -286,152 +409,15 @@ class _ThemeSwatchLevel extends StatelessWidget {
       (c) => c.state.effectiveAppearance.themeId,
     );
     final cubit = context.read<ReaderAppearanceCubit>();
-    final activePreset = ReaderThemePreset.fromId(themeId);
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final painter = TextPainter(
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
-          locale: Localizations.localeOf(context),
-        );
-        var minimumWidth = AppSizes.buttonHeight;
-        for (final preset in ReaderThemePreset.values) {
-          painter.text = TextSpan(
-            text: _themePresetLabel(context, preset),
-            style: context.text.labelSmall.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          );
-          painter.layout();
-          if (painter.width > minimumWidth) minimumWidth = painter.width;
-        }
-        painter.dispose();
-        final count = ReaderThemePreset.values.length;
-        final columns =
-            minimumWidth * count + AppSpacing.xs * (count - 1) <=
-                constraints.maxWidth
-            ? count
-            : 2;
-        final width =
-            (constraints.maxWidth - AppSpacing.xs * (columns - 1)) / columns;
-        return Wrap(
-          key: const ValueKey('reader-theme-presets'),
-          spacing: AppSpacing.xs,
-          runSpacing: AppSpacing.sm,
-          children: [
-            for (final preset in ReaderThemePreset.values)
-              SizedBox(
-                width: width,
-                child: _ThemeSwatchButton(
-                  preset: preset,
-                  active: preset == activePreset,
-                  onTap: () => cubit.setTheme(preset.id),
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _ThemeSwatchButton extends StatelessWidget {
-  const _ThemeSwatchButton({
-    required this.preset,
-    required this.active,
-    required this.onTap,
-  });
-
-  final ReaderThemePreset preset;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = context.colors;
-    final text = context.text;
-    final theme = preset.data;
-    final label = _themePresetLabel(context, preset);
-    final radius = BorderRadius.circular(AppRadius.sm);
-    // The sample keeps the preset's own page colors; the selected fill and
-    // label color are the shared selected-control pair.
-    return Semantics(
-      key: ValueKey('reader-theme-swatch-${preset.id}'),
-      button: true,
-      selected: active,
-      inMutuallyExclusiveGroup: true,
-      label: label,
-      excludeSemantics: true,
-      onTap: onTap,
-      child: Material(
-        color: active ? cs.selectedControlBackground : Colors.transparent,
-        borderRadius: radius,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: radius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: AppSizes.buttonHeight),
-            child: Padding(
-              padding: const EdgeInsets.all(_swatchInkInset),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: double.infinity,
-                    height:
-                        (MediaQuery.textScalerOf(context).scale(15) * 1.28 +
-                                AppSpacing.sm)
-                            .clamp(_themeSwatchHeight, double.infinity),
-                    decoration: BoxDecoration(
-                      color: theme.backgroundColor,
-                      borderRadius: radius,
-                      border: Border.all(
-                        color: active
-                            ? context.actionForeground
-                            : context.appColors.divider,
-                        width: active ? 2 : 1,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      context.l10n.readerAppearanceSample,
-                      style: text.titleSmall.copyWith(
-                        color: theme.primaryTextColor,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: text.labelSmall.copyWith(
-                      color: active
-                          ? cs.selectedControlForeground
-                          : cs.onSurfaceVariant,
-                      fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+    return AppSettingsSection(
+      title: context.l10n.readerTheme,
+      titlePadding: _sectionGutterInset,
+      child: ReaderThemeSwatches(
+        selected: ReaderThemePreset.fromId(themeId),
+        onSelected: (preset) => cubit.setTheme(preset.id),
       ),
     );
   }
-}
-
-String _themePresetLabel(BuildContext context, ReaderThemePreset preset) {
-  final l10n = context.l10n;
-  return switch (preset) {
-    ReaderThemePreset.snow => l10n.readerThemeSnow,
-    ReaderThemePreset.paper => l10n.readerThemePaper,
-    ReaderThemePreset.warm => l10n.readerThemeWarm,
-    ReaderThemePreset.mist => l10n.readerThemeMist,
-    ReaderThemePreset.night => l10n.readerThemeNight,
-  };
 }
 
 class _FontPickerRow extends StatelessWidget {
@@ -459,16 +445,6 @@ class _FontPickerRow extends StatelessWidget {
   }
 }
 
-/// Text size, line spacing and margins share one width. It grows with text
-/// scale so the percentage keeps its room and the three stay aligned.
-double _compactControlWidthFor(BuildContext context) =>
-    AppSizes.buttonHeight * 2 +
-    (_compactControlWidth - AppSizes.buttonHeight * 2) *
-        (MediaQuery.textScalerOf(context).scale(15) / 15).clamp(
-          1,
-          double.infinity,
-        );
-
 class _FontSizeControl extends StatelessWidget {
   const _FontSizeControl();
 
@@ -485,7 +461,6 @@ class _FontSizeControl extends StatelessWidget {
     final cs = context.colors;
     return SizedBox(
       key: const ValueKey('reader-text-scale-control'),
-      width: _compactControlWidthFor(context),
       height: AppSizes.buttonHeight,
       child: Material(
         color: cs.surface,
@@ -649,112 +624,116 @@ class _TextSizeValueButton extends StatelessWidget {
   }
 }
 
-class _ReaderLayoutSettingsPanel extends StatelessWidget {
-  const _ReaderLayoutSettingsPanel({required this.showPageTurnControls});
+/// The font row, then text size, line spacing and margins. Each control
+/// takes exactly half the column, so its start edge meets the split of the
+/// two-option choices below. The three move below their labels together.
+class _CompactSettingRows extends StatelessWidget {
+  const _CompactSettingRows({required this.onFont});
 
-  final bool showPageTurnControls;
+  final VoidCallback onFont;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _AppearanceSettingRow(
-          label: context.l10n.readerFontSize,
-          control: const _FontSizeControl(),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _AppearanceSettingRow(
-          label: context.l10n.readerLineSpacing,
-          control: const _LineSpacingControl(),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _AppearanceSettingRow(
-          label: context.l10n.readerTextAlignment,
-          controlBelowLabel: true,
-          control: const _AlignmentControl(),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        _AppearanceSettingRow(
-          label: context.l10n.readerPageMargins,
-          control: const _MarginControl(),
-        ),
-        if (showPageTurnControls) ...[
-          const SizedBox(height: AppSpacing.xs),
-          _AppearanceSettingRow(
-            label: context.l10n.readerPageTurn,
-            controlBelowLabel: true,
-            control: const _PageTurnControl(),
-          ),
-        ],
-      ],
+    final l10n = context.l10n;
+    final rows = [
+      (l10n.readerFontSize, const _FontSizeControl()),
+      (l10n.readerLineSpacing, const _LineSpacingControl()),
+      (l10n.readerPageMargins, const _MarginControl()),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked = _stacksCompactRows(
+          context,
+          width: constraints.maxWidth,
+          labels: [for (final (label, _) in rows) label],
+        );
+        final gap = SizedBox(
+          height: stacked ? AppSpacing.lg : AppSpacing.sm,
+        );
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _FontPickerRow(onPressed: onFont),
+            for (final (label, control) in rows) ...[
+              gap,
+              _CompactSettingRow(
+                label: label,
+                stacked: stacked,
+                control: control,
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
 
-/// A setting label with its control. Compact controls trail the label and
-/// move below it only for large text in a narrow sheet. Labeled choices
-/// ([controlBelowLabel]) always span the width below their label, so long
-/// translations wrap inside the choice instead of crowding the label.
-class _AppearanceSettingRow extends StatelessWidget {
-  const _AppearanceSettingRow({
+/// Whether the compact rows put their controls below their labels: for large
+/// text in a narrow sheet, when half the column cannot hold three 48dp
+/// segments, or when a label would need a third line beside its control.
+bool _stacksCompactRows(
+  BuildContext context, {
+  required double width,
+  required List<String> labels,
+}) {
+  final textScaler = MediaQuery.textScalerOf(context);
+  if (width < 360 && textScaler.scale(14) > 18) return true;
+  final half = width / 2;
+  if (half < AppSizes.buttonHeight * 3) return true;
+  final painter = TextPainter(
+    textDirection: Directionality.of(context),
+    textScaler: textScaler,
+    locale: Localizations.maybeLocaleOf(context),
+    maxLines: _compactLabelMaxLines,
+  );
+  try {
+    for (final label in labels) {
+      painter
+        ..text = TextSpan(text: label, style: context.text.bodyMedium)
+        ..layout(maxWidth: half - AppSpacing.md);
+      if (painter.didExceedMaxLines) return true;
+    }
+    return false;
+  } finally {
+    painter.dispose();
+  }
+}
+
+/// A label with its control in the end half of the row, or, [stacked], a
+/// caption above the full-width control like the labeled choices.
+class _CompactSettingRow extends StatelessWidget {
+  const _CompactSettingRow({
     required this.label,
+    required this.stacked,
     required this.control,
-    this.controlBelowLabel = false,
   });
 
   final String label;
+  final bool stacked;
   final Widget control;
-  final bool controlBelowLabel;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final stacked =
-            controlBelowLabel ||
-            constraints.maxWidth < 360 &&
-                MediaQuery.textScalerOf(context).scale(14) > 18;
-        final title = Text(
-          label,
-          maxLines: stacked ? null : 2,
-          overflow: TextOverflow.visible,
-          style: context.text.bodyMedium,
-        );
-        if (stacked) {
-          // With the 4dp row gap the label sits 16dp below the previous
-          // control and 8dp above its own.
-          return Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                title,
-                const SizedBox(height: AppSpacing.sm),
-                if (controlBelowLabel)
-                  control
-                else
-                  Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: control,
-                  ),
-              ],
+    if (stacked) return AppSettingsSection(title: label, child: control);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: AppSizes.buttonHeight),
+      child: Row(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(end: AppSpacing.md),
+              child: Text(
+                label,
+                maxLines: _compactLabelMaxLines,
+                style: context.text.bodyMedium,
+              ),
             ),
-          );
-        }
-        return ConstrainedBox(
-          constraints: const BoxConstraints(
-            minHeight: AppSizes.buttonHeight,
           ),
-          child: Row(
-            children: [
-              Expanded(child: title),
-              const SizedBox(width: AppSpacing.md),
-              control,
-            ],
-          ),
-        );
-      },
+          Expanded(child: control),
+        ],
+      ),
     );
   }
 }
@@ -828,32 +807,29 @@ class _LineSpacingControl extends StatelessWidget {
     );
     final cubit = context.read<ReaderAppearanceCubit>();
     final l10n = context.l10n;
-    return SizedBox(
+    return AppChoiceControl<ReaderLineSpacingPreset>(
       key: const ValueKey('reader-line-height-control'),
-      width: _compactControlWidthFor(context),
-      child: AppChoiceControl<ReaderLineSpacingPreset>(
-        iconOnly: true,
-        // The nearest preset is shown selected; tapping it applies its value.
-        reselectable: true,
-        selected: ReaderLineSpacingPreset.nearest(lineHeight),
-        onChanged: (preset) {
-          final value = preset.lineHeight;
-          if (value == lineHeight) return;
-          cubit.previewLineHeight(value);
-          cubit.commitLineHeight(value);
-        },
-        options: [
-          for (final preset in ReaderLineSpacingPreset.values)
-            AppChoiceOption(
-              value: preset,
-              label: _lineSpacingLabel(l10n, preset),
-              glyph: ReaderLineSpacingGlyph(
-                preset,
-                key: ValueKey('reader-line-spacing-${preset.name}'),
-              ),
+      iconOnly: true,
+      // The nearest preset is shown selected; tapping it applies its value.
+      reselectable: true,
+      selected: ReaderLineSpacingPreset.nearest(lineHeight),
+      onChanged: (preset) {
+        final value = preset.lineHeight;
+        if (value == lineHeight) return;
+        cubit.previewLineHeight(value);
+        cubit.commitLineHeight(value);
+      },
+      options: [
+        for (final preset in ReaderLineSpacingPreset.values)
+          AppChoiceOption(
+            value: preset,
+            label: _lineSpacingLabel(l10n, preset),
+            glyph: ReaderLineSpacingGlyph(
+              preset,
+              key: ValueKey('reader-line-spacing-${preset.name}'),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -877,32 +853,29 @@ class _MarginControl extends StatelessWidget {
     );
     final cubit = context.read<ReaderAppearanceCubit>();
     final l10n = context.l10n;
-    return SizedBox(
+    return AppChoiceControl<ReaderMarginPreset>(
       key: const ValueKey('reader-margin-control'),
-      width: _compactControlWidthFor(context),
-      child: AppChoiceControl<ReaderMarginPreset>(
-        iconOnly: true,
-        // The nearest preset is shown selected; tapping it applies its value.
-        reselectable: true,
-        selected: ReaderMarginPreset.nearest(sideMargin),
-        onChanged: (preset) {
-          final value = preset.sideMargin;
-          if (value == sideMargin) return;
-          cubit.previewSideMargin(value);
-          cubit.commitSideMargin(value);
-        },
-        options: [
-          for (final preset in ReaderMarginPreset.values)
-            AppChoiceOption(
-              value: preset,
-              label: _marginLabel(l10n, preset),
-              glyph: ReaderMarginsGlyph(
-                preset,
-                key: ValueKey('reader-margin-${preset.name}'),
-              ),
+      iconOnly: true,
+      // The nearest preset is shown selected; tapping it applies its value.
+      reselectable: true,
+      selected: ReaderMarginPreset.nearest(sideMargin),
+      onChanged: (preset) {
+        final value = preset.sideMargin;
+        if (value == sideMargin) return;
+        cubit.previewSideMargin(value);
+        cubit.commitSideMargin(value);
+      },
+      options: [
+        for (final preset in ReaderMarginPreset.values)
+          AppChoiceOption(
+            value: preset,
+            label: _marginLabel(l10n, preset),
+            glyph: ReaderMarginsGlyph(
+              preset,
+              key: ValueKey('reader-margin-${preset.name}'),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

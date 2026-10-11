@@ -6,7 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:reader/src/reader_comic_pages.dart';
+import 'package:reader/src/reader_page_grid.dart';
 import 'package:reader_webview/reader_webview.dart';
 
 import '../test/support/comic_fixture.dart';
@@ -138,7 +138,7 @@ void main() {
     await tapUi(tester, find.byIcon(AppIcons.toc));
     await waitForUi(
       tester,
-      () => find.byType(ReaderComicPages).evaluate().isNotEmpty,
+      () => find.byType(ReaderPageGrid).evaluate().isNotEmpty,
       description: 'comic Pages tab',
     );
     await waitForUi(
@@ -146,7 +146,7 @@ void main() {
       () =>
           find
               .descendant(
-                of: find.byType(ReaderComicPages),
+                of: find.byType(ReaderPageGrid),
                 matching: find.byType(Image),
               )
               .evaluate()

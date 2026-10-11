@@ -371,6 +371,14 @@ Both use the real repositories and a phone-sized Arabic override for `tabletRtl`
 Import phase and translation menu snapshots remain in the existing suites.
 Reader-native rendering is tested separately: `comic_zoom_test.dart` opens Pages,
 waits for actual bridge-generated previews and navigates from a thumbnail.
+`pdf_reader_test.dart` opens a generated PDF natively. It checks the default
+trimmed, theme-colored page and sharp zoom, then turns both options off from
+the real Appearance sheet, and it runs PDF search and highlight drawing inside
+the WebView.
+`pdf_contents_golden_test.dart` and `reader_appearance_golden_test.dart`
+snapshot the PDF Contents tabs and the PDF Appearance sheet in every profile;
+`reader_pdf_controls_test.dart` checks that sheet choices reach the WebView
+style.
 The 500-page cubit/widget workloads bound active requests and retained previews;
 they do not assert FPS or peak browser image-decoder memory.
 

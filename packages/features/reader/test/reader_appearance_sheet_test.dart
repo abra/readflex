@@ -139,24 +139,298 @@ void main() {
     expect(find.byType(VerticalDivider), findsNothing);
   });
 
-  testWidgets('localized layout labels wrap in narrow appearance sheets', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(320, 720);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  group('PDF pages', () {
+    testWidgets('swap text controls for margins and page colors', (
+      tester,
+    ) async {
+      await tester.openAppearanceSheet(cubit, pdfControls: true);
 
-    await tester.openAppearanceSheet(cubit, locale: const Locale('ru'));
+      expect(find.text('Appearance'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('reader-theme-presets')),
+        findsOneWidget,
+      );
+      for (final text in [
+        'Margins',
+        'Whole page',
+        'Trimmed',
+        'Page colors',
+        'Original',
+        'Page turn',
+        'Horizontal',
+        'Vertical',
+      ]) {
+        expect(find.text(text), findsOneWidget, reason: text);
+      }
+      // "Theme" names both the swatch section and a page colors option.
+      expect(find.text('Theme'), findsNWidgets(2));
+      for (final text in [
+        'Font',
+        'Font size',
+        'Line spacing',
+        'Text alignment',
+        'Page margins',
+      ]) {
+        expect(find.text(text), findsNothing, reason: text);
+      }
+      expect(find.byKey(const ValueKey('reader-font-picker')), findsNothing);
+      expect(find.byType(ReaderFontSheet), findsNothing);
+    });
 
-    expect(find.text('Межстрочный интервал'), findsOneWidget);
-    expect(find.text('Поля страницы'), findsOneWidget);
-    final lineSpacingLabel = tester.widget<Text>(
-      find.text('Межстрочный интервал'),
-    );
+    testWidgets('start trimmed in theme colors and save choices per book', (
+      tester,
+    ) async {
+      await tester.openAppearanceSheet(cubit, pdfControls: true);
+      AppChoiceControl<T> control<T>(String key) =>
+          tester.widget<AppChoiceControl<T>>(find.byKey(ValueKey(key)));
 
-    expect(lineSpacingLabel.maxLines, 2);
-    expect(tester.takeException(), isNull);
+      expect(control<bool>('reader-pdf-margins-control').selected, isTrue);
+      expect(
+        control<ReaderPageColors>('reader-pdf-page-colors-control').selected,
+        ReaderPageColors.theme,
+      );
+      expect(find.text('Reset'), findsOneWidget);
+
+      await tester.tap(find.text('Whole page'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Original'));
+      await tester.pumpAndSettle();
+
+      expect(control<bool>('reader-pdf-margins-control').selected, isFalse);
+      expect(
+        control<ReaderPageColors>('reader-pdf-page-colors-control').selected,
+        ReaderPageColors.original,
+      );
+      final saved = preferencesService.readerAppearanceOverrideFor(_sourceId);
+      expect(saved?.trimPageMargins, isFalse);
+      expect(saved?.pageColors, ReaderPageColors.original);
+
+      await tester.tap(find.text('Reset'));
+      await tester.pumpAndSettle();
+      expect(control<bool>('reader-pdf-margins-control').selected, isTrue);
+      expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
+    });
+
+    testWidgets('choices announce their names and selection', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.openAppearanceSheet(cubit, pdfControls: true);
+
+      for (final (label, selected) in [
+        ('Whole page', false),
+        ('Trimmed', true),
+        ('Original', false),
+      ]) {
+        final node = tester.getSemantics(
+          find
+              .ancestor(of: find.text(label), matching: find.byType(Semantics))
+              .first,
+        );
+        expect(
+          node.flagsCollection.isSelected,
+          selected ? Tristate.isTrue : Tristate.isFalse,
+          reason: label,
+        );
+      }
+      handle.dispose();
+    });
+
+    testWidgets('large text keeps every PDF choice readable', (tester) async {
+      await tester.openAppearanceSheet(
+        cubit,
+        pdfControls: true,
+        textScaler: const TextScaler.linear(2),
+      );
+      for (final text in ['Whole page', 'Trimmed', 'Original']) {
+        final finder = find.text(text);
+        await tester.ensureVisible(finder);
+        await tester.pumpAndSettle();
+        expect(
+          tester.renderObject<RenderParagraph>(finder).didExceedMaxLines,
+          isFalse,
+          reason: text,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('compact rows', () {
+    const compactControls = [
+      'reader-text-scale-control',
+      'reader-line-height-control',
+      'reader-margin-control',
+    ];
+    const compactLabels = ['Font size', 'Line spacing', 'Page margins'];
+
+    for (final direction in TextDirection.values) {
+      testWidgets('controls take the end half, on the split of the choices '
+          'below ($direction)', (tester) async {
+        tester.view.physicalSize = const Size(390, 1400);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.openAppearanceSheet(cubit, textDirection: direction);
+        final ltr = direction == TextDirection.ltr;
+        final column = tester.getRect(
+          find.byKey(const ValueKey('reader-text-alignment-control')),
+        );
+        for (final key in compactControls) {
+          final control = tester.getRect(find.byKey(ValueKey(key)));
+          expect(control.width, closeTo(column.width / 2, 1e-6), reason: key);
+          expect(
+            ltr ? control.left : control.right,
+            closeTo(column.center.dx, 1e-6),
+            reason: key,
+          );
+          expect(
+            ltr ? control.right : control.left,
+            ltr ? column.right : column.left,
+          );
+        }
+        final rows = [
+          tester.getRect(find.byKey(const ValueKey('reader-font-picker'))),
+          for (final key in compactControls)
+            tester.getRect(find.byKey(ValueKey(key))),
+        ];
+        for (var i = 1; i < rows.length; i++) {
+          expect(rows[i].top - rows[i - 1].bottom, AppSpacing.sm);
+        }
+        for (final label in compactLabels) {
+          final text = tester.getRect(find.text(label));
+          expect(
+            ltr ? text.left : text.right,
+            ltr ? column.left : column.right,
+          );
+          expect(
+            find.ancestor(
+              of: find.text(label),
+              matching: find.byType(AppSettingsSection),
+            ),
+            findsNothing,
+            reason: label,
+          );
+        }
+      });
+    }
+
+    testWidgets('a narrow sheet puts every control under its caption', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.openAppearanceSheet(cubit, locale: const Locale('ru'));
+      final column = tester.getRect(
+        find.byKey(const ValueKey('reader-text-alignment-control')),
+      );
+      final captions = [
+        'Размер текста',
+        'Межстрочный интервал',
+        'Поля страницы',
+      ];
+      for (final (index, key) in compactControls.indexed) {
+        final control = tester.getRect(find.byKey(ValueKey(key)));
+        expect(control.width, column.width, reason: key);
+        final caption = find.text(captions[index]);
+        expect(
+          find.ancestor(of: caption, matching: find.byType(AppSettingsSection)),
+          findsOneWidget,
+        );
+        expect(
+          tester.renderObject<RenderParagraph>(caption).didExceedMaxLines,
+          isFalse,
+        );
+        expect(tester.getRect(caption).bottom, lessThan(control.top));
+      }
+      // Stacked rows keep the 16dp rhythm of the captioned choices.
+      final fontRow = tester.getRect(
+        find.byKey(const ValueKey('reader-font-picker')),
+      );
+      expect(
+        tester.getTopLeft(find.text('Размер текста')).dy - fontRow.bottom,
+        AppSpacing.lg,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a label that would need a third line stacks all three rows', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      // Below the large-text rule: 1.28 x 14 < 18.
+      const scale = TextScaler.linear(1.28);
+      await tester.openAppearanceSheet(cubit, textScaler: scale);
+      for (final label in compactLabels) {
+        expect(
+          find.ancestor(
+            of: find.text(label),
+            matching: find.byType(AppSettingsSection),
+          ),
+          findsNothing,
+          reason: label,
+        );
+      }
+      // The test font's square glyphs break "Межстрочный" over three lines
+      // in the half row.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.openAppearanceSheet(
+        cubit,
+        locale: const Locale('ru'),
+        textScaler: scale,
+      );
+      for (final label in [
+        'Размер текста',
+        'Межстрочный интервал',
+        'Поля страницы',
+      ]) {
+        expect(
+          find.ancestor(
+            of: find.text(label),
+            matching: find.byType(AppSettingsSection),
+          ),
+          findsOneWidget,
+          reason: label,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('alignment and page turn are captioned choices', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.openAppearanceSheet(cubit);
+      for (final caption in ['Theme', 'Text alignment', 'Page turn']) {
+        expect(
+          find.ancestor(
+            of: find.text(caption),
+            matching: find.byType(AppSettingsSection),
+          ),
+          findsOneWidget,
+          reason: caption,
+        );
+        expect(
+          tester.getSemantics(find.text(caption)).flagsCollection.isHeader,
+          isTrue,
+          reason: caption,
+        );
+      }
+      final margins = tester.getRect(
+        find.byKey(const ValueKey('reader-margin-control')),
+      );
+      final alignment = tester.getRect(find.text('Text alignment'));
+      final pageTurn = tester.getRect(find.text('Page turn'));
+      final alignmentControl = tester.getRect(
+        find.byKey(const ValueKey('reader-text-alignment-control')),
+      );
+      expect(alignment.top - margins.bottom, AppSpacing.lg);
+      expect(pageTurn.top - alignmentControl.bottom, AppSpacing.lg);
+      semantics.dispose();
+    });
   });
 
   testWidgets('theme swatches persist reader theme ids', (tester) async {
@@ -995,29 +1269,38 @@ void main() {
       find.descendant(of: paper, matching: find.byType(InkWell)),
       findsOneWidget,
     );
-    final selectedMaterial = tester.widget<Material>(
-      find.descendant(of: paper, matching: find.byType(Material)).first,
-    );
-    expect(selectedMaterial.color, context.colors.selectedControlBackground);
-    final unselectedMaterial = tester.widget<Material>(
-      find.descendant(of: snow, matching: find.byType(Material)).first,
-    );
-    expect(unselectedMaterial.color, Colors.transparent);
-    final sample = tester.widget<Container>(
-      find.descendant(of: paper, matching: find.byType(Container)).first,
-    );
+    // Only the ring and the name mark the selection: no tinted block.
+    for (final swatch in [paper, snow]) {
+      final material = tester.widget<Material>(
+        find.descendant(of: swatch, matching: find.byType(Material)).first,
+      );
+      expect(material.type, MaterialType.transparency);
+    }
+    BoxDecoration sample(Finder swatch) =>
+        tester
+                .widget<Container>(
+                  find
+                      .descendant(of: swatch, matching: find.byType(Container))
+                      .first,
+                )
+                .decoration!
+            as BoxDecoration;
     expect(
-      (sample.decoration! as BoxDecoration).color,
+      sample(paper).color,
       ReaderThemePreset.paper.data.backgroundColor,
     );
-    expect(
-      tester.widget<Text>(find.text('Paper')).style?.color,
-      context.colors.selectedControlForeground,
-    );
-    expect(
-      tester.widget<Text>(find.text('Snow')).style?.color,
-      context.colors.onSurfaceVariant,
-    );
+    final ring = sample(paper).border! as Border;
+    expect(ring.top.color, context.actionForeground);
+    expect(ring.top.width, 2);
+    final idle = sample(snow).border! as Border;
+    expect(idle.top.color, context.appColors.divider);
+    expect(idle.top.width, 1);
+    final paperLabel = tester.widget<Text>(find.text('Paper')).style;
+    expect(paperLabel?.color, context.actionForeground);
+    expect(paperLabel?.fontWeight, FontWeight.w600);
+    final snowLabel = tester.widget<Text>(find.text('Snow')).style;
+    expect(snowLabel?.color, context.colors.onSurfaceVariant);
+    expect(snowLabel?.fontWeight, FontWeight.w400);
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     semantics.dispose();
   });
@@ -1430,9 +1713,11 @@ extension on WidgetTester {
   Future<void> openAppearanceSheet(
     ReaderAppearanceCubit cubit, {
     bool showPageTurnControls = true,
+    bool pdfControls = false,
     Locale locale = const Locale('en'),
     bool disableAnimations = false,
     TextScaler textScaler = TextScaler.noScaling,
+    TextDirection? textDirection,
   }) async {
     await pumpWidget(
       MaterialApp(
@@ -1441,7 +1726,9 @@ extension on WidgetTester {
             disableAnimations: disableAnimations,
             textScaler: textScaler,
           ),
-          child: child!,
+          child: textDirection == null
+              ? child!
+              : Directionality(textDirection: textDirection, child: child!),
         ),
         locale: locale,
         supportedLocales: ReadflexSupportedLocales.locales,
@@ -1459,6 +1746,7 @@ extension on WidgetTester {
                     onPressed: () => showReaderAppearanceSheet(
                       context,
                       showPageTurnControls: showPageTurnControls,
+                      pdfControls: pdfControls,
                     ),
                     child: const Text('Open'),
                   ),

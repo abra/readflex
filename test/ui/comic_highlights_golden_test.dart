@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/reader.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:reader/src/reader_comic_thumbnail_cubit.dart';
+import 'package:reader/src/reader_page_thumbnail_cubit.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_image_highlight_preview.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
@@ -28,7 +28,7 @@ void main() {
     await tester.pumpAndSettle();
     final previews = find.byType(ReaderImageHighlightPreview);
     final context = tester.element(previews.first);
-    final cache = context.read<ReaderComicThumbnailCubit>().state;
+    final cache = context.read<ReaderPageThumbnailCubit>().state;
     // The bridge decodes base64 into new byte identities. Precache those actual
     // ImageCache keys, not the fixture bytes, before capturing painted crops.
     await tester.runAsync(() async {
@@ -60,7 +60,7 @@ void main() {
         var failPreview = false;
         final platform = ReaderTestPlatform(
           onAsyncJavaScript: (body, args) async {
-            expect(body, contains('readflexComicThumbnail'));
+            expect(body, contains('readflexPageThumbnail'));
             requests.add(args['index'] as int);
             return CallAsyncJavaScriptResult(
               value: failPreview
@@ -163,7 +163,7 @@ void main() {
         await expectUiGolden(tester, profile, 'comic-highlights');
         final thumbnails = tester
             .element(previews.first)
-            .read<ReaderComicThumbnailCubit>();
+            .read<ReaderPageThumbnailCubit>();
         await tapUi(tester, find.text(l10n.readerBookmarks));
         expect(thumbnails.isClosed, isTrue);
         final count = requests.length;

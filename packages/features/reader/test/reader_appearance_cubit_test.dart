@@ -132,6 +132,63 @@ void main() {
     );
 
     blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
+      'PDF pages trim margins and follow the theme until a book opts out',
+      build: () => ReaderAppearanceCubit(
+        preferencesService: preferencesService,
+        sourceId: _sourceId,
+      ),
+      act: (cubit) async {
+        await cubit.setTrimPageMargins(false);
+        await cubit.setPageColors(ReaderPageColors.original);
+      },
+      expect: () => [
+        isA<ReaderAppearanceState>()
+            .having(
+              (s) => s.effectiveAppearance.trimPageMargins,
+              'trimPageMargins',
+              isFalse,
+            )
+            .having((s) => s.hasOverride, 'hasOverride', isTrue),
+        isA<ReaderAppearanceState>().having(
+          (s) => s.effectiveAppearance.pageColors,
+          'pageColors',
+          ReaderPageColors.original,
+        ),
+      ],
+      verify: (cubit) {
+        final saved = preferencesService.readerAppearanceOverrideFor(_sourceId);
+        expect(saved?.trimPageMargins, isFalse);
+        expect(saved?.pageColors, ReaderPageColors.original);
+        expect(
+          preferencesService.current.readerAppearance.trimPageMargins,
+          isTrue,
+          reason: 'other books keep the global default',
+        );
+      },
+    );
+
+    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
+      'choosing the global PDF page values again clears the override',
+      build: () => ReaderAppearanceCubit(
+        preferencesService: preferencesService,
+        sourceId: _sourceId,
+      ),
+      act: (cubit) async {
+        await cubit.setTrimPageMargins(false);
+        await cubit.setPageColors(ReaderPageColors.original);
+        await cubit.setTrimPageMargins(true);
+        await cubit.setPageColors(ReaderPageColors.theme);
+      },
+      verify: (cubit) {
+        expect(cubit.state.hasOverride, isFalse);
+        expect(
+          preferencesService.readerAppearanceOverrideFor(_sourceId),
+          isNull,
+        );
+      },
+    );
+
+    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
       'previewTextScale emits immediately without persisting',
       build: () => ReaderAppearanceCubit(
         preferencesService: preferencesService,

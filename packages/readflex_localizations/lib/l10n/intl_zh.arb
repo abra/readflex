@@ -336,5 +336,14 @@
   "readerAlignJustified": "两端对齐",
   "readerPageTurnHorizontalShort": "横向",
   "readerPageTurnVerticalShort": "纵向",
-  "readerChapterRead": "已读"
+  "readerChapterRead": "已读",
+  "readerPdfMargins": "页边距",
+  "readerPdfMarginsWhole": "整页",
+  "readerPdfMarginsTrimmed": "裁剪",
+  "readerPdfPageColors": "页面颜色",
+  "readerPdfPageColorsTheme": "主题",
+  "readerPdfPageColorsOriginal": "原始",
+  "readerExternalLinkTitle": "打开链接？",
+  "readerExternalLinkOpen": "打开",
+  "readerExternalLinkCopy": "复制链接"
 }

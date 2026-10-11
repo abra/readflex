@@ -24,7 +24,7 @@ class ReaderScreen extends StatelessWidget {
     VoidCallback? onSourceOpened,
     VoidCallback? onReadingPositionSaved,
     void Function(String url, String title)? onArticleTitlePressed,
-    ValueChanged<String>? onExternalLink,
+    ValueChanged<String>? onOpenExternalLink,
   });
 }
 ```
@@ -38,8 +38,30 @@ when a book source was already loaded by the previous route. For articles,
 `onArticleTitlePressed` lets the composition root open the original article URL
 from the top reader chrome without coupling the reader package to
 `url_launcher`.
-`onExternalLink` separately forwards book links to the app shell's validated
-HTTP(S) launcher.
+
+### External links
+
+A link in a book, article or PDF that leaves the reader (http(s), `mailto:`,
+`tel:`) never opens directly. `ReaderExternalLinkPrompt` turns each link the
+WebView reports into `ReaderExternalLinkSheet`: "Open link?", the real
+destination, Copy link and Open. Only Open hands the link, unchanged, to
+`onOpenExternalLink`; Copy puts it on the clipboard with a toast; Close, a scrim
+tap or Back keep the page as it was. One sheet at a time, so a double tap or a
+navigation the page starts itself cannot stack sheets; other schemes and links
+without a host are ignored, as they were.
+
+`ReaderExternalLinkDestination` decides what the sheet shows: the host (an
+email address, a phone number) first and never shortened, so link text cannot
+hide where a link goes, then the whole address in at most three lines. Only
+escaped non-ASCII text is decoded for reading, so Cyrillic or Arabic paths read
+as words while `%2F`/`%3A` stay escaped as browsers show them, and anything that
+decodes to control or bidi-format characters (`%E2%80%AE`) stays escaped too.
+Addresses read left to right in RTL interfaces. Routing opens confirmed web
+links in the in-app browser (`LaunchMode.inAppBrowserView`: Safari View
+Controller, Custom Tabs), so Done returns to the same page, and email or phone
+links in their apps. Tests: `reader_external_link_destination_test.dart`,
+`reader_external_link_prompt_test.dart`; root goldens
+`reader_external_link_golden_test.dart`.
 
 ## TextAction plugin system
 
@@ -81,14 +103,19 @@ three-line excerpt limit. Neither leaf owns repositories or WebView lifecycle.
 Appearance uses `ActionBottomSheetLayout.scrollable`, the same shell as Display,
 Language and the text-action result sheets. `AppSettingsSection` and
 `AppChoiceControl` share settings typography, spacing and selection states.
-Theme swatches retain the preset's page colors for the localized sample
-(`readerAppearanceSample`); each swatch is an ink tile with a 48dp target,
-`Semantics(button, selected)` and the shared `selectedControlBackground/
-Foreground` pair behind the active sample and label. Each swatch keeps a 4dp
-ink inset around its sample, so the sheet body gutter is reduced by that inset
-for the swatch grid only (`_swatchInkInset`): sample borders, the "Theme"
-label, the Font row and the setting rows all sit on the 24dp gutter while the
-ink tiles bleed 4dp past it. Font options use the same fill-plus-check
+`ReaderThemeSwatches` shows each theme as a sample in the preset's page colors
+(`readerAppearanceSample`) with its name: an ink tile with a 48dp target and
+`Semantics(button, selected)`. Only the selected sample's 2dp accent ring and
+accent name mark the choice; there is no tinted block behind it. All five sit
+in one row when every name fits its column on one line with the ink, else in
+rows of three (so "Бумага" never breaks mid-word); when even three do not fit
+(large text), they scroll in one row under `ScrollEdgeFadeStack` fades that
+opens with the selected theme centered and then keeps the reader's position.
+Each swatch keeps a 4dp ink inset around its sample
+(`ReaderThemeSwatches.inkInset`), so the sheet body gutter is reduced by that
+inset for the swatches only: sample borders, the "Theme" label, the Font row
+and the setting rows all sit on the 24dp gutter while the ink tiles bleed 4dp
+past it. Font options use the same fill-plus-check
 selection as the Language sheet, without an extra border, and the same 8dp
 option inset: the Font sheet body gives those 8dp back so option text and the
 check glyph land on 24dp. The Font row shows the active typeface and
@@ -112,16 +139,24 @@ calls. The glyph segments are icon-only `AppChoiceControl`s with
 `AppChoiceOption.glyph` and `reselectable`, so tapping the preset shown as the
 nearest match applies its exact value. Alignment offers labeled Normal (start)
 and Justified choices; a legacy stored `end` reads back as start. Page turn (books only)
-offers labeled Horizontal and Vertical paging. The three compact controls
-share one width that grows with text scale and trail their label, moving below
-it for large text in a narrow sheet. The labeled choices always span the
-gutters below their label (16dp above the label, 8dp to the control), where
-`AppChoiceControl` reflows long translations instead of truncating them. Large
-text uses a tooltip-labeled Reset icon. Controls keep
+offers labeled Horizontal and Vertical paging. The compact rows come first and
+together, 8dp apart: Font, then Font size, Line spacing and Page margins, whose
+controls fill exactly the end half of the column so they start on the split
+of the two-option choices below. All three move under captions, as full-width
+controls 16dp apart, when the sheet is narrow at large text, when half the
+column cannot hold three 48dp segments, or when a label would need a third
+line. Text alignment and Page turn are `AppSettingsSection` captions above
+full-width choices, 16dp below the group above, where `AppChoiceControl`
+reflows long translations instead of truncating them. Reset keeps its label
+while the title can shrink to fit beside it (`BottomSheetHeader.minTitleScale`)
+and otherwise becomes a tooltip-labeled icon (`headerCompactTrailing`); only
+when even that does not fit does it move below the title. Controls keep
 their narrow `context.select` subscriptions and existing preview/commit/reset
 callbacks; scrolling the sheet does not recreate the reading WebView.
-`test/reader_appearance_layout_test.dart` checks gutters in LTR/RTL, en/ru/de
-fit and 2x text at 320dp with the bundled faces.
+`test/reader_appearance_layout_test.dart` checks gutters, the half-width
+controls in LTR/RTL, en/ru/de fit, Reset beside the title and whole theme names
+at 320dp with the bundled faces; `test/reader_theme_swatches_test.dart` covers
+the five, three and scrolling layouts and the opening position.
 Root goldens cover portrait, landscape, 2x text and RTL, including access to
 the final page-turn control and font sample. Native reader flows check equal
 step heights, manual return, DOM style updates,
@@ -147,8 +182,29 @@ abstract class TextAction {
 | `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
 | `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |
 | `ReaderBrightnessCubit`       | System/custom reader brightness state and active window override lifecycle |
-| `ReaderComicThumbnailCubit`   | UI-only bounded preview queue/cache, owned by the visible Pages or Highlights tab |
+| `ReaderPageThumbnailCubit`   | UI-only bounded preview queue/cache, owned by the visible Pages or Highlights tab |
 | `ReaderSelectionTipCubit`     | One-time "Press and hold a word" tip: when it shows, hides and ends for good |
+
+### PDF page appearance
+
+PDF pages are images, so the Appearance sheet swaps its text controls for page
+controls: the theme, Margins (Whole page or Trimmed), Page colors (Theme or
+Original) and Page turn, each a caption above a full-width choice, 16dp apart. `showReaderAppearanceSheet(pdfControls: true)` builds
+this variant without the font step, and the chrome's appearance button reads
+"Appearance" instead of "Font" for PDF.
+
+- **Defaults.** Trimmed and Theme come from `ReaderAppearancePreferences`
+  (`trimPageMargins`, `pageColors`). Changes in the sheet are per-book
+  overrides through `ReaderAppearanceCubit`; Reset returns to the defaults.
+- **Delivery.** The reader maps both into `FoliateStyle.cropPageMargins` and
+  `FoliateStyle.pageColors`; `reader_webview` crops and recolors the bitmaps.
+  Other formats ignore them.
+- **Progress.** The bottom chrome shows `percent · page / total` for PDF from
+  the zero-based page fixed layouts report, so page 15 reads 15.
+
+`test/ui/reader_pdf_controls_test.dart` drives the sheet, the WebView style
+and the Pages tab end to end; `reader_appearance_sheet_test.dart` covers the
+variant's controls, persistence, Reset, semantics and 2x text.
 
 ### One-time selection tip
 
@@ -303,6 +359,12 @@ row belongs to the row, so tab paging works from the tab bar or outside the
 rows.
 Oversized Contents tab labels scroll horizontally rather than overlapping;
 the scrolling bar is inset 8dp so the first glyph lands on the 16dp gutter.
+A label cut by the sheet edge fades into the sheet (`ScrollEdgeFadeStack`,
+horizontal) so it reads as more tabs to scroll to; the divider stays whole.
+The "Contents" title stays on one line: a long translation at large text
+shrinks to at most `readerDrawerTitleMinFontScale` (0.8) of its size before it
+ellipsizes (`readerFittedTitleFontSize`). The three Contents search fields
+fall back to the short `commonSearch` hint when the full one would be cut.
 
 Deleting a highlight from the saved-highlight popup follows the same model
 (`highlightEdits` in `ReaderState`): the page annotation disappears and the
@@ -316,12 +378,26 @@ the page overlay refreshes from the repository. Restore failures keep the row
 with Undo. Removed rows neither navigate nor expand; image rows keep their
 preview.
 
-CBZ Contents replaces Chapters with a Pages grid, initially revealing the saved
+`readerContentsTabs` decides the Contents tabs per format:
+
+- **CBZ** replaces Chapters with Pages: a comic's table of contents is its page
+  list, so taps open the page's TOC entry.
+- **PDF** keeps Chapters first, even without an outline (the tab then shows
+  its empty state), and adds Pages once the document reports its page count.
+  Pages taps call `goToSectionIndex`; the current page is the zero-based
+  chapter page that fixed layouts report.
+- **Other books** keep Chapters, Bookmarks and Highlights.
+
+Filled tabs share the width equally, so the bar scrolls once the widest label
+does not fit its share; four tabs in Arabic or German scroll from the gutter.
+
+`ReaderPageGrid` shows the pages of both formats, initially revealing the saved
 page. The grid keeps the 16dp drawer gutter on every side (plus the bottom
 system inset) with 12dp between tiles. Page order follows the book's
 progression direction independently of the app locale. Captions and controls still use the app locale. Only the visible
-Pages or Highlights tab owns `ReaderComicThumbnailCubit`; its callback is supplied by the reader
-host, and the View receives no repository or WebView controller. One preview is
+Pages or Highlights tab owns `ReaderPageThumbnailCubit`; its callback is supplied by the reader
+host (`BookReaderWebViewState.pageThumbnail`, which PDF.js or the open archive
+answers), and the View receives no repository or WebView controller. One preview is
 decoded at a time. Offscreen queued requests are discarded; a 24-entry LRU retains
 at most 96 KiB encoded bytes per preview. Per-tile selectors avoid rebuilding the
 grid/list for each response. Multiple highlights on one page share the encoded
@@ -335,7 +411,12 @@ entries and ignores late responses. Failure keeps page navigation available and
 offers Retry. There is no startup thumbnail generation or whole-archive decode.
 The JS/WebView side's limits are documented in `reader_webview/README.md`.
 Tests cover shared-page leases, cancellation/retry, crop pixels/aspect ratio,
-long notes and missing anchors. `test/ui/comic_highlights_golden_test.dart` checks
+long notes and missing anchors. `reader_contents_tabs_test.dart` pins the tab
+rules; `reader_toc_drawer_test.dart` covers PDF Chapters/Pages with and
+without an outline, page taps, the late page count, the fitted title, tab
+fades and compact search hints; `reader_drawer_title_fit_test.dart` pins the
+fit math; `test/ui/pdf_contents_golden_test.dart` snapshots both PDF
+tabs in every visual profile. `test/ui/comic_highlights_golden_test.dart` checks
 the real drawer with 100 saved areas across phone themes, large text, landscape
 and phone RTL; `integration_test/comic_highlights_test.dart` checks native CBZ
 thumbnails and row navigation on iOS/Android. These are not device FPS tests.

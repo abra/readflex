@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reader_webview/src/comic_touch_tap_forwarder.dart';
+import 'package:reader_webview/src/page_touch_tap_forwarder.dart';
 
 void main() {
   const point = Offset(150, 250);
@@ -12,7 +12,7 @@ void main() {
     await tester.pumpWidget(
       Padding(
         padding: const EdgeInsets.only(left: 30, top: 50),
-        child: ComicTouchTapForwarder(
+        child: PageTouchTapForwarder(
           onTap: taps.add,
           child: const ColoredBox(color: Color(0xffcccccc)),
         ),

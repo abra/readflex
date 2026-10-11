@@ -11,19 +11,23 @@ class ReaderTocDrawerDriver extends StatelessWidget {
     required this.readerTheme,
     required this.onClose,
     required this.onItemSelected,
+    required this.onPageSelected,
     required this.onBookmarkSelected,
     required this.onHighlightSelected,
     required this.onBookmarkDeleted,
     super.key,
   });
 
-  final ComicThumbnailLoader loadThumbnail;
+  final PageThumbnailLoader loadThumbnail;
   final bool visible;
   final BookFormat? format;
   final bool pageProgressionRtl;
   final ReaderThemeData readerTheme;
   final VoidCallback onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
+
+  /// Receives the zero-based page tapped in the PDF page grid.
+  final ValueChanged<int> onPageSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
   final ValueChanged<Highlight> onHighlightSelected;
   final ValueChanged<SourceBookmark> onBookmarkDeleted;
@@ -45,9 +49,19 @@ class ReaderTocDrawerDriver extends StatelessWidget {
     final currentChapterTitle = context.select<ReaderBloc, String?>(
       (b) => b.state.chapterTitle,
     );
+    final pageCount = context.select<ReaderBloc, int?>(
+      (b) => b.state.documentFeatures?.pageCount,
+    );
+    // Fixed layouts report the zero-based page as the chapter page.
+    final currentPageIndex = context.select<ReaderBloc, int?>(
+      (b) => b.state.chapterCurrentPage,
+    );
 
     return _ReaderTocDrawer(
       loadThumbnail: loadThumbnail,
+      pageCount: pageCount,
+      currentPageIndex: currentPageIndex,
+      onPageSelected: onPageSelected,
       visible: visible,
       format: format,
       pageProgressionRtl: pageProgressionRtl,
@@ -66,13 +80,17 @@ class ReaderTocDrawerDriver extends StatelessWidget {
   }
 }
 
-/// Contents sheet: chapters (or comic pages), bookmarks and highlights.
+/// Contents sheet: chapters, pages, bookmarks and highlights, as
+/// [readerContentsTabs] decides for the format.
 ///
 /// An [AppInlineSheet] rather than a route, so each tab's search text and
 /// scroll offset survive closing it between chapters.
 class _ReaderTocDrawer extends StatelessWidget {
   const _ReaderTocDrawer({
     required this.loadThumbnail,
+    required this.pageCount,
+    required this.currentPageIndex,
+    required this.onPageSelected,
     required this.visible,
     required this.format,
     required this.pageProgressionRtl,
@@ -89,7 +107,10 @@ class _ReaderTocDrawer extends StatelessWidget {
     required this.onBookmarkDeleted,
   });
 
-  final ComicThumbnailLoader loadThumbnail;
+  final PageThumbnailLoader loadThumbnail;
+  final int? pageCount;
+  final int? currentPageIndex;
+  final ValueChanged<int> onPageSelected;
   final bool visible;
   final BookFormat? format;
   final bool pageProgressionRtl;
@@ -110,6 +131,9 @@ class _ReaderTocDrawer extends StatelessWidget {
     return Positioned.fill(
       child: _ReaderTocDrawerContent(
         loadThumbnail: loadThumbnail,
+        pageCount: pageCount,
+        currentPageIndex: currentPageIndex,
+        onPageSelected: onPageSelected,
         format: format,
         visible: visible,
         pageProgressionRtl: pageProgressionRtl,
@@ -134,6 +158,9 @@ class _ReaderTocDrawer extends StatelessWidget {
 class _ReaderTocDrawerContent extends StatefulWidget {
   const _ReaderTocDrawerContent({
     required this.loadThumbnail,
+    required this.pageCount,
+    required this.currentPageIndex,
+    required this.onPageSelected,
     required this.format,
     required this.visible,
     required this.pageProgressionRtl,
@@ -150,7 +177,12 @@ class _ReaderTocDrawerContent extends StatefulWidget {
     required this.onBookmarkDeleted,
   });
 
-  final ComicThumbnailLoader loadThumbnail;
+  final PageThumbnailLoader loadThumbnail;
+
+  /// PDF page count, once the document reports it.
+  final int? pageCount;
+  final int? currentPageIndex;
+  final ValueChanged<int> onPageSelected;
   final BookFormat? format;
   final bool visible;
   final bool pageProgressionRtl;
@@ -191,11 +223,37 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final l10n = context.l10n;
+    final comic = widget.format == BookFormat.cbz;
+    final tabs = readerContentsTabs(
+      format: widget.format,
+      hasPageGrid: widget.pageCount != null,
+    );
+    // Comic pages are their table of contents; PDF pages are separate.
+    final pageCount = comic ? widget.tocItems.length : widget.pageCount ?? 0;
+    // A hidden sheet still rebuilds on every page turn; skip the comic scan
+    // of every TOC entry until the grid can be seen.
+    final currentPage = !widget.visible
+        ? 0
+        : comic
+        ? readerActiveTocIndex(
+                items: widget.tocItems,
+                readingProgress: widget.currentProgress,
+                chapterTitle: widget.currentChapterTitle,
+              ) ??
+              0
+        : widget.currentPageIndex ?? 0;
+    String labelOf(ReaderContentsTab tab) => switch (tab) {
+      ReaderContentsTab.chapters => l10n.readerChapters,
+      ReaderContentsTab.pages => l10n.readerPages,
+      ReaderContentsTab.bookmarks => l10n.readerBookmarks,
+      ReaderContentsTab.highlights => l10n.readerHighlights,
+    };
 
     // The tab bar lives in the sheet's dragging header and the tab views in
-    // its body, so the controller wraps the whole sheet.
+    // its body, so the controller wraps the whole sheet. The tab count can
+    // grow once a PDF reports its outline and page count.
     return DefaultTabController(
-      length: 3,
+      length: tabs.length,
       child: AppInlineSheet(
         visible: widget.visible,
         onClose: widget.onClose,
@@ -214,16 +272,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
               ),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Text(
-                      l10n.readerContents,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.text.titleLarge.copyWith(
-                        color: colors.onSurface,
-                      ),
-                    ),
-                  ),
+                  Expanded(child: _ReaderDrawerTitle(l10n.readerContents)),
                   AppPlainIconButton(
                     icon: AppIcons.close,
                     tooltip: l10n.commonClose,
@@ -234,28 +283,26 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
             ),
             LayoutBuilder(
               builder: (context, constraints) {
-                var width = 0.0;
-                for (final label in [
-                  widget.format == BookFormat.cbz
-                      ? l10n.readerPages
-                      : l10n.readerChapters,
-                  l10n.readerBookmarks,
-                  l10n.readerHighlights,
-                ]) {
+                // Filled tabs share the width equally, so the widest label
+                // decides; four tabs in a long language need to scroll.
+                var widest = 0.0;
+                for (final label in tabs.map(labelOf)) {
                   final painter = TextPainter(
                     text: TextSpan(text: label, style: context.text.labelSmall),
                     textDirection: Directionality.of(context),
                     textScaler: MediaQuery.textScalerOf(context),
                   )..layout();
-                  width +=
-                      painter.width +
-                      AppIconSize.sm +
-                      AppSpacing.xxs +
-                      2 * AppSpacing.sm;
+                  widest = math.max(
+                    widest,
+                    painter.width +
+                        AppIconSize.sm +
+                        AppSpacing.xxs +
+                        2 * AppSpacing.sm,
+                  );
                   painter.dispose();
                 }
-                final scrollable = width > constraints.maxWidth;
-                return TabBar(
+                final scrollable = widest * tabs.length > constraints.maxWidth;
+                final tabBar = TabBar(
                   isScrollable: scrollable,
                   tabAlignment: scrollable
                       ? TabAlignment.start
@@ -269,30 +316,37 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                     horizontal: scrollable ? AppSpacing.sm : 0,
                   ),
                   tabs: [
-                    Tab(
-                      child: _ReaderDrawerTabLabel(
-                        icon: AppIcons.toc,
-                        label: widget.format == BookFormat.cbz
-                            ? l10n.readerPages
-                            : l10n.readerChapters,
+                    for (final tab in tabs)
+                      Tab(
+                        child: _ReaderDrawerTabLabel(
+                          icon: switch (tab) {
+                            ReaderContentsTab.chapters => AppIcons.toc,
+                            ReaderContentsTab.pages => AppIcons.viewGrid,
+                            ReaderContentsTab.bookmarks => AppIcons.bookmark,
+                            ReaderContentsTab.highlights => AppIcons.highlight,
+                          },
+                          label: labelOf(tab),
+                        ),
                       ),
-                    ),
-                    Tab(
-                      child: _ReaderDrawerTabLabel(
-                        icon: AppIcons.bookmark,
-                        label: l10n.readerBookmarks,
-                      ),
-                    ),
-                    Tab(
-                      child: _ReaderDrawerTabLabel(
-                        icon: AppIcons.highlight,
-                        label: l10n.readerHighlights,
-                      ),
-                    ),
                   ],
                   labelColor: colors.onSurface,
                   unselectedLabelColor: colors.onSurfaceVariant,
                   indicatorColor: context.actionForeground,
+                );
+                // A label cut by the sheet edge fades into the sheet, so it
+                // reads as more tabs to scroll to; the divider stays whole.
+                // Always wrapped, so the TabBar keeps its element when a
+                // PDF's late page count makes the tabs scroll.
+                return ScrollEdgeFadeStack(
+                  axis: Axis.horizontal,
+                  enabled: scrollable,
+                  surfaceColor:
+                      Theme.of(context).bottomSheetTheme.backgroundColor ??
+                      colors.surface,
+                  fadeInsets: EdgeInsets.only(
+                    bottom: TabBarTheme.of(context).dividerHeight ?? 1,
+                  ),
+                  child: tabBar,
                 );
               },
             ),
@@ -300,87 +354,149 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
         ),
         body: TabBarView(
           children: [
-            if (widget.format == BookFormat.cbz)
-              Builder(
-                builder: (context) {
-                  final tabs = DefaultTabController.of(context);
-                  return AnimatedBuilder(
-                    animation: tabs,
-                    builder: (context, _) {
-                      if (!widget.visible || tabs.index != 0) {
-                        return const SizedBox.shrink();
-                      }
-                      return ReaderComicPages(
-                        items: widget.tocItems,
+            for (final (index, tab) in tabs.indexed)
+              switch (tab) {
+                ReaderContentsTab.chapters => _ReaderTocTab(
+                  controller: _chaptersSearchController,
+                  visible: widget.visible,
+                  format: widget.format,
+                  pageProgressionRtl: widget.pageProgressionRtl,
+                  currentProgress: widget.currentProgress,
+                  currentChapterTitle: widget.currentChapterTitle,
+                  query: _chaptersQuery,
+                  hintText: l10n.readerSearchChapters,
+                  items: widget.tocItems,
+                  onQueryChanged: (value) {
+                    setState(() => _chaptersQuery = value);
+                  },
+                  onItemSelected: widget.onItemSelected,
+                ),
+                ReaderContentsTab.pages => _ReaderPagesTab(
+                  tabIndex: index,
+                  visible: widget.visible,
+                  pageCount: pageCount,
+                  currentIndex: currentPage,
+                  pageProgressionRtl: widget.pageProgressionRtl,
+                  loadThumbnail: widget.loadThumbnail,
+                  onSelected: comic
+                      ? (page) => widget.onItemSelected(widget.tocItems[page])
+                      : widget.onPageSelected,
+                ),
+                ReaderContentsTab.bookmarks => _ReaderBookmarksTab(
+                  controller: _bookmarksSearchController,
+                  pageProgressionRtl: widget.pageProgressionRtl,
+                  query: _bookmarksQuery,
+                  bookmarks: widget.bookmarks,
+                  onQueryChanged: (value) {
+                    setState(() => _bookmarksQuery = value);
+                  },
+                  onBookmarkSelected: widget.onBookmarkSelected,
+                  onBookmarkDeleted: widget.onBookmarkDeleted,
+                ),
+                ReaderContentsTab.highlights => Builder(
+                  builder: (context) {
+                    final tabController = DefaultTabController.of(context);
+                    return AnimatedBuilder(
+                      animation: tabController,
+                      builder: (context, _) => _ReaderHighlightsTab(
+                        controller: _highlightsSearchController,
                         pageProgressionRtl: widget.pageProgressionRtl,
-                        currentIndex:
-                            readerActiveTocIndex(
-                              items: widget.tocItems,
-                              readingProgress: widget.currentProgress,
-                              chapterTitle: widget.currentChapterTitle,
-                            ) ??
-                            0,
+                        readerTheme: widget.readerTheme,
+                        query: _highlightsQuery,
+                        highlights: widget.highlights,
+                        // Image-area previews exist only for comics.
+                        previewsEnabled:
+                            widget.visible &&
+                            tabController.index == index &&
+                            comic,
                         loadThumbnail: widget.loadThumbnail,
-                        onSelected: widget.onItemSelected,
-                      );
-                    },
-                  );
-                },
-              )
-            else
-              _ReaderTocTab(
-                controller: _chaptersSearchController,
-                visible: widget.visible,
-                format: widget.format,
-                pageProgressionRtl: widget.pageProgressionRtl,
-                currentProgress: widget.currentProgress,
-                currentChapterTitle: widget.currentChapterTitle,
-                query: _chaptersQuery,
-                hintText: l10n.readerSearchChapters,
-                items: widget.tocItems,
-                onQueryChanged: (value) {
-                  setState(() => _chaptersQuery = value);
-                },
-                onItemSelected: widget.onItemSelected,
-              ),
-            _ReaderBookmarksTab(
-              controller: _bookmarksSearchController,
-              pageProgressionRtl: widget.pageProgressionRtl,
-              query: _bookmarksQuery,
-              bookmarks: widget.bookmarks,
-              onQueryChanged: (value) {
-                setState(() => _bookmarksQuery = value);
+                        onQueryChanged: (value) {
+                          setState(() => _highlightsQuery = value);
+                        },
+                        onHighlightSelected: widget.onHighlightSelected,
+                      ),
+                    );
+                  },
+                ),
               },
-              onBookmarkSelected: widget.onBookmarkSelected,
-              onBookmarkDeleted: widget.onBookmarkDeleted,
-            ),
-            Builder(
-              builder: (context) {
-                final tabs = DefaultTabController.of(context);
-                return AnimatedBuilder(
-                  animation: tabs,
-                  builder: (context, _) => _ReaderHighlightsTab(
-                    controller: _highlightsSearchController,
-                    pageProgressionRtl: widget.pageProgressionRtl,
-                    readerTheme: widget.readerTheme,
-                    query: _highlightsQuery,
-                    highlights: widget.highlights,
-                    previewsEnabled:
-                        widget.visible &&
-                        tabs.index == 2 &&
-                        widget.format == BookFormat.cbz,
-                    loadThumbnail: widget.loadThumbnail,
-                    onQueryChanged: (value) {
-                      setState(() => _highlightsQuery = value);
-                    },
-                    onHighlightSelected: widget.onHighlightSelected,
-                  ),
-                );
-              },
-            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Page thumbnails, built only while the drawer shows this tab so previews
+/// are never requested in the background.
+class _ReaderPagesTab extends StatelessWidget {
+  const _ReaderPagesTab({
+    required this.tabIndex,
+    required this.visible,
+    required this.pageCount,
+    required this.currentIndex,
+    required this.pageProgressionRtl,
+    required this.loadThumbnail,
+    required this.onSelected,
+  });
+
+  final int tabIndex;
+  final bool visible;
+  final int pageCount;
+  final int currentIndex;
+  final bool pageProgressionRtl;
+  final PageThumbnailLoader loadThumbnail;
+  final ValueChanged<int> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final tabs = DefaultTabController.of(context);
+    return AnimatedBuilder(
+      animation: tabs,
+      builder: (context, _) {
+        if (!visible || tabs.index != tabIndex) return const SizedBox.shrink();
+        return ReaderPageGrid(
+          pageCount: pageCount,
+          pageProgressionRtl: pageProgressionRtl,
+          currentIndex: currentIndex,
+          loadThumbnail: loadThumbnail,
+          onSelected: onSelected,
+        );
+      },
+    );
+  }
+}
+
+/// The Contents title on one line. A long translation at large text first
+/// shrinks, down to [readerDrawerTitleMinFontScale] of its size, and only
+/// then ellipsizes.
+class _ReaderDrawerTitle extends StatelessWidget {
+  const _ReaderDrawerTitle(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = context.text.titleLarge.copyWith(
+      color: context.colors.onSurface,
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final fontSize = readerFittedTitleFontSize(
+          text: label,
+          style: style,
+          textScaler: MediaQuery.textScalerOf(context),
+          textDirection: Directionality.of(context),
+          maxWidth: constraints.maxWidth,
+        );
+        return Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          // The fitted size already includes the text scale.
+          style: fontSize == null ? style : style.copyWith(fontSize: fontSize),
+          textScaler: fontSize == null ? null : TextScaler.noScaling,
+        );
+      },
     );
   }
 }
@@ -583,6 +699,7 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
           child: SearchField(
             controller: widget.controller,
             hintText: widget.hintText,
+            compactHintText: context.l10n.commonSearch,
             clearButtonSemanticsLabel: context.l10n.commonClearSearch,
             onChanged: widget.onQueryChanged,
           ),
@@ -843,6 +960,7 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
           child: SearchField(
             controller: widget.controller,
             hintText: context.l10n.readerSearchBookmarks,
+            compactHintText: context.l10n.commonSearch,
             clearButtonSemanticsLabel: context.l10n.commonClearSearch,
             onChanged: widget.onQueryChanged,
           ),
@@ -1017,7 +1135,7 @@ class _ReaderHighlightsTab extends StatefulWidget {
   final String query;
   final List<Highlight> highlights;
   final bool previewsEnabled;
-  final ComicThumbnailLoader loadThumbnail;
+  final PageThumbnailLoader loadThumbnail;
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<Highlight> onHighlightSelected;
 
@@ -1032,7 +1150,7 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
   late List<Highlight> _filtered;
   List<Highlight> _removed = const [];
   Set<String> _removedIds = const {};
-  ReaderComicThumbnailCubit? _thumbnails;
+  ReaderPageThumbnailCubit? _thumbnails;
   ReadflexLocalizations? _strings;
 
   // Preserve filters and note expansion, but release previews on inactive tabs.
@@ -1043,7 +1161,7 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
   void initState() {
     super.initState();
     if (widget.previewsEnabled) {
-      _thumbnails = ReaderComicThumbnailCubit(widget.loadThumbnail);
+      _thumbnails = ReaderPageThumbnailCubit(widget.loadThumbnail);
     }
   }
 
@@ -1063,7 +1181,7 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
     if (oldWidget.previewsEnabled != widget.previewsEnabled) {
       final previous = _thumbnails;
       _thumbnails = widget.previewsEnabled
-          ? ReaderComicThumbnailCubit(widget.loadThumbnail)
+          ? ReaderPageThumbnailCubit(widget.loadThumbnail)
           : null;
       if (previous != null) unawaited(previous.close());
     }
@@ -1128,6 +1246,7 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
           child: SearchField(
             controller: widget.controller,
             hintText: context.l10n.readerSearchHighlights,
+            compactHintText: context.l10n.commonSearch,
             clearButtonSemanticsLabel: context.l10n.commonClearSearch,
             onChanged: widget.onQueryChanged,
           ),

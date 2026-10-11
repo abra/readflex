@@ -336,5 +336,14 @@
   "readerAlignJustified": "По ширине",
   "readerPageTurnHorizontalShort": "Горизонтально",
   "readerPageTurnVerticalShort": "Вертикально",
-  "readerChapterRead": "Прочитано"
+  "readerChapterRead": "Прочитано",
+  "readerPdfMargins": "Поля",
+  "readerPdfMarginsWhole": "Вся страница",
+  "readerPdfMarginsTrimmed": "Обрезаны",
+  "readerPdfPageColors": "Цвета страниц",
+  "readerPdfPageColorsTheme": "Тема",
+  "readerPdfPageColorsOriginal": "Исходные",
+  "readerExternalLinkTitle": "Открыть ссылку?",
+  "readerExternalLinkOpen": "Открыть",
+  "readerExternalLinkCopy": "Копировать"
 }

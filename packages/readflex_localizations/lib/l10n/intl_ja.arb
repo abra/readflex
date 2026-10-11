@@ -336,5 +336,14 @@
   "readerAlignJustified": "両端揃え",
   "readerPageTurnHorizontalShort": "横",
   "readerPageTurnVerticalShort": "縦",
-  "readerChapterRead": "既読"
+  "readerChapterRead": "既読",
+  "readerPdfMargins": "余白",
+  "readerPdfMarginsWhole": "ページ全体",
+  "readerPdfMarginsTrimmed": "トリミング",
+  "readerPdfPageColors": "ページの色",
+  "readerPdfPageColorsTheme": "テーマ",
+  "readerPdfPageColorsOriginal": "オリジナル",
+  "readerExternalLinkTitle": "リンクを開きますか？",
+  "readerExternalLinkOpen": "開く",
+  "readerExternalLinkCopy": "リンクをコピー"
 }

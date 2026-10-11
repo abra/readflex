@@ -336,5 +336,14 @@
   "readerAlignJustified": "Blocksatz",
   "readerPageTurnHorizontalShort": "Horizontal",
   "readerPageTurnVerticalShort": "Vertikal",
-  "readerChapterRead": "Gelesen"
+  "readerChapterRead": "Gelesen",
+  "readerPdfMargins": "Ränder",
+  "readerPdfMarginsWhole": "Ganze Seite",
+  "readerPdfMarginsTrimmed": "Beschnitten",
+  "readerPdfPageColors": "Seitenfarben",
+  "readerPdfPageColorsTheme": "Design",
+  "readerPdfPageColorsOriginal": "Original",
+  "readerExternalLinkTitle": "Link öffnen?",
+  "readerExternalLinkOpen": "Öffnen",
+  "readerExternalLinkCopy": "Link kopieren"
 }

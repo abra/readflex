@@ -86,9 +86,9 @@ still required before release.
 
 Link events from both shells cross the bridge as the destination URL only
 (`onExternalLink`, `ValueChanged<String>` on `BookReaderWebView` and
-`ArticleHtmlReaderWebView`). The reader feature forwards that value through its
-callback boundary, and app routing opens only validated HTTP(S) links with the
-platform URL launcher.
+`ArticleHtmlReaderWebView`). The reader feature confirms each one in its link
+sheet before app routing opens it, so hosts should treat the callback as a
+request, never as consent to leave the reader.
 
 ### Links and navigation policy
 
@@ -112,6 +112,70 @@ and forwarded to `onExternalLink` as a safety net for anything JS missed; every
 other request (external sub-frames, `javascript:`, `file:`, custom schemes) is
 cancelled silently. Sub-frames stay limited to the loopback origin, matching the
 section CSP. Decisions from a replaced native WebView are ignored.
+
+### PDF Pages
+
+`pdf.js` draws each page straight into a canvas; no PNG is encoded or decoded.
+
+- **Coordinates.** Page documents use PDF points times 2 whatever the bitmap
+  resolution, so the text layer stays above Android WebView's minimum font
+  size and positions do not change when a page is redrawn.
+- **CFI parity.** The bitmap is prepended as the first `<body>` element, where
+  earlier versions had an `<img>`, so saved highlight CFIs still address the
+  text layer. Sharp tiles are appended with `cfi-inert`.
+- **Density.** The bitmap matches device pixels at page fit, capped at 6 million
+  pixels. With margin crops on, new pages render 1.3x denser.
+- **Single pages in portrait.** A portrait screen opens the PDF one page at a
+  time. Spreads would draw the hidden half of every spread and prefetch only
+  half of the next one. Landscape openings, such as tablets, keep spreads.
+- **Bounded cache.** `readflex_pdf_page_cache.js` keeps the visible pages and one
+  neighbour on each side. It releases the rest after every turn, aborting their
+  renders, and prefetches the next page, then the previous one, once navigation
+  settles. Released canvases are resized to zero because WebKit frees canvas
+  memory on resize, not on garbage collection.
+- **Sharp zoom.** After a gesture or layout change, the fixed-layout renderer
+  compares screen density with bitmap density using `readflex_page_geometry.js`.
+  Above 1.1x it asks `book.sharpenPage` for a tile of the visible area plus a
+  20% pan margin, within 6 million pixels. Covered regions reuse the tile, a new
+  request cancels the old render, and page turns drop tiles. Tiles are drawn on
+  a canvas of the top document and then moved into the page: PDF.js registers
+  embedded fonts there, and a page-document canvas draws missing-glyph boxes.
+- **Margin crops.** The `crop-margins` renderer attribute crops each page to
+  its printed area. `readflex_page_content.js` finds that area on a 160 px
+  sample of the bitmap. Pages narrower than half the page keep the whole page.
+  The crop height follows the screen aspect from the top of the ink, so short
+  pages keep the scale and top edge of full pages.
+- **Theme colors.** `readflex_page_colors.js` bakes colors into the bitmap once
+  per render. Light themes multiply paper into the background. Dark themes
+  invert, restore the original hue, then map black to the background and white
+  to the text color. A theme change redraws cached pages offscreen, visible
+  first, and swaps each bitmap in one copy.
+- **Settings.** `FoliateStyle.cropPageMargins` and `FoliateStyle.pageColors`
+  reach `book.js`, which sets the renderer attribute and calls
+  `setCropMargins` and `setPageColors`. Formats without these hooks ignore them.
+  The wire defaults are off; the reader sends its own defaults (trimmed, theme
+  colors) from preferences.
+- **Search.** Each PDF section has a `createDocument` that builds the same
+  page HTML without a bitmap, so foliate search walks the text layer and its
+  CFIs resolve on the displayed page. Direction inference skips PDF
+  (`book.samplesTextDirection = false`) so opening builds no search documents.
+- **Document features.** PDF reports `format`, `hasToc` and `pageCount` at
+  startup and `hasSearchableText: true` once a page with text renders, through
+  `book.onFeaturesChange`. The reader uses the page count for its Pages grid.
+
+### Fixed-Layout Highlights
+
+Fixed-layout pages (PDF, comics, fixed-layout EPUB) get a highlight overlay
+inside each page document. Crop, scale and zoom transforms then apply to the
+marks as to the text, and the overlay is appended last with `cfi-inert`, above
+sharp tiles and outside saved CFIs. A frame created hidden has no client rects,
+so the overlay redraws each time its frame becomes visible. Search marks use
+the same overlay.
+
+Zoomable pages report taps as viewport points instead of DOM clicks. `view.js`
+hit-tests the overlays at that point first: a saved highlight under the tap
+emits `show-annotation`, the same path a click opens on reflowable pages, and
+does not toggle chrome.
 
 ### Book Startup
 
@@ -676,11 +740,13 @@ when changing this setting or updating Flutter/WebView.
 DOMPurify is pinned and vendored without edits. See
 `assets/foliate-js/src/vendor/DOMPurify-README.md` for provenance and updates.
 
-### Comic Gestures and Resources
+### Page Zoom and Resources (Comics, PDF)
 
-Comic archives advertise `rendition.zoomable`; other fixed-layout EPUBs,
-PDFs, reflowable books and articles keep their existing gestures. Comic zoom
-loads the bundled Panzoom module lazily, without network requests.
+Comic archives and PDFs advertise `rendition.zoomable`; fixed-layout EPUBs,
+reflowable books and articles keep their existing gestures. Page zoom
+(`readflex_page_zoom.js`) loads the bundled Panzoom module lazily, without
+network requests. `BookReaderWebView.zoomablePages` enables it on the Dart
+side. The bullets below describe comics; PDF differences follow them.
 
 - At page fit, taps in the physical left/right 30% zones immediately invoke
   page navigation, including with chrome visible (Flutter also hides chrome).
@@ -717,17 +783,32 @@ loads the bundled Panzoom module lazily, without network requests.
   not a decoded-GPU-memory limit. Prefetch does not create offscreen iframes or
   decode images. Concurrent demand/prefetch loads share extraction, obsolete
   results cannot recreate revoked URLs, and closing releases all owned URLs.
-- iOS comic taps use `ComicTouchTapForwarder`: the current Flutter/WKWebView
-  combination can omit the second rapid touch in the DOM. The listener observes
-  completed short touches without entering Flutter's gesture arena; JS ignores
-  their duplicate DOM taps. Long press, pinch and pan remain WebView-owned.
-  Android uses DOM pointer taps. Neither text readers nor native plugin settings
-  are changed by this workaround.
+- iOS page taps use `PageTouchTapForwarder` for comics and PDF: the current
+  Flutter/WKWebView combination can omit the second rapid touch in the DOM. The
+  listener observes completed short touches without entering Flutter's gesture
+  arena; JS ignores their duplicate DOM taps. Long press, pinch and pan remain
+  WebView-owned. Android uses DOM pointer taps. Neither text readers nor native
+  plugin settings are changed by this workaround.
 
-### Comic Page Previews
+PDF pages also advertise `rendition.selectableText`, which changes page zoom
+for text:
 
-`BookReaderWebViewState.comicThumbnail(index)` asks the already-open CBZ loader
-for one preview; it does not turn a page, change zoom, or create a reading iframe.
+- Idle touches are not cancelled, so a long press selects text natively. CSS
+  `touch-action: none` still stops native panning and zooming in the page.
+- A tap on a PDF link reaches the link instead of the reader. Host-forwarded
+  iOS taps hit-test the page and skip links the same way.
+- A non-collapsed text selection blocks panning and pinching until it clears.
+- Flutter keeps text-book chrome rules for PDF: visible chrome blocks page
+  input and taps toggle it. Only comics turn pages from edge taps with chrome
+  visible.
+- When a gesture ends, the renderer asks the PDF for a sharp tile of the
+  visible area (see PDF Pages).
+
+### Page Previews
+
+`BookReaderWebViewState.pageThumbnail(index)` asks the already-open CBZ loader
+or PDF for one preview; it does not turn a page, change zoom, or create a
+reading iframe. PDF previews are drawn by PDF.js at the same 240x360 bound.
 The thumbnail helper is dynamically imported on the first Pages or Highlights
 preview request, not on reader startup. Highlights crop the returned page
 thumbnail in Flutter; multiple areas do not cause separate archive decodes.

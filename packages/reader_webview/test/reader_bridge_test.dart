@@ -25,6 +25,31 @@ void main() {
       expect(features.format, 'pdf');
       expect(features.hasTableOfContents, isNull);
       expect(features.hasSearchableText, isNull);
+      expect(features.pageCount, isNull);
+    });
+
+    test('fromMap reads a positive page count only', () {
+      ReaderDocumentFeatures parse(Object? count) =>
+          ReaderDocumentFeatures.fromMap({'format': 'pdf', 'pageCount': count});
+
+      expect(parse(834).pageCount, 834);
+      expect(parse(12.0).pageCount, 12);
+      for (final invalid in [0, -3, '12', null]) {
+        expect(parse(invalid).pageCount, isNull, reason: '$invalid');
+      }
+    });
+
+    test('features with equal values are equal', () {
+      ReaderDocumentFeatures pdf({bool? text}) => ReaderDocumentFeatures(
+        format: 'pdf',
+        hasTableOfContents: true,
+        hasSearchableText: text,
+        pageCount: 6,
+      );
+
+      expect(pdf(text: true), pdf(text: true));
+      expect(pdf(text: true).hashCode, pdf(text: true).hashCode);
+      expect(pdf(text: true), isNot(pdf()));
     });
   });
 
@@ -711,6 +736,30 @@ void main() {
       expect(map['overrideFont'], true);
       expect(map['overrideColor'], true);
       expect(map['useBookLayout'], true);
+      expect(map['cropPageMargins'], false);
+      expect(map['pageColors'], 'original');
+    });
+
+    test('image-page options reach the reader by their wire names', () {
+      const style = FoliateStyle(
+        cropPageMargins: true,
+        pageColors: FoliatePageColors.theme,
+      );
+      final map = style.toMap();
+
+      expect(map['cropPageMargins'], true);
+      expect(map['pageColors'], 'theme');
+    });
+
+    test('image-page options take part in equality', () {
+      const base = FoliateStyle();
+      expect(base, const FoliateStyle());
+      expect(base.hashCode, const FoliateStyle().hashCode);
+      expect(base, isNot(const FoliateStyle(cropPageMargins: true)));
+      expect(
+        base,
+        isNot(const FoliateStyle(pageColors: FoliatePageColors.theme)),
+      );
     });
 
     test('override flags can be disabled', () {
@@ -762,7 +811,7 @@ void main() {
 
     test('toMap has expected key count', () {
       const style = FoliateStyle();
-      expect(style.toMap().length, 31);
+      expect(style.toMap().length, 33);
     });
   });
 

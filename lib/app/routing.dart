@@ -14,6 +14,7 @@ import 'package:import_flow/import_flow.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/app_system_ui_mode.dart';
 import 'package:readflex/app/dependency_container.dart';
+import 'package:readflex/app/reader_link_opener.dart';
 import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:translate/translate.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -156,8 +157,8 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
           onArticleTitlePressed: (url, title) {
             unawaited(_openExternalUrl(url));
           },
-          onExternalLink: (url) {
-            unawaited(_openExternalUrl(url));
+          onOpenExternalLink: (url) {
+            unawaited(openReaderLink(url));
           },
           initialSearchHistory:
               deps.preferencesService.current.readerSearchHistory,

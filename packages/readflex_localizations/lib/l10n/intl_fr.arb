@@ -336,5 +336,14 @@
   "readerAlignJustified": "Justifié",
   "readerPageTurnHorizontalShort": "Horizontal",
   "readerPageTurnVerticalShort": "Vertical",
-  "readerChapterRead": "Lu"
+  "readerChapterRead": "Lu",
+  "readerPdfMargins": "Marges",
+  "readerPdfMarginsWhole": "Page entière",
+  "readerPdfMarginsTrimmed": "Rognées",
+  "readerPdfPageColors": "Couleurs des pages",
+  "readerPdfPageColorsTheme": "Thème",
+  "readerPdfPageColorsOriginal": "D'origine",
+  "readerExternalLinkTitle": "Ouvrir le lien ?",
+  "readerExternalLinkOpen": "Ouvrir",
+  "readerExternalLinkCopy": "Copier le lien"
 }

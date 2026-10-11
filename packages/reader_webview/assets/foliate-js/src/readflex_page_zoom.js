@@ -16,8 +16,14 @@ const viewportPoint = (event, doc) => {
     }
 }
 
-export function createComicZoom(stage, host, onTap, {
-    hostTaps = false, pageTapZoneFraction = 0.3,
+// Pinch, pan and double-tap zoom for image pages (comics, PDF).
+//
+// [selectableText] pages (PDF) keep native touches for text selection and
+// links: idle touches are not cancelled, link taps reach the link, and an
+// active text selection blocks panning. [onSettle] runs once a gesture ends
+// so the renderer can redraw the zoomed area sharper.
+export function createPageZoom(stage, host, onTap, {
+    hostTaps = false, pageTapZoneFraction = 0.3, selectableText = false, onSettle = null,
 } = {}) {
     const listeners = new AbortController()
     const pointers = new Map()
@@ -28,6 +34,7 @@ export function createComicZoom(stage, host, onTap, {
     let frame = 0
     let suppressClickUntil = 0
     let compatibilityClickUntil = 0
+    let settleFrame = 0
     const zoom = Panzoom(stage, {
         noBind: true, minScale: 1, maxScale: 4, contain: 'outside',
         panOnlyWhenZoomed: true, cursor: '',
@@ -38,7 +45,34 @@ export function createComicZoom(stage, host, onTap, {
         },
     })
     const isZoomed = () => zoom.getScale() > 1.01
+    const textSelected = () => {
+        for (const doc of documents) if (doc.getSelection?.()?.isCollapsed === false) return true
+        return false
+    }
     const selectionActive = () => globalThis.__readflexImageAreaDraftActive === true
+        || (selectableText && textSelected())
+    const linkOf = target => selectableText ? target?.closest?.('a[href]') ?? null : null
+    // Host taps carry only a point; find the page element under it.
+    const linkAt = ({ x, y }) => {
+        if (!selectableText) return null
+        for (const doc of documents) {
+            const iframe = doc.defaultView?.frameElement
+            const rect = iframe?.getBoundingClientRect()
+            if (!rect?.width || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) continue
+            const element = doc.elementFromPoint(
+                (x - rect.left) * iframe.clientWidth / rect.width,
+                (y - rect.top) * iframe.clientHeight / rect.height)
+            return linkOf(element)
+        }
+        return null
+    }
+    const settle = () => {
+        if (!onSettle || settleFrame) return
+        settleFrame = requestAnimationFrame(() => {
+            settleFrame = 0
+            if (!disposed) onSettle(zoom.getScale())
+        })
+    }
     const cancelTap = () => {
         if (pendingTap) clearTimeout(pendingTap.timer)
         pendingTap = null
@@ -71,6 +105,7 @@ export function createComicZoom(stage, host, onTap, {
             zoom.handleUp({ pointerId: pointer.event.pointerId })
         }
         pointers.clear()
+        if (active) settle()
         active = false
     }
     const begin = () => {
@@ -120,6 +155,7 @@ export function createComicZoom(stage, host, onTap, {
                 // Rebase when a finger lifts so the remaining finger can pan.
                 for (const remaining of pointers.values()) zoom.handleDown(asPointer(remaining))
                 active = pointers.size > 0
+                if (!active) settle()
                 suppressClickUntil = performance.now() + 400
                 stop(event)
             } else {
@@ -131,6 +167,8 @@ export function createComicZoom(stage, host, onTap, {
                     // clicks. iOS may forward these taps from the Flutter host.
                     pointer.event = event
                     const { clientX: x, clientY: y } = asPointer(pointer)
+                    // A link handles its own click; it is not a reader tap.
+                    if (linkOf(event.target)) return
                     compatibilityClickUntil = performance.now() + 500
                     if (!hostTaps) onTap({ x, y })
                 }
@@ -142,12 +180,16 @@ export function createComicZoom(stage, host, onTap, {
         for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
             target.addEventListener(type, event => {
                 if (active || performance.now() < suppressClickUntil) stop(event)
-                // The comic renderer owns scrolling/zoom; leave propagation
-                // intact for page swipes and image-area long press.
-                else if (!selectionActive() && event.cancelable) event.preventDefault()
+                // Image pages own scrolling and zoom; leave propagation intact
+                // for page swipes and image-area long press. Text pages keep
+                // the default so long press selects text; CSS touch-action
+                // already stops native panning and zooming there.
+                else if (!selectableText && !selectionActive() && event.cancelable) event.preventDefault()
             }, options)
         }
         target.addEventListener('click', event => {
+            // A link keeps its click; taps elsewhere already reached the reader.
+            if (linkOf(event.target)) return
             if (performance.now() < Math.max(suppressClickUntil, compatibilityClickUntil)) stop(event)
         }, options)
         target.addEventListener('dblclick', event => event.preventDefault(), options)
@@ -175,7 +217,7 @@ export function createComicZoom(stage, host, onTap, {
         get blocksPageSwipe() { return isZoomed() || active || performance.now() < suppressClickUntil },
         tapFromHost(point) {
             // Area editing owns its native touches, including taps on handles.
-            if (hostTaps && !selectionActive()) onTap(point)
+            if (hostTaps && !selectionActive() && !linkAt(point)) onTap(point)
         },
         tap(point, singleTap) {
             if (disposed || active || performance.now() < suppressClickUntil) return
@@ -192,6 +234,7 @@ export function createComicZoom(stage, host, onTap, {
                 cancelTap()
                 if (isZoomed()) zoom.reset({ animate: false })
                 else zoom.zoomToPoint(2.5, { clientX: point.x, clientY: point.y })
+                settle()
                 return
             }
             cancelTap()
@@ -210,6 +253,7 @@ export function createComicZoom(stage, host, onTap, {
         destroy() {
             cancelTap()
             release()
+            cancelAnimationFrame(settleFrame)
             disposed = true
             listeners.abort()
             documents.clear()

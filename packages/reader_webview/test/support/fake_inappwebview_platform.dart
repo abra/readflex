@@ -67,7 +67,9 @@ class FakeInAppWebView extends PlatformInAppWebViewWidget {
         (_) => params.onWebViewCreated?.call(controller),
       );
     }
-    return const SizedBox.expand();
+    // Hit-testable like a native platform view, so pointer listeners above
+    // it receive touches.
+    return const ColoredBox(color: Color(0x00000000), child: SizedBox.expand());
   }
 
   void emit(String name, List<dynamic> args) =>
@@ -93,6 +95,20 @@ class FakeInAppWebViewController extends PlatformInAppWebViewController {
 
   final handlers = <String, JavaScriptHandlerCallback>{};
   final scripts = <String>[];
+
+  /// Async calls as (function body, arguments); [asyncResult] answers them.
+  final asyncCalls = <(String, Map<String, dynamic>)>[];
+  Object? asyncResult;
+
+  @override
+  Future<CallAsyncJavaScriptResult?> callAsyncJavaScript({
+    required String functionBody,
+    Map<String, dynamic> arguments = const <String, dynamic>{},
+    ContentWorld? contentWorld,
+  }) async {
+    asyncCalls.add((functionBody, arguments));
+    return CallAsyncJavaScriptResult(value: asyncResult, error: null);
+  }
 
   @override
   void addJavaScriptHandler({

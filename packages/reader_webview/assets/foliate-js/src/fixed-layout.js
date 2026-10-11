@@ -1,3 +1,10 @@
+import { contentCrop, sharpenRegion } from './readflex_page_geometry.js'
+
+// Layout changes settle before a zoomed page is redrawn sharper; gesture ends
+// already wait for a frame, so they use the shorter delay.
+const SHARPEN_AFTER_LAYOUT_MS = 120
+const SHARPEN_AFTER_GESTURE_MS = 40
+
 const parseViewport = str => str
     ?.split(/[,;\s]/) // NOTE: technically, only the comma is valid
     ?.filter(x => x)
@@ -60,6 +67,7 @@ const writeCanvasImageDocument = (iframe, src) => {
 }
 
 export class FixedLayout extends HTMLElement {
+    static get observedAttributes() { return ['crop-margins'] }
     #root = this.attachShadow({ mode: 'closed' })
     #observer = new ResizeObserver(() => {
         this.#zoom?.reset()
@@ -72,6 +80,8 @@ export class FixedLayout extends HTMLElement {
     #pendingNavigation = null
     #disposed = false
     #prefetchTimer = 0
+    #sharpenTimer = 0
+    #cropMargins = false
     #frameLoads = new AbortController()
     defaultViewport
     spread
@@ -108,7 +118,7 @@ export class FixedLayout extends HTMLElement {
         .spread.current {
             pointer-events: auto;
         }
-        .comic-stage {
+        .zoom-stage {
             width: 100%;
             height: 100%;
             display: flex;
@@ -117,6 +127,14 @@ export class FixedLayout extends HTMLElement {
         }`)
 
         this.#observer.observe(this)
+    }
+    attributeChangedCallback(name, _, value) {
+        if (name !== 'crop-margins') return
+        const cropMargins = value != null && value !== 'false'
+        if (cropMargins === this.#cropMargins) return
+        this.#cropMargins = cropMargins
+        this.#zoom?.reset()
+        this.#render()
     }
     #shouldAnimate(direction) {
         if (!direction || !this.hasAttribute('animated')) return false
@@ -226,12 +244,18 @@ export class FixedLayout extends HTMLElement {
             const doc = writeCanvasImageDocument(iframe, src)
             doc.position = position
             doc.readflexSectionIndex = index
+            zoom?.attach(doc)
             this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
+            this.#createOverlayer(doc, index)
             return {
-                element, iframe,
+                element, iframe, index,
                 width: src.width,
                 height: src.height,
                 crop: src.crop,
+                // Printed area for margin crops and bitmap pixels per page
+                // pixel for sharp zoom; both optional.
+                content: src.content,
+                density: src.density,
             }
         }
         return new Promise(resolve => {
@@ -247,6 +271,7 @@ export class FixedLayout extends HTMLElement {
                 doc.readflexSectionIndex = index
                 zoom?.attach(doc)
                 this.dispatchEvent(new CustomEvent('load', { detail: { doc, index } }))
+                this.#createOverlayer(doc, index)
                 // Image-backed fixed pages can fire iframe `load` before
                 // the image bitmap is decoded, leaving naturalWidth/Height
                 // at 0. Wait before measuring viewport so scaling is stable.
@@ -254,7 +279,7 @@ export class FixedLayout extends HTMLElement {
                     this.#frameLoads.signal.removeEventListener('abort', aborted)
                     const { width, height } = getViewport(doc, this.defaultViewport)
                     resolve({
-                        element, iframe,
+                        element, iframe, index,
                         width: parseFloat(width),
                         height: parseFloat(height),
                     })
@@ -277,6 +302,20 @@ export class FixedLayout extends HTMLElement {
             iframe.src = src
         })
     }
+    // Highlights and search marks are drawn inside the page document, so crop,
+    // scale and zoom transforms apply to them as to the text. Appended last and
+    // `cfi-inert`: above sharp tiles, outside saved CFIs.
+    #createOverlayer(doc, index) {
+        this.dispatchEvent(new CustomEvent('create-overlayer', { detail: {
+            doc, index,
+            attach: overlayer => {
+                if (!doc.body) return
+                overlayer.element.setAttribute('cfi-inert', '')
+                doc.body.append(overlayer.element)
+                doc.readflexOverlayer = overlayer
+            },
+        } }))
+    }
     #render(side = this.#side) {
         if (!side) return
         const left = this.#left ?? {}
@@ -295,10 +334,21 @@ export class FixedLayout extends HTMLElement {
         this.#portrait = portrait
         const blankWidth = left.width ?? right.width
         const blankHeight = left.height ?? right.height
+        const single = portrait || this.#center
+        // Explicit source crops win; margin crops follow the detected ink.
+        const cropOf = (frame, sourceWidth, sourceHeight) => normalizeCrop(
+            frame.crop ?? (this.#cropMargins ? contentCrop({
+                content: frame.content,
+                width: sourceWidth,
+                height: sourceHeight,
+                availableWidth: single ? width : width / 2,
+                availableHeight: height,
+            }) : null),
+            sourceWidth, sourceHeight)
         const renderSize = frame => {
             const sourceWidth = frame.width ?? blankWidth
             const sourceHeight = frame.height ?? blankHeight
-            const crop = normalizeCrop(frame.crop, sourceWidth, sourceHeight)
+            const crop = cropOf(frame, sourceWidth, sourceHeight)
             return {
                 width: crop?.width ?? sourceWidth,
                 height: crop?.height ?? sourceHeight,
@@ -308,7 +358,7 @@ export class FixedLayout extends HTMLElement {
         const leftSize = renderSize(left)
         const rightSize = renderSize(right)
 
-        const scale = portrait || this.#center
+        const scale = single
             ? Math.min(
                 width / targetSize.width,
                 height / targetSize.height)
@@ -320,19 +370,20 @@ export class FixedLayout extends HTMLElement {
             const { element, iframe, width, height, blank } = frame
             const sourceWidth = width ?? blankWidth
             const sourceHeight = height ?? blankHeight
-            const crop = normalizeCrop(frame.crop, sourceWidth, sourceHeight)
+            const crop = cropOf(frame, sourceWidth, sourceHeight)
             const renderWidth = crop?.width ?? sourceWidth
             const renderHeight = crop?.height ?? sourceHeight
             const pageTransform = crop
                 ? `translate(${-crop.left * scale}px, ${-crop.top * scale}px) scale(${scale})`
                 : `scale(${scale})`
-            iframe.contentDocument.scale = scale
-            iframe.contentDocument.readflexVisibleRect = {
+            frame.visibleRect = {
                 left: crop?.left ?? 0,
                 top: crop?.top ?? 0,
                 width: renderWidth,
                 height: renderHeight,
             }
+            iframe.contentDocument.scale = scale
+            iframe.contentDocument.readflexVisibleRect = frame.visibleRect
             Object.assign(iframe.style, {
                 width: `${sourceWidth}px`,
                 height: `${sourceHeight}px`,
@@ -349,12 +400,43 @@ export class FixedLayout extends HTMLElement {
             if (portrait && frame !== target) {
                 element.style.display = 'none'
             }
+            // Ranges have no client rects while a frame is hidden, so marks
+            // added then are empty. Redraw them each time the frame shows.
+            const shown = !blank && element.style.display !== 'none'
+            if (shown && !frame.shown) iframe.contentDocument?.readflexOverlayer?.redraw()
+            frame.shown = shown
         }
         if (this.#center) {
             transform(this.#center)
         } else {
             transform(left)
             transform(right)
+        }
+        this.#scheduleSharpen()
+    }
+    #scheduleSharpen(delay = SHARPEN_AFTER_LAYOUT_MS) {
+        if (this.#disposed || !this.book?.sharpenPage) return
+        clearTimeout(this.#sharpenTimer)
+        this.#sharpenTimer = setTimeout(() => this.#sharpen(), delay)
+    }
+    // Asks the book for sharper bitmaps where the screen shows a page denser
+    // than it was rendered (zoom, margin crops), and drops them elsewhere.
+    #sharpen() {
+        this.#sharpenTimer = 0
+        if (this.#disposed) return
+        const host = this.getBoundingClientRect()
+        const viewport = { left: host.left, top: host.top, right: host.right, bottom: host.bottom }
+        const devicePixelRatio = globalThis.devicePixelRatio || 1
+        for (const frame of [this.#left, this.#right, this.#center]) {
+            if (!frame || frame.blank || frame.index == null) continue
+            const shown = frame.element.isConnected && frame.element.style.display !== 'none'
+            this.book.sharpenPage(frame.index, shown ? sharpenRegion({
+                frameRect: frame.element.getBoundingClientRect(),
+                viewport,
+                visible: frame.visibleRect,
+                baseDensity: frame.density ?? Infinity,
+                devicePixelRatio,
+            }) : null)
         }
     }
     async #showSpread({ left, right, center, side, direction = 0 }) {
@@ -367,17 +449,19 @@ export class FixedLayout extends HTMLElement {
         let pageParent = nextSpread
         let nextZoom = null
         if (this.book.rendition?.zoomable) {
-            const { createComicZoom } = await import('./readflex_comic_zoom.js')
+            const { createPageZoom } = await import('./readflex_page_zoom.js')
             if (this.#disposed) { nextSpread.remove(); return }
             pageParent = document.createElement('div')
-            pageParent.className = 'comic-stage'
+            pageParent.className = 'zoom-stage'
             nextSpread.append(pageParent)
             const params = new URLSearchParams(location.search)
             const edge = Number(params.get('pageTapZoneFraction') ?? 0.3)
-            nextZoom = createComicZoom(pageParent, nextSpread, detail =>
+            nextZoom = createPageZoom(pageParent, nextSpread, detail =>
                 this.dispatchEvent(new CustomEvent('tap', { detail })), {
-                    hostTaps: params.get('comicHostTaps') === 'true',
+                    hostTaps: params.get('pageHostTaps') === 'true',
                     pageTapZoneFraction: edge > 0 && edge < 0.5 ? edge : 0.3,
+                    selectableText: this.book.rendition.selectableText === true,
+                    onSettle: () => this.#scheduleSharpen(SHARPEN_AFTER_GESTURE_MS),
                 })
         }
         let nextLeft = null
@@ -396,6 +480,10 @@ export class FixedLayout extends HTMLElement {
             nextZoom?.destroy()
             nextSpread.remove()
             return
+        }
+        // Sharp tiles belong to the documents that are about to leave.
+        for (const frame of [this.#left, this.#right, this.#center]) {
+            if (frame?.index != null) this.book.sharpenPage?.(frame.index, null)
         }
         this.#zoom = nextZoom
         this.#left = nextLeft
@@ -643,6 +731,7 @@ export class FixedLayout extends HTMLElement {
         return Array.from(this.#root.querySelectorAll('iframe'), frame => ({
             doc: frame.contentDocument,
             index: frame.contentDocument?.readflexSectionIndex,
+            overlayer: frame.contentDocument?.readflexOverlayer,
         }))
     }
     get blocksPageSwipe() { return this.#zoom?.blocksPageSwipe ?? false }
@@ -658,6 +747,7 @@ export class FixedLayout extends HTMLElement {
         this.#disposed = true
         this.#pendingNavigation = null
         clearTimeout(this.#prefetchTimer)
+        clearTimeout(this.#sharpenTimer)
         this.#frameLoads.abort()
         this.#zoom?.destroy()
         this.#zoom = null

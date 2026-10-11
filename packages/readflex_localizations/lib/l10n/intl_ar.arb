@@ -336,5 +336,14 @@
   "readerAlignJustified": "ضبط",
   "readerPageTurnHorizontalShort": "أفقي",
   "readerPageTurnVerticalShort": "عمودي",
-  "readerChapterRead": "مقروء"
+  "readerChapterRead": "مقروء",
+  "readerPdfMargins": "الهوامش",
+  "readerPdfMarginsWhole": "الصفحة كاملة",
+  "readerPdfMarginsTrimmed": "مقصوصة",
+  "readerPdfPageColors": "ألوان الصفحات",
+  "readerPdfPageColorsTheme": "السمة",
+  "readerPdfPageColorsOriginal": "الأصلية",
+  "readerExternalLinkTitle": "فتح الرابط؟",
+  "readerExternalLinkOpen": "فتح",
+  "readerExternalLinkCopy": "نسخ الرابط"
 }

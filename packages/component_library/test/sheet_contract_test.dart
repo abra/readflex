@@ -503,6 +503,58 @@ void main() {
     }
   });
 
+  testWidgets('a header title shrinks before its action wraps', (
+    tester,
+  ) async {
+    Widget header() => BottomSheetHeader(
+      title: 'Appearance',
+      closeLabel: 'Close',
+      onClose: () {},
+      trailing: TextButton.icon(
+        onPressed: () {},
+        icon: const Icon(AppIcons.refresh),
+        label: const AppButtonLabel('Reset'),
+      ),
+    );
+    Future<void> pumpAt(double width) => tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(width: width, child: header()),
+          ),
+        ),
+      ),
+    );
+    await pumpAt(600);
+    final title = tester.getSize(find.text('Appearance')).width;
+    final reset = tester.getSize(find.byType(TextButton)).width;
+    // The title bar ends where the 48dp close button starts.
+    double widthFor(double titleShare) =>
+        title * titleShare + AppSpacing.md + reset + AppSizes.buttonHeight;
+
+    await pumpAt(widthFor(.9));
+    final shrunk = tester.getRect(find.text('Appearance'));
+    final button = tester.getRect(find.byType(TextButton));
+    expect(shrunk.width, closeTo(title * .9, 1e-6));
+    expect(button.left - shrunk.right, closeTo(AppSpacing.md, 1e-6));
+    expect(shrunk.center.dy, closeTo(button.center.dy, 1e-6));
+    expect(
+      tester.getSize(find.byType(BottomSheetHeader)).height,
+      AppSizes.buttonHeight,
+    );
+
+    await pumpAt(widthFor(BottomSheetHeader.minTitleScale - .05));
+    final wrapped = tester.getRect(find.text('Appearance'));
+    expect(wrapped.width, title);
+    expect(
+      tester.getTopLeft(find.byType(TextButton)).dy,
+      greaterThanOrEqualTo(wrapped.bottom),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('AppSheetActions.stacks predicts the stacked layout', (
     tester,
   ) async {

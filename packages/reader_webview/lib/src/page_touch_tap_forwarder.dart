@@ -4,8 +4,8 @@ import 'package:flutter/widgets.dart';
 /// Observes short touches without competing with the platform view's gestures.
 /// WKWebView in a Flutter platform view can lose the second rapid touch.
 /// Only completed taps cross the bridge; pan/pinch stay in the WebView.
-class ComicTouchTapForwarder extends StatefulWidget {
-  const ComicTouchTapForwarder({
+class PageTouchTapForwarder extends StatefulWidget {
+  const PageTouchTapForwarder({
     required this.onTap,
     required this.child,
     super.key,
@@ -15,10 +15,10 @@ class ComicTouchTapForwarder extends StatefulWidget {
   final Widget child;
 
   @override
-  State<ComicTouchTapForwarder> createState() => _ComicTouchTapForwarderState();
+  State<PageTouchTapForwarder> createState() => _PageTouchTapForwarderState();
 }
 
-class _ComicTouchTapForwarderState extends State<ComicTouchTapForwarder>
+class _PageTouchTapForwarderState extends State<PageTouchTapForwarder>
     with WidgetsBindingObserver {
   final _pointers = <int>{};
   PointerDownEvent? _candidate;
@@ -62,7 +62,8 @@ class _ComicTouchTapForwarderState extends State<ComicTouchTapForwarder>
     final candidate = _candidate;
     if (candidate?.pointer != event.pointer) return;
     _candidate = null;
-    // Image-area long press starts at 280 ms in the reader JS.
+    // Image-area long press starts at 280 ms in the reader JS; longer
+    // touches belong to it or to native text selection.
     if (_pointers.isEmpty &&
         event.timeStamp - candidate!.timeStamp <
             const Duration(milliseconds: 280) &&

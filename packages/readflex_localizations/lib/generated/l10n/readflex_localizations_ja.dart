@@ -1129,4 +1129,31 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get readerChapterRead => '既読';
+
+  @override
+  String get readerPdfMargins => '余白';
+
+  @override
+  String get readerPdfMarginsWhole => 'ページ全体';
+
+  @override
+  String get readerPdfMarginsTrimmed => 'トリミング';
+
+  @override
+  String get readerPdfPageColors => 'ページの色';
+
+  @override
+  String get readerPdfPageColorsTheme => 'テーマ';
+
+  @override
+  String get readerPdfPageColorsOriginal => 'オリジナル';
+
+  @override
+  String get readerExternalLinkTitle => 'リンクを開きますか？';
+
+  @override
+  String get readerExternalLinkOpen => '開く';
+
+  @override
+  String get readerExternalLinkCopy => 'リンクをコピー';
 }

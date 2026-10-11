@@ -38,16 +38,31 @@ String readerProgressLabel({
   final percent = readingPercentLabel(progress);
   if (isDragging) return percent;
 
-  final sectionPage = visualSectionPageLabel(
-    currentPage: chapterCurrentPage,
-    totalPages: chapterTotalPages,
-    formatPageOfTotal: formatPageOfTotal,
-  );
+  // PDF is fixed layout: its chapter page is the zero-based page of the
+  // document, like a comic page, not a one-based page within a section.
+  final sectionPage = format == BookFormat.pdf
+      ? comicPageLabel(
+          currentPage: chapterCurrentPage,
+          totalPages: chapterTotalPages,
+          formatPageOfTotal: formatPageOfTotal,
+        )
+      : visualSectionPageLabel(
+          currentPage: chapterCurrentPage,
+          totalPages: chapterTotalPages,
+          formatPageOfTotal: formatPageOfTotal,
+        );
   return sectionPage == null ? percent : '$percent · $sectionPage';
 }
 
 bool isImagePageFormat(BookFormat? format) {
   return format == BookFormat.cbz;
+}
+
+/// Comic and PDF pages are page images in the WebView: they pinch and
+/// double-tap zoom and have page previews. Unlike [isImagePageFormat], PDF
+/// keeps text-book progress, selection and chrome taps.
+bool readerHasZoomablePages(BookFormat? format) {
+  return format == BookFormat.cbz || format == BookFormat.pdf;
 }
 
 const readerDefaultSeekSettleTimeout = Duration(milliseconds: 600);

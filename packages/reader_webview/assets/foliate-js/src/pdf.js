@@ -1,4 +1,8 @@
 import './vendor/pdfjs/pdf.js'
+import { createPdfPageCache } from './readflex_pdf_page_cache.js'
+import { PAGE_CONTENT_SAMPLE_SIZE, detectContentBox } from './readflex_page_content.js'
+import { applyPageColors, samePageColors } from './readflex_page_colors.js'
+import { SHARPEN_THRESHOLD, tileCovers, tileFor } from './readflex_page_geometry.js'
 
 const { pdfjsLib } = globalThis
 // Module scripts have no document.currentScript for PDF.js to infer this path.
@@ -497,37 +501,105 @@ const annotationLayerBuilderCSS = `
 }
 `
 
-const renderPage = async (page, getImageBlob) => {
+// Page documents keep one coordinate system whatever the bitmap resolution:
+// PDF points times DOC_SCALE. Two keeps small print in the text layer above
+// the minimum font size of Android WebView.
+const DOC_SCALE = 2
 
-    const naturalPdfSize = page.getViewport({ scale: 1 })
-    const naturalPdfRatio = naturalPdfSize.width / naturalPdfSize.height
-    const appRatio = innerWidth / innerHeight
-    const pdfToAppResolutionRatio = appRatio / naturalPdfRatio
+// One page bitmap stays under 24 MiB of RGBA and WebKit's canvas limits.
+const MAX_PAGE_PIXELS = 6_000_000
 
-    const scale = devicePixelRatio * pdfToAppResolutionRatio
-    const viewport = page.getViewport({ scale })
+// Margin crops enlarge the page by about this much; render denser up front
+// instead of following every crop with a sharp tile.
+const CROP_DENSITY_BOOST = 1.3
 
-    const canvas = document.createElement('canvas')
-    canvas.height = viewport.height
-    canvas.width = viewport.width
-    const canvasContext = canvas.getContext('2d')
-    await page.render({ canvasContext, viewport }).promise
-    const blob = await new Promise(resolve => canvas.toBlob(resolve))
-    if (getImageBlob) return blob
+// Thumbnails match the comic Pages grid and its bridge limits.
+const THUMBNAIL_WIDTH = 240
+const THUMBNAIL_HEIGHT = 360
+const THUMBNAIL_MAX_LENGTH = 128 * 1024
 
-    /*
-    // with the SVG backend
-    const operatorList = await page.getOperatorList()
-    const svgGraphics = new pdfjsLib.SVGGraphics(page.commonObjs, page.objs)
-    const svg = await svgGraphics.getSVG(operatorList, viewport)
-    const str = new XMLSerializer().serializeToString(svg)
-    const blob = new Blob([str], { type: 'image/svg+xml' })
-    */
+// Library covers are shown small; this keeps imports fast and files light.
+const COVER_MAX_WIDTH = 1200
+const COVER_MAX_HEIGHT = 1800
 
+const abortError = () => new DOMException('PDF render released', 'AbortError')
+
+// WebKit frees canvas memory on resize, not on garbage collection.
+const releaseCanvas = canvas => {
+    if (canvas) canvas.width = canvas.height = 0
+}
+
+// The portrait test of the fixed-layout renderer.
+const isPortraitScreen = () => (innerHeight || 1) > (innerWidth || 1) * 1.2
+
+// Bitmap pixels per page pixel that fill the screen at page fit. Two-page
+// spreads give each page half the width.
+const fitDensity = (width, height, singlePages) => {
+    const screenWidth = innerWidth || 1
+    const screenHeight = innerHeight || 1
+    const available = singlePages || isPortraitScreen() ? screenWidth : screenWidth / 2
+    return Math.min(available / width, screenHeight / height) * (devicePixelRatio || 1)
+}
+
+const pageDensity = (width, height, boost, singlePages) => Math.min(
+    fitDensity(width, height, singlePages) * boost,
+    Math.sqrt(MAX_PAGE_PIXELS / (width * height)))
+
+const sizedCanvas = (doc, width, height) => {
+    const canvas = doc.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(width))
+    canvas.height = Math.max(1, Math.round(height))
+    return canvas
+}
+
+// Draws the page, or the part of it from (left, top) in page pixels, at
+// [density] bitmap pixels per page pixel. pdf.js yields every frame while it
+// draws, so background renders do not block input.
+const renderInto = async (page, canvas, { density, left = 0, top = 0, signal }) => {
+    if (signal?.aborted) throw abortError()
+    const task = page.render({
+        canvasContext: canvas.getContext('2d', { alpha: false }),
+        viewport: page.getViewport({ scale: DOC_SCALE * density }),
+        transform: left || top ? [1, 0, 0, 1, -left * density, -top * density] : null,
+    })
+    const cancel = () => task.cancel()
+    signal?.addEventListener('abort', cancel, { once: true })
+    try {
+        await task.promise
+    } finally {
+        signal?.removeEventListener('abort', cancel)
+    }
+}
+
+// Printed area in page pixels, read from a small copy of the bitmap.
+const detectContent = (canvas, width, height) => {
+    const scale = PAGE_CONTENT_SAMPLE_SIZE / Math.max(canvas.width, canvas.height)
+    const sample = sizedCanvas(document, canvas.width * scale, canvas.height * scale)
+    try {
+        const context = sample.getContext('2d', { willReadFrequently: true })
+        context.drawImage(canvas, 0, 0, sample.width, sample.height)
+        const box = detectContentBox(
+            context.getImageData(0, 0, sample.width, sample.height).data,
+            sample.width, sample.height)
+        if (!box) return null
+        const x = width / sample.width
+        const y = height / sample.height
+        return { left: box.left * x, top: box.top * y, right: box.right * x, bottom: box.bottom * y }
+    } catch {
+        // A tainted or lost canvas only costs the margin crop.
+        return null
+    } finally {
+        releaseCanvas(sample)
+    }
+}
+
+// Text and link layers as HTML, and whether the page has any text to find.
+const renderLayers = async (page, viewport) => {
+    const textContent = await page.getTextContent()
     const container = document.createElement('div')
     container.classList.add('textLayer')
     await pdfjsLib.renderTextLayer({
-        textContentSource: await page.getTextContent(),
+        textContentSource: textContent,
         container, viewport,
     }).promise
 
@@ -540,27 +612,55 @@ const renderPage = async (page, getImageBlob) => {
             addLinkAttributes: (link, url) => link.href = url,
         },
     })
+    return {
+        html: container.outerHTML + div.outerHTML,
+        hasText: textContent.items.some(item => item.str?.trim()),
+    }
+}
 
-    const src = URL.createObjectURL(blob)
-    const url = URL.createObjectURL(new Blob([`
-        <!DOCTYPE html>
-        <meta charset="utf-8">
-        <style>
-        :root {
-            --scale-factor: ${scale};
-        }
-        html, body {
-            margin: 0;
-            padding: 0;
-        }
-        ${textLayerBuilderCSS}
-        ${annotationLayerBuilderCSS}
-        </style>
-        <img src="${src}">
-        ${container.outerHTML}
-        ${div.outerHTML}
-    `], { type: 'text/html' }))
-    return url
+// One page document for display and search. Its first <body> element is the
+// bitmap slot, where earlier versions had an <img>, so saved highlight CFIs
+// keep pointing at the text layer; search CFIs match the displayed page.
+// Sharp tiles and the highlight overlay are `cfi-inert` for the same reason.
+const pageHTML = (width, height, layers) => `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+:root {
+    --scale-factor: ${DOC_SCALE};
+}
+html, body {
+    margin: 0;
+    padding: 0;
+}
+body {
+    position: relative;
+    width: ${width}px;
+    height: ${height}px;
+    overflow: hidden;
+}
+.readflex-pdf-page {
+    display: block;
+    width: ${width}px;
+    height: ${height}px;
+}
+.readflex-pdf-tile {
+    position: absolute;
+    pointer-events: none;
+}
+${textLayerBuilderCSS}
+${annotationLayerBuilderCSS}
+</style></head><body><div class="readflex-pdf-page"></div>${layers}</body></html>`
+
+const renderCover = async page => {
+    const natural = page.getViewport({ scale: 1 })
+    const scale = Math.min(COVER_MAX_WIDTH / natural.width, COVER_MAX_HEIGHT / natural.height)
+    const viewport = page.getViewport({ scale })
+    const canvas = sizedCanvas(document, viewport.width, viewport.height)
+    try {
+        await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport }).promise
+        return await new Promise(resolve => canvas.toBlob(resolve))
+    } finally {
+        releaseCanvas(canvas)
+    }
 }
 
 const makeTOCItem = item => ({
@@ -573,7 +673,15 @@ export const makePDF = async file => {
     const data = new Uint8Array(await file.arrayBuffer())
     const pdf = await pdfjsLib.getDocument({ data }).promise
 
-    const book = { rendition: { layout: 'pre-paginated' } }
+    // Text pages keep native selection under zoom; see readflex_page_zoom.js.
+    // A portrait screen reads one page at a time: spreads would draw the
+    // hidden half of every spread and prefetch only half of the next one.
+    // Landscape openings (tablets) keep two-page spreads.
+    const singlePages = isPortraitScreen()
+    const book = { rendition: {
+        layout: 'pre-paginated', zoomable: true, selectableText: true,
+        ...(singlePages ? { spread: 'none' } : {}),
+    } }
 
     const info = (await pdf.getMetadata())?.info
     book.metadata = {
@@ -584,19 +692,241 @@ export const makePDF = async file => {
     const outline = await pdf.getOutline()
     book.toc = outline?.map(makeTOCItem)
 
-    const cache = new Map()
+    // Sent to Flutter as document features. Searchable text is unknown until a
+    // page with text renders; `onFeaturesChange` is set by the reader shell.
+    book.features = { format: 'pdf', hasToc: !!book.toc?.length, pageCount: pdf.numPages }
+    const noteText = hasText => {
+        if (!hasText || book.features.hasSearchableText) return
+        book.features.hasSearchableText = true
+        book.onFeaturesChange?.()
+    }
+    book.samplesTextDirection = false
+
+    // Page document HTML, the same for display and search.
+    const pageDocumentHTML = async page => {
+        const viewport = page.getViewport({ scale: DOC_SCALE })
+        const { html, hasText } = await renderLayers(page, viewport)
+        noteText(hasText)
+        return pageHTML(viewport.width, viewport.height, html)
+    }
+
+    let destroyed = false
+    let cropMargins = false
+    let colors = null
+    let recoloring = null
+
+    // One rendered page: its bitmap, the colors baked into it, and the
+    // canvas-image source the fixed-layout renderer shows.
+    const renderPage = async (index, signal) => {
+        const page = await pdf.getPage(index + 1)
+        if (signal.aborted) throw abortError()
+        const { width, height } = page.getViewport({ scale: DOC_SCALE })
+        const target = pageDensity(width, height, cropMargins ? CROP_DENSITY_BOOST : 1, singlePages)
+        const canvas = sizedCanvas(document, width * target, height * target)
+        canvas.className = 'readflex-pdf-page'
+        try {
+            const density = canvas.width / width
+            await renderInto(page, canvas, { density, signal })
+            const content = detectContent(canvas, width, height)
+            const applied = colors
+            applyPageColors(canvas, applied)
+            const html = await pageDocumentHTML(page)
+            if (signal.aborted) throw abortError()
+            return {
+                index, page, canvas, density, colors: applied,
+                source: {
+                    kind: 'canvas-image',
+                    width, height, density, content, html,
+                    draw: doc => doc.querySelector('.readflex-pdf-page')?.replaceWith(canvas),
+                },
+            }
+        } catch (error) {
+            releaseCanvas(canvas)
+            throw error
+        }
+    }
+
+    // Sharp tiles per page: the one on screen and at most one being drawn.
+    const tiles = new Map()
+
+    const dropTile = index => {
+        const slot = tiles.get(index)
+        if (!slot) return
+        tiles.delete(index)
+        slot.pending?.controller.abort()
+        slot.shown?.canvas.remove()
+        releaseCanvas(slot.shown?.canvas)
+    }
+
+    const renderTile = async (entry, slot, pending) => {
+        const { doc, controller: { signal } } = pending
+        // pdf.js registers embedded fonts with this document. A canvas made by
+        // the page document would draw missing-glyph boxes; draw here, then
+        // move the finished tile in, like the page bitmap.
+        const canvas = sizedCanvas(document, pending.width * pending.density, pending.height * pending.density)
+        canvas.className = 'readflex-pdf-tile'
+        canvas.setAttribute('cfi-inert', '')
+        canvas.setAttribute('aria-hidden', 'true')
+        Object.assign(canvas.style, {
+            left: `${pending.left}px`,
+            top: `${pending.top}px`,
+            width: `${pending.width}px`,
+            height: `${pending.height}px`,
+        })
+        try {
+            await renderInto(entry.page, canvas, {
+                density: pending.density, left: pending.left, top: pending.top, signal,
+            })
+            if (signal.aborted || slot.pending !== pending || tiles.get(entry.index) !== slot
+                || !entry.canvas.isConnected) throw abortError()
+            applyPageColors(canvas, pending.colors)
+            // Right after the bitmap: under the text layer and highlights.
+            entry.canvas.after(canvas)
+            const previous = slot.shown
+            slot.shown = { ...pending, canvas }
+            slot.pending = null
+            previous?.canvas.remove()
+            releaseCanvas(previous?.canvas)
+        } catch {
+            // Superseded, released or failed: the page bitmap stays on screen.
+            releaseCanvas(canvas)
+            if (slot.pending === pending) slot.pending = null
+        }
+    }
+
+    const startTile = (entry, slot, { left, top, width, height, density }, doc) => {
+        slot.pending?.controller.abort()
+        const pending = { left, top, width, height, density, doc, colors, controller: new AbortController() }
+        slot.pending = pending
+        void renderTile(entry, slot, pending)
+    }
+
+    const releasePage = entry => {
+        dropTile(entry.index)
+        releaseCanvas(entry.canvas)
+        // Deferred by pdf.js while a thumbnail or tile still draws this page.
+        entry.page.cleanup()
+    }
+
+    const cache = createPdfPageCache({ count: pdf.numPages, render: renderPage, release: releasePage })
+
+    // Colors are baked into bitmaps, so a theme change redraws the cached
+    // pages offscreen, visible first, and swaps each one in a single copy.
+    const recolor = async () => {
+        for (const [index, entry] of cache.ready()) {
+            if (destroyed) return
+            if (!samePageColors(entry.colors, colors)) {
+                const applied = colors
+                const canvas = sizedCanvas(document, entry.canvas.width, entry.canvas.height)
+                try {
+                    await renderInto(entry.page, canvas, { density: entry.density })
+                    if (destroyed || cache.peek(index) !== entry) continue
+                    applyPageColors(canvas, applied)
+                    entry.canvas.getContext('2d').drawImage(canvas, 0, 0)
+                    entry.colors = applied
+                } catch {
+                    // The next load or theme change retries.
+                } finally {
+                    releaseCanvas(canvas)
+                }
+            }
+            const slot = tiles.get(index)
+            const shown = slot?.shown
+            if (shown && !slot.pending && !samePageColors(shown.colors, colors)) {
+                startTile(entry, slot, shown, shown.doc)
+            }
+        }
+    }
+
+    const scheduleRecolor = () => {
+        // Changes during a pass are picked up by one more pass.
+        recoloring ??= (async () => {
+            try {
+                let applied
+                do {
+                    applied = colors
+                    await recolor()
+                } while (!destroyed && !samePageColors(applied, colors))
+            } finally {
+                recoloring = null
+            }
+        })()
+    }
+
     book.sections = Array.from({ length: pdf.numPages }).map((_, i) => ({
         id: i,
         load: async () => {
-            const cached = cache.get(i)
-            if (cached) return cached
-            const url = await renderPage(await pdf.getPage(i + 1))
-            cache.set(i, url)
-            return url
+            const entry = await cache.load(i)
+            // The theme changed while this page was drawing.
+            if (!samePageColors(entry.colors, colors)) scheduleRecolor()
+            return entry.source
+        },
+        unload: () => cache.unload(i),
+        // Text-only twin of the displayed page for search: no bitmap is drawn.
+        createDocument: async () => {
+            if (destroyed) throw abortError()
+            const page = await pdf.getPage(i + 1)
+            try {
+                return new DOMParser().parseFromString(await pageDocumentHTML(page), 'text/html')
+            } finally {
+                if (cache.peek(i) === undefined) page.cleanup()
+            }
         },
         size: 1000,
     }))
     book.sections[0].pageSpread = 'right'
+
+    // Called by the fixed-layout renderer after each navigation.
+    book.prepareAdjacentPages = (visible, options) => cache.retain(visible, options)
+
+    // Redraws the visible [region] of a page sharper, or drops its tile.
+    book.sharpenPage = (index, region) => {
+        const entry = cache.peek(index)
+        const doc = entry?.canvas.isConnected ? entry.canvas.ownerDocument : null
+        if (destroyed || !region || !doc) return dropTile(index)
+        let slot = tiles.get(index)
+        if (!slot) tiles.set(index, slot = { shown: null, pending: null })
+        const fresh = tile => tile?.doc === doc && samePageColors(tile.colors, colors)
+        if (fresh(slot.shown) && tileCovers(slot.shown, region)) {
+            slot.pending?.controller.abort()
+            slot.pending = null
+            return
+        }
+        if (fresh(slot.pending) && tileCovers(slot.pending, region)) return
+        const plan = tileFor(region, entry.source)
+        // Within the pixel budget the tile would be no sharper than the page.
+        if (plan.density <= entry.density * SHARPEN_THRESHOLD) return dropTile(index)
+        startTile(entry, slot, plan, doc)
+    }
+
+    book.setCropMargins = enabled => { cropMargins = enabled === true }
+
+    book.setPageColors = next => {
+        if (samePageColors(next, colors)) return
+        colors = next
+        scheduleRecolor()
+    }
+
+    book.getThumbnail = async index => {
+        if (destroyed || !Number.isInteger(index) || index < 0 || index >= pdf.numPages) return null
+        const page = await pdf.getPage(index + 1)
+        if (destroyed) return null
+        const natural = page.getViewport({ scale: 1 })
+        const viewport = page.getViewport({
+            scale: Math.min(THUMBNAIL_WIDTH / natural.width, THUMBNAIL_HEIGHT / natural.height),
+        })
+        const canvas = sizedCanvas(document, viewport.width, viewport.height)
+        try {
+            await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport }).promise
+            if (destroyed) return null
+            const result = canvas.toDataURL('image/jpeg', 0.72)
+            return result.length <= THUMBNAIL_MAX_LENGTH ? result : null
+        } finally {
+            releaseCanvas(canvas)
+            if (cache.peek(index) === undefined) page.cleanup()
+        }
+    }
+
     book.isExternal = uri => /^\w+:/i.test(uri)
     book.resolveHref = async href => {
         const parsed = JSON.parse(href)
@@ -613,6 +943,12 @@ export const makePDF = async file => {
         return [index, null]
     }
     book.getTOCFragment = doc => doc.documentElement
-    book.getCover = async () => renderPage(await pdf.getPage(1), true)
+    book.getCover = async () => renderCover(await pdf.getPage(1))
+    book.destroy = () => {
+        destroyed = true
+        for (const index of [...tiles.keys()]) dropTile(index)
+        cache.destroy()
+        void pdf.destroy()
+    }
     return book
 }

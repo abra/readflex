@@ -1,14 +1,46 @@
 part of 'reader_screen.dart';
 
-/// Full-screen reader scaffold. The heavy WebView subtree is created only when
-/// [ReaderBloc] reaches [ReaderStatus.ready].
+/// The reader scaffold behind the link sheet that external links pass.
 class _ReaderView extends StatelessWidget {
   const _ReaderView({
     required this.serverBaseUri,
     required this.textActions,
     required this.onRetry,
     this.onArticleTitlePressed,
-    this.onExternalLink,
+    this.onOpenExternalLink,
+  });
+
+  final Uri serverBaseUri;
+  final List<TextAction> textActions;
+  final VoidCallback onRetry;
+  final void Function(String url, String title)? onArticleTitlePressed;
+  final ValueChanged<String>? onOpenExternalLink;
+
+  @override
+  Widget build(BuildContext context) {
+    // A link leaves the reader only after the link sheet confirms it.
+    return ReaderExternalLinkPrompt(
+      onOpen: onOpenExternalLink,
+      builder: (context, onExternalLink) => _ReaderScaffold(
+        serverBaseUri: serverBaseUri,
+        textActions: textActions,
+        onRetry: onRetry,
+        onArticleTitlePressed: onArticleTitlePressed,
+        onExternalLink: onExternalLink,
+      ),
+    );
+  }
+}
+
+/// Full-screen reader scaffold. The heavy WebView subtree is created only when
+/// [ReaderBloc] reaches [ReaderStatus.ready].
+class _ReaderScaffold extends StatelessWidget {
+  const _ReaderScaffold({
+    required this.serverBaseUri,
+    required this.textActions,
+    required this.onRetry,
+    required this.onArticleTitlePressed,
+    required this.onExternalLink,
   });
 
   final Uri serverBaseUri;
@@ -245,8 +277,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     _endSearch();
     final uiCubit = context.read<ReaderUiCubit>();
     final appearanceCubit = context.read<ReaderAppearanceCubit>();
-    final sourceType = context.read<ReaderBloc>().state.sourceType;
-    final showPageTurnControls = sourceType != SourceType.article;
+    final readerState = context.read<ReaderBloc>().state;
+    final showPageTurnControls = readerState.sourceType != SourceType.article;
+    final pdfControls = readerState.document?.format == BookFormat.pdf;
     final initialPageTurnStyle =
         appearanceCubit.state.effectiveAppearance.pageTurnStyle;
     final wasChromeVisible = uiCubit.state.chromeVisible;
@@ -260,6 +293,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     await showReaderAppearanceSheet(
       context,
       showPageTurnControls: showPageTurnControls,
+      pdfControls: pdfControls,
       onFullyHidden: () {
         if (!mounted) return;
         final nextPageTurnStyle =
@@ -329,6 +363,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     } else {
       _webViewKey.currentState?.goToHref(item.href);
     }
+    _closeTocDrawer(restoreChrome: false);
+  }
+
+  /// Opens a PDF page picked in the Contents page grid.
+  void _goToPage(int index) {
+    _webViewKey.currentState?.goToSectionIndex(index);
     _closeTocDrawer(restoreChrome: false);
   }
 
@@ -692,11 +732,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               _ReaderTocDrawerVisibilityDriver(
                 format: format,
                 loadThumbnail: (index) async =>
-                    _webViewKey.currentState?.comicThumbnail(index),
+                    _webViewKey.currentState?.pageThumbnail(index),
                 pageProgressionRtl: pageProgressionRtl,
                 readerTheme: readerTheme,
                 onClose: _closeTocDrawer,
                 onItemSelected: _goToTocItem,
+                onPageSelected: _goToPage,
                 onBookmarkSelected: _goToBookmark,
                 onHighlightSelected: _goToHighlight,
                 onBookmarkDeleted: _deleteBookmark,
@@ -778,17 +819,19 @@ class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
     required this.readerTheme,
     required this.onClose,
     required this.onItemSelected,
+    required this.onPageSelected,
     required this.onBookmarkSelected,
     required this.onHighlightSelected,
     required this.onBookmarkDeleted,
   });
 
-  final ComicThumbnailLoader loadThumbnail;
+  final PageThumbnailLoader loadThumbnail;
   final BookFormat? format;
   final bool pageProgressionRtl;
   final ReaderThemeData readerTheme;
   final void Function({bool restoreChrome}) onClose;
   final ValueChanged<ReaderTocItem> onItemSelected;
+  final ValueChanged<int> onPageSelected;
   final ValueChanged<SourceBookmark> onBookmarkSelected;
   final ValueChanged<Highlight> onHighlightSelected;
   final ValueChanged<SourceBookmark> onBookmarkDeleted;
@@ -814,6 +857,7 @@ class _ReaderTocDrawerVisibilityDriver extends StatelessWidget {
         readerTheme: readerTheme,
         onClose: onClose,
         onItemSelected: onItemSelected,
+        onPageSelected: onPageSelected,
         onBookmarkSelected: onBookmarkSelected,
         onHighlightSelected: onHighlightSelected,
         onBookmarkDeleted: onBookmarkDeleted,
@@ -953,6 +997,12 @@ FoliateStyle _readerWebViewStyle({
     overrideFont: appearance.overrideFont,
     overrideColor: appearance.overrideColor,
     useBookLayout: appearance.useBookLayout,
+    // PDF only; other formats ignore both.
+    cropPageMargins: appearance.trimPageMargins,
+    pageColors: switch (appearance.pageColors) {
+      ReaderPageColors.theme => FoliatePageColors.theme,
+      ReaderPageColors.original => FoliatePageColors.original,
+    },
     maxColumnCount: 1,
   );
 }
@@ -1206,7 +1256,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       initialProgress: state.document?.readingProgress,
       foliateStyle: foliateStyle,
       isArticle: state.sourceType == SourceType.article,
-      isComic: state.document?.format == BookFormat.cbz,
+      zoomablePages: readerHasZoomablePages(state.document?.format),
       comicPageOrderVersion: state.document?.comicPageOrderVersion ?? 0,
       pageProgressionRtl: state.pageProgressionRtl,
       highlights: highlights,

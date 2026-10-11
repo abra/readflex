@@ -1168,4 +1168,31 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get readerChapterRead => 'مقروء';
+
+  @override
+  String get readerPdfMargins => 'الهوامش';
+
+  @override
+  String get readerPdfMarginsWhole => 'الصفحة كاملة';
+
+  @override
+  String get readerPdfMarginsTrimmed => 'مقصوصة';
+
+  @override
+  String get readerPdfPageColors => 'ألوان الصفحات';
+
+  @override
+  String get readerPdfPageColorsTheme => 'السمة';
+
+  @override
+  String get readerPdfPageColorsOriginal => 'الأصلية';
+
+  @override
+  String get readerExternalLinkTitle => 'فتح الرابط؟';
+
+  @override
+  String get readerExternalLinkOpen => 'فتح';
+
+  @override
+  String get readerExternalLinkCopy => 'نسخ الرابط';
 }

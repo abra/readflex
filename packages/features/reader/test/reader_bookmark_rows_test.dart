@@ -94,6 +94,7 @@ void main() {
                   readerTheme: ReaderThemePreset.paper.data,
                   onClose: () {},
                   onItemSelected: (_) {},
+                  onPageSelected: (_) {},
                   onBookmarkSelected: (_) {},
                   onHighlightSelected: (_) {},
                   // The production flow: ReaderScreen dispatches this event.

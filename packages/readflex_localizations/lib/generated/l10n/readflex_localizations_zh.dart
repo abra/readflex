@@ -1129,4 +1129,31 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get readerChapterRead => '已读';
+
+  @override
+  String get readerPdfMargins => '页边距';
+
+  @override
+  String get readerPdfMarginsWhole => '整页';
+
+  @override
+  String get readerPdfMarginsTrimmed => '裁剪';
+
+  @override
+  String get readerPdfPageColors => '页面颜色';
+
+  @override
+  String get readerPdfPageColorsTheme => '主题';
+
+  @override
+  String get readerPdfPageColorsOriginal => '原始';
+
+  @override
+  String get readerExternalLinkTitle => '打开链接？';
+
+  @override
+  String get readerExternalLinkOpen => '打开';
+
+  @override
+  String get readerExternalLinkCopy => '复制链接';
 }

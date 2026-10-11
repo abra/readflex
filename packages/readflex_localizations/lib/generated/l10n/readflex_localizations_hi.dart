@@ -1151,4 +1151,31 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get readerChapterRead => 'पढ़ा गया';
+
+  @override
+  String get readerPdfMargins => 'मार्जिन';
+
+  @override
+  String get readerPdfMarginsWhole => 'पूरा पेज';
+
+  @override
+  String get readerPdfMarginsTrimmed => 'कटे हुए';
+
+  @override
+  String get readerPdfPageColors => 'पेज के रंग';
+
+  @override
+  String get readerPdfPageColorsTheme => 'थीम';
+
+  @override
+  String get readerPdfPageColorsOriginal => 'मूल';
+
+  @override
+  String get readerExternalLinkTitle => 'लिंक खोलें?';
+
+  @override
+  String get readerExternalLinkOpen => 'खोलें';
+
+  @override
+  String get readerExternalLinkCopy => 'लिंक कॉपी करें';
 }

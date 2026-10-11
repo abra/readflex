@@ -97,20 +97,45 @@ class ReaderDocumentFeatures {
     required this.format,
     this.hasTableOfContents,
     this.hasSearchableText,
+    this.pageCount,
   });
 
   final String? format;
   final bool? hasTableOfContents;
+
+  /// Unknown (null) until the document shows text or proves it has some;
+  /// PDF reports `true` once a page with text renders.
   final bool? hasSearchableText;
 
+  /// Number of fixed pages (PDF), for the Pages grid. Null for reflowable
+  /// formats, whose page count depends on layout.
+  final int? pageCount;
+
   factory ReaderDocumentFeatures.fromMap(Map<String, dynamic> map) {
+    final pageCount = _int(map['pageCount']);
     return ReaderDocumentFeatures(
       format: _string(map['format']),
       hasTableOfContents: _bool(map['hasToc']),
       hasSearchableText:
           _bool(map['hasSearchableText']) ?? _bool(map['hasTextLayer']),
+      pageCount: pageCount != null && pageCount > 0 ? pageCount : null,
     );
   }
+
+  // The shell sends features more than once; equal values must not rebuild
+  // the chrome that selects them.
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ReaderDocumentFeatures &&
+          format == other.format &&
+          hasTableOfContents == other.hasTableOfContents &&
+          hasSearchableText == other.hasSearchableText &&
+          pageCount == other.pageCount;
+
+  @override
+  int get hashCode =>
+      Object.hash(format, hasTableOfContents, hasSearchableText, pageCount);
 }
 
 enum ReaderBookmarkChangeSource { unknown, pullDown, chrome }
@@ -784,6 +809,16 @@ class ReaderImageAreaSelection {
 /// `changeStyle()` thereafter. Field names mirror the JS object keys that
 /// foliate-js's `book.js` reads — do not rename without updating the
 /// bundled JS.
+/// How image pages (PDF) are colored.
+enum FoliatePageColors {
+  /// As published.
+  original,
+
+  /// Paper takes the reader background and ink the reader text color; dark
+  /// themes invert the page into those colors.
+  theme,
+}
+
 class FoliateStyle {
   const FoliateStyle({
     this.fontSize = 1.4,
@@ -817,6 +852,8 @@ class FoliateStyle {
     this.overrideFont = true,
     this.overrideColor = true,
     this.useBookLayout = true,
+    this.cropPageMargins = false,
+    this.pageColors = FoliatePageColors.original,
   });
 
   final double fontSize;
@@ -875,6 +912,13 @@ class FoliateStyle {
   /// When `false`, publisher line-height / indent / hyphenation / margins win.
   final bool useBookLayout;
 
+  /// Image pages (PDF) drop their blank margins so the printed area fills the
+  /// screen. Sparse pages keep the whole page. Other formats ignore it.
+  final bool cropPageMargins;
+
+  /// Colors of image pages (PDF). Other formats ignore it.
+  final FoliatePageColors pageColors;
+
   Map<String, dynamic> toMap() => {
     'fontSize': fontSize,
     'textScale': textScale,
@@ -907,6 +951,8 @@ class FoliateStyle {
     'overrideFont': overrideFont,
     'overrideColor': overrideColor,
     'useBookLayout': useBookLayout,
+    'cropPageMargins': cropPageMargins,
+    'pageColors': pageColors.name,
   };
 
   // Value equality so `BookReaderWebView.didUpdateWidget` can decide
@@ -949,7 +995,9 @@ class FoliateStyle {
           customCSSEnabled == other.customCSSEnabled &&
           overrideFont == other.overrideFont &&
           overrideColor == other.overrideColor &&
-          useBookLayout == other.useBookLayout;
+          useBookLayout == other.useBookLayout &&
+          cropPageMargins == other.cropPageMargins &&
+          pageColors == other.pageColors;
 
   @override
   int get hashCode => Object.hashAll([
@@ -984,6 +1032,8 @@ class FoliateStyle {
     overrideFont,
     overrideColor,
     useBookLayout,
+    cropPageMargins,
+    pageColors,
   ]);
 }
 

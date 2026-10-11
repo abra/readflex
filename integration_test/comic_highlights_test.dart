@@ -7,7 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:reader/src/reader_comic_thumbnail_cubit.dart';
+import 'package:reader/src/reader_page_thumbnail_cubit.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_image_highlight_preview.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
@@ -120,7 +120,7 @@ void main() {
               final page = (element.widget as ReaderImageHighlightPreview)
                   .area
                   .pageIndex;
-              return element.read<ReaderComicThumbnailCubit>().state[page] !=
+              return element.read<ReaderPageThumbnailCubit>().state[page] !=
                   null;
             });
       }, description: 'native cropped previews');

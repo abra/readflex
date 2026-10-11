@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-import 'reader_comic_thumbnail_cubit.dart';
+import 'reader_page_thumbnail_cubit.dart';
 
 /// Crops a shared, bounded page thumbnail, never the full archive image.
 class ReaderImageHighlightPreview extends StatefulWidget {
@@ -22,7 +22,7 @@ class ReaderImageHighlightPreview extends StatefulWidget {
 
 class _ReaderImageHighlightPreviewState
     extends State<ReaderImageHighlightPreview> {
-  late final _thumbnails = context.read<ReaderComicThumbnailCubit>();
+  late final _thumbnails = context.read<ReaderPageThumbnailCubit>();
 
   @override
   void initState() {
@@ -48,7 +48,7 @@ class _ReaderImageHighlightPreviewState
   @override
   Widget build(BuildContext context) =>
       BlocSelector<
-        ReaderComicThumbnailCubit,
+        ReaderPageThumbnailCubit,
         Map<int, Uint8List?>,
         ({bool loaded, Uint8List? bytes})
       >(

@@ -21,7 +21,7 @@ class BookReaderWebView extends StatefulWidget {
     this.initialCfi,
     this.initialProgress,
     this.isArticle = false,
-    this.isComic = false,
+    this.zoomablePages = false,
     this.comicPageOrderVersion = 0,
     this.pageProgressionRtl = false,
     this.foliateStyle = const FoliateStyle(),
@@ -63,8 +63,10 @@ class BookReaderWebView extends StatefulWidget {
   /// Whether the opened EPUB was generated from a saved web article.
   final bool isArticle;
 
-  /// Enables the iOS comic tap bridge without changing text-reader gestures.
-  final bool isComic;
+  /// Comic and PDF pages: page images with pinch and double-tap zoom.
+  /// Enables the iOS tap bridge for double taps and [BookReaderWebViewState.pageThumbnail]
+  /// previews without changing text-reader gestures.
+  final bool zoomablePages;
 
   /// Persisted CBZ indexing policy; never infer it from the presence of a CFI.
   final int comicPageOrderVersion;

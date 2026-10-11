@@ -916,6 +916,10 @@ class ReaderBottomChromeDriver extends StatelessWidget {
             bookmarkActive: snapshot.currentPageBookmarked,
             showTocAction: actions.contains(ReaderChromeAction.contents),
             showFontAction: actions.contains(ReaderChromeAction.textAppearance),
+            // PDF pages have no font: the sheet holds page appearance.
+            fontActionTooltip: snapshot.format == BookFormat.pdf
+                ? l10n.readerAppearanceTitle
+                : l10n.readerFontAction,
             showPageTurnAction: actions.contains(ReaderChromeAction.pageTurn),
             showBookmarkAction: actions.contains(ReaderChromeAction.bookmark),
             showSearchAction: actions.contains(ReaderChromeAction.textSearch),
@@ -1147,6 +1151,7 @@ class _ReaderChromeCapsule extends StatelessWidget {
     required this.bookmarkActive,
     required this.showTocAction,
     required this.showFontAction,
+    required this.fontActionTooltip,
     required this.showPageTurnAction,
     required this.showBookmarkAction,
     required this.showSearchAction,
@@ -1166,6 +1171,7 @@ class _ReaderChromeCapsule extends StatelessWidget {
   final bool bookmarkActive;
   final bool showTocAction;
   final bool showFontAction;
+  final String fontActionTooltip;
   final bool showPageTurnAction;
   final bool showBookmarkAction;
   final bool showSearchAction;
@@ -1203,7 +1209,7 @@ class _ReaderChromeCapsule extends StatelessWidget {
         AppPlainIconButton(
           icon: AppIcons.font,
           iconSize: AppIconSize.md,
-          tooltip: l10n.readerFontAction,
+          tooltip: fontActionTooltip,
           color: foregroundColor,
           onPressed: onFontPressed,
         ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
@@ -22,19 +23,22 @@ import 'reader_appearance_cubit.dart';
 import 'reader_appearance_sheet.dart';
 import 'reader_back_guard.dart';
 import 'reader_bookmark_filter.dart';
-import 'reader_comic_pages.dart';
-import 'reader_comic_thumbnail_cubit.dart';
+import 'reader_page_grid.dart';
+import 'reader_page_thumbnail_cubit.dart';
 import 'reader_bloc.dart';
 import 'reader_brightness_cubit.dart';
 import 'reader_chrome_actions.dart';
 import 'reader_chrome_colors.dart';
 import 'reader_chrome_labels.dart';
 import 'reader_chrome_progress_layout.dart';
+import 'reader_contents_tabs.dart';
 import 'reader_image_page_progress_overlay.dart';
 import 'reader_color_utils.dart';
 import 'reader_device_font_scale.dart';
 import 'reader_drawer_layout.dart';
 import 'reader_drawer_messages.dart';
+import 'reader_drawer_title_fit.dart';
+import 'reader_external_link_prompt.dart';
 import 'reader_directional_layout.dart';
 import 'reader_highlight_focus_cubit.dart';
 import 'reader_highlight_effect_listener.dart';
@@ -173,7 +177,7 @@ class ReaderScreen extends StatelessWidget {
     this.onSourceOpened,
     this.onReadingPositionSaved,
     this.onArticleTitlePressed,
-    this.onExternalLink,
+    this.onOpenExternalLink,
     super.key,
   });
 
@@ -194,7 +198,10 @@ class ReaderScreen extends StatelessWidget {
   /// below can refresh while the reader still covers it.
   final VoidCallback? onReadingPositionSaved;
   final void Function(String url, String title)? onArticleTitlePressed;
-  final ValueChanged<String>? onExternalLink;
+
+  /// Opens a link from a book, article or PDF after the reader confirmed it
+  /// in the link sheet: a web page, an email or a phone number.
+  final ValueChanged<String>? onOpenExternalLink;
 
   @override
   Widget build(BuildContext context) {
@@ -264,7 +271,7 @@ class ReaderScreen extends StatelessWidget {
                     ReaderSourceLoadRequested(sourceId: sourceId),
                   ),
                   onArticleTitlePressed: onArticleTitlePressed,
-                  onExternalLink: onExternalLink,
+                  onOpenExternalLink: onOpenExternalLink,
                 ),
               ),
             ),

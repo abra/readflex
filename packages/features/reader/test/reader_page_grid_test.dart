@@ -4,16 +4,11 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
-import 'package:reader/src/reader_comic_pages.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_page_grid.dart';
 
 void main() {
   final bytes = base64Decode(
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-  );
-  final items = List.generate(
-    500,
-    (i) => ReaderTocItem(label: 'file-$i.jpg', href: '$i', level: 0),
   );
   for (final locale in [const Locale('en'), const Locale('ar')]) {
     for (final scale in [1.0, 2.0]) {
@@ -25,7 +20,7 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         final requests = <int>[];
-        ReaderTocItem? selected;
+        int? selected;
         await tester.pumpWidget(
           MaterialApp(
             theme: AppTheme.light(),
@@ -40,8 +35,8 @@ void main() {
               child: child!,
             ),
             home: Scaffold(
-              body: ReaderComicPages(
-                items: items,
+              body: ReaderPageGrid(
+                pageCount: 500,
                 currentIndex: 246,
                 pageProgressionRtl: locale.languageCode == 'en',
                 loadThumbnail: (index) async {
@@ -54,7 +49,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final context = tester.element(find.byType(ReaderComicPages));
+        final context = tester.element(find.byType(ReaderPageGrid));
         final label = context.l10n.readerPageNumber(247);
         expect(find.text(label).hitTestable(), findsOneWidget);
         expect(requests.length, lessThan(10));
@@ -71,8 +66,7 @@ void main() {
           );
         }
         await tester.tap(find.text(label));
-        expect(selected, items[246]);
-        expect(find.text('file-246.jpg'), findsNothing);
+        expect(selected, 246, reason: 'the zero-based page index');
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
       });
@@ -93,8 +87,8 @@ void main() {
           localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: Scaffold(
-            body: ReaderComicPages(
-              items: items.take(6).toList(),
+            body: ReaderPageGrid(
+              pageCount: 6,
               currentIndex: 0,
               pageProgressionRtl: rtl,
               loadThumbnail: (_) async => null,
@@ -104,7 +98,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final l10n = tester.element(find.byType(ReaderComicPages)).l10n;
+      final l10n = tester.element(find.byType(ReaderPageGrid)).l10n;
       expect(
         tester.widget<GridView>(find.byType(GridView)).padding,
         const EdgeInsets.all(AppSpacing.lg),
@@ -132,25 +126,25 @@ void main() {
     });
   }
 
-  testWidgets('an asynchronously loaded TOC still reveals the saved page', (
+  testWidgets('a page count that arrives later still reveals the saved page', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final toc = ValueNotifier<List<ReaderTocItem>>([]);
-    addTearDown(toc.dispose);
+    final pageCount = ValueNotifier<int>(0);
+    addTearDown(pageCount.dispose);
     final requests = <int>[];
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         home: Scaffold(
-          body: ValueListenableBuilder<List<ReaderTocItem>>(
-            valueListenable: toc,
-            builder: (_, pages, _) => ReaderComicPages(
-              items: pages,
+          body: ValueListenableBuilder<int>(
+            valueListenable: pageCount,
+            builder: (_, pages, _) => ReaderPageGrid(
+              pageCount: pages,
               currentIndex: 246,
               onSelected: (_) {},
               loadThumbnail: (index) async {
@@ -164,7 +158,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(requests, isEmpty);
-    toc.value = items;
+    pageCount.value = 500;
     await tester.pumpAndSettle();
     expect(find.text('Page 247').hitTestable(), findsOneWidget);
     expect(requests.every((index) => index >= 246 && index < 256), isTrue);

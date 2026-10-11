@@ -687,5 +687,41 @@
   "readerChapterRead": "Read",
   "@readerChapterRead": {
     "description": "Accessibility value of a chapter before the current one"
+  },
+  "readerPdfMargins": "Margins",
+  "@readerPdfMargins": {
+    "description": "PDF appearance: label of the choice between whole pages and pages with blank margins cropped"
+  },
+  "readerPdfMarginsWhole": "Whole page",
+  "@readerPdfMarginsWhole": {
+    "description": "PDF appearance: option that shows each page with its margins"
+  },
+  "readerPdfMarginsTrimmed": "Trimmed",
+  "@readerPdfMarginsTrimmed": {
+    "description": "PDF appearance: option that crops blank page margins so the text is larger"
+  },
+  "readerPdfPageColors": "Page colors",
+  "@readerPdfPageColors": {
+    "description": "PDF appearance: label of the choice between theme colors and the original page colors"
+  },
+  "readerPdfPageColorsTheme": "Theme",
+  "@readerPdfPageColorsTheme": {
+    "description": "PDF appearance: option that tints or inverts pages into the reader theme colors"
+  },
+  "readerPdfPageColorsOriginal": "Original",
+  "@readerPdfPageColorsOriginal": {
+    "description": "PDF appearance: option that keeps the colors the PDF was published with"
+  },
+  "readerExternalLinkTitle": "Open link?",
+  "@readerExternalLinkTitle": {
+    "description": "Reader: title of the sheet that asks before a link in a book, article or PDF opens a web page, email or phone number outside the reader"
+  },
+  "readerExternalLinkOpen": "Open",
+  "@readerExternalLinkOpen": {
+    "description": "Reader: primary button of the link sheet; opens the link (web pages in the in-app browser)"
+  },
+  "readerExternalLinkCopy": "Copy link",
+  "@readerExternalLinkCopy": {
+    "description": "Reader: secondary button of the link sheet; copies the link without opening it"
   }
 }

@@ -92,5 +92,54 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     }, tags: ['golden']);
+
+    testWidgets('PDF page controls ${profile.name}', (tester) async {
+      final cubit = ReaderAppearanceCubit(
+        preferencesService: app.preferencesService,
+        sourceId: 'pdf-fixture',
+      );
+      addTearDown(cubit.close);
+      late BuildContext sheetContext;
+      await pumpGoldenSurface(
+        tester,
+        profile,
+        (_) => BlocProvider.value(
+          value: cubit,
+          child: Builder(
+            builder: (context) {
+              sheetContext = context;
+              return const Scaffold();
+            },
+          ),
+        ),
+      );
+      showReaderAppearanceSheet(sheetContext, pdfControls: true);
+      await tester.pumpAndSettle();
+      final l10n = sheetContext.l10n;
+      for (final (control, label) in [
+        ('reader-pdf-margins-control', l10n.readerPdfMarginsWhole),
+        ('reader-pdf-margins-control', l10n.readerPdfMarginsTrimmed),
+        ('reader-pdf-page-colors-control', l10n.readerPdfPageColorsTheme),
+        ('reader-pdf-page-colors-control', l10n.readerPdfPageColorsOriginal),
+      ]) {
+        final text = find.descendant(
+          of: find.byKey(ValueKey(control)),
+          matching: find.text(label),
+        );
+        expect(
+          tester.renderObject<RenderParagraph>(text).didExceedMaxLines,
+          isFalse,
+          reason: '$label must stay readable',
+        );
+      }
+      await expectUiGolden(tester, profile, 'reader-appearance-pdf');
+      final pageTurn = find.text(l10n.readerPageTurnVerticalShort);
+      await tester.ensureVisible(pageTurn);
+      await tester.pumpAndSettle();
+      expect(pageTurn.hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    }, tags: ['golden']);
   }
 }

@@ -128,6 +128,24 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     await _persistOverride(next);
   }
 
+  /// PDF only: crop blank page margins, or show whole pages.
+  Future<void> setTrimPageMargins(bool trim) async {
+    final next = state.sourceOverride.copyWith(
+      trimPageMargins: trim == state.globalAppearance.trimPageMargins
+          ? null
+          : trim,
+    );
+    await _persistOverride(next);
+  }
+
+  /// PDF only: theme colors or the colors the document was published with.
+  Future<void> setPageColors(ReaderPageColors colors) async {
+    final next = state.sourceOverride.copyWith(
+      pageColors: colors == state.globalAppearance.pageColors ? null : colors,
+    );
+    await _persistOverride(next);
+  }
+
   void previewTextScale(double value) {
     final nextValue = value.clamp(minTextScale, maxTextScale).toDouble();
     final next = state.sourceOverride.copyWith(

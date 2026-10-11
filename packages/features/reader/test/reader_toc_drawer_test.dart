@@ -2,7 +2,9 @@ import 'dart:ui' show FontFeature, Tristate;
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
+import 'package:component_library/src/search_field_hint.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -38,16 +40,21 @@ void main() {
   ];
   late ReaderBloc bloc;
 
-  Future<void> load(WidgetTester tester, {bool withHighlight = false}) async {
+  Future<void> load(
+    WidgetTester tester, {
+    bool withHighlight = false,
+    Book? source,
+  }) async {
+    final opened = source ?? book;
     final highlights = FakeHighlightRepository();
-    if (withHighlight) highlights.seedHighlights(book.id, [highlight]);
+    if (withHighlight) highlights.seedHighlights(opened.id, [highlight]);
     bloc = ReaderBloc(
-      bookRepository: FakeBookRepository()..seedBook(book),
+      bookRepository: FakeBookRepository()..seedBook(opened),
       highlightRepository: highlights,
-      initialSource: book,
+      initialSource: opened,
     );
     addTearDown(bloc.close);
-    bloc.add(ReaderSourceLoadRequested(sourceId: book.id));
+    bloc.add(ReaderSourceLoadRequested(sourceId: opened.id));
     await bloc.stream
         .firstWhere((s) => s.status == ReaderStatus.ready)
         .timeout(const Duration(seconds: 3), onTimeout: () => bloc.state);
@@ -65,6 +72,7 @@ void main() {
     Size size = _phone,
     VoidCallback? onClose,
     ValueChanged<ReaderTocItem>? onItemSelected,
+    ValueChanged<int>? onPageSelected,
   }) async {
     tester.view
       ..physicalSize = size
@@ -99,6 +107,7 @@ void main() {
                   readerTheme: ReaderThemePreset.paper.data,
                   onClose: onClose ?? () {},
                   onItemSelected: onItemSelected ?? (_) {},
+                  onPageSelected: onPageSelected ?? (_) {},
                   onBookmarkSelected: (_) {},
                   onHighlightSelected: (_) {},
                   onBookmarkDeleted: (_) {},
@@ -820,6 +829,7 @@ void main() {
                   readerTheme: ReaderThemePreset.paper.data,
                   onClose: () {},
                   onItemSelected: (_) {},
+                  onPageSelected: (_) {},
                   onBookmarkSelected: (_) {},
                   onHighlightSelected: (_) {},
                   onBookmarkDeleted: (_) {},
@@ -845,6 +855,228 @@ void main() {
     // pending, a running slide would still be animating.
     await tester.pump();
     expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  group('long translations and large text', () {
+    testWidgets('the title shrinks to fit instead of ellipsizing', (
+      tester,
+    ) async {
+      await load(tester);
+      // The test font's square glyphs make "Contents" overflow here by a
+      // margin the fit absorbs, like "Содержание" at 2x on a real phone.
+      await pump(tester, scale: 1.8, size: const Size(320, 568));
+      final l10n = tester.element(find.byType(TabBar)).l10n;
+      final title = find.text(l10n.readerContents);
+      final paragraph = tester.renderObject<RenderParagraph>(title);
+      final text = tester.widget<Text>(title);
+      expect(paragraph.didExceedMaxLines, isFalse);
+      final scaled = const TextScaler.linear(1.8).scale(
+        Theme.of(tester.element(title)).textTheme.titleLarge!.fontSize!,
+      );
+      expect(text.style!.fontSize, lessThan(scaled));
+      expect(text.style!.fontSize, greaterThanOrEqualTo(scaled * 0.8));
+      expect(text.textScaler, TextScaler.noScaling);
+
+      await pump(tester, size: const Size(800, 600));
+      final roomy = tester.widget<Text>(find.text(l10n.readerContents));
+      expect(
+        roomy.textScaler,
+        isNull,
+        reason: 'a title that fits keeps its size',
+      );
+    });
+
+    testWidgets('scrolling tabs fade at the edge that hides more tabs', (
+      tester,
+    ) async {
+      await load(tester);
+      await pump(tester, scale: 2);
+      final fades = find.ancestor(
+        of: find.byType(TabBar),
+        matching: find.byType(ScrollEdgeFadeStack),
+      );
+      expect(fades, findsOneWidget);
+      ScrollEdgeFade fade(ScrollFadeEdge edge) => tester
+          .widgetList<ScrollEdgeFade>(
+            find.descendant(of: fades, matching: find.byType(ScrollEdgeFade)),
+          )
+          .singleWhere((fade) => fade.edge == edge);
+      expect(fade(ScrollFadeEdge.start).visible, isFalse);
+      expect(fade(ScrollFadeEdge.end).visible, isTrue);
+
+      await pump(tester, size: const Size(800, 600));
+      expect(
+        tester.widget<TabBar>(find.byType(TabBar)).isScrollable,
+        isFalse,
+      );
+      expect(fade(ScrollFadeEdge.start).visible, isFalse);
+      expect(
+        fade(ScrollFadeEdge.end).visible,
+        isFalse,
+        reason: 'tabs that fill the width have nothing to fade',
+      );
+    });
+
+    testWidgets('search hints shorten on a narrow screen with large text', (
+      tester,
+    ) async {
+      await load(tester);
+      await pump(tester, scale: 2, size: const Size(320, 568));
+      final l10n = tester.element(find.byType(TabBar)).l10n;
+      final hint = tester.renderObject<RenderSearchFieldHint>(
+        find.byType(SearchFieldHint),
+      );
+      expect(hint.shownText, l10n.commonSearch);
+      expect(hint.text, l10n.readerSearchChapters);
+
+      await pump(tester, size: const Size(800, 600));
+      expect(
+        tester
+            .renderObject<RenderSearchFieldHint>(find.byType(SearchFieldHint))
+            .shownText,
+        l10n.readerSearchChapters,
+      );
+    });
+  });
+
+  group('PDF contents', () {
+    final pdf = Book(
+      id: 'pdf',
+      title: 'PDF',
+      filePath: '/book.pdf',
+      format: BookFormat.pdf,
+      addedAt: DateTime(2026),
+    );
+
+    Future<void> openPdf(
+      WidgetTester tester, {
+      List<ReaderTocItem> outline = toc,
+      int? pageCount = 40,
+      int currentPage = 2,
+    }) async {
+      await load(tester, source: pdf);
+      bloc
+        ..add(ReaderTocUpdated(items: outline))
+        ..add(
+          const ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/6!)',
+            progress: 0.05,
+            chapterCurrentPage: 2,
+            chapterTotalPages: 40,
+          ),
+        );
+      if (pageCount != null) {
+        bloc.add(
+          ReaderDocumentFeaturesUpdated(
+            features: ReaderDocumentFeatures(
+              format: 'pdf',
+              pageCount: pageCount,
+            ),
+          ),
+        );
+      }
+      await bloc.stream.firstWhere((s) => s.tocItems == outline);
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    }
+
+    List<String> tabLabels(WidgetTester tester) => tester
+        .widgetList<Tab>(find.byType(Tab))
+        .map(
+          (tab) => tester
+              .widget<Text>(
+                find.descendant(
+                  of: find.byWidget(tab),
+                  matching: find.byType(Text),
+                ),
+              )
+              .data!,
+        )
+        .toList();
+
+    testWidgets('a PDF with an outline lists chapters, then pages', (
+      tester,
+    ) async {
+      await openPdf(tester);
+      final pages = <int>[];
+      await pump(tester, format: BookFormat.pdf, onPageSelected: pages.add);
+      await tester.pumpAndSettle();
+      final l10n = tester.element(find.byType(TabBar)).l10n;
+
+      expect(tabLabels(tester), [
+        l10n.readerChapters,
+        l10n.readerPages,
+        l10n.readerBookmarks,
+        l10n.readerHighlights,
+      ]);
+      expect(find.text('Part one'), findsOneWidget);
+      // Four equal shares are too narrow for the widest label on a phone.
+      expect(tester.widget<TabBar>(find.byType(TabBar)).isScrollable, isTrue);
+
+      await tester.tap(find.text(l10n.readerPages));
+      await tester.pumpAndSettle();
+      final current = find.text(l10n.readerPageNumber(3));
+      expect(current.hitTestable(), findsOneWidget);
+      expect(
+        tester.getSemantics(current).flagsCollection.isSelected,
+        Tristate.isTrue,
+        reason: 'the page on screen is selected',
+      );
+      await tester.tap(find.text(l10n.readerPageNumber(4)));
+      expect(pages, [3], reason: 'zero-based page index');
+    });
+
+    testWidgets('a PDF without an outline keeps an empty Chapters tab first', (
+      tester,
+    ) async {
+      await openPdf(tester, outline: const []);
+      await pump(tester, format: BookFormat.pdf);
+      await tester.pumpAndSettle();
+      final l10n = tester.element(find.byType(TabBar)).l10n;
+
+      expect(tabLabels(tester), [
+        l10n.readerChapters,
+        l10n.readerPages,
+        l10n.readerBookmarks,
+        l10n.readerHighlights,
+      ]);
+      expect(find.byType(EmptyState), findsOneWidget);
+
+      await tester.tap(find.text(l10n.readerPages));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.readerPageNumber(3)).hitTestable(),
+        findsOneWidget,
+        reason: 'scrolled to the page on screen',
+      );
+    });
+
+    testWidgets('a PDF adds Pages once its page count arrives', (
+      tester,
+    ) async {
+      await openPdf(tester, outline: const [], pageCount: null);
+      await pump(tester, format: BookFormat.pdf);
+      await tester.pumpAndSettle();
+      final l10n = tester.element(find.byType(TabBar)).l10n;
+
+      expect(tabLabels(tester), [
+        l10n.readerChapters,
+        l10n.readerBookmarks,
+        l10n.readerHighlights,
+      ]);
+
+      bloc.add(
+        const ReaderDocumentFeaturesUpdated(
+          features: ReaderDocumentFeatures(format: 'pdf', pageCount: 40),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tabLabels(tester), [
+        l10n.readerChapters,
+        l10n.readerPages,
+        l10n.readerBookmarks,
+        l10n.readerHighlights,
+      ]);
+    });
   });
 }
 

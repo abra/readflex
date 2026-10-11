@@ -18,6 +18,7 @@ through a dedicated secure-storage backed service.
 | `ReaderAppearanceOverride`      | data class       | Optional per-source reader appearance override                    |
 | `ReaderTextAlignment`           | enum             | Reader text alignment (`start`, `end`, `justify`)                 |
 | `ReaderPageTurnStyle`           | enum             | Reader page-turn mode (`horizontal`, `vertical`)                  |
+| `ReaderPageColors`              | enum             | PDF page colors (`theme`, `original`)                             |
 | `PreferencesService`            | concrete         | Loads, streams, and persists `Preferences`                         |
 | `PreferencesStorage`            | concrete         | Thin `SharedPreferencesAsync` wrapper                              |
 | `PreferencesRepository`         | concrete         | JSON (de)serialization + locale resolution                         |
@@ -46,6 +47,8 @@ repository loading resolves the device locale to a supported language.
 | `readerOverrideColor`      | `bool`      | `true`      |
 | `readerUseBookLayout`      | `bool`      | `true`      |
 | `readerPageTurnStyle`      | `ReaderPageTurnStyle` | `horizontal` |
+| `readerTrimPageMargins`    | `bool`      | `true`      |
+| `readerPageColors`         | `ReaderPageColors` | `theme` |
 | `readerBrightness`         | `double?`   | `null`      |
 | `readerLastCustomBrightness` | `double`  | `0.7`       |
 | `readerSearchHistory`      | `List<String>` | `[]`     |
@@ -55,6 +58,12 @@ repository loading resolves the device locale to a supported language.
 | `onboardingCompleted`      | `bool`      | `false`     |
 | `readerSelectionTipShowCount` | `int`  | `0`         |
 | `readerSelectionTipDismissed` | `bool` | `false`     |
+
+`readerTrimPageMargins` and `readerPageColors` apply to PDF pages only. They
+are on by default because a phone shows a printed page about a third smaller
+with its margins, and a white page breaks dark and tinted themes. Readers
+change them per book from the reader's Appearance sheet, which stores a
+`ReaderAppearanceOverride`.
 
 The two `readerSelectionTip*` fields back the reader's one-time "Press and
 hold a word" tip. Storage only records what happened; the show limit and

@@ -63,6 +63,13 @@ void main() {
     format: BookFormat.cbz,
     addedAt: DateTime(2026),
   );
+  final pdf = Book(
+    id: 'pdf',
+    title: 'PDF',
+    filePath: '/book.pdf',
+    format: BookFormat.pdf,
+    addedAt: DateTime(2026),
+  );
   final article = Article(
     id: 'article',
     title: 'Saved Article',
@@ -84,7 +91,8 @@ void main() {
     final loaded = ReaderBloc(
       bookRepository: FakeBookRepository()
         ..seedBook(book)
-        ..seedBook(comic),
+        ..seedBook(comic)
+        ..seedBook(pdf),
       articleRepository: FakeArticleRepository()..seedArticle(article),
       highlightRepository: FakeHighlightRepository(),
     );
@@ -311,6 +319,21 @@ void main() {
       final rect = tester.getRect(find.byKey(_capsuleKey));
       expect(rect.width, 560 - AppSpacing.lg * 2);
       expect(rect.center.dx, closeTo(512, 0.01));
+    });
+
+    testWidgets('PDF names its appearance action for pages, not fonts', (
+      tester,
+    ) async {
+      final pdfBloc = (await tester.runAsync(() => load(pdf.id)))!;
+      addTearDown(pdfBloc.close);
+      final pressed = <String>[];
+      await pump(tester, source: pdfBloc, pressed: pressed);
+      final l10n = tester.element(find.byType(Scaffold)).l10n;
+
+      expect(find.byTooltip(l10n.readerFontAction), findsNothing);
+      await tester.tap(find.byTooltip(l10n.readerAppearanceTitle));
+      await tester.pump();
+      expect(pressed, ['font']);
     });
 
     testWidgets('actions reach their callbacks', (tester) async {

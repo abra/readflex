@@ -81,6 +81,9 @@ const inferBookPageProgressionDirection = async (book, language = {}) => {
   }
   if (book?.dir === 'rtl') return 'rtl'
   if (language.direction === 'rtl') return 'rtl'
+  // PDF pages keep their printed order, and sampling their text would build
+  // a search document per sampled page during startup.
+  if (book?.samplesTextDirection === false) return null
 
   let rtlCount = 0
   let ltrCount = 0
@@ -220,7 +223,9 @@ export class View extends HTMLElement {
     this.renderer.setAttribute('exportparts', 'head,foot,filter')
     this.renderer.addEventListener('load', e => this.#onLoad(e.detail))
     this.renderer.addEventListener('relocate', e => this.#onRelocate(e.detail))
-    this.renderer.addEventListener('tap', e => this.#emit('click-view', e.detail))
+    this.renderer.addEventListener('tap', e => {
+      if (!this.#showAnnotationAt(e.detail)) this.#emit('click-view', e.detail)
+    })
     this.renderer.addEventListener('create-overlayer', e =>
       e.detail.attach(this.#createOverlayer(e.detail)))
     this.renderer.addEventListener('click', ({ clientX, clientY }) => {
@@ -526,6 +531,25 @@ export class View extends HTMLElement {
   #getOverlayer(index) {
     return this.renderer.getContents()
       .find(x => x.index === index && x.overlayer)
+  }
+  // Taps on zoomable fixed-layout pages arrive as viewport points, not DOM
+  // clicks. A saved highlight under the point opens like a click would.
+  #showAnnotationAt({ x, y }) {
+    for (const { doc, index, overlayer } of this.renderer.getContents?.() ?? []) {
+      const frame = doc?.defaultView?.frameElement
+      const rect = frame?.getBoundingClientRect()
+      if (!overlayer || !rect?.width
+        || x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) continue
+      const [value, range] = overlayer.hitTest({
+        x: (x - rect.left) * frame.clientWidth / rect.width,
+        y: (y - rect.top) * frame.clientHeight / rect.height,
+      })
+      if (value && !value.startsWith(SEARCH_PREFIX)) {
+        this.#emit('show-annotation', { value, index, range })
+        return true
+      }
+    }
+    return false
   }
   #createOverlayer({ doc, index }) {
     const overlayer = new Overlayer(doc)

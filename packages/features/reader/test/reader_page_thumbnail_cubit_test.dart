@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reader/src/reader_comic_thumbnail_cubit.dart';
+import 'package:reader/src/reader_page_thumbnail_cubit.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -12,7 +12,7 @@ void main() {
     () async {
       final calls = <int>[];
       final first = Completer<Uint8List?>();
-      final cubit = ReaderComicThumbnailCubit((page) async {
+      final cubit = ReaderPageThumbnailCubit((page) async {
         calls.add(page);
         return page == 0 ? first.future : Uint8List.fromList([page]);
       });
@@ -33,7 +33,7 @@ void main() {
   );
 
   test('cache and emitted snapshots remain bounded after 500 pages', () async {
-    final cubit = ReaderComicThumbnailCubit(
+    final cubit = ReaderPageThumbnailCubit(
       (page) async => Uint8List.fromList([page % 256]),
     );
     addTearDown(cubit.close);
@@ -44,7 +44,7 @@ void main() {
       cubit.release(page);
       expect(
         cubit.state.length,
-        lessThanOrEqualTo(ReaderComicThumbnailCubit.cacheCapacity),
+        lessThanOrEqualTo(ReaderPageThumbnailCubit.cacheCapacity),
       );
     }
     expect(cubit.state.keys.first, 476);
@@ -55,7 +55,7 @@ void main() {
     () async {
       final pending = Completer<Uint8List?>();
       var calls = 0;
-      final cubit = ReaderComicThumbnailCubit((_) {
+      final cubit = ReaderPageThumbnailCubit((_) {
         calls++;
         return pending.future;
       });
@@ -74,7 +74,7 @@ void main() {
   test('retry does not retain a released thumbnail consumer', () async {
     final pending = Completer<Uint8List?>();
     var calls = 0;
-    final cubit = ReaderComicThumbnailCubit((_) async {
+    final cubit = ReaderPageThumbnailCubit((_) async {
       return ++calls == 1 ? null : pending.future;
     });
     addTearDown(cubit.close);
@@ -90,7 +90,7 @@ void main() {
   test('close cancels the queue and ignores in-flight completion', () async {
     final calls = <int>[];
     final pending = Completer<Uint8List?>();
-    final cubit = ReaderComicThumbnailCubit((page) {
+    final cubit = ReaderPageThumbnailCubit((page) {
       calls.add(page);
       return pending.future;
     });
@@ -107,7 +107,7 @@ void main() {
     'oversized and failed previews are local and explicitly retryable',
     () async {
       var calls = 0;
-      final cubit = ReaderComicThumbnailCubit(
+      final cubit = ReaderPageThumbnailCubit(
         (_) async =>
             ++calls == 1 ? Uint8List(100 * 1024) : Uint8List.fromList([1]),
       );

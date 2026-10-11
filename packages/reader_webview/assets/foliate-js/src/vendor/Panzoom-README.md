@@ -6,7 +6,7 @@
 - `Panzoom-LICENSE`: unmodified npm `@panzoom/panzoom/MIT-License.txt`.
 
 The comic renderer loads the bundled module offline, only for comic archives.
-Gesture arbitration and iframe coordinates belong to `readflex_comic_zoom.js`;
+Gesture arbitration and iframe coordinates belong to `readflex_page_zoom.js`;
 focal zoom, transforms and pan bounds use the upstream library.
 
 To update, review upstream changes, update the exact npm dependency and lockfile,

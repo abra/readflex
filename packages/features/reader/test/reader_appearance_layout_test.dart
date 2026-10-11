@@ -54,6 +54,8 @@ void main() {
       double trailing(Rect rect) => rtl ? rect.left : 390 - rect.right;
       Rect rectOf(String key) => tester.getRect(find.byKey(ValueKey(key)));
       final l10n = tester.element(find.byType(BottomSheet)).l10n;
+      // A phone at 1x has room for the labeled Reset beside the title.
+      expect(find.text(l10n.readerReset).hitTestable(), findsOneWidget);
 
       for (final label in [
         l10n.readerFontSize,
@@ -64,10 +66,11 @@ void main() {
       ]) {
         expect(leading(tester.getRect(find.text(label))), _gutter);
       }
-      // Compact controls trail their label on the gutter, all one width.
+      // Compact controls fill the end half of the column: they start on its
+      // center, the split of the labeled choices, and end on the gutter.
       for (final key in _compactControls) {
         expect(trailing(rectOf(key)), _gutter, reason: key);
-        expect(rectOf(key).width, rectOf(_compactControls.first).width);
+        expect(leading(rectOf(key)), 390 / 2, reason: key);
         expect(
           rectOf(key).height,
           greaterThanOrEqualTo(AppSizes.buttonHeight),
@@ -84,14 +87,22 @@ void main() {
         expect(trailing(control), _gutter, reason: key);
         expect(control.top - title.bottom, AppSpacing.sm, reason: key);
       }
+      // Compact rows 8dp apart; the captioned choices 16dp below them.
+      final rows = [
+        rectOf('reader-font-picker'),
+        for (final key in _compactControls) rectOf(key),
+      ];
+      for (var i = 1; i < rows.length; i++) {
+        expect(rows[i].top - rows[i - 1].bottom, AppSpacing.sm);
+      }
       expect(
         tester.getRect(find.text(l10n.readerTextAlignment)).top -
-            rectOf('reader-line-height-control').bottom,
+            rectOf('reader-margin-control').bottom,
         AppSpacing.lg,
       );
       expect(
         tester.getRect(find.text(l10n.readerPageTurn)).top -
-            rectOf('reader-margin-control').bottom,
+            rectOf(_labeledControls[0]).bottom,
         AppSpacing.lg,
       );
       // Small "A" leads, large "A" trails, mirrored in RTL.
@@ -111,6 +122,71 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  for (final (locale, size, scale) in [
+    (const Locale('ru'), const Size(320, 720), 1.0),
+    (const Locale('de'), const Size(320, 720), 2.0),
+    (const Locale('en'), const Size(390, 844), 2.0),
+  ]) {
+    testWidgets('Reset stays beside the title at ${size.width}dp '
+        '${scale}x $locale', (tester) async {
+      await tester.openSheet(
+        locale: locale,
+        size: size,
+        textScaler: TextScaler.linear(scale),
+      );
+      final l10n = tester.element(find.byType(BottomSheet)).l10n;
+      final title = tester.getRect(find.text(l10n.readerAppearanceTitle));
+      // The labeled button, or the icon button that takes its place; the
+      // other one is built but not on screen.
+      final reset = tester.getRect(
+        find
+            .ancestor(
+              of: find.byIcon(AppIcons.refresh).hitTestable(),
+              matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+            )
+            .first,
+      );
+      final close = tester.getRect(find.byTooltip(l10n.commonClose));
+      // One header line: the title shrinks, never below 0.8, before Reset
+      // would wrap under it.
+      expect(reset.center.dy, closeTo(title.center.dy, 1));
+      expect(reset.center.dy, closeTo(close.center.dy, 1));
+      expect(reset.left - title.right, greaterThanOrEqualTo(AppSpacing.md));
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.text(l10n.readerAppearanceTitle),
+      );
+      expect(
+        title.width / paragraph.size.width,
+        greaterThanOrEqualTo(BottomSheetHeader.minTitleScale),
+      );
+      expect(_lineCount(paragraph), 1);
+      _expectNoTruncatedText(tester);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('theme names stay whole at 320dp ru', (tester) async {
+    await tester.openSheet(
+      locale: const Locale('ru'),
+      size: const Size(320, 720),
+    );
+    final l10n = tester.element(find.byType(BottomSheet)).l10n;
+    for (final name in [
+      l10n.readerThemeSnow,
+      l10n.readerThemePaper,
+      l10n.readerThemeWarm,
+      l10n.readerThemeNight,
+      l10n.readerThemeMist,
+    ]) {
+      expect(
+        _lineCount(tester.renderObject<RenderParagraph>(find.text(name))),
+        1,
+        reason: name,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
 
   for (final locale in [
     const Locale('en'),
@@ -171,7 +247,7 @@ void main() {
       const contentEnd = 320 - _gutter;
       _expectNoTruncatedText(tester);
 
-      // Compact controls drop below their label, still on the gutter.
+      // Compact controls drop below their caption, spanning the gutters.
       for (final (key, label) in [
         (_compactControls[0], l10n.readerFontSize),
         (_compactControls[1], l10n.readerLineSpacing),
@@ -184,7 +260,7 @@ void main() {
           reason: key,
         );
         expect(control.right, contentEnd, reason: key);
-        expect(control.left, greaterThanOrEqualTo(_gutter), reason: key);
+        expect(control.left, _gutter, reason: key);
       }
       // Labeled options keep 48dp, stay inside the gutters and wrap only
       // between words.

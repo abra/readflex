@@ -394,8 +394,8 @@ Reader-specific UI state is split by responsibility:
 - `ReaderAppearanceCubit` owns reader appearance preferences.
 - `ReaderBrightnessCubit` coordinates widget brightness, system brightness, and
   platform override behavior.
-- `ReaderComicThumbnailCubit` owns a Pages-tab-local queue and bounded preview
-  cache. The reader host injects an async callback to its existing WebView;
+- `ReaderPageThumbnailCubit` owns a Pages-tab-local queue and bounded preview
+  cache for comic and PDF pages. The reader host injects an async callback to its existing WebView;
   view widgets never receive a repository, archive parser or WebView controller.
   Only visible tiles request previews, one at a time, independently of book
   startup and reading-position state. Closing the tab releases its cache.
@@ -412,22 +412,30 @@ use the foliate WebView; articles use a separate vertical HTML WebView that
 loads `content.html` and restores position through stable sentence anchors.
 
 Both shells intercept link taps in JS: in-document fragments navigate in place,
-everything else is reported through one `onExternalLink` callback that
-`routing.dart` hands to the system browser. `ReaderNavigationPolicy` in
+everything else is reported through one `onExternalLink` callback. The reader
+feature asks first (`ReaderExternalLinkPrompt`, a sheet with the real
+destination, Copy link and Open) and passes only confirmed links to
+`ReaderScreen.onOpenExternalLink`; `routing.dart` opens web pages in the in-app
+browser and `mailto:`/`tel:` in their apps. `ReaderNavigationPolicy` in
 `reader_webview` limits WebView navigation to the loopback reader server and
 forwards any external main-frame http(s) navigation to the same callback, so
 neither shell can leave the reader inside the WebView. Highlight drawing,
 search tints, the symbol font fallback and the post-selection tap debounce
 come from shared modules so articles and books render the same tokens alike.
 
-Comic gesture arbitration lives in `reader_webview` JS: edge taps are immediate,
-centre taps distinguish chrome from double-tap zoom, and zoomed drags only pan.
+Page zoom for comics and PDF lives in `reader_webview` JS: edge taps are
+immediate, centre taps distinguish chrome from double-tap zoom, and zoomed drags
+only pan. PDF pages keep native text selection and link taps under zoom.
 Flutter owns chrome visibility and physical/logical page commands, with the
-same tap-zone fraction passed to JS. The fixed-layout renderer serializes comic
-navigation with one replaceable pending intent; other fixed-layout formats keep
-their existing busy-input gate. The comic loader owns deduplicated image-blob
-loads and bounded adjacent-page prefetch (8 MiB speculative encoded data), not
-feature state or Flutter pointer-move callbacks.
+same tap-zone fraction passed to JS; PDF keeps text-book chrome rules. The
+fixed-layout renderer serializes zoomable navigation with one replaceable
+pending intent; other fixed-layout formats keep their existing busy-input gate.
+It also owns layout geometry: margin crops and when a zoomed page needs a sharp
+tile. The comic loader owns deduplicated image-blob loads and bounded
+adjacent-page prefetch (8 MiB speculative encoded data). The PDF loader owns
+canvas page bitmaps for the visible page and its neighbours, sharp tiles and
+theme recoloring. Neither keeps feature state or Flutter pointer-move
+callbacks.
 
 Book selection navigation stays inside `reader_webview`'s JS runtime. A handle
 drag never turns a page. A subsequent swipe or edge tap advances exactly one

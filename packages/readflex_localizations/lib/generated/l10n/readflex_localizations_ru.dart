@@ -1167,4 +1167,31 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get readerChapterRead => 'Прочитано';
+
+  @override
+  String get readerPdfMargins => 'Поля';
+
+  @override
+  String get readerPdfMarginsWhole => 'Вся страница';
+
+  @override
+  String get readerPdfMarginsTrimmed => 'Обрезаны';
+
+  @override
+  String get readerPdfPageColors => 'Цвета страниц';
+
+  @override
+  String get readerPdfPageColorsTheme => 'Тема';
+
+  @override
+  String get readerPdfPageColorsOriginal => 'Исходные';
+
+  @override
+  String get readerExternalLinkTitle => 'Открыть ссылку?';
+
+  @override
+  String get readerExternalLinkOpen => 'Открыть';
+
+  @override
+  String get readerExternalLinkCopy => 'Копировать';
 }

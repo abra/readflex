@@ -11,16 +11,17 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   bool get debugIsReady => _isReady;
   bool _isReady = false;
 
-  /// Returns a bounded preview from the already open archive, not the full page.
-  Future<Uint8List?> comicThumbnail(int index) async {
+  /// Returns a bounded JPEG preview of a comic or PDF page from the already
+  /// open document, never the full page.
+  Future<Uint8List?> pageThumbnail(int index) async {
     final controller = _controller;
     final generation = _loadSession.generation;
-    if (!_isReady || !widget.isComic || controller == null || index < 0) {
+    if (!_isReady || !widget.zoomablePages || controller == null || index < 0) {
       return null;
     }
     try {
       final result = await controller.callAsyncJavaScript(
-        functionBody: 'return await window.readflexComicThumbnail?.(index);',
+        functionBody: 'return await window.readflexPageThumbnail?.(index);',
         arguments: {'index': index},
       );
       if (!mounted ||
@@ -73,8 +74,8 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   bool get _effectiveArticle =>
       widget.isArticle || isGeneratedArticleReaderPath(widget.bookFilePath);
 
-  bool get _forwardComicTaps =>
-      widget.isComic && defaultTargetPlatform == TargetPlatform.iOS;
+  bool get _forwardPageTaps =>
+      widget.zoomablePages && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void dispose() {
@@ -317,7 +318,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'initialCfi': jsonEncode(initialLocation.cfi),
       'initialProgress': jsonEncode(initialLocation.progress),
       'sourceType': jsonEncode(_effectiveArticle ? 'article' : 'book'),
-      'comicHostTaps': jsonEncode(_forwardComicTaps),
+      'pageHostTaps': jsonEncode(_forwardPageTaps),
       'comicPageOrderVersion': jsonEncode(widget.comicPageOrderVersion),
       'pageTapZoneFraction': jsonEncode(readerPageTapZoneFraction),
       'pageProgressionDirection': jsonEncode(
@@ -367,15 +368,15 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       // TEMP — see _recoveringFromCrash field doc for context.
       onWebContentProcessDidTerminate: _onContentProcessTerminated,
     );
-    if (!_forwardComicTaps) return webView;
-    return ComicTouchTapForwarder(
+    if (!_forwardPageTaps) return webView;
+    return PageTouchTapForwarder(
       key: ValueKey(_loadSession.generation),
       onTap: (position) {
         if (!_isReady) return;
         _evaluateReaderCommand(
-          label: 'comicTouchTap',
+          label: 'pageTouchTap',
           expression:
-              'window.handleComicTouchTap?.(${position.dx}, ${position.dy})',
+              'window.handlePageTouchTap?.(${position.dx}, ${position.dy})',
         );
       },
       child: webView,

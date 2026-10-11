@@ -17,6 +17,8 @@ const _baseRA = ReaderAppearancePreferences(
   overrideColor: true,
   useBookLayout: true,
   pageTurnStyle: ReaderPageTurnStyle.horizontal,
+  trimPageMargins: true,
+  pageColors: ReaderPageColors.theme,
 );
 
 void main() {
@@ -263,6 +265,8 @@ void main() {
         overrideColor: true,
         useBookLayout: true,
         pageTurnStyle: ReaderPageTurnStyle.horizontal,
+        trimPageMargins: true,
+        pageColors: ReaderPageColors.theme,
       );
       expect(a, equals(b));
       expect(a.hashCode, b.hashCode);
@@ -296,6 +300,34 @@ void main() {
           equals(_baseRA.copyWith(pageTurnStyle: ReaderPageTurnStyle.vertical)),
         ),
       );
+      expect(
+        _baseRA,
+        isNot(equals(_baseRA.copyWith(trimPageMargins: false))),
+      );
+      expect(
+        _baseRA,
+        isNot(equals(_baseRA.copyWith(pageColors: ReaderPageColors.original))),
+      );
+    });
+
+    test('PDF pages trim margins and follow the theme by default', () {
+      expect(ReaderAppearancePreferences.defaults.trimPageMargins, isTrue);
+      expect(
+        ReaderAppearancePreferences.defaults.pageColors,
+        ReaderPageColors.theme,
+      );
+      const prefs = Preferences();
+      expect(prefs.readerTrimPageMargins, isTrue);
+      expect(prefs.readerPageColors, ReaderPageColors.theme);
+      expect(prefs.readerAppearance, ReaderAppearancePreferences.defaults);
+    });
+
+    test('ReaderPageColors reads its IDs and falls back to theme', () {
+      expect(ReaderPageColors.fromId('original'), ReaderPageColors.original);
+      expect(ReaderPageColors.fromId('theme'), ReaderPageColors.theme);
+      expect(ReaderPageColors.fromId('sepia'), ReaderPageColors.theme);
+      expect(ReaderPageColors.fromId(null), ReaderPageColors.theme);
+      expect(ReaderPageColors.tryFromId('sepia'), isNull);
     });
 
     test('ReaderTextAlignment parses start and justify IDs', () {
@@ -360,6 +392,40 @@ void main() {
 
       expect(json.containsKey('themeId'), isFalse);
       expect(loaded, source);
+    });
+
+    test('PDF page options round-trip, inherit and drop global values', () {
+      const source = ReaderAppearanceOverride(
+        trimPageMargins: false,
+        pageColors: ReaderPageColors.original,
+      );
+      final json = source.toJson();
+      expect(json, {'trimPageMargins': false, 'pageColors': 'original'});
+      expect(ReaderAppearanceOverride.fromJson(json), source);
+      expect(source.isEmpty, isFalse);
+
+      final applied = source.applyTo(ReaderAppearancePreferences.defaults);
+      expect(applied.trimPageMargins, isFalse);
+      expect(applied.pageColors, ReaderPageColors.original);
+
+      final matching = const ReaderAppearanceOverride(
+        trimPageMargins: true,
+        pageColors: ReaderPageColors.theme,
+      ).withoutValuesMatching(ReaderAppearancePreferences.defaults);
+      expect(matching.isEmpty, isTrue);
+
+      final cleared = source.copyWith(trimPageMargins: null, pageColors: null);
+      expect(cleared.isEmpty, isTrue);
+    });
+
+    test('unreadable PDF page options are ignored', () {
+      final loaded = ReaderAppearanceOverride.fromJson(const {
+        'trimPageMargins': 'yes',
+        'pageColors': 'sepia',
+      });
+      expect(loaded.trimPageMargins, isNull);
+      expect(loaded.pageColors, isNull);
+      expect(loaded.isEmpty, isTrue);
     });
   });
 }

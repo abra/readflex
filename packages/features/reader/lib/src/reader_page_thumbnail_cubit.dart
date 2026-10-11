@@ -4,15 +4,15 @@ import 'dart:typed_data';
 import 'package:flutter/painting.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-typedef ComicThumbnailLoader = Future<Uint8List?> Function(int page);
+typedef PageThumbnailLoader = Future<Uint8List?> Function(int page);
 
 /// Drawer-local cache. Only mounted tiles request work; closing it releases both
 /// encoded previews and their decoded Flutter image-cache entries.
-class ReaderComicThumbnailCubit extends Cubit<Map<int, Uint8List?>> {
-  ReaderComicThumbnailCubit(this._load) : super(const {});
+class ReaderPageThumbnailCubit extends Cubit<Map<int, Uint8List?>> {
+  ReaderPageThumbnailCubit(this._load) : super(const {});
 
   static const cacheCapacity = 24;
-  final ComicThumbnailLoader _load;
+  final PageThumbnailLoader _load;
   final _cache = <int, Uint8List?>{};
   // Several saved areas can share a page; each mounted preview owns one lease.
   final _wanted = <int, int>{};

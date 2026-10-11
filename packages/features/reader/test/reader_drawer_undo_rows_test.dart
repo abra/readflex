@@ -92,6 +92,7 @@ void main() {
                   readerTheme: ReaderThemePreset.paper.data,
                   onClose: () {},
                   onItemSelected: (_) {},
+                  onPageSelected: (_) {},
                   onBookmarkSelected: (_) {},
                   onHighlightSelected: (_) {},
                   onBookmarkDeleted: (b) => bloc.add(

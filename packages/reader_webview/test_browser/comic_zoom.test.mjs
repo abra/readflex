@@ -50,7 +50,7 @@ test('comic thumbnails load on demand, are bounded and leave navigation unchange
     assert.equal(requests.some(url => url.endsWith('readflex_comic_thumbnail.js')), false)
     const before = await state(page)
     const preview = await page.evaluate(async () => {
-        const data = await window.readflexComicThumbnail(3)
+        const data = await window.readflexPageThumbnail(3)
         const image = new Image()
         image.src = data
         await image.decode()
@@ -68,7 +68,7 @@ test('comic thumbnails load on demand, are bounded and leave navigation unchange
     assert.equal((await state(page)).index, before.index)
     assert.equal((await state(page)).width, before.width)
     await page.evaluate(() => window.reader.view.book.destroy())
-    assert.equal(await page.evaluate(() => window.readflexComicThumbnail(0)), null)
+    assert.equal(await page.evaluate(() => window.readflexPageThumbnail(0)), null)
 })
 
 test('comic edge taps reach the host immediately and never become double-tap zoom', async t => {
@@ -194,7 +194,7 @@ test('host-forwarded edge taps are still recognized while the next spread loads'
         section.load = () => new Promise(resolve => { window.finishComicLoad = () => resolve(src) })
         window.comicTurn = r.next()
         await Promise.resolve()
-        window.handleComicTouchTap(360, 400)
+        window.handlePageTouchTap(360, 400)
     })
     const loading = await state(page)
     assert.equal(loading.index, 1)
@@ -292,7 +292,7 @@ test('host-forwarded taps tolerate missing WebKit touches without duplicate acti
     const { page } = await openComic(t, { hostTaps: true, controlledClock: true })
     await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
     const before = await state(page)
-    const tap = () => page.evaluate(() => handleComicTouchTap(150, 330))
+    const tap = () => page.evaluate(() => handlePageTouchTap(150, 330))
     // iOS can deliver the first touch and omit the entire second DOM sequence.
     await pointer(page, 'pointerdown', 150, 330)
     await pointer(page, 'pointerup', 150, 330)
@@ -356,7 +356,7 @@ test('host taps do not dismiss an image-area draft being edited', async t => {
     await page.waitForTimeout(330)
     await page.mouse.up()
     assert.equal(await page.evaluate(() => __readflexImageAreaDraftActive), true)
-    await page.evaluate(() => handleComicTouchTap(195, 420))
+    await page.evaluate(() => handlePageTouchTap(195, 420))
     await page.waitForTimeout(350)
     assert.equal(await page.evaluate(() => __readflexImageAreaDraftActive), true)
     assert.equal((await state(page)).clicks.length, 0)

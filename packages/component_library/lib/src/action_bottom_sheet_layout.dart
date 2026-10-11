@@ -18,6 +18,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
     required this.title,
     required this.child,
     this.headerTrailing,
+    this.headerCompactTrailing,
     this.onClose,
     this.closeLabel,
     this.onBack,
@@ -45,6 +46,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
     required this.title,
     required this.child,
     this.headerTrailing,
+    this.headerCompactTrailing,
     this.onClose,
     this.closeLabel,
     this.onBack,
@@ -85,6 +87,9 @@ class ActionBottomSheetLayout extends StatelessWidget {
   final String title;
   final Widget child;
   final Widget? headerTrailing;
+
+  /// [headerTrailing] in less width; see [BottomSheetHeader.compactTrailing].
+  final Widget? headerCompactTrailing;
   final VoidCallback? onClose;
   final String? closeLabel;
   final VoidCallback? onBack;
@@ -124,6 +129,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
       onBack: onBack,
       backLabel: backLabel,
       trailing: headerTrailing,
+      compactTrailing: headerCompactTrailing,
       padding: headerPadding,
     );
 
