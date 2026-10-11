@@ -215,22 +215,57 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get appRetrying => 'फिर कोशिश हो रही है…';
 
   @override
-  String get onboardingReadAnythingTitle => 'कुछ भी पढ़ें';
+  String get onboardingWelcomeTitle => 'Readflex में आपका स्वागत है';
 
   @override
-  String get onboardingReadAnythingDescription =>
-      'किताबें आयात करें और अनुकूलन योग्य रीडर में आराम से पढ़ें।';
+  String get onboardingWelcomeSubtitle =>
+      'किताबें, कॉमिक, PDF और वेब लेख, एक ही रीडर में।';
 
   @override
-  String get onboardingHighlightSaveTitle => 'हाइलाइट करें और सहेजें';
+  String get onboardingFeatureBooksTitle => 'किताबें, कॉमिक और PDF';
 
   @override
-  String get onboardingHighlightSaveDescription =>
-      'हाइलाइट बनाने के लिए टेक्स्ट चुनें। बेहतर समझ के लिए नोट जोड़ें।';
+  String get onboardingFeatureBooksDescription =>
+      'EPUB, FB2, MOBI, AZW3, PDF और CBZ';
 
   @override
-  String get onboardingOrganizeLibraryDescription =>
-      'किताबें और लेख एक जगह रखें और अपनी पढ़ने की प्रगति पर वापस आएं।';
+  String get onboardingFeatureArticlesTitle => 'लिंक से लेख';
+
+  @override
+  String get onboardingFeatureArticlesDescription =>
+      'ऑफ़लाइन पढ़ने के लिए साफ़ कॉपी';
+
+  @override
+  String get onboardingFeatureLookupTitle => 'अनुवाद और परिभाषा';
+
+  @override
+  String onboardingFeatureLookupDescription(String translate, String define) {
+    return 'किसी शब्द को दबाकर रखें, फिर “$translate” या “$define” पर टैप करें';
+  }
+
+  @override
+  String get onboardingFeatureHighlightsTitle => 'हाइलाइट और नोट्स';
+
+  @override
+  String get onboardingFeatureHighlightsDescription =>
+      'पाँच रंग, और किसी भी हाइलाइट पर नोट';
+
+  @override
+  String onboardingSelectionSampleSentence(String word) {
+    return 'दीये की रोशनी में हर पन्ना $word लग रहा था।';
+  }
+
+  @override
+  String get onboardingSelectionSampleWord => 'भारहीन';
+
+  @override
+  String onboardingSelectionSampleLabel(
+    String copy,
+    String translate,
+    String define,
+  ) {
+    return '“$copy”, “$translate” और “$define” कार्रवाइयों के साथ चुने गए शब्द का उदाहरण';
+  }
 
   @override
   String get commonCancel => 'रद्द करें';
@@ -1016,12 +1051,41 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get translationUnknownLanguage => 'अज्ञात भाषा';
 
   @override
+  String get translationSameLanguageTitle => 'अनुवाद की ज़रूरत नहीं';
+
+  @override
+  String translationSameLanguageBody(String language) {
+    return 'टेक्स्ट पहले से लक्ष्य भाषा में है: $language। अनुवाद के लिए कोई दूसरी भाषा चुनें।';
+  }
+
+  @override
+  String translationSameLanguageDefineBody(String language, String define) {
+    return 'टेक्स्ट पहले से लक्ष्य भाषा में है: $language। “$define” बताएगा कि यहाँ इसका क्या मतलब है।';
+  }
+
+  @override
   String dictionaryDefinitionNumber(int number) {
     return '$number.';
   }
 
   @override
   String get importDiscardUrlBody => 'दर्ज किया गया पता सहेजा नहीं जाएगा।';
+
+  @override
+  String get readerSelectionTipTitle => 'किसी शब्द को दबाकर रखें';
+
+  @override
+  String readerSelectionTipBody(
+    String highlight,
+    String copy,
+    String translate,
+    String define,
+  ) {
+    return 'फिर “$highlight”, “$copy”, “$translate” या “$define” पर टैप करें।';
+  }
+
+  @override
+  String get readerSelectionTipDismiss => 'ठीक है';
 
   @override
   String get readerTapAreaHint => 'टैप क्षेत्र';
@@ -1067,7 +1131,7 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get libraryChooseCollection => 'कलेक्शन चुनें';
 
   @override
-  String get onboardingAddBook => 'किताब जोड़ें';
+  String get onboardingAddBook => 'अपनी पहली किताब जोड़ें';
 
   @override
   String get onboardingNotNow => 'अभी नहीं';

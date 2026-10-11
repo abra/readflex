@@ -112,9 +112,14 @@ to layout, navigation and performance contracts.
 Collections exposes selected state and a check as well as the selection fill.
 Reader active-result text and action icons use tested foreground/background
 pairs in both themes. Quote direction, note direction and interface direction
-are independent. Onboarding is one static screen: its page preview tilt mirrors
-in RTL, nothing animates, and both actions stay outside the scrolling content
-at large text. Errors do not expire automatically
+are independent. Onboarding is one static screen: the app icon is decorative,
+the heading is a header that shrinks rather than break a word at large text,
+the sample page is announced as one described image (its copied selection menu
+takes no input and is not read as buttons), its tilt mirrors in RTL, nothing
+animates, and both actions stay outside the scrolling content at large text.
+The reader's one-time selection tip is a live region with a 48dp "Got it"; its
+inks keep 4.5:1 on the inverse plate, "Got it" moves below the message at
+large text, and the tip appears without animation under reduced motion. Errors do not expire automatically
 when accessible navigation is enabled; success notifications stay 4s, long
 enough to read a book title. Toasts sit at the bottom above the screen's bottom
 controls (`ToastAvoidArea`) and never cover them, so those controls stay

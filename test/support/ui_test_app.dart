@@ -89,6 +89,9 @@ final class UiTestApp {
     bool withBook = true,
     bool nativeReader = false,
     bool onboardingCompleted = true,
+    // Scenarios show a returning reader; the first-run selection tip has its
+    // own test.
+    bool readerSelectionTipDismissed = true,
   }) async {
     final previous = SharedPreferencesAsyncPlatform.instance;
     final app = UiTestApp._(
@@ -110,6 +113,7 @@ final class UiTestApp {
       await app.preferencesService.update(
         (p) => p.copyWith(
           onboardingCompleted: onboardingCompleted,
+          readerSelectionTipDismissed: readerSelectionTipDismissed,
           locale: const Locale('en'),
           themeMode: ThemeMode.light,
           translationTargetLanguageCode: 'de',

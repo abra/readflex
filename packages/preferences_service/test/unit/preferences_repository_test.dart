@@ -40,6 +40,8 @@ void main() {
       expect(prefs.readerLastCustomBrightness, 0.7);
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.onboardingCompleted, isFalse);
+      expect(prefs.readerSelectionTipShowCount, 0);
+      expect(prefs.readerSelectionTipDismissed, isFalse);
     });
 
     test('load() reads legacy catalog layout preference', () async {
@@ -91,6 +93,8 @@ void main() {
           ),
         },
         onboardingCompleted: true,
+        readerSelectionTipShowCount: 2,
+        readerSelectionTipDismissed: true,
       );
 
       await repo.save(source);
@@ -149,6 +153,45 @@ void main() {
       expect(map['readerTextScale'], 1.0);
       expect(map['readerLineHeight'], 1.6);
       expect(map['readerSideMargin'], 8.0);
+    });
+
+    test('save() writes the selection tip fields under stable keys', () async {
+      final storage = PreferencesStorage();
+      final repo = PreferencesRepository(storage);
+      await repo.save(
+        const Preferences(
+          readerSelectionTipShowCount: 3,
+          readerSelectionTipDismissed: true,
+        ),
+      );
+
+      final map =
+          jsonDecode((await storage.getString(_key))!) as Map<String, Object?>;
+      expect(map['readerSelectionTipShowCount'], 3);
+      expect(map['readerSelectionTipDismissed'], isTrue);
+    });
+
+    test('load() keeps the selection tip count at zero or more', () async {
+      final storage = PreferencesStorage();
+      for (final (stored, expected) in [
+        (-4, 0),
+        (2.0, 2),
+        (null, 0),
+      ]) {
+        await storage.setString(
+          _key,
+          jsonEncode(<String, Object?>{
+            'readerSelectionTipShowCount': stored,
+            'readerSelectionTipDismissed': stored == null ? null : false,
+          }),
+        );
+
+        final prefs = await PreferencesRepository(storage).load(
+          _supportedCodes,
+        );
+        expect(prefs.readerSelectionTipShowCount, expected, reason: '$stored');
+        expect(prefs.readerSelectionTipDismissed, isFalse);
+      }
     });
 
     test(

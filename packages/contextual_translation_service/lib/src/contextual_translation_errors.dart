@@ -7,6 +7,11 @@ enum ContextualTranslationFailureReason {
   offlineModelRequired,
   unsupportedLanguagePair,
   unavailable,
+
+  /// The text is already in the target language, so there is nothing to
+  /// translate. Not a fault: [ContextualTranslationException.sourceLanguage]
+  /// names that language, and no offline fallback runs.
+  sameLanguage,
 }
 
 class ContextualTranslationException implements Exception {

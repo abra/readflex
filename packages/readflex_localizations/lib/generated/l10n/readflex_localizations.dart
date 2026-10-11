@@ -495,35 +495,87 @@ abstract class ReadflexLocalizations {
   /// **'Retrying…'**
   String get appRetrying;
 
-  /// No description provided for @onboardingReadAnythingTitle.
+  /// Onboarding heading. "Readflex" is the app name and is not translated.
   ///
   /// In en, this message translates to:
-  /// **'Read anything'**
-  String get onboardingReadAnythingTitle;
+  /// **'Welcome to Readflex'**
+  String get onboardingWelcomeTitle;
 
-  /// No description provided for @onboardingReadAnythingDescription.
+  /// One line under the onboarding heading: what the app reads.
   ///
   /// In en, this message translates to:
-  /// **'Import books and read comfortably with a customizable reader.'**
-  String get onboardingReadAnythingDescription;
+  /// **'Books, comics, PDF and web articles in one reader.'**
+  String get onboardingWelcomeSubtitle;
 
-  /// No description provided for @onboardingHighlightSaveTitle.
+  /// Onboarding feature row title: the file types the app opens.
   ///
   /// In en, this message translates to:
-  /// **'Highlight & save'**
-  String get onboardingHighlightSaveTitle;
+  /// **'Books, comics and PDF'**
+  String get onboardingFeatureBooksTitle;
 
-  /// No description provided for @onboardingHighlightSaveDescription.
+  /// Onboarding feature row detail: supported file formats. Format names are not translated; only the list conjunction is.
   ///
   /// In en, this message translates to:
-  /// **'Select text to create highlights. Add notes for deeper understanding.'**
-  String get onboardingHighlightSaveDescription;
+  /// **'EPUB, FB2, MOBI, AZW3, PDF and CBZ'**
+  String get onboardingFeatureBooksDescription;
 
-  /// No description provided for @onboardingOrganizeLibraryDescription.
+  /// Onboarding feature row title: web articles saved from a link.
   ///
   /// In en, this message translates to:
-  /// **'Keep books and articles in one place and return to your reading progress.'**
-  String get onboardingOrganizeLibraryDescription;
+  /// **'Articles from a link'**
+  String get onboardingFeatureArticlesTitle;
+
+  /// Onboarding feature row detail: a saved article is a cleaned copy readable offline.
+  ///
+  /// In en, this message translates to:
+  /// **'A clean copy for offline reading'**
+  String get onboardingFeatureArticlesDescription;
+
+  /// Onboarding feature row title: translation and dictionary lookup of selected text.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate and define'**
+  String get onboardingFeatureLookupTitle;
+
+  /// Onboarding feature row detail. The placeholders are the reader selection menu labels (translationAction, dictionaryAction), so the copy names the real buttons.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a word, then tap {translate} or {define}'**
+  String onboardingFeatureLookupDescription(String translate, String define);
+
+  /// Onboarding feature row title: highlights and notes.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlights and notes'**
+  String get onboardingFeatureHighlightsTitle;
+
+  /// Onboarding feature row detail. The reader offers five highlight colors; a note can be added to any highlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Five colors, and a note on any highlight'**
+  String get onboardingFeatureHighlightsDescription;
+
+  /// Sample sentence on the onboarding book page; {word} is onboardingSelectionSampleWord, shown as selected text.
+  ///
+  /// In en, this message translates to:
+  /// **'In the lamplight every page felt {word}.'**
+  String onboardingSelectionSampleSentence(String word);
+
+  /// The selected word in the onboarding sample sentence; must read naturally where {word} sits in onboardingSelectionSampleSentence.
+  ///
+  /// In en, this message translates to:
+  /// **'weightless'**
+  String get onboardingSelectionSampleWord;
+
+  /// Screen reader description of the onboarding sample page. The placeholders are the reader selection menu labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Example of a selected word with the {copy}, {translate} and {define} actions'**
+  String onboardingSelectionSampleLabel(
+    String copy,
+    String translate,
+    String define,
+  );
 
   /// No description provided for @commonCancel.
   ///
@@ -1905,6 +1957,24 @@ abstract class ReadflexLocalizations {
   /// **'Unknown language'**
   String get translationUnknownLanguage;
 
+  /// Translation sheet state when the selected text is already in the target language.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to translate'**
+  String get translationSameLanguageTitle;
+
+  /// Same-language state for longer text. {language} is the language name as the language menu shows it.
+  ///
+  /// In en, this message translates to:
+  /// **'The text is already in the target language, {language}. Choose another language to translate it.'**
+  String translationSameLanguageBody(String language);
+
+  /// Same-language state for a word or phrase. {language} is the language name as the language menu shows it; {define} is the dictionaryAction label of the button below.
+  ///
+  /// In en, this message translates to:
+  /// **'The text is already in the target language, {language}. {define} shows what it means here.'**
+  String translationSameLanguageDefineBody(String language, String define);
+
   /// No description provided for @dictionaryDefinitionNumber.
   ///
   /// In en, this message translates to:
@@ -1916,6 +1986,29 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'The address you entered will not be saved.'**
   String get importDiscardUrlBody;
+
+  /// One-time reader tip title: how to select text.
+  ///
+  /// In en, this message translates to:
+  /// **'Press and hold a word'**
+  String get readerSelectionTipTitle;
+
+  /// One-time reader tip detail. The placeholders are the reader selection menu labels, in their menu order.
+  ///
+  /// In en, this message translates to:
+  /// **'Then tap {highlight}, {copy}, {translate} or {define}.'**
+  String readerSelectionTipBody(
+    String highlight,
+    String copy,
+    String translate,
+    String define,
+  );
+
+  /// Button that closes the one-time reader tip for good.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get readerSelectionTipDismiss;
 
   /// No description provided for @readerTapAreaHint.
   ///
@@ -1998,7 +2091,7 @@ abstract class ReadflexLocalizations {
   /// Primary onboarding action; finishes onboarding and opens import
   ///
   /// In en, this message translates to:
-  /// **'Add a book'**
+  /// **'Add your first book'**
   String get onboardingAddBook;
 
   /// Secondary onboarding action; finishes onboarding without importing

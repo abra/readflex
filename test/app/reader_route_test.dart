@@ -1,9 +1,11 @@
+import 'package:dictionary/dictionary.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/app_system_ui_mode.dart';
 import 'package:readflex/app/routing.dart';
+import 'package:translate/translate.dart';
 
 import '../support/ui_test_app.dart';
 
@@ -28,6 +30,8 @@ void main() {
         (tester) async {
           var opened = 0;
           void onOpened() => opened++;
+          var saved = 0;
+          void onSaved() => saved++;
           final hasBook = ['book', 'both', 'mismatched'].contains(scenario);
           final hasCallback = [
             'callback',
@@ -42,6 +46,7 @@ void main() {
               : ReaderRouteArguments(
                   initialSource: hasBook ? app.book : null,
                   onSourceOpened: hasCallback ? onOpened : null,
+                  onReadingPositionSaved: hasCallback ? onSaved : null,
                 );
           final location = AppRoutes.reader(sourceId);
           final route = router.configuration.routes
@@ -93,7 +98,22 @@ void main() {
           expect(reader.onSourceOpened, hasCallback ? same(onOpened) : isNull);
           reader.onSourceOpened?.call();
           expect(opened, hasCallback ? 1 : 0);
+          expect(
+            reader.onReadingPositionSaved,
+            hasCallback ? same(onSaved) : isNull,
+          );
+          reader.onReadingPositionSaved?.call();
+          expect(saved, hasCallback ? 1 : 0);
           expect(reader.textActions, hasLength(4));
+          // A word already in the target language opens the definition from
+          // the very dictionary action the menu offers.
+          final translate = reader.textActions
+              .whereType<TranslateAction>()
+              .single;
+          final dictionary = reader.textActions
+              .whereType<DictionaryAction>()
+              .single;
+          expect(translate.onDefine, dictionary.onExecute);
           expect(reader.serverBaseUri, app.readerServer.baseUri);
         },
         variant: TargetPlatformVariant({platform}),

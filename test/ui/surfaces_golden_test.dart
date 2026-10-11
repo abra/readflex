@@ -124,6 +124,25 @@ void main() {
       );
       pending.complete();
       await tester.pumpAndSettle();
+      // English text with English as the target: nothing to translate, and
+      // the phrase offers its definition.
+      await preferences.update(
+        (p) => p.copyWith(translationTargetLanguageCode: 'en'),
+      );
+      await sheet(
+        'translation-same-language',
+        (context) => showTranslateSheet(
+          context,
+          selection: selection,
+          translationService: FixtureTranslation()
+            ..failure = ContextualTranslationFailureReason.sameLanguage,
+          preferencesService: preferences,
+          canDefine: true,
+        ),
+      );
+      await preferences.update(
+        (p) => p.copyWith(translationTargetLanguageCode: 'de'),
+      );
       await sheet(
         'translation-word',
         (context) => showTranslateSheet(

@@ -210,19 +210,54 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get appRetrying => '正在重试…';
 
   @override
-  String get onboardingReadAnythingTitle => '阅读任何内容';
+  String get onboardingWelcomeTitle => '欢迎使用 Readflex';
 
   @override
-  String get onboardingReadAnythingDescription => '导入图书，并使用可自定义的阅读器舒适阅读。';
+  String get onboardingWelcomeSubtitle => '图书、漫画、PDF 和网页文章，尽在一个阅读器。';
 
   @override
-  String get onboardingHighlightSaveTitle => '高亮并保存';
+  String get onboardingFeatureBooksTitle => '图书、漫画和 PDF';
 
   @override
-  String get onboardingHighlightSaveDescription => '选择文字创建高亮。添加笔记以加深理解。';
+  String get onboardingFeatureBooksDescription =>
+      'EPUB、FB2、MOBI、AZW3、PDF 和 CBZ';
 
   @override
-  String get onboardingOrganizeLibraryDescription => '将图书和文章放在一处，并随时回到阅读进度。';
+  String get onboardingFeatureArticlesTitle => '通过链接保存文章';
+
+  @override
+  String get onboardingFeatureArticlesDescription => '干净的副本，可离线阅读';
+
+  @override
+  String get onboardingFeatureLookupTitle => '翻译和释义';
+
+  @override
+  String onboardingFeatureLookupDescription(String translate, String define) {
+    return '长按单词，然后点按“$translate”或“$define”';
+  }
+
+  @override
+  String get onboardingFeatureHighlightsTitle => '高亮和笔记';
+
+  @override
+  String get onboardingFeatureHighlightsDescription => '五种颜色，每处高亮都能添加笔记';
+
+  @override
+  String onboardingSelectionSampleSentence(String word) {
+    return '在灯光下，每一页都显得$word。';
+  }
+
+  @override
+  String get onboardingSelectionSampleWord => '轻盈';
+
+  @override
+  String onboardingSelectionSampleLabel(
+    String copy,
+    String translate,
+    String define,
+  ) {
+    return '示例：选中的单词及“$copy”“$translate”“$define”操作';
+  }
 
   @override
   String get commonCancel => '取消';
@@ -994,12 +1029,41 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get translationUnknownLanguage => '未知语言';
 
   @override
+  String get translationSameLanguageTitle => '无需翻译';
+
+  @override
+  String translationSameLanguageBody(String language) {
+    return '文本已经是目标语言（$language）。请选择其他语言进行翻译。';
+  }
+
+  @override
+  String translationSameLanguageDefineBody(String language, String define) {
+    return '文本已经是目标语言（$language）。点按“$define”查看它在这里的含义。';
+  }
+
+  @override
   String dictionaryDefinitionNumber(int number) {
     return '$number.';
   }
 
   @override
   String get importDiscardUrlBody => '输入的地址将不会保存。';
+
+  @override
+  String get readerSelectionTipTitle => '长按单词';
+
+  @override
+  String readerSelectionTipBody(
+    String highlight,
+    String copy,
+    String translate,
+    String define,
+  ) {
+    return '然后点按“$highlight”“$copy”“$translate”或“$define”。';
+  }
+
+  @override
+  String get readerSelectionTipDismiss => '知道了';
 
   @override
   String get readerTapAreaHint => '点击区域';
@@ -1045,7 +1109,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryChooseCollection => '选择收藏集';
 
   @override
-  String get onboardingAddBook => '添加图书';
+  String get onboardingAddBook => '添加第一本书';
 
   @override
   String get onboardingNotNow => '以后再说';

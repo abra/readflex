@@ -2,18 +2,31 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-import 'onboarding_page_preview.dart';
+import 'onboarding_app_icon.dart';
+import 'onboarding_feature_list.dart';
+import 'onboarding_heading.dart';
+import 'onboarding_selection_sample.dart';
 
 /// Single onboarding screen shown on the first app launch.
 ///
-/// Both actions finish onboarding; the caller persists completion and decides
-/// where each one leads.
+/// It greets the reader as Readflex (the app icon and "Welcome to Readflex"),
+/// shows the reader's selection menu on a sample page, and lists what the app
+/// does. Both actions finish onboarding; the caller persists completion and
+/// decides where each one leads.
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({
     required this.onAddBook,
     required this.onNotNow,
     super.key,
   });
+
+  /// Content and actions stop growing at this width, so a tablet keeps the
+  /// phone's single column instead of stretching rows and buttons.
+  static const maxContentWidth = 480.0;
+
+  /// Space around the sample page; it also leaves room for its tilted
+  /// corners and shadow.
+  static const sampleSpacing = AppSpacing.xl + AppSpacing.xs;
 
   /// Primary action: finish onboarding and start adding a book.
   final VoidCallback onAddBook;
@@ -45,39 +58,35 @@ class OnboardingScreen extends StatelessWidget {
                     constraints: BoxConstraints(
                       minHeight: constraints.maxHeight,
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Room for the tilted corners and the card's shadow.
-                        const SizedBox(height: AppSpacing.xl),
-                        // The page sample carries the highlight story, so the
-                        // copy below does not repeat it.
-                        OnboardingPagePreview(
-                          chapter: l10n.onboardingHighlightSaveTitle,
-                          highlightedParagraph:
-                              l10n.onboardingHighlightSaveDescription,
-                          paragraph: l10n.onboardingOrganizeLibraryDescription,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: maxContentWidth,
                         ),
-                        const SizedBox(height: AppSpacing.xl + AppSpacing.sm),
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            l10n.onboardingReadAnythingTitle,
-                            style: text.headlineSmall,
-                            textAlign: TextAlign.center,
-                          ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: AppSpacing.xl),
+                            const Center(child: OnboardingAppIcon()),
+                            const SizedBox(height: AppSpacing.lg),
+                            OnboardingHeading(l10n.onboardingWelcomeTitle),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              l10n.onboardingWelcomeSubtitle,
+                              style: text.bodyMedium.copyWith(
+                                color: colors.onSurfaceVariant,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: sampleSpacing),
+                            const OnboardingSelectionSample(),
+                            const SizedBox(height: sampleSpacing),
+                            const OnboardingFeatureList(),
+                            const SizedBox(height: AppSpacing.lg),
+                          ],
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Text(
-                          l10n.onboardingReadAnythingDescription,
-                          style: text.bodyLarge.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -90,20 +99,25 @@ class OnboardingScreen extends StatelessWidget {
                 AppSpacing.lg,
                 AppSpacing.lg,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  FilledButton.icon(
-                    onPressed: onAddBook,
-                    icon: const Icon(AppIcons.add, size: AppIconSize.sm),
-                    label: AppButtonLabel(l10n.onboardingAddBook),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: maxContentWidth),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: onAddBook,
+                        icon: const Icon(AppIcons.add, size: AppIconSize.sm),
+                        label: AppButtonLabel(l10n.onboardingAddBook),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      TextButton(
+                        onPressed: onNotNow,
+                        child: AppButtonLabel(l10n.onboardingNotNow),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  TextButton(
-                    onPressed: onNotNow,
-                    child: AppButtonLabel(l10n.onboardingNotNow),
-                  ),
-                ],
+                ),
               ),
             ),
           ],

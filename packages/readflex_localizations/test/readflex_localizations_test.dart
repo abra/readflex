@@ -28,6 +28,84 @@ void main() {
     }
   });
 
+  group('selection copy', () {
+    for (final locale in ReadflexSupportedLocales.locales) {
+      test('names the real selection menu labels: $locale', () {
+        final l10n = lookupReadflexLocalizations(locale);
+        final translate = l10n.translationAction;
+        final define = l10n.dictionaryAction;
+        final copy = l10n.commonCopy;
+        final highlight = l10n.highlightAction;
+
+        final lookup = l10n.onboardingFeatureLookupDescription(
+          translate,
+          define,
+        );
+        expect(lookup, allOf(contains(translate), contains(define)));
+
+        final tip = l10n.readerSelectionTipBody(
+          highlight,
+          copy,
+          translate,
+          define,
+        );
+        final order = [
+          highlight,
+          copy,
+          translate,
+          define,
+        ].map(tip.indexOf).toList();
+        expect(order, everyElement(isNonNegative), reason: tip);
+        expect(order, orderedEquals([...order]..sort()), reason: tip);
+
+        final sample = l10n.onboardingSelectionSampleLabel(
+          copy,
+          translate,
+          define,
+        );
+        expect(
+          sample,
+          allOf(contains(copy), contains(translate), contains(define)),
+        );
+      });
+
+      test('the sample sentence holds its selected word once: $locale', () {
+        final l10n = lookupReadflexLocalizations(locale);
+        final word = l10n.onboardingSelectionSampleWord;
+        final sentence = l10n.onboardingSelectionSampleSentence(word);
+
+        expect(word.trim(), isNotEmpty);
+        expect(sentence.indexOf(word), isNonNegative);
+        expect(sentence.indexOf(word), sentence.lastIndexOf(word));
+        expect(sentence.length, greaterThan(word.length));
+      });
+
+      test('the same-language copy names the language and Define: '
+          '$locale', () {
+        final l10n = lookupReadflexLocalizations(locale);
+        const language = 'English';
+        expect(l10n.translationSameLanguageTitle.trim(), isNotEmpty);
+        expect(l10n.translationSameLanguageBody(language), contains(language));
+        final define = l10n.translationSameLanguageDefineBody(
+          language,
+          l10n.dictionaryAction,
+        );
+        expect(
+          define,
+          allOf(contains(language), contains(l10n.dictionaryAction)),
+        );
+      });
+
+      test('the welcome copy keeps the app name: $locale', () {
+        final l10n = lookupReadflexLocalizations(locale);
+        expect(l10n.onboardingWelcomeTitle, contains('Readflex'));
+        expect(l10n.onboardingFeatureBooksDescription, contains('EPUB'));
+        expect(l10n.onboardingFeatureBooksDescription, contains('CBZ'));
+        expect(l10n.readerSelectionTipDismiss.trim(), isNotEmpty);
+      });
+    }
+  });
+
   test('uses Russian highlight terminology consistently', () {
     final l10n = lookupReadflexLocalizations(const Locale('ru'));
 
@@ -45,10 +123,15 @@ void main() {
     expect(l10n.readerNoMatchingHighlights, 'Подходящих выделений нет');
     expect(l10n.readerRemoveHighlight, 'Удалить выделение');
     expect(l10n.readerHighlightNoteTitle, 'Заметка к выделению');
-    expect(
-      l10n.onboardingHighlightSaveDescription,
-      'Сохраняйте выделенные фрагменты текста и добавляйте заметки.',
-    );
+    expect(l10n.onboardingFeatureHighlightsTitle, 'Выделения и заметки');
+    // "Выделить" is the highlight command, so the selection copy never asks
+    // the reader to "выделить" a word.
+    for (final copy in [
+      l10n.onboardingFeatureLookupDescription('A', 'B'),
+      l10n.readerSelectionTipTitle,
+    ]) {
+      expect(copy.toLowerCase(), isNot(contains('выдел')), reason: copy);
+    }
     for (final count in [1, 2, 5, 21]) {
       expect(l10n.libraryDeleteItemsBody(count), contains('выделения'));
       expect(

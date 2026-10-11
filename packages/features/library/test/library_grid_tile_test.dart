@@ -560,8 +560,11 @@ void main() {
           .width;
       await pump(selected: true);
       final scale = tester.widget<AnimatedScale>(find.byType(AnimatedScale));
-      final fill = tester.widget<AnimatedContainer>(
-        find.byKey(const Key('libraryGridProgressFill')),
+      final fill = tester.widget<AnimatedFractionallySizedBox>(
+        find.ancestor(
+          of: find.byKey(const Key('libraryGridProgressFill')),
+          matching: find.byType(AnimatedFractionallySizedBox),
+        ),
       );
       if (reduceMotion) {
         expect(scale.duration, Duration.zero);

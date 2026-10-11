@@ -11,21 +11,28 @@ import 'translate_cubit.dart';
 import 'translation_details.dart';
 import 'translation_language_direction.dart';
 import 'translation_lexical_header.dart';
+import 'translate_sheet_outcome.dart';
+import 'translation_selection_mode.dart';
 import 'translation_selection_preview.dart';
 import 'translation_text_direction.dart';
 
-Future<void> showTranslateSheet(
+/// Shows the translation sheet for [selection]. Completes with
+/// [TranslateSheetOutcome.define] when the reader asked for the definition
+/// instead, or `null` when the sheet was dismissed.
+Future<TranslateSheetOutcome?> showTranslateSheet(
   BuildContext context, {
   required TextSelectionContext selection,
   required ContextualTranslationService translationService,
   required PreferencesService preferencesService,
+  bool canDefine = false,
 }) {
-  return showAppBottomSheet<void>(
+  return showAppBottomSheet<TranslateSheetOutcome>(
     context,
     builder: (_) => TranslateSheet(
       selection: selection,
       translationService: translationService,
       preferencesService: preferencesService,
+      canDefine: canDefine,
     ),
   );
 }
@@ -35,12 +42,17 @@ class TranslateSheet extends StatelessWidget {
     required this.selection,
     required this.translationService,
     required this.preferencesService,
+    this.canDefine = false,
     super.key,
   });
 
   final TextSelectionContext selection;
   final ContextualTranslationService translationService;
   final PreferencesService preferencesService;
+
+  /// Whether the caller can open a definition, offered when a word is
+  /// already in the target language.
+  final bool canDefine;
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +63,7 @@ class TranslateSheet extends StatelessWidget {
       )..translate(selection),
       child: _TranslateSheetView(
         selection: selection,
+        canDefine: canDefine,
         onCopy: (text) => Clipboard.setData(ClipboardData(text: text)),
       ),
     );
@@ -58,9 +71,14 @@ class TranslateSheet extends StatelessWidget {
 }
 
 class _TranslateSheetView extends StatefulWidget {
-  const _TranslateSheetView({required this.selection, required this.onCopy});
+  const _TranslateSheetView({
+    required this.selection,
+    required this.canDefine,
+    required this.onCopy,
+  });
 
   final TextSelectionContext selection;
+  final bool canDefine;
   final Future<void> Function(String) onCopy;
 
   @override
@@ -69,11 +87,21 @@ class _TranslateSheetView extends StatefulWidget {
 
 class _TranslateSheetViewState extends State<_TranslateSheetView> {
   final _sourceMenu = MenuController();
+  final _targetMenu = MenuController();
 
   void _chooseSourceLanguage() {
     if (context.read<TranslateCubit>().state.isBusy) return;
     _sourceMenu.open();
   }
+
+  void _chooseTargetLanguage() {
+    if (context.read<TranslateCubit>().state.isBusy) return;
+    _targetMenu.open();
+  }
+
+  /// Closes the sheet so the action that opened it shows the definition,
+  /// from a context that outlives this sheet.
+  void _define() => Navigator.of(context).pop(TranslateSheetOutcome.define);
 
   @override
   Widget build(BuildContext context) {
@@ -96,9 +124,10 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
           headerBottom: TranslationLanguageDirection(
             sourceLanguageCode: state.sourceLanguageCode,
             targetLanguageCode: state.targetLanguageCode,
-            detectedSourceLanguage: state.result?.detectedSourceLanguage,
+            detectedSourceLanguage: state.detectedSourceLanguage,
             enabled: !state.isBusy,
             sourceMenu: _sourceMenu,
+            targetMenu: _targetMenu,
             onSourceChanged: (value) =>
                 cubit.setSourceLanguage(selection, value),
             onTargetChanged: (value) =>
@@ -119,6 +148,8 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
                 selection: selection,
                 state: state,
                 onChooseSourceLanguage: _chooseSourceLanguage,
+                onChooseTargetLanguage: _chooseTargetLanguage,
+                onDefine: widget.canDefine ? _define : null,
                 onCopy: widget.onCopy,
               ),
             ],
@@ -134,12 +165,16 @@ class _TranslateBody extends StatelessWidget {
     required this.selection,
     required this.state,
     required this.onChooseSourceLanguage,
+    required this.onChooseTargetLanguage,
+    required this.onDefine,
     required this.onCopy,
   });
 
   final TextSelectionContext selection;
   final TranslateSheetState state;
   final VoidCallback onChooseSourceLanguage;
+  final VoidCallback onChooseTargetLanguage;
+  final VoidCallback? onDefine;
   final Future<void> Function(String) onCopy;
 
   @override
@@ -186,7 +221,60 @@ class _TranslateBody extends StatelessWidget {
         actionLabel: l10n.commonRetry,
         onAction: () => cubit.translate(selection),
       ),
+      TranslateSheetStatus.sameLanguage => _SameLanguageMessage(
+        selection: selection,
+        targetLanguageCode: state.targetLanguageCode,
+        onDefine: onDefine,
+        onChooseTargetLanguage: onChooseTargetLanguage,
+      ),
     };
+  }
+}
+
+/// The text is already in the target language, so nothing is translated.
+///
+/// A word or phrase offers its definition: in the language it is written in,
+/// a definition is what an English to English request means. Longer text, or
+/// a caller without a dictionary, points to the target language menu.
+class _SameLanguageMessage extends StatelessWidget {
+  const _SameLanguageMessage({
+    required this.selection,
+    required this.targetLanguageCode,
+    required this.onDefine,
+    required this.onChooseTargetLanguage,
+  });
+
+  final TextSelectionContext selection;
+  final String targetLanguageCode;
+  final VoidCallback? onDefine;
+  final VoidCallback onChooseTargetLanguage;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final language =
+        translationLanguageName(targetLanguageCode) ??
+        l10n.translationUnknownLanguage;
+    final onDefine = this.onDefine;
+    final define =
+        onDefine != null &&
+            translationModeForSelection(selection) == contextualTranslationMode
+        ? onDefine
+        : null;
+    return AppStatusMessage(
+      key: const ValueKey('translation-same-language'),
+      title: l10n.translationSameLanguageTitle,
+      body: define != null
+          ? l10n.translationSameLanguageDefineBody(
+              language,
+              l10n.dictionaryAction,
+            )
+          : l10n.translationSameLanguageBody(language),
+      actionLabel: define != null
+          ? l10n.dictionaryAction
+          : l10n.translationSelectLanguage,
+      onAction: define ?? onChooseTargetLanguage,
+    );
   }
 }
 

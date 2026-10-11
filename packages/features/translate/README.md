@@ -10,8 +10,9 @@ loading/error states, and target-language preference updates.
 
 | Symbol | Purpose |
 |--------|---------|
-| `TranslateAction` | Reader context-panel action wired by `routing.dart` |
-| `showTranslateSheet` | Opens the translation sheet for a `TextSelectionContext` |
+| `TranslateAction` | Reader context-panel action wired by `routing.dart`; optional `onDefine` opens the definition of the same selection |
+| `showTranslateSheet` | Opens the translation sheet for a `TextSelectionContext`; completes with `TranslateSheetOutcome.define` when the reader asked for the definition |
+| `TranslateSheetOutcome` | How the sheet closed when it asks the opening action for a follow-up |
 
 ## Architecture
 
@@ -26,6 +27,27 @@ routing.dart
 
 The sheet does not create HTTP clients, ML Kit translators, or repositories.
 Those are composed in the root app and passed through the action.
+
+### Text already in the target language
+
+Translating text into its own language means nothing; a reader who picks
+English for English text wants what the word means. `TranslateCubit` keeps
+the provider's detected language (`TranslateSheetState.detectedSourceLanguage`)
+across target changes, so the direction label holds it and a source or target
+equal to the known source language emits `TranslateSheetStatus.sameLanguage`
+without a request (a running request is cancelled; the target is still saved
+as the default). A provider `sameLanguage` answer, such as the first request
+with an automatic source, ends in the same state. Codes compare with
+`isSameTranslationLanguage`.
+
+The state is a shared `AppStatusMessage`, "Nothing to translate", naming the
+language as the menu shows it. For a word or phrase (`contextual_lookup`) with
+a definition available, its button is Define: the sheet closes with
+`TranslateSheetOutcome.define` and `TranslateAction` runs `onDefine` with its
+own caller context, which outlives the sheet. `routing.dart` passes the reader's
+`DictionaryAction.onExecute`, so this package never imports the dictionary
+feature. Longer text, or no `onDefine`, gets Select language, which opens the
+target menu.
 Language selection remains an anchored menu in the fixed direction header,
 not another bottom sheet. Ten autonyms use two columns only when measured text
 and checkmark slots fit. Larger text falls back to a bounded scrollable list;

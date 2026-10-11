@@ -53,6 +53,12 @@ repository loading resolves the device locale to a supported language.
 | `translationTargetLanguageCode` | `String` | app locale |
 | `bookImportTermsAcceptedVersion` | `int`  | `0`         |
 | `onboardingCompleted`      | `bool`      | `false`     |
+| `readerSelectionTipShowCount` | `int`  | `0`         |
+| `readerSelectionTipDismissed` | `bool` | `false`     |
+
+The two `readerSelectionTip*` fields back the reader's one-time "Press and
+hold a word" tip. Storage only records what happened; the show limit and
+dismissal rules belong to the reader's `ReaderSelectionTipCubit`.
 
 ## Usage
 

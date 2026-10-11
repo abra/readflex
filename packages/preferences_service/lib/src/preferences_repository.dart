@@ -1,5 +1,6 @@
 import 'dart:convert' show jsonDecode, jsonEncode;
 import 'dart:developer' as developer;
+import 'dart:math' as math;
 import 'dart:ui' show Locale, PlatformDispatcher;
 
 import 'package:flutter/material.dart' show ThemeMode;
@@ -117,6 +118,12 @@ class PreferencesRepository {
         bookImportTermsAcceptedVersion:
             (map['bookImportTermsAcceptedVersion'] as num?)?.toInt() ?? 0,
         onboardingCompleted: map['onboardingCompleted'] as bool? ?? false,
+        readerSelectionTipShowCount: math.max(
+          0,
+          (map['readerSelectionTipShowCount'] as num?)?.toInt() ?? 0,
+        ),
+        readerSelectionTipDismissed:
+            map['readerSelectionTipDismissed'] as bool? ?? false,
       );
       return preferences.copyWith(
         readerAppearanceOverrides: _removeNoOpReaderAppearanceOverrides(
@@ -165,6 +172,8 @@ class PreferencesRepository {
       'translationTargetLanguageCode': prefs.translationTargetLanguageCode,
       'bookImportTermsAcceptedVersion': prefs.bookImportTermsAcceptedVersion,
       'onboardingCompleted': prefs.onboardingCompleted,
+      'readerSelectionTipShowCount': prefs.readerSelectionTipShowCount,
+      'readerSelectionTipDismissed': prefs.readerSelectionTipDismissed,
     };
     await _storage.setString(_key, jsonEncode(map));
   }

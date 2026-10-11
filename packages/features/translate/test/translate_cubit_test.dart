@@ -15,6 +15,8 @@ void main() {
         InMemorySharedPreferencesAsync.empty();
   });
 
+  _sameLanguageTests();
+
   test('translate builds contextual request from text selection', () async {
     final service = _FakeTranslationService();
     final preferences = await PreferencesService.create(
@@ -220,6 +222,161 @@ void main() {
   });
 }
 
+void _sameLanguageTests() {
+  group('same language', () {
+    late PreferencesService preferences;
+
+    setUp(() async {
+      preferences = await PreferencesService.create(
+        supportedCodes: const ['en', 'ru', 'de'],
+      );
+      await preferences.update(
+        (prefs) => prefs.copyWith(translationTargetLanguageCode: 'ru'),
+      );
+    });
+    tearDown(() => preferences.dispose());
+
+    TranslateCubit createCubit(ContextualTranslationService service) {
+      final cubit = TranslateCubit(
+        translationService: service,
+        preferencesService: preferences,
+      );
+      addTearDown(cubit.close);
+      return cubit;
+    }
+
+    test('a target equal to the detected language sends no request', () async {
+      final service = _FakeTranslationService();
+      final cubit = createCubit(service);
+      await cubit.translate(_selection());
+      expect(cubit.state.detectedSourceLanguage, 'en');
+      expect(service.calls, 1);
+
+      await cubit.setTargetLanguage(_selection(), 'en-US');
+
+      expect(cubit.state.status, TranslateSheetStatus.sameLanguage);
+      expect(cubit.state.targetLanguageCode, 'en-US');
+      expect(cubit.state.result, isNull);
+      expect(cubit.state.detectedSourceLanguage, 'en');
+      expect(service.calls, 1);
+      expect(
+        preferences.current.translationTargetLanguageCode,
+        'en-US',
+        reason: 'the choice is still kept as the default target',
+      );
+    });
+
+    test('another target after that translates again', () async {
+      final service = _FakeTranslationService();
+      final cubit = createCubit(service);
+      await cubit.translate(_selection());
+      await cubit.setTargetLanguage(_selection(), 'en');
+
+      await cubit.setTargetLanguage(_selection(), 'de');
+
+      expect(cubit.state.status, TranslateSheetStatus.success);
+      expect(service.calls, 2);
+      expect(service.lastRequest?.targetLanguage, 'de');
+    });
+
+    test('a chosen source equal to the target sends no request', () async {
+      final service = _FakeTranslationService();
+      final cubit = createCubit(service);
+      await cubit.translate(_selection());
+
+      await cubit.setSourceLanguage(_selection(), 'ru');
+
+      expect(cubit.state.status, TranslateSheetStatus.sameLanguage);
+      expect(cubit.state.sourceLanguageCode, 'ru');
+      expect(service.calls, 1);
+    });
+
+    test(
+      'back to automatic with a detected language equal to the target',
+      () async {
+        final service = _FakeTranslationService();
+        final cubit = createCubit(service);
+        await cubit.translate(_selection());
+        await cubit.setSourceLanguage(_selection(), 'de');
+        expect(service.calls, 2);
+        await cubit.setTargetLanguage(_selection(), 'en');
+        expect(service.calls, 3, reason: 'de to en is a real translation');
+
+        await cubit.setSourceLanguage(_selection(), autoSourceLanguageCode);
+
+        expect(cubit.state.status, TranslateSheetStatus.sameLanguage);
+        expect(service.calls, 3);
+      },
+    );
+
+    test(
+      'a same-language answer shows the state and keeps its language',
+      () async {
+        final service = _FakeTranslationService(
+          error: const ContextualTranslationException(
+            ContextualTranslationFailureReason.sameLanguage,
+            'same',
+            sourceLanguage: 'ru',
+            targetLanguage: 'ru',
+          ),
+        );
+        final cubit = createCubit(service);
+
+        await cubit.translate(_selection());
+
+        expect(cubit.state.status, TranslateSheetStatus.sameLanguage);
+        expect(cubit.state.detectedSourceLanguage, 'ru');
+        expect(cubit.state.isBusy, isFalse);
+      },
+    );
+
+    test(
+      'a same-language answer to a chosen source keeps the detection',
+      () async {
+        final service = _FakeTranslationService();
+        final cubit = createCubit(service);
+        await cubit.translate(_selection());
+        service.error = const ContextualTranslationException(
+          ContextualTranslationFailureReason.sameLanguage,
+          'same',
+          sourceLanguage: 'de',
+          targetLanguage: 'ru',
+        );
+
+        await cubit.setSourceLanguage(_selection(), 'de');
+
+        expect(cubit.state.status, TranslateSheetStatus.sameLanguage);
+        expect(cubit.state.detectedSourceLanguage, 'en');
+      },
+    );
+
+    test('a same-language target cancels a running request', () async {
+      final service = _ControlledTranslationService();
+      final cubit = createCubit(service);
+      final first = cubit.translate(_selection());
+      service.complete(0, translation: 'бросил');
+      await first;
+
+      final pending = cubit.setTargetLanguage(_selection(), 'de');
+      await pumpEventQueue();
+      expect(service.requests, hasLength(2));
+      // Starting the second request also aborts the finished first one,
+      // which is a no-op.
+      expect(service.cancelled, [0]);
+
+      await cubit.setTargetLanguage(_selection(), 'en');
+      await pumpEventQueue();
+      expect(service.cancelled, [0, 1]);
+      expect(cubit.state.status, TranslateSheetStatus.sameLanguage);
+
+      service.complete(1, translation: 'late');
+      await pending;
+      expect(cubit.state.status, TranslateSheetStatus.sameLanguage);
+      expect(cubit.state.result, isNull);
+    });
+  });
+}
+
 TextSelectionContext _selection() {
   return const TextSelectionContext(
     selectedText: 'up',
@@ -240,8 +397,9 @@ TextSelectionContext _selection() {
 class _FakeTranslationService implements ContextualTranslationService {
   _FakeTranslationService({this.error});
 
-  final ContextualTranslationException? error;
+  ContextualTranslationException? error;
   ContextualTranslationRequest? lastRequest;
+  var calls = 0;
 
   @override
   Future<ContextualTranslationResult> translate(
@@ -249,6 +407,7 @@ class _FakeTranslationService implements ContextualTranslationService {
     bool allowOfflineModelDownload = false,
     Future<void>? abortTrigger,
   }) async {
+    calls++;
     lastRequest = request;
     final error = this.error;
     if (error != null) throw error;

@@ -310,6 +310,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
         fraction: position.fraction.clamp(0, 1),
       );
     }
+    if (isReaderPageTurn(
+      sourceType: context.read<ReaderBloc>().state.sourceType,
+      relocationReason: position.relocationReason,
+    )) {
+      context.read<ReaderSelectionTipCubit>().hideForSession();
+    }
     if (context.read<ReaderSearchCubit>().state.isNavigating) return;
     context.read<ReaderUiCubit>().readerPositionChanged(
       relocationReason: position.relocationReason,
@@ -650,6 +656,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                             onSeekFraction: _seekFraction,
                           ),
                         const _ReaderImagePageProgressOverlayDriver(),
+                        ReaderSelectionTipDriver(webViewReady: webViewReady),
                         _ContextPanelDriver(
                           textActions: widget.textActions,
                           webViewKey: _webViewKey,

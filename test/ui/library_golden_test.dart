@@ -96,7 +96,8 @@ void main() {
           articleRepository: app.articleRepository,
           collectionRepository: app.collectionRepository,
           preferencesService: app.preferencesService,
-          onSourcePressed: (_, {onSourceOpened}) async {},
+          onSourcePressed:
+              (_, {onSourceOpened, onReadingPositionSaved}) async {},
           onAddPressed:
               ({required onImported, entry = LibraryImportEntry.menu}) async {},
         ),
@@ -317,7 +318,7 @@ void main() {
         articleRepository: app.articleRepository,
         collectionRepository: app.collectionRepository,
         preferencesService: app.preferencesService,
-        onSourcePressed: (_, {onSourceOpened}) async {},
+        onSourcePressed: (_, {onSourceOpened, onReadingPositionSaved}) async {},
         onAddPressed:
             ({required onImported, entry = LibraryImportEntry.menu}) async {},
       ),

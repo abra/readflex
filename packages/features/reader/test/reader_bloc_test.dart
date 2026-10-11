@@ -961,6 +961,112 @@ void main() {
         },
       );
 
+      test('persists first book progress immediately', () async {
+        final freshBook = testBook.copyWith(readingProgress: 0);
+        bookRepository.seedBook(freshBook);
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        bloc.emit(
+          ReaderState(
+            status: ReaderStatus.ready,
+            title: freshBook.title,
+            document: ReaderDocument.fromBook(freshBook),
+          ),
+        );
+
+        bloc.add(
+          const ReaderBookPositionUpdated(cfi: 'epubcfi(/6/2)', progress: 0.02),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        expect(bookRepository.updateCallCount, 1);
+        expect(bookRepository.updatedBook!.readingProgress, 0.02);
+      });
+
+      group('onReadingPositionSaved', () {
+        var saved = 0;
+        setUp(() => saved = 0);
+
+        ReaderBloc buildReportingBloc(Book book) {
+          bookRepository.seedBook(book);
+          final bloc = ReaderBloc(
+            bookRepository: bookRepository,
+            highlightRepository: highlightRepository,
+            onReadingPositionSaved: () => saved++,
+          );
+          bloc.emit(
+            ReaderState(
+              status: ReaderStatus.ready,
+              title: book.title,
+              document: ReaderDocument.fromBook(book),
+            ),
+          );
+          return bloc;
+        }
+
+        test('reports a debounced write once it reaches storage', () async {
+          final bloc = buildReportingBloc(testBook);
+          addTearDown(bloc.close);
+
+          bloc.add(
+            const ReaderBookPositionUpdated(cfi: 'epubcfi(2)', progress: 0.2),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          expect(saved, 0, reason: 'nothing is written during the debounce');
+
+          await Future<void>.delayed(const Duration(milliseconds: 650));
+          expect(bookRepository.updateCallCount, 1);
+          expect(saved, 1);
+
+          bloc.add(
+            const ReaderBookPositionUpdated(cfi: 'epubcfi(3)', progress: 0.3),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 700));
+          expect(saved, 2);
+        });
+
+        test('reports the first progress at once', () async {
+          final bloc = buildReportingBloc(
+            testBook.copyWith(readingProgress: 0),
+          );
+          addTearDown(bloc.close);
+
+          bloc.add(
+            const ReaderBookPositionUpdated(cfi: 'epubcfi(1)', progress: 0.01),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+
+          expect(saved, 1);
+        });
+
+        test('reports the write flushed on close', () async {
+          final bloc = buildReportingBloc(testBook);
+
+          bloc.add(
+            const ReaderBookPositionUpdated(cfi: 'epubcfi(9)', progress: 0.9),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          expect(saved, 0);
+
+          await bloc.close();
+          expect(bookRepository.updatedBook!.readingProgress, 0.9);
+          expect(saved, 1);
+        });
+
+        test('does not report a failed write', () async {
+          final bloc = buildReportingBloc(testBook);
+          addTearDown(bloc.close);
+          bookRepository.shouldThrow = true;
+
+          bloc.add(
+            const ReaderBookPositionUpdated(cfi: 'epubcfi(2)', progress: 0.2),
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 700));
+
+          expect(saved, 0);
+        });
+      });
+
       test(
         'treats a single-page article as fully progressed after opening',
         () async {

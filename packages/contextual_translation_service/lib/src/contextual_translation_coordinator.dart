@@ -2,6 +2,7 @@ import 'contextual_translation_cache.dart';
 import 'contextual_translation_errors.dart';
 import 'contextual_translation_models.dart';
 import 'contextual_translation_service.dart';
+import 'translation_language_code.dart';
 
 class ContextualTranslationCoordinator implements ContextualTranslationService {
   ContextualTranslationCoordinator({
@@ -36,10 +37,15 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
     // Observe an already completed signal before reading cache or starting I/O.
     await Future<void>.value();
     checkCancellation();
+    // A source the reader chose that equals the target needs no provider.
+    _throwIfSameLanguage(request.sourceLanguage, request);
     final cached = _cache.read(request);
     if (cached != null &&
         cached.reliability != ContextualTranslationReliability.offline) {
-      return _resultForRequest(cached, request.requestId);
+      return _resultForRequest(
+        _checkedLanguages(cached, request),
+        request.requestId,
+      );
     }
 
     try {
@@ -48,7 +54,9 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
         abortTrigger: abortTrigger,
       );
       checkCancellation();
-      _cache.write(request, result);
+      // Checked before caching, so a result that answers another question
+      // is never served again.
+      _cache.write(request, _checkedLanguages(result, request));
       return result;
     } on ContextualTranslationException catch (error) {
       checkCancellation();
@@ -66,6 +74,8 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
         targetLanguage: request.targetLanguage,
       );
     }
+    // Before any model check or download: there is nothing to translate.
+    _throwIfSameLanguage(sourceLanguage, request);
 
     if (!_offlineService.supportsLanguagePair(
       sourceLanguage: sourceLanguage,
@@ -128,6 +138,44 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
   }
 }
 
+/// Rejects a [result] that answers another question than [request]: text
+/// already in the target language, or a translation into another language.
+///
+/// Lives here rather than in a provider so remote and offline results follow
+/// the same rule.
+ContextualTranslationResult _checkedLanguages(
+  ContextualTranslationResult result,
+  ContextualTranslationRequest request,
+) {
+  _throwIfSameLanguage(result.detectedSourceLanguage, request);
+  final answered = result.targetLanguage;
+  if (answered != null &&
+      !isSameTranslationLanguage(answered, request.targetLanguage)) {
+    throw ContextualTranslationException(
+      ContextualTranslationFailureReason.invalidResponse,
+      'Translation response is in another language than requested',
+      sourceLanguage: result.detectedSourceLanguage,
+      targetLanguage: answered,
+    );
+  }
+  return result;
+}
+
+void _throwIfSameLanguage(
+  String? sourceLanguage,
+  ContextualTranslationRequest request,
+) {
+  if (!isSameTranslationLanguage(sourceLanguage, request.targetLanguage)) {
+    return;
+  }
+  throw ContextualTranslationException(
+    ContextualTranslationFailureReason.sameLanguage,
+    'The text is already in the target language',
+    sourceLanguage: translationLanguagePrimaryCode(sourceLanguage),
+    targetLanguage: request.targetLanguage,
+  );
+}
+
 bool _canFallbackOffline(ContextualTranslationException error) {
   return switch (error.reason) {
     ContextualTranslationFailureReason.network ||
@@ -139,7 +187,8 @@ bool _canFallbackOffline(ContextualTranslationException error) {
     ContextualTranslationFailureReason.cancelled ||
     ContextualTranslationFailureReason.sourceLanguageRequired ||
     ContextualTranslationFailureReason.offlineModelRequired ||
-    ContextualTranslationFailureReason.unsupportedLanguagePair => false,
+    ContextualTranslationFailureReason.unsupportedLanguagePair ||
+    ContextualTranslationFailureReason.sameLanguage => false,
   };
 }
 

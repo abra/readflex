@@ -111,11 +111,82 @@
   "appTechnicalDetails": "Technical details",
   "appRetry": "Retry",
   "appRetrying": "Retrying…",
-  "onboardingReadAnythingTitle": "Read anything",
-  "onboardingReadAnythingDescription": "Import books and read comfortably with a customizable reader.",
-  "onboardingHighlightSaveTitle": "Highlight & save",
-  "onboardingHighlightSaveDescription": "Select text to create highlights. Add notes for deeper understanding.",
-  "onboardingOrganizeLibraryDescription": "Keep books and articles in one place and return to your reading progress.",
+  "onboardingWelcomeTitle": "Welcome to Readflex",
+  "@onboardingWelcomeTitle": {
+    "description": "Onboarding heading. \"Readflex\" is the app name and is not translated."
+  },
+  "onboardingWelcomeSubtitle": "Books, comics, PDF and web articles in one reader.",
+  "@onboardingWelcomeSubtitle": {
+    "description": "One line under the onboarding heading: what the app reads."
+  },
+  "onboardingFeatureBooksTitle": "Books, comics and PDF",
+  "@onboardingFeatureBooksTitle": {
+    "description": "Onboarding feature row title: the file types the app opens."
+  },
+  "onboardingFeatureBooksDescription": "EPUB, FB2, MOBI, AZW3, PDF and CBZ",
+  "@onboardingFeatureBooksDescription": {
+    "description": "Onboarding feature row detail: supported file formats. Format names are not translated; only the list conjunction is."
+  },
+  "onboardingFeatureArticlesTitle": "Articles from a link",
+  "@onboardingFeatureArticlesTitle": {
+    "description": "Onboarding feature row title: web articles saved from a link."
+  },
+  "onboardingFeatureArticlesDescription": "A clean copy for offline reading",
+  "@onboardingFeatureArticlesDescription": {
+    "description": "Onboarding feature row detail: a saved article is a cleaned copy readable offline."
+  },
+  "onboardingFeatureLookupTitle": "Translate and define",
+  "@onboardingFeatureLookupTitle": {
+    "description": "Onboarding feature row title: translation and dictionary lookup of selected text."
+  },
+  "onboardingFeatureLookupDescription": "Select a word, then tap {translate} or {define}",
+  "@onboardingFeatureLookupDescription": {
+    "description": "Onboarding feature row detail. The placeholders are the reader selection menu labels (translationAction, dictionaryAction), so the copy names the real buttons.",
+    "placeholders": {
+      "translate": {
+        "type": "String"
+      },
+      "define": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingFeatureHighlightsTitle": "Highlights and notes",
+  "@onboardingFeatureHighlightsTitle": {
+    "description": "Onboarding feature row title: highlights and notes."
+  },
+  "onboardingFeatureHighlightsDescription": "Five colors, and a note on any highlight",
+  "@onboardingFeatureHighlightsDescription": {
+    "description": "Onboarding feature row detail. The reader offers five highlight colors; a note can be added to any highlight."
+  },
+  "onboardingSelectionSampleSentence": "In the lamplight every page felt {word}.",
+  "@onboardingSelectionSampleSentence": {
+    "description": "Sample sentence on the onboarding book page; {word} is onboardingSelectionSampleWord, shown as selected text.",
+    "placeholders": {
+      "word": {
+        "type": "String"
+      }
+    }
+  },
+  "onboardingSelectionSampleWord": "weightless",
+  "@onboardingSelectionSampleWord": {
+    "description": "The selected word in the onboarding sample sentence; must read naturally where {word} sits in onboardingSelectionSampleSentence."
+  },
+  "onboardingSelectionSampleLabel": "Example of a selected word with the {copy}, {translate} and {define} actions",
+  "@onboardingSelectionSampleLabel": {
+    "description": "Screen reader description of the onboarding sample page. The placeholders are the reader selection menu labels.",
+    "placeholders": {
+      "copy": {
+        "type": "String"
+      },
+      "translate": {
+        "type": "String"
+      },
+      "define": {
+        "type": "String"
+      }
+    }
+  },
   "commonCancel": "Cancel",
   "commonSave": "Save",
   "commonDelete": "Delete",
@@ -477,6 +548,31 @@
   "readerAddComment": "Add comment",
   "readerAppearanceSample": "Aa",
   "translationUnknownLanguage": "Unknown language",
+  "translationSameLanguageTitle": "Nothing to translate",
+  "@translationSameLanguageTitle": {
+    "description": "Translation sheet state when the selected text is already in the target language."
+  },
+  "translationSameLanguageBody": "The text is already in the target language, {language}. Choose another language to translate it.",
+  "@translationSameLanguageBody": {
+    "description": "Same-language state for longer text. {language} is the language name as the language menu shows it.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "translationSameLanguageDefineBody": "The text is already in the target language, {language}. {define} shows what it means here.",
+  "@translationSameLanguageDefineBody": {
+    "description": "Same-language state for a word or phrase. {language} is the language name as the language menu shows it; {define} is the dictionaryAction label of the button below.",
+    "placeholders": {
+      "language": {
+        "type": "String"
+      },
+      "define": {
+        "type": "String"
+      }
+    }
+  },
   "dictionaryDefinitionNumber": "{number}.",
   "@dictionaryDefinitionNumber": {
     "placeholders": {
@@ -486,6 +582,32 @@
     }
   },
   "importDiscardUrlBody": "The address you entered will not be saved.",
+  "readerSelectionTipTitle": "Press and hold a word",
+  "@readerSelectionTipTitle": {
+    "description": "One-time reader tip title: how to select text."
+  },
+  "readerSelectionTipBody": "Then tap {highlight}, {copy}, {translate} or {define}.",
+  "@readerSelectionTipBody": {
+    "description": "One-time reader tip detail. The placeholders are the reader selection menu labels, in their menu order.",
+    "placeholders": {
+      "highlight": {
+        "type": "String"
+      },
+      "copy": {
+        "type": "String"
+      },
+      "translate": {
+        "type": "String"
+      },
+      "define": {
+        "type": "String"
+      }
+    }
+  },
+  "readerSelectionTipDismiss": "Got it",
+  "@readerSelectionTipDismiss": {
+    "description": "Button that closes the one-time reader tip for good."
+  },
   "readerTapAreaHint": "Tap area",
   "importOfflineHint": "You're offline",
   "importArticleOfflineSubtitle": "Needs an internet connection",
@@ -542,7 +664,7 @@
   "@libraryChooseCollection": {
     "description": "Accessibility label of the Library title, which opens the collection switcher"
   },
-  "onboardingAddBook": "Add a book",
+  "onboardingAddBook": "Add your first book",
   "@onboardingAddBook": {
     "description": "Primary onboarding action; finishes onboarding and opens import"
   },

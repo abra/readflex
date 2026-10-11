@@ -222,7 +222,7 @@ void main() {
           await binding.takeScreenshot('translation-${example.name}-scrolled');
         }
         await tapUi(tester, language);
-        await tapUi(tester, find.text('English').hitTestable().last);
+        await tapUi(tester, find.text('Русский').hitTestable().last);
         await waitForUi(
           tester,
           () =>
@@ -230,10 +230,22 @@ void main() {
               find.text(primaryText).evaluate().isNotEmpty,
           description: 'changed target language',
         );
-        expect(service.requests.last.targetLanguage, 'en');
+        expect(service.requests.last.targetLanguage, 'ru');
         expect(service.requests.last.selection.text, example.word);
         expect(find.text(example.pronunciation), findsOneWidget);
         expect(base, findsOneWidget);
+        // English for this English word: nothing to translate, no request.
+        await tapUi(tester, language);
+        await tapUi(tester, find.text('English').hitTestable().last);
+        await waitForUi(
+          tester,
+          () => find
+              .byKey(const ValueKey('translation-same-language'))
+              .evaluate()
+              .isNotEmpty,
+          description: 'same-language message',
+        );
+        expect(service.requests, hasLength(2));
         binding.reportData ??= {};
         binding.reportData!.addAll({
           'platform': Platform.operatingSystem,

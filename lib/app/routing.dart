@@ -96,10 +96,14 @@ GoRoute _buildLibraryRoute(DependenciesContainer deps) => GoRoute(
       isOffline: isOffline,
       // Read once by the screen's first frame; later rebuilds keep the state.
       openImportOnStart: arguments.openImportOnStart,
-      onSourcePressed: (source, {onSourceOpened}) => context.push(
-        AppRoutes.reader(source.id),
-        extra: ReaderRouteArguments(onSourceOpened: onSourceOpened),
-      ),
+      onSourcePressed: (source, {onSourceOpened, onReadingPositionSaved}) =>
+          context.push(
+            AppRoutes.reader(source.id),
+            extra: ReaderRouteArguments(
+              onSourceOpened: onSourceOpened,
+              onReadingPositionSaved: onReadingPositionSaved,
+            ),
+          ),
       onAddPressed: ({required onImported, entry = LibraryImportEntry.menu}) =>
           _showImportSheet(
             context,
@@ -127,6 +131,10 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
     };
     final initialSource = arguments.initialSource;
     final matchingSource = initialSource?.id == sourceId ? initialSource : null;
+    final dictionaryAction = DictionaryAction(
+      systemDictionaryService: deps.systemDictionaryService,
+      dictionaryLookupService: deps.dictionaryLookupService,
+    );
     return CustomTransitionPage(
       key: state.pageKey,
       fullscreenDialog: true,
@@ -144,6 +152,7 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
           preferencesService: deps.preferencesService,
           screenControlService: deps.screenControlService,
           onSourceOpened: arguments.onSourceOpened,
+          onReadingPositionSaved: arguments.onReadingPositionSaved,
           onArticleTitlePressed: (url, title) {
             unawaited(_openExternalUrl(url));
           },
@@ -167,11 +176,10 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
             TranslateAction(
               translationService: deps.contextualTranslationService,
               preferencesService: deps.preferencesService,
+              // A word already in the target language opens its definition.
+              onDefine: dictionaryAction.onExecute,
             ),
-            DictionaryAction(
-              systemDictionaryService: deps.systemDictionaryService,
-              dictionaryLookupService: deps.dictionaryLookupService,
-            ),
+            dictionaryAction,
           ],
         ),
       ),
@@ -302,10 +310,15 @@ class LibraryRouteArguments {
 /// Optional reader arguments. The path ID remains authoritative, including
 /// when opening a deep link without any payload.
 class ReaderRouteArguments {
-  const ReaderRouteArguments({this.initialSource, this.onSourceOpened});
+  const ReaderRouteArguments({
+    this.initialSource,
+    this.onSourceOpened,
+    this.onReadingPositionSaved,
+  });
 
   final Book? initialSource;
   final VoidCallback? onSourceOpened;
+  final VoidCallback? onReadingPositionSaved;
 }
 
 /// Adapts the import sheet contract to article extraction and storage services.

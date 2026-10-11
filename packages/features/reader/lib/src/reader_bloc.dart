@@ -53,7 +53,8 @@ String? _normalizedHighlightNote(String? note) {
 ///   * resolve a [sourceId] into a reader document on load and bump its
 ///     `lastOpenedAt` timestamp;
 ///   * persist position updates (CFI + progress fraction) coming from the
-///     WebView back to the repository;
+///     WebView back to the repository, reporting each saved write through
+///     `onReadingPositionSaved`;
 ///   * refresh highlights when a TextAction (e.g. "Highlight") completes.
 ///
 /// UI-only concerns (chrome/drawer state, search drawer state, selection,
@@ -65,9 +66,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     required HighlightRepository highlightRepository,
     ArticleRepository? articleRepository,
     Book? initialSource,
+    VoidCallback? onReadingPositionSaved,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
+       _onReadingPositionSaved = onReadingPositionSaved,
        super(
          initialSource == null
              ? const ReaderState()
@@ -105,6 +108,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   final BookRepository _bookRepository;
   final ArticleRepository? _articleRepository;
   final HighlightRepository _highlightRepository;
+
+  /// Called after each position write reaches the repository, including the
+  /// flush on [close], so the screen below can re-read storage while the
+  /// reader still covers it.
+  final VoidCallback? _onReadingPositionSaved;
 
   /// Pending document to persist to the repository. foliate-js can emit frequent
   /// `ReaderBookPositionUpdated` events during navigation, so the actual
@@ -419,11 +427,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       'atEnd=${event.atEnd} '
       'rtl=${event.pageProgressionRtl}',
     );
-    final isFirstArticleProgress =
-        state.sourceType == SourceType.article &&
-        previousProgress <= 0 &&
-        progress > 0;
-    if (isFirstArticleProgress) {
+    // The first progress is saved at once: it is what puts the source in the
+    // Library's Continue reading card.
+    final isFirstProgress = previousProgress <= 0 && progress > 0;
+    if (isFirstProgress) {
       _persistTimer?.cancel();
       _persistTimer = null;
       _pendingPersist = null;
@@ -510,13 +517,14 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         cfi: document.currentCfi,
         progress: document.readingProgress,
       );
-      return;
+    } else {
+      await _bookRepository.updateReadingPosition(
+        document.id,
+        cfi: document.currentCfi,
+        progress: document.readingProgress,
+      );
     }
-    await _bookRepository.updateReadingPosition(
-      document.id,
-      cfi: document.currentCfi,
-      progress: document.readingProgress,
-    );
+    _onReadingPositionSaved?.call();
   }
 
   /// Routes an external error through BLoC's error pipeline (e.g. from a

@@ -5,3 +5,4 @@ export 'src/contextual_translation_models.dart';
 export 'src/contextual_translation_service.dart';
 export 'src/mlkit_offline_translation_service.dart';
 export 'src/remote_contextual_translation_service.dart';
+export 'src/translation_language_code.dart';

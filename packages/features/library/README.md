@@ -68,8 +68,12 @@ Late callbacks after Library disposal are ignored.
 Books and articles are requested together. Loads carry a generation token so
 an older response/error cannot replace newer data. A superseded delete refresh
 still emits its completion effect without restoring stale list contents.
-The existing delayed refresh on reader-route return remains intact to avoid
-moving list tiles during a reverse route/Hero transition.
+While the reader is open, Library refreshes on its `onSourceOpened` and on
+every `onReadingPositionSaved`, so a source read for the first time is already
+in Continue reading, with its current progress, when the reader closes instead
+of moving there in view. The delayed refresh on reader-route return remains as
+a fallback and avoids moving list tiles during a reverse route/Hero
+transition.
 
 Article metadata comes from a SQL projection via `getLibrarySources`, not a
 full-text article read. Search and scope changes reuse the same source list.
@@ -139,8 +143,15 @@ error-coloured secondary (`AppSheetActions`, `destructiveSecondary: true`) in
 the layout's `footer`, 24dp after the body text and 16dp above the route's
 safe area. Keep closes only the confirmation and never writes. The list swipe background, cover New/finished
 badges and selection checks use directional placement, so they mirror in RTL.
-Grid selection scale, progress fill and the list/grid cross-fade resolve their
-durations through `context.motion`, settling in one frame under reduced motion.
+Grid selection scale, the grid and Continue reading progress fills and the
+list/grid cross-fade resolve their durations through `context.motion`,
+settling in one frame under reduced motion.
+Both progress fills are `LibraryProgressFill`: it eases to a new value over
+`AppMotion.short` with `kLibraryProgressFillCurve`, and holds a value that
+changes while the route is covered (tickers off, as under the reader) until the
+Library shows again. Started while covered, the animation would be over by the
+time the reader closes, because a ticker started during a frame keeps that
+frame's time.
 
 ## Library Controls
 
@@ -316,8 +327,11 @@ cover; it scrolls with the content. Its content sits on the list rows' lines:
 the row's `LibraryListCoverSlot` (60×90) on the 16dp gutter, then
 `kLibraryListCoverToTextGap` (14dp), so in the grid its cover lines up with the
 first column. The text column holds the Continue reading overline, a serif
-`titleMedium` title (two lines), the muted author, a 4dp rounded
-`actionForeground` progress bar on a muted track and a
+`titleMedium` title (at most three lines; a longer one shrinks in 5% steps to
+80% before it ellipsizes, see `resolveContinueReadingTitleLayout`), the muted
+author, a 4dp rounded
+`actionForeground` progress bar on a muted track (a `LibraryProgressFill`,
+keyed by source, so another book taking the card does not animate) and a
 "{percent}% · {time left}" caption. Time left is
 `readingTimeLeft(LibrarySource.estimatedMinutesLeft)` and is omitted when
 unknown (books have no character count).

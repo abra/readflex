@@ -333,7 +333,10 @@ packages. `routing.dart` creates their `TextAction` implementations and passes
 a list into `ReaderScreen`; the reader adds its UI-only `CopyTextAction`. The
 selection popup renders colors and Highlight on the first row, then Copy,
 Translate, and Define on the second row. Reader executes all feature actions
-only through the `TextAction` contract.
+only through the `TextAction` contract. `routing.dart` also passes the
+dictionary action's `onExecute` to `TranslateAction.onDefine`: a word already in
+the target language closes the translation sheet and opens its definition,
+without the two features importing each other.
 
 Translation pronunciation/reading are optional fields of its own backend
 response, obtained in the same provider call. The sheet displays them only when
@@ -396,6 +399,12 @@ Reader-specific UI state is split by responsibility:
   view widgets never receive a repository, archive parser or WebView controller.
   Only visible tiles request previews, one at a time, independently of book
   startup and reading-position state. Closing the tab releases its cache.
+- `ReaderSelectionTipCubit` owns the one-time "Press and hold a word" tip.
+  `PreferencesService` stores its show count and dismissal; the cubit owns the
+  policy (once per session, at most three sessions, "Got it" or a selection
+  ends it, a page turn or the controls hide it until the next session). A
+  driver in the content stack feeds it reader state and the content's
+  position handler reports book page turns.
 
 The WebView subtree is kept behind ready-state reader composition so routine
 UI changes do not recreate the reader runtime unnecessarily. Books and comics
@@ -534,7 +543,7 @@ progress/result state back to the route that opened it.
 
 Entry points: the "+" at the outer end of the Library's bottom capsule (after the collection switcher) opens the menu; the empty Library's Upload
 a file / Save an article buttons pass `LibraryImportEntry.file` / `.article`;
-onboarding's Add a book navigates to Library with `LibraryRouteArguments`
+onboarding's Add your first book navigates to Library with `LibraryRouteArguments`
 (`openImportOnStart`), which opens the file path once after the first frame.
 `routing.dart` maps `LibraryImportEntry` to `ImportFlowEntry`, because the two
 features never import each other. A file entry still shows the terms step
@@ -586,8 +595,12 @@ feature package      UI and state management
 - It imports all feature package public barrels.
 - It passes repositories/services from `DependenciesContainer`.
 - It creates navigation callbacks and result callbacks.
-- It gates entry routes such as onboarding. Onboarding is one screen; both
-  Add a book and Not now mark it completed before going to Library.
+- It gates entry routes such as onboarding. Onboarding is one welcome screen
+  (`lib/app/screens/`): the app icon, a sample page with the reader's text
+  selection menu, and what the app does. Both Add your first book and Not now
+  mark it completed before going to Library. The sample's menu commands must
+  match the reader's text actions composed here;
+  `test/app/onboarding_selection_sample_test.dart` compares them.
 Features should express navigation needs through callbacks. They should not
 call GoRouter to navigate to sibling features directly.
 

@@ -44,6 +44,8 @@ void main() {
       expect(prefs.readerAppearanceOverrides, isEmpty);
       expect(prefs.translationTargetLanguageCode, 'en');
       expect(prefs.onboardingCompleted, isFalse);
+      expect(prefs.readerSelectionTipShowCount, 0);
+      expect(prefs.readerSelectionTipDismissed, isFalse);
     });
 
     test('copyWith updates selected fields', () {
@@ -64,6 +66,8 @@ void main() {
         },
         translationTargetLanguageCode: 'ru',
         onboardingCompleted: true,
+        readerSelectionTipShowCount: 2,
+        readerSelectionTipDismissed: true,
       );
 
       expect(updated.themeMode, ThemeMode.dark);
@@ -77,6 +81,8 @@ void main() {
       expect(updated.readerBrightnessOverrideFor('source-1'), 0.42);
       expect(updated.translationTargetLanguageCode, 'ru');
       expect(updated.onboardingCompleted, isTrue);
+      expect(updated.readerSelectionTipShowCount, 2);
+      expect(updated.readerSelectionTipDismissed, isTrue);
       // Unchanged fields preserved
       expect(updated.readerThemeId, 'paper');
       expect(updated.readerFontId, 'serif');
@@ -87,6 +93,18 @@ void main() {
       const b = Preferences();
       expect(a, equals(b));
       expect(a.hashCode, b.hashCode);
+    });
+
+    test('equality and hashCode include the selection tip fields', () {
+      const base = Preferences();
+      for (final changed in [
+        base.copyWith(readerSelectionTipShowCount: 1),
+        base.copyWith(readerSelectionTipDismissed: true),
+      ]) {
+        expect(changed, isNot(equals(base)));
+        expect(changed.hashCode, isNot(base.hashCode));
+        expect(changed, equals(changed.copyWith()));
+      }
     });
 
     test('equality compares readerSearchHistory by value', () {

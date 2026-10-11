@@ -15,6 +15,10 @@ const double kLibraryContentTopPadding = AppSpacing.md;
 /// Gap between the Continue reading card and the first cover in both layouts.
 const double kLibraryContinueReadingGap = AppSpacing.lg;
 
+/// Progress fills (grid covers, Continue reading card) ease to a new value
+/// over [AppMotion.short] with this curve.
+const Curve kLibraryProgressFillCurve = Curves.easeOutCubic;
+
 /// The list row's cover (2:3) and its gap to the text, between the md and lg
 /// tokens. The Continue reading card uses the same, so its cover and text
 /// start on the rows' lines.

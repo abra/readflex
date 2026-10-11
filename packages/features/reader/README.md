@@ -22,6 +22,7 @@ class ReaderScreen extends StatelessWidget {
     Book? initialSource,
     ValueChanged<List<String>>? onSearchHistoryChanged,
     VoidCallback? onSourceOpened,
+    VoidCallback? onReadingPositionSaved,
     void Function(String url, String title)? onArticleTitlePressed,
     ValueChanged<String>? onExternalLink,
   });
@@ -147,6 +148,39 @@ abstract class TextAction {
 | `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |
 | `ReaderBrightnessCubit`       | System/custom reader brightness state and active window override lifecycle |
 | `ReaderComicThumbnailCubit`   | UI-only bounded preview queue/cache, owned by the visible Pages or Highlights tab |
+| `ReaderSelectionTipCubit`     | One-time "Press and hold a word" tip: when it shows, hides and ends for good |
+
+### One-time selection tip
+
+The first time a page of selectable text is on screen, a tip at the bottom
+says "Press and hold a word" and names the selection menu's commands by their
+real labels (`highlightAction`, `commonCopy`, `translationAction`,
+`dictionaryAction`), with "Got it".
+
+- **When it is due:** a ready article, EPUB, FB2, MOBI or AZW3, or a PDF whose
+  features report a text layer (`readerSupportsSelectionTip`); never a comic.
+  The WebView must have painted the page, and no chrome, search navigation or
+  selection may be on screen. A tap on the chrome while the page loads does
+  not use up the session.
+- **Policy (`ReaderSelectionTipCubit`):** at most once per reader session and
+  in at most `maxShows` (3) sessions. "Got it" or any text selection ends it
+  for good. Opening the controls or a book page turn (relocation reason
+  `page` or `snap`, `isReaderPageTurn`) hides it until the next session.
+  Articles are not hidden by scrolling: their shell also reports image loads
+  and layout observers as `scroll`. `PreferencesService` stores
+  `readerSelectionTipShowCount` and `readerSelectionTipDismissed`.
+- **Wiring:** `ReaderScreen` provides the cubit. `ReaderSelectionTipDriver`
+  sits in the content `Stack` and feeds it through
+  `ReaderSelectionTipScope`, which calls the cubit from lifecycle methods,
+  never `build`. The content's position handler reports page turns.
+- **Look (`ReaderSelectionTipCard`):** the neutral inverse plate of the app's
+  toasts. The glyph and "Got it" take the opposite theme's action color
+  (`primaryFixedDim` on the light theme's dark plate, `primary` on the dark
+  theme's light plate), at least 4.5:1. From 130% text "Got it" moves below
+  the message. The tip is inset 16dp from the edges and the safe area, at
+  most 560dp wide and 60% of the screen tall; past that its message scrolls.
+  It sits in a `ToastAvoidArea`, fades with `AppMotion.short`, and appears at
+  once under reduced motion. The message is a live region.
 
 ### Contents and Saved Passages
 
@@ -463,10 +497,14 @@ none), which the bloc keeps as live state like the page metrics. It is never
 persisted.
 
 Position persistence keeps the 500ms trailing debounce and serializes writes,
-including the first immediate article position. Repository partial updates
-avoid overwriting metadata from an old snapshot. Source loading preserves live
-position/document features; `close()` waits for an already-running write as
-well as the latest pending position.
+including the first position of any source (`0` to above `0`), which is saved
+at once because it is what puts the source in Library's Continue reading.
+Repository partial updates avoid overwriting metadata from an old snapshot.
+Source loading preserves live position/document features; `close()` waits for
+an already-running write as well as the latest pending position.
+`onReadingPositionSaved` fires after each write reaches the repository,
+including the flush on `close()`, never after a failed one. The Library uses
+it to re-read storage while the reader still covers it.
 
 Highlight refresh/delete/color/note events share a separate sequential bucket.
 This preserves user edit order without serializing position events behind

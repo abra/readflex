@@ -4,6 +4,8 @@ import 'package:contextual_translation_service/contextual_translation_service.da
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  _languageOutcomeTests();
+
   test('an already cancelled operation performs no I/O', () async {
     final remote = _FakeRemoteService();
     final offline = _FakeOfflineService();
@@ -288,15 +290,150 @@ void main() {
   );
 }
 
+Matcher _failsWith(ContextualTranslationFailureReason reason) => throwsA(
+  isA<ContextualTranslationException>().having(
+    (e) => e.reason,
+    'reason',
+    reason,
+  ),
+);
+
+void _languageOutcomeTests() {
+  group('language outcomes', () {
+    test('an explicit source equal to the target performs no I/O', () async {
+      final remote = _FakeRemoteService();
+      final offline = _FakeOfflineService(downloaded: true);
+      final coordinator = ContextualTranslationCoordinator(
+        remoteService: remote,
+        offlineService: offline,
+      );
+
+      final operation = coordinator.translate(
+        _request(sourceLanguage: 'en-US', targetLanguage: 'EN'),
+      );
+      await expectLater(
+        operation,
+        _failsWith(ContextualTranslationFailureReason.sameLanguage),
+      );
+      await expectLater(
+        coordinator.translate(
+          _request(sourceLanguage: 'en', targetLanguage: 'en'),
+        ),
+        throwsA(
+          isA<ContextualTranslationException>()
+              .having((e) => e.sourceLanguage, 'sourceLanguage', 'en')
+              .having((e) => e.targetLanguage, 'targetLanguage', 'en'),
+        ),
+      );
+      expect(remote.calls, 0);
+      expect(offline.calls, 0);
+    });
+
+    test('a detected source equal to the target is reported, not cached, '
+        'and never falls back offline', () async {
+      final remote = _FakeRemoteService(
+        detectedSourceLanguage: 'en',
+        answeredTargetLanguage: 'en',
+      );
+      final offline = _FakeOfflineService(downloaded: true);
+      final coordinator = ContextualTranslationCoordinator(
+        remoteService: remote,
+        offlineService: offline,
+      );
+
+      for (final id in ['request-1', 'request-2']) {
+        await expectLater(
+          coordinator.translate(_request(requestId: id, targetLanguage: 'en')),
+          _failsWith(ContextualTranslationFailureReason.sameLanguage),
+        );
+      }
+      expect(remote.calls, 2, reason: 'nothing was cached');
+      expect(offline.calls, 0);
+    });
+
+    test(
+      'a translation into another language is rejected and not cached',
+      () async {
+        final remote = _FakeRemoteService(
+          detectedSourceLanguage: 'en',
+          answeredTargetLanguage: 'ru',
+        );
+        final offline = _FakeOfflineService(downloaded: true);
+        final coordinator = ContextualTranslationCoordinator(
+          remoteService: remote,
+          offlineService: offline,
+        );
+
+        for (final id in ['request-1', 'request-2']) {
+          await expectLater(
+            coordinator.translate(
+              _request(requestId: id, targetLanguage: 'de'),
+            ),
+            _failsWith(ContextualTranslationFailureReason.invalidResponse),
+          );
+        }
+        expect(remote.calls, 2, reason: 'nothing was cached');
+        expect(offline.calls, 0, reason: 'a malformed answer is not offline');
+      },
+    );
+
+    test('region subtags and a missing target echo are accepted', () async {
+      for (final answered in ['ru-RU', 'RU', null]) {
+        final coordinator = ContextualTranslationCoordinator(
+          remoteService: _FakeRemoteService(answeredTargetLanguage: answered),
+          offlineService: _FakeOfflineService(),
+        );
+        final result = await coordinator.translate(_request());
+        expect(
+          result.translation.contextualTranslation,
+          'remote',
+          reason: '$answered',
+        );
+      }
+    });
+
+    test(
+      'offline: a hinted source equal to the target stops before models',
+      () async {
+        final remote = _FakeRemoteService(
+          error: const ContextualTranslationException(
+            ContextualTranslationFailureReason.network,
+            'offline',
+          ),
+        );
+        final offline = _FakeOfflineService();
+        final coordinator = ContextualTranslationCoordinator(
+          remoteService: remote,
+          offlineService: offline,
+        );
+
+        await expectLater(
+          coordinator.translate(
+            _request(sourceHint: 'ru', targetLanguage: 'ru'),
+            allowOfflineModelDownload: true,
+          ),
+          _failsWith(ContextualTranslationFailureReason.sameLanguage),
+        );
+        expect(remote.calls, 1);
+        expect(offline.modelCheckStarted.isCompleted, isFalse);
+        expect(offline.downloads, 0);
+        expect(offline.calls, 0);
+      },
+    );
+  });
+}
+
 ContextualTranslationRequest _request({
   String requestId = 'request-1',
   String? sourceHint = 'en',
+  String sourceLanguage = autoSourceLanguageCode,
+  String targetLanguage = 'ru',
 }) {
   return ContextualTranslationRequest(
     requestId: requestId,
-    sourceLanguage: autoSourceLanguageCode,
+    sourceLanguage: sourceLanguage,
     sourceLanguageHint: sourceHint,
-    targetLanguage: 'ru',
+    targetLanguage: targetLanguage,
     selection: const TranslationSelection(text: 'hello'),
     context: const TranslationTextContext(
       level: 'sentence',
@@ -307,9 +444,15 @@ ContextualTranslationRequest _request({
 }
 
 class _FakeRemoteService implements ContextualTranslationService {
-  _FakeRemoteService({this.error});
+  _FakeRemoteService({
+    this.error,
+    this.detectedSourceLanguage = 'en',
+    this.answeredTargetLanguage = 'ru',
+  });
 
   ContextualTranslationException? error;
+  final String? detectedSourceLanguage;
+  final String? answeredTargetLanguage;
   var calls = 0;
 
   @override
@@ -325,8 +468,8 @@ class _FakeRemoteService implements ContextualTranslationService {
       requestId: request.requestId,
       status: ContextualTranslationStatus.resolved,
       reliability: ContextualTranslationReliability.verified,
-      detectedSourceLanguage: 'en',
-      targetLanguage: 'ru',
+      detectedSourceLanguage: detectedSourceLanguage,
+      targetLanguage: answeredTargetLanguage,
       translation: const ContextualTranslationText(
         contextualTranslation: 'remote',
       ),

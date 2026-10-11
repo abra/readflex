@@ -210,22 +210,53 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get appRetrying => '再試行中…';
 
   @override
-  String get onboardingReadAnythingTitle => '何でも読む';
+  String get onboardingWelcomeTitle => 'Readflexへようこそ';
 
   @override
-  String get onboardingReadAnythingDescription =>
-      '本をインポートし、カスタマイズできるリーダーで快適に読みましょう。';
+  String get onboardingWelcomeSubtitle => '本、コミック、PDF、ウェブ記事をひとつのリーダーで。';
 
   @override
-  String get onboardingHighlightSaveTitle => 'ハイライトして保存';
+  String get onboardingFeatureBooksTitle => '本、コミック、PDF';
 
   @override
-  String get onboardingHighlightSaveDescription =>
-      'テキストを選択してハイライトを作成し、理解を深めるためにメモを追加できます。';
+  String get onboardingFeatureBooksDescription => 'EPUB、FB2、MOBI、AZW3、PDF、CBZ';
 
   @override
-  String get onboardingOrganizeLibraryDescription =>
-      '本と記事を一か所にまとめ、読書の続きにすぐ戻れます。';
+  String get onboardingFeatureArticlesTitle => 'リンクから記事';
+
+  @override
+  String get onboardingFeatureArticlesDescription => 'オフラインで読めるすっきりしたコピー';
+
+  @override
+  String get onboardingFeatureLookupTitle => '翻訳と辞書';
+
+  @override
+  String onboardingFeatureLookupDescription(String translate, String define) {
+    return '単語を長押しして「$translate」または「$define」をタップ';
+  }
+
+  @override
+  String get onboardingFeatureHighlightsTitle => 'ハイライトとメモ';
+
+  @override
+  String get onboardingFeatureHighlightsDescription => '5色のハイライトと、どれにでも付けられるメモ';
+
+  @override
+  String onboardingSelectionSampleSentence(String word) {
+    return 'ランプの明かりの下、どのページも$word感じられた。';
+  }
+
+  @override
+  String get onboardingSelectionSampleWord => '軽やかに';
+
+  @override
+  String onboardingSelectionSampleLabel(
+    String copy,
+    String translate,
+    String define,
+  ) {
+    return '選択した単語と「$copy」「$translate」「$define」アクションの例';
+  }
 
   @override
   String get commonCancel => 'キャンセル';
@@ -998,12 +1029,41 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get translationUnknownLanguage => '不明な言語';
 
   @override
+  String get translationSameLanguageTitle => '翻訳は不要です';
+
+  @override
+  String translationSameLanguageBody(String language) {
+    return 'テキストはすでに翻訳先の言語（$language）です。翻訳するには別の言語を選んでください。';
+  }
+
+  @override
+  String translationSameLanguageDefineBody(String language, String define) {
+    return 'テキストはすでに翻訳先の言語（$language）です。「$define」でここでの意味を確認できます。';
+  }
+
+  @override
   String dictionaryDefinitionNumber(int number) {
     return '$number.';
   }
 
   @override
   String get importDiscardUrlBody => '入力したアドレスは保存されません。';
+
+  @override
+  String get readerSelectionTipTitle => '単語を長押し';
+
+  @override
+  String readerSelectionTipBody(
+    String highlight,
+    String copy,
+    String translate,
+    String define,
+  ) {
+    return '次に「$highlight」「$copy」「$translate」「$define」をタップします。';
+  }
+
+  @override
+  String get readerSelectionTipDismiss => 'わかりました';
 
   @override
   String get readerTapAreaHint => 'タップ領域';
@@ -1049,7 +1109,7 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get libraryChooseCollection => 'コレクションを選択';
 
   @override
-  String get onboardingAddBook => '本を追加';
+  String get onboardingAddBook => '最初の本を追加';
 
   @override
   String get onboardingNotNow => 'あとで';

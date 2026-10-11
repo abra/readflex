@@ -450,6 +450,8 @@ class Preferences {
     this.translationTargetLanguageCode = 'en',
     this.bookImportTermsAcceptedVersion = 0,
     this.onboardingCompleted = false,
+    this.readerSelectionTipShowCount = 0,
+    this.readerSelectionTipDismissed = false,
   });
 
   final ThemeMode themeMode;
@@ -478,6 +480,14 @@ class Preferences {
 
   /// Whether the user has completed the onboarding flow.
   final bool onboardingCompleted;
+
+  /// Reader sessions in which the one-time text selection tip appeared. The
+  /// reader stops showing it after its own limit.
+  final int readerSelectionTipShowCount;
+
+  /// Whether the user acknowledged the text selection tip or already selected
+  /// text, so it never appears again.
+  final bool readerSelectionTipDismissed;
 
   ReaderAppearancePreferences get readerAppearance =>
       ReaderAppearancePreferences(
@@ -535,6 +545,8 @@ class Preferences {
     String? translationTargetLanguageCode,
     int? bookImportTermsAcceptedVersion,
     bool? onboardingCompleted,
+    int? readerSelectionTipShowCount,
+    bool? readerSelectionTipDismissed,
   }) => Preferences(
     themeMode: themeMode ?? this.themeMode,
     locale: locale ?? this.locale,
@@ -566,6 +578,10 @@ class Preferences {
     bookImportTermsAcceptedVersion:
         bookImportTermsAcceptedVersion ?? this.bookImportTermsAcceptedVersion,
     onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+    readerSelectionTipShowCount:
+        readerSelectionTipShowCount ?? this.readerSelectionTipShowCount,
+    readerSelectionTipDismissed:
+        readerSelectionTipDismissed ?? this.readerSelectionTipDismissed,
   );
 
   @override
@@ -598,7 +614,9 @@ class Preferences {
               other.translationTargetLanguageCode &&
           bookImportTermsAcceptedVersion ==
               other.bookImportTermsAcceptedVersion &&
-          onboardingCompleted == other.onboardingCompleted;
+          onboardingCompleted == other.onboardingCompleted &&
+          readerSelectionTipShowCount == other.readerSelectionTipShowCount &&
+          readerSelectionTipDismissed == other.readerSelectionTipDismissed;
 
   @override
   int get hashCode => Object.hashAll([
@@ -624,6 +642,8 @@ class Preferences {
     translationTargetLanguageCode,
     bookImportTermsAcceptedVersion,
     onboardingCompleted,
+    readerSelectionTipShowCount,
+    readerSelectionTipDismissed,
   ]);
 }
 

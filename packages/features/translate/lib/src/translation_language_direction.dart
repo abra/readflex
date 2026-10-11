@@ -17,6 +17,7 @@ class TranslationLanguageDirection extends StatelessWidget {
     required this.sourceMenu,
     required this.onSourceChanged,
     required this.onTargetChanged,
+    this.targetMenu,
     super.key,
   });
 
@@ -27,6 +28,10 @@ class TranslationLanguageDirection extends StatelessWidget {
   final MenuController sourceMenu;
   final ValueChanged<String> onSourceChanged;
   final ValueChanged<String> onTargetChanged;
+
+  /// Opens the target menu from elsewhere in the sheet, such as the
+  /// same-language message.
+  final MenuController? targetMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +71,7 @@ class TranslationLanguageDirection extends StatelessWidget {
           width: math.min(targetWidth, constraints.maxWidth),
           child: _LanguageMenu(
             buttonKey: const ValueKey('translation-target-language'),
+            controller: targetMenu,
             semanticsLabel: l10n.translationTargetLanguage,
             label: targetLabel,
             selectedCode: targetLanguageCode,
@@ -284,8 +290,8 @@ class _LanguageMenu extends StatelessWidget {
 }
 
 String? translationLanguageName(String? code) {
-  if (code == null || code.isEmpty) return null;
-  final normalized = code.toLowerCase().split(RegExp(r'[-_]')).first;
+  final normalized = translationLanguagePrimaryCode(code);
+  if (normalized == null) return null;
   for (final language in ReadflexSupportedLocales.languages) {
     if (language.code == normalized) return language.name;
   }

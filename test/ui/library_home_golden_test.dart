@@ -21,7 +21,7 @@ void main() {
     articleRepository: app.articleRepository,
     collectionRepository: app.collectionRepository,
     preferencesService: app.preferencesService,
-    onSourcePressed: (_, {onSourceOpened}) async {},
+    onSourcePressed: (_, {onSourceOpened, onReadingPositionSaved}) async {},
     onAddPressed:
         ({required onImported, entry = LibraryImportEntry.menu}) async {},
   );
@@ -149,6 +149,44 @@ void main() {
       );
       expect(find.text('Panel Studies'), findsWidgets);
       expect(find.text(ReadingFixture.bookTitle), findsNothing);
+      await unmountUi(tester);
+    }, tags: ['golden']);
+  }
+
+  // A long title shrinks to fit three lines instead of growing the card or
+  // ending in an ellipsis; at double text size it ellipsizes at the floor.
+  for (final profile in [VisualProfile.phone, VisualProfile.largeText]) {
+    testWidgets('continue reading long title ${profile.name}', (tester) async {
+      const longTitle =
+          'Flutter Design Patterns and Best Practices: Build Scalable, '
+          'Maintainable and Production-Ready Apps';
+      final app = await tester.runAsync(() => UiTestApp.create());
+      addTearDown(app!.dispose);
+      await tester.runAsync(
+        () => app.database.booksDao.updateBook(
+          BooksTableCompanion(
+            id: Value(app.book!.id),
+            title: const Value(longTitle),
+            readingProgress: const Value(.42),
+            lastOpenedAt: Value(DateTime(2026, 10, 7).toIso8601String()),
+          ),
+        ),
+      );
+      await pumpGoldenSurface(tester, profile, (_) => libraryScreen(app));
+      final title = find.byKey(const ValueKey('libraryContinueReadingTitle'));
+      await waitForUi(
+        tester,
+        () => title.evaluate().isNotEmpty,
+        description: 'continue reading title',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(longTitle), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await expectUiGolden(
+        tester,
+        profile,
+        'library-continue-reading-long-title',
+      );
       await unmountUi(tester);
     }, tags: ['golden']);
   }

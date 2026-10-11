@@ -60,7 +60,16 @@ class FixtureTranslation implements ContextualTranslationService {
     requests.add(request);
     await pending?.future;
     if (failure case final reason?) {
-      throw ContextualTranslationException(reason, 'Fixture failure');
+      throw ContextualTranslationException(
+        reason,
+        'Fixture failure',
+        // Text already in the target language is in that language.
+        sourceLanguage:
+            reason == ContextualTranslationFailureReason.sameLanguage
+            ? request.targetLanguage
+            : null,
+        targetLanguage: request.targetLanguage,
+      );
     }
     return ContextualTranslationResult(
       requestId: request.requestId,

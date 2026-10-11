@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:equatable/equatable.dart';
 import 'package:uuid/uuid.dart';
 
+import 'translation_language_code.dart';
+
 const contextualTranslationRequestSchemaVersion =
     'readflex.contextual_translation.request.v1';
 const contextualTranslationResultSchemaVersion =
@@ -234,9 +236,9 @@ class ContextualTranslationRequest extends Equatable {
   final TranslationAnchor anchor;
 
   String? get concreteSourceLanguage {
-    final explicit = _normalizedLanguageCode(sourceLanguage);
+    final explicit = translationLanguagePrimaryCode(sourceLanguage);
     if (explicit != null && explicit != autoSourceLanguageCode) return explicit;
-    return _normalizedLanguageCode(sourceLanguageHint);
+    return translationLanguagePrimaryCode(sourceLanguageHint);
   }
 
   ContextualTranslationRequest copyWith({
@@ -694,12 +696,6 @@ Map<String, Object?>? _map(Object? value) {
   if (value is Map<String, Object?>) return value;
   if (value is Map) return Map<String, Object?>.from(value);
   return null;
-}
-
-String? _normalizedLanguageCode(String? value) {
-  final normalized = value?.trim().toLowerCase();
-  if (normalized == null || normalized.isEmpty) return null;
-  return normalized.split(RegExp(r'[-_]')).first;
 }
 
 String _requiredString(Map<String, Object?> json, String key) {

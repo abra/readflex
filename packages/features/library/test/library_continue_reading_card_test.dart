@@ -1,8 +1,10 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
+import 'package:library_feature/src/library_continue_reading_title_layout.dart';
 import 'package:library_feature/src/library_grid_view.dart';
 import 'package:library_feature/src/library_layout.dart';
 import 'package:library_feature/src/library_list_cover_slot.dart';
@@ -137,8 +139,8 @@ void main() {
       expect(overline.style!.color, theme.colorScheme.onSurfaceVariant);
 
       final title = tester.widget<Text>(find.text('The Long Read'));
-      expect(title.maxLines, 2);
-      expect(title.overflow, TextOverflow.ellipsis);
+      expect(title.maxLines, kContinueReadingTitleMaxLines);
+      expect(title.overflow, isNull);
       expect(title.style!.fontSize, theme.textTheme.titleMedium!.fontSize);
       expect(title.style!.fontFamily, AppTypography.fontFamilySerif);
 
@@ -158,6 +160,126 @@ void main() {
         tester.getRect(find.text('The Long Read')).top,
         greaterThan(overlineRect.bottom),
       );
+    });
+
+    group('long titles', () {
+      // The square test font at titleMedium: 16 glyphs per 284dp line.
+      const threeLineTitle = 'Flutter Patterns and Best Practices';
+      const longTitle = 'Flutter Design Patterns and Best Practices for Apps';
+      final absurdTitle = List.filled(40, 'Very').join(' ');
+      final titleFinder = find.byKey(
+        const ValueKey('libraryContinueReadingTitle'),
+      );
+
+      LibrarySource bookTitled(String title) => LibrarySource.fromBook(
+        Book(
+          id: 'b-long',
+          title: title,
+          author: 'Ada Writer',
+          filePath: '/books/long.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026),
+          readingProgress: 0.42,
+          lastOpenedAt: DateTime(2026, 2, 1),
+        ),
+      );
+
+      Future<({double card, double title, double fontSize})> measure(
+        WidgetTester tester,
+        String title,
+      ) async {
+        await pumpCard(tester, bookTitled(title));
+        return (
+          card: tester.getSize(_card).height,
+          title: tester.getSize(titleFinder).height,
+          fontSize: tester.widget<Text>(titleFinder).style!.fontSize!,
+        );
+      }
+
+      testWidgets('three lines keep the full title size', (tester) async {
+        final theme = AppTheme.light();
+        final threeLines = await measure(tester, threeLineTitle);
+        expect(threeLines.fontSize, theme.textTheme.titleMedium!.fontSize);
+        final paragraph = tester.renderObject<RenderParagraph>(titleFinder);
+        expect(paragraph.didExceedMaxLines, isFalse);
+        final role = theme.textTheme.titleMedium!;
+        expect(
+          paragraph.size.height,
+          closeTo(role.fontSize! * role.height! * 3, 1),
+        );
+      });
+
+      testWidgets('a longer title shrinks to fit whole in three lines', (
+        tester,
+      ) async {
+        final threeLines = await measure(tester, threeLineTitle);
+        final long = await measure(tester, longTitle);
+
+        expect(long.fontSize, lessThan(threeLines.fontSize));
+        final paragraph = tester.renderObject<RenderParagraph>(titleFinder);
+        expect(paragraph.didExceedMaxLines, isFalse);
+        expect(tester.widget<Text>(titleFinder).overflow, isNull);
+        expect(long.title, lessThanOrEqualTo(threeLines.title + 0.5));
+        expect(long.card, lessThanOrEqualTo(threeLines.card + 0.5));
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('past the minimum size it ellipsizes, never grows', (
+        tester,
+      ) async {
+        final theme = AppTheme.light();
+        final threeLines = await measure(tester, threeLineTitle);
+        final absurd = await measure(tester, absurdTitle);
+
+        expect(
+          absurd.fontSize,
+          closeTo(
+            theme.textTheme.titleMedium!.fontSize! *
+                kContinueReadingTitleMinFontScale,
+            0.01,
+          ),
+        );
+        final text = tester.widget<Text>(titleFinder);
+        expect(text.overflow, TextOverflow.ellipsis);
+        expect(text.maxLines, kContinueReadingTitleMaxLines);
+        expect(absurd.title, lessThanOrEqualTo(threeLines.title + 0.5));
+        expect(absurd.card, lessThanOrEqualTo(threeLines.card + 0.5));
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('large text: at most three scaled lines', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            localizationsDelegates:
+                ReadflexLocalizations.localizationsDelegates,
+            supportedLocales: ReadflexSupportedLocales.locales,
+            home: MediaQuery(
+              data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+              child: Scaffold(
+                body: Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: 390,
+                    child: LibraryContinueReadingCard(
+                      source: bookTitled(longTitle),
+                      onPressed: () {},
+                      onLongPressed: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final paragraph = tester.renderObject<RenderParagraph>(titleFinder);
+        final theme = AppTheme.light().textTheme.titleMedium!;
+        final budget = theme.fontSize! * theme.height! * 2 * 3;
+        expect(paragraph.size.height, lessThanOrEqualTo(budget + 0.5));
+        expect(tester.takeException(), isNull);
+      });
     });
 
     testWidgets('omits the author line without an author', (tester) async {
@@ -267,6 +389,105 @@ void main() {
         );
       });
     }
+
+    group('progress fill animation', () {
+      final fillFinder = find.byKey(
+        const ValueKey('libraryContinueReadingProgressFill'),
+      );
+      final trackFinder = find.byKey(
+        const ValueKey('libraryContinueReadingProgress'),
+      );
+      final later = LibrarySource.fromBook(
+        Book(
+          id: 'b-1',
+          title: 'Flutter in Action',
+          author: 'Eric Windmill',
+          filePath: '/books/flutter.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026),
+          readingProgress: 0.8,
+          lastOpenedAt: DateTime(2026, 2, 1),
+        ),
+      );
+
+      testWidgets('eases to a new progress like the grid covers', (
+        tester,
+      ) async {
+        await pumpCard(tester, _book);
+        final track = tester.getSize(trackFinder).width;
+        expect(tester.getSize(fillFinder).width, closeTo(track * .42, .5));
+
+        await pumpCard(tester, later);
+        expect(
+          tester.getSize(fillFinder).width,
+          closeTo(track * .42, .5),
+          reason: 'the fill starts from the old value',
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        final mid = tester.getSize(fillFinder).width;
+        expect(mid, greaterThan(track * .42));
+        expect(mid, lessThan(track * .8));
+
+        await tester.pump(AppMotion.short);
+        expect(tester.getSize(fillFinder).width, closeTo(track * .8, .5));
+      });
+
+      testWidgets('another book taking the card does not animate', (
+        tester,
+      ) async {
+        await pumpCard(tester, _book);
+        await pumpCard(
+          tester,
+          LibrarySource.fromBook(
+            Book(
+              id: 'b-2',
+              title: 'Another Book',
+              filePath: '/books/another.epub',
+              format: BookFormat.epub,
+              addedAt: DateTime(2026),
+              readingProgress: 0.8,
+              lastOpenedAt: DateTime(2026, 3, 1),
+            ),
+          ),
+        );
+        final track = tester.getSize(trackFinder).width;
+        expect(tester.getSize(fillFinder).width, closeTo(track * .8, .5));
+      });
+
+      testWidgets('reduced motion sets the new progress at once', (
+        tester,
+      ) async {
+        Future<void> pump(LibrarySource source) => tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            localizationsDelegates:
+                ReadflexLocalizations.localizationsDelegates,
+            supportedLocales: ReadflexSupportedLocales.locales,
+            home: MediaQuery(
+              data: const MediaQueryData(disableAnimations: true),
+              child: Scaffold(
+                body: Align(
+                  alignment: Alignment.topLeft,
+                  child: SizedBox(
+                    width: 390,
+                    child: LibraryContinueReadingCard(
+                      source: source,
+                      onPressed: () {},
+                      onLongPressed: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await pump(_book);
+        await pump(later);
+        await tester.pump();
+        final track = tester.getSize(trackFinder).width;
+        expect(tester.getSize(fillFinder).width, closeTo(track * .8, .5));
+      });
+    });
 
     testWidgets('is one button: title label, progress and time value', (
       tester,

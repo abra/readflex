@@ -3,13 +3,13 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'library_progress_fill.dart';
 import 'library_selection_tint.dart';
 import 'library_source_semantics.dart';
 
 const double _kNewBadgeHeight = 20.0;
 const double _kProgressOverlayReserve = 16.0;
 const double _kProgressOverlayInset = AppSpacing.xxs;
-const _kProgressFillAnimationCurve = Curves.easeOutCubic;
 
 /// Grid-mode tile for a library source.
 ///
@@ -249,29 +249,17 @@ class _GridTileShell extends StatelessWidget {
                   left: _kProgressOverlayInset,
                   right: _kProgressOverlayInset,
                   bottom: _kProgressOverlayInset,
-                  child: LayoutBuilder(
-                    builder: (_, constraints) => ClipRRect(
-                      borderRadius: BorderRadius.circular(AppRadius.full),
-                      child: SizedBox(
-                        key: const Key('libraryGridProgressBar'),
-                        height: 3,
-                        child: Stack(
-                          children: [
-                            Positioned.fill(
-                              child: ColoredBox(
-                                color: Colors.white.withValues(alpha: 0.50),
-                              ),
-                            ),
-                            AnimatedContainer(
-                              key: const Key('libraryGridProgressFill'),
-                              duration: context.motion(AppMotion.short),
-                              curve: _kProgressFillAnimationCurve,
-                              width:
-                                  constraints.maxWidth *
-                                  progress.clamp(0.0, 1.0).toDouble(),
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                          ],
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppRadius.full),
+                    child: SizedBox(
+                      key: const Key('libraryGridProgressBar'),
+                      height: 3,
+                      child: ColoredBox(
+                        color: Colors.white.withValues(alpha: 0.50),
+                        child: LibraryProgressFill(
+                          progress: progress,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fillKey: const Key('libraryGridProgressFill'),
                         ),
                       ),
                     ),

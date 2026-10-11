@@ -3,9 +3,12 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'library_continue_reading_title_layout.dart';
 import 'library_layout.dart';
 import 'library_list_cover_slot.dart';
+import 'library_progress_fill.dart';
 import 'library_source_semantics.dart';
+import 'library_title_layout.dart';
 
 const double _progressBarHeight = 4;
 const double _articleIconAlpha = 0.4;
@@ -106,11 +109,8 @@ class LibraryContinueReadingCard extends StatelessWidget {
                         style: text.labelSmall.copyWith(color: mutedColor),
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        source.title,
-                        key: const ValueKey('libraryContinueReadingTitle'),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                      _ContinueReadingTitle(
+                        title: source.title,
                         style: AppTypography.serif(
                           textStyle: text.titleMedium,
                           color: emphasisColor,
@@ -127,6 +127,7 @@ class LibraryContinueReadingCard extends StatelessWidget {
                       ],
                       const SizedBox(height: AppSpacing.sm),
                       _ContinueReadingProgressBar(
+                        sourceId: source.id,
                         progress: progress,
                         isSelected: isSelected,
                       ),
@@ -144,6 +145,39 @@ class LibraryContinueReadingCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The serif title in at most three lines: a longer title shrinks to fit
+/// whole rather than grow the card or end in an ellipsis.
+class _ContinueReadingTitle extends StatelessWidget {
+  const _ContinueReadingTitle({required this.title, required this.style});
+
+  final String title;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final resolved = DefaultTextStyle.of(context).style.merge(style);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final layout = resolveContinueReadingTitleLayout(
+          title: title,
+          style: resolved,
+          textScaler: MediaQuery.textScalerOf(context),
+          textDirection: Directionality.of(context),
+          locale: Localizations.maybeLocaleOf(context),
+          maxWidth: constraints.maxWidth,
+        );
+        return Text(
+          title,
+          key: const ValueKey('libraryContinueReadingTitle'),
+          maxLines: kContinueReadingTitleMaxLines,
+          overflow: layout.truncated ? TextOverflow.ellipsis : null,
+          style: libraryTitleStyle(resolved, layout.fontScale),
+        );
+      },
     );
   }
 }
@@ -194,10 +228,12 @@ class _ContinueReadingCover extends StatelessWidget {
 
 class _ContinueReadingProgressBar extends StatelessWidget {
   const _ContinueReadingProgressBar({
+    required this.sourceId,
     required this.progress,
     required this.isSelected,
   });
 
+  final String sourceId;
   final double progress;
   final bool isSelected;
 
@@ -222,13 +258,13 @@ class _ContinueReadingProgressBar extends StatelessWidget {
         height: _progressBarHeight,
         child: ColoredBox(
           color: track,
-          child: FractionallySizedBox(
-            alignment: AlignmentDirectional.centerStart,
-            widthFactor: progress,
-            child: ColoredBox(
-              key: const ValueKey('libraryContinueReadingProgressFill'),
-              color: fill,
-            ),
+          // Keyed by source: another book taking the card does not animate
+          // from the previous book's progress.
+          child: LibraryProgressFill(
+            key: ValueKey(sourceId),
+            progress: progress,
+            color: fill,
+            fillKey: const ValueKey('libraryContinueReadingProgressFill'),
           ),
         ),
       ),

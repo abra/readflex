@@ -145,8 +145,9 @@ void main() {
           preferencesService: preferencesService,
           isOffline: isOffline,
           openImportOnStart: openImportOnStart,
-          onSourcePressed: (source, {onSourceOpened}) async =>
-              onSourcePressed?.call(source),
+          onSourcePressed:
+              (source, {onSourceOpened, onReadingPositionSaved}) async =>
+                  onSourcePressed?.call(source),
           onAddPressed:
               onAddPressed ??
               ({required onImported, entry = LibraryImportEntry.menu}) async {},
@@ -857,7 +858,7 @@ void main() {
           bookRepository: bookRepository,
           collectionRepository: collectionRepository,
           preferencesService: preferencesService,
-          onSourcePressed: (_, {onSourceOpened}) async {
+          onSourcePressed: (_, {onSourceOpened, onReadingPositionSaved}) async {
             opened = true;
             await navigatorKey.currentState!.push<void>(
               MaterialPageRoute(
@@ -1574,7 +1575,8 @@ void main() {
           bookRepository: bookRepository,
           collectionRepository: collectionRepository,
           preferencesService: preferencesService,
-          onSourcePressed: (_, {onSourceOpened}) async {},
+          onSourcePressed:
+              (_, {onSourceOpened, onReadingPositionSaved}) async {},
           onAddPressed:
               ({required onImported, entry = LibraryImportEntry.menu}) async {
                 invocations++;
@@ -1608,7 +1610,7 @@ void main() {
       bookRepository: bookRepository,
       collectionRepository: collectionRepository,
       preferencesService: preferencesService,
-      onSourcePressed: (_, {onSourceOpened}) async {},
+      onSourcePressed: (_, {onSourceOpened, onReadingPositionSaved}) async {},
       onAddPressed:
           ({required onImported, entry = LibraryImportEntry.menu}) async {
             await gate.future;
@@ -1717,14 +1719,15 @@ void main() {
           bookRepository: bookRepository,
           collectionRepository: collectionRepository,
           preferencesService: preferencesService,
-          onSourcePressed: (source, {onSourceOpened}) async {
-            expect(source.id, target.id);
-            bookRepository.seedBooks([
-              target.copyWith(lastOpenedAt: DateTime(2026, 1, 5)),
-              newest,
-              second,
-            ]);
-          },
+          onSourcePressed:
+              (source, {onSourceOpened, onReadingPositionSaved}) async {
+                expect(source.id, target.id);
+                bookRepository.seedBooks([
+                  target.copyWith(lastOpenedAt: DateTime(2026, 1, 5)),
+                  newest,
+                  second,
+                ]);
+              },
           onAddPressed:
               ({required onImported, entry = LibraryImportEntry.menu}) async {},
         ),
@@ -1803,11 +1806,12 @@ void main() {
           bookRepository: bookRepository,
           collectionRepository: collectionRepository,
           preferencesService: preferencesService,
-          onSourcePressed: (source, {onSourceOpened}) async {
-            expect(source.id, target.id);
-            notifySourceOpened = onSourceOpened;
-            await routeCompleter.future;
-          },
+          onSourcePressed:
+              (source, {onSourceOpened, onReadingPositionSaved}) async {
+                expect(source.id, target.id);
+                notifySourceOpened = onSourceOpened;
+                await routeCompleter.future;
+              },
           onAddPressed:
               ({required onImported, entry = LibraryImportEntry.menu}) async {},
         ),
@@ -1870,6 +1874,88 @@ void main() {
       bookRepository.getBooksCallCount,
       3,
       reason: 'return refresh picks up reader progress persisted after open',
+    );
+  });
+
+  testWidgets('each saved reading position refreshes before the reader '
+      'returns, so the book is already in Continue reading', (tester) async {
+    final target = Book(
+      id: 'b-target',
+      title: 'Target',
+      author: 'Author',
+      filePath: '/books/target.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1),
+    );
+    final routeCompleter = Completer<void>();
+    VoidCallback? notifyPositionSaved;
+    final card = find.byKey(const ValueKey('libraryContinueReadingCard'));
+
+    bookRepository.seedBooks([target]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: LibraryScreen(
+          bookRepository: bookRepository,
+          collectionRepository: collectionRepository,
+          preferencesService: preferencesService,
+          onSourcePressed:
+              (source, {onSourceOpened, onReadingPositionSaved}) async {
+                notifyPositionSaved = onReadingPositionSaved;
+                await routeCompleter.future;
+              },
+          onAddPressed:
+              ({required onImported, entry = LibraryImportEntry.menu}) async {},
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(card, findsNothing);
+
+    await tester.tap(find.text('Target'));
+    await tester.pump();
+    expect(notifyPositionSaved, isNotNull);
+    expect(bookRepository.getBooksCallCount, 1);
+
+    bookRepository.seedBooks([
+      target.copyWith(
+        lastOpenedAt: DateTime(2026, 1, 5),
+        readingProgress: 0.3,
+      ),
+    ]);
+    notifyPositionSaved!();
+    await tester.pump();
+    await tester.pump();
+    expect(bookRepository.getBooksCallCount, 2);
+    expect(card, findsOneWidget);
+    expect(
+      find.descendant(of: card, matching: find.text('30%')),
+      findsOneWidget,
+    );
+
+    bookRepository.seedBooks([
+      target.copyWith(
+        lastOpenedAt: DateTime(2026, 1, 5),
+        readingProgress: 0.4,
+      ),
+    ]);
+    notifyPositionSaved!();
+    await tester.pump();
+    await tester.pump();
+    expect(bookRepository.getBooksCallCount, 3, reason: 'every save refreshes');
+    expect(
+      find.descendant(of: card, matching: find.text('40%')),
+      findsOneWidget,
+    );
+
+    routeCompleter.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 325));
+    await tester.pump();
+    expect(
+      find.descendant(of: card, matching: find.text('40%')),
+      findsOneWidget,
     );
   });
 

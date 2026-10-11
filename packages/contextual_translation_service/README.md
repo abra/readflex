@@ -81,6 +81,32 @@ start offline fallback or model downloads. Already running native ML Kit work
 cannot be interrupted by its API; cancelled results are discarded, not cached.
 Disconnecting HTTP does not guarantee cancellation of a backend LLM job.
 
+## Language outcomes
+
+`isSameTranslationLanguage` and `translationLanguagePrimaryCode` compare codes
+by their primary subtag, ignoring case, region and script (`en`, `EN-us`,
+`en_GB`); `auto` and missing codes never match. The coordinator applies them to
+remote and offline results alike:
+
+- An explicit source equal to the target throws `sameLanguage` before any
+  cache read or I/O.
+- A result whose detected source equals the target throws `sameLanguage`: the
+  text is already in that language. It is not cached and never falls back
+  offline. The exception's `sourceLanguage` names the language.
+- A result whose `target_language` differs from the requested target throws
+  `invalidResponse`, is not cached, and does not fall back offline. A missing
+  `target_language` is accepted.
+- Offline, a concrete source (explicit or hinted) equal to the target throws
+  `sameLanguage` before any model check or download.
+
+`sameLanguage` is an outcome, not a fault; the translation sheet turns it into
+"Nothing to translate".
+
+Backend contract: translate into `target_language` and echo it. With a
+detected source equal to the target, answer without calling the model; the
+client already shows the same-language state. A response in another language
+under the requested `target_language` cannot be detected on the client.
+
 The remote client treats the backend payload as an untrusted versioned
 contract. It requires the supported schema version and enums, verifies that the
 response `request_id` and mode match the request, and maps malformed responses

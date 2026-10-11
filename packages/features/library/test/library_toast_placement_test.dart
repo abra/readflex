@@ -55,7 +55,8 @@ void main() {
             bookRepository: bookRepository,
             collectionRepository: FakeCollectionRepository(),
             preferencesService: preferences,
-            onSourcePressed: (_, {onSourceOpened}) async {},
+            onSourcePressed:
+                (_, {onSourceOpened, onReadingPositionSaved}) async {},
             onAddPressed:
                 ({
                   required onImported,

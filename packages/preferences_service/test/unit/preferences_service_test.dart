@@ -371,6 +371,27 @@ void main() {
       expect(service2.current.onboardingCompleted, isTrue);
     });
 
+    test('selection tip fields persist across service instances', () async {
+      final service = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      expect(service.current.readerSelectionTipShowCount, 0);
+      expect(service.current.readerSelectionTipDismissed, isFalse);
+
+      await service.update(
+        (s) => s.copyWith(
+          readerSelectionTipShowCount: s.readerSelectionTipShowCount + 1,
+          readerSelectionTipDismissed: true,
+        ),
+      );
+
+      final service2 = await PreferencesService.create(
+        supportedCodes: _supportedCodes,
+      );
+      expect(service2.current.readerSelectionTipShowCount, 1);
+      expect(service2.current.readerSelectionTipDismissed, isTrue);
+    });
+
     test('create() returns defaults when stored data is corrupted', () async {
       await PreferencesStorage().setString('app_preferences', 'not valid json');
 

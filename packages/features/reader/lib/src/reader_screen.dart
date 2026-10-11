@@ -54,6 +54,8 @@ import 'reader_search_cubit.dart';
 import 'reader_search_navigation_bar.dart';
 import 'reader_search_panel.dart';
 import 'reader_selection_cubit.dart';
+import 'reader_selection_tip.dart';
+import 'reader_selection_tip_cubit.dart';
 import 'reader_swipe_to_delete.dart';
 import 'reader_system_ui_overlay.dart';
 import 'reader_tap_action.dart';
@@ -169,6 +171,7 @@ class ReaderScreen extends StatelessWidget {
     this.initialSource,
     this.onSearchHistoryChanged,
     this.onSourceOpened,
+    this.onReadingPositionSaved,
     this.onArticleTitlePressed,
     this.onExternalLink,
     super.key,
@@ -186,6 +189,10 @@ class ReaderScreen extends StatelessWidget {
   final Book? initialSource;
   final ValueChanged<List<String>>? onSearchHistoryChanged;
   final VoidCallback? onSourceOpened;
+
+  /// Called after each reading position write reaches storage, so the screen
+  /// below can refresh while the reader still covers it.
+  final VoidCallback? onReadingPositionSaved;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
 
@@ -201,6 +208,7 @@ class ReaderScreen extends StatelessWidget {
             articleRepository: articleRepository,
             highlightRepository: highlightRepository,
             initialSource: initialSource?.id == sourceId ? initialSource : null,
+            onReadingPositionSaved: onReadingPositionSaved,
           )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
         ),
         BlocProvider(create: (_) => ReaderUiCubit()),
@@ -234,6 +242,11 @@ class ReaderScreen extends StatelessWidget {
         BlocProvider(
           create: (_) => ReaderKeepAwakeCubit(
             screenControlService: screenControlService,
+          ),
+        ),
+        BlocProvider(
+          create: (_) => ReaderSelectionTipCubit(
+            preferencesService: preferencesService,
           ),
         ),
       ],

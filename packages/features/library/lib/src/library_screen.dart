@@ -70,6 +70,7 @@ class LibraryScreen extends StatelessWidget {
   final Future<void> Function(
     LibrarySource source, {
     VoidCallback? onSourceOpened,
+    VoidCallback? onReadingPositionSaved,
   })
   onSourcePressed;
   final LibraryImportLauncher onAddPressed;
@@ -148,6 +149,7 @@ class _LibraryView extends StatefulWidget {
   final Future<void> Function(
     LibrarySource source, {
     VoidCallback? onSourceOpened,
+    VoidCallback? onReadingPositionSaved,
   })
   onSourcePressed;
   final LibraryImportLauncher onAddPressed;
@@ -238,8 +240,20 @@ class _LibraryViewState extends State<_LibraryView> {
       }
     }
 
+    // Each saved position re-reads storage while the reader still covers the
+    // Library, so the source is already in Continue reading (with its current
+    // progress) when the reader closes, instead of moving there in view.
+    void handleReadingPositionSaved() {
+      if (!mounted) return;
+      context.read<LibraryBloc>().add(const LibraryRefreshRequested());
+    }
+
     try {
-      await widget.onSourcePressed(source, onSourceOpened: handleSourceOpened);
+      await widget.onSourcePressed(
+        source,
+        onSourceOpened: handleSourceOpened,
+        onReadingPositionSaved: handleReadingPositionSaved,
+      );
     } finally {
       if (mounted) {
         _dismissCurrentFocus();
@@ -249,9 +263,8 @@ class _LibraryViewState extends State<_LibraryView> {
     // `Navigator.push` completes as soon as the details route starts popping,
     // before the reverse Hero flight finishes. Refreshing immediately can move
     // the opened item to the top and destroy the Hero endpoint mid-flight.
-    // If the reader was opened, we still need this second delayed refresh:
-    // the early refresh only updates recency, while reading progress is written
-    // later by ReaderBloc.
+    // This delayed refresh is a fallback: the reader already reports each
+    // saved position, including the write it flushes on close.
     await Future<void>.delayed(_sourceRouteReturnRefreshDelay);
     if (!context.mounted) return;
     context.read<LibraryBloc>().add(const LibraryRefreshRequested());

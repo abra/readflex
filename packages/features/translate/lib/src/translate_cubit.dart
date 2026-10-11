@@ -16,6 +16,9 @@ enum TranslateSheetStatus {
   sourceLanguageRequired,
   offlineModelRequired,
   downloadingOfflineModel,
+
+  /// The text is already in the target language: nothing is translated.
+  sameLanguage,
 }
 
 class TranslateSheetState extends Equatable {
@@ -25,6 +28,7 @@ class TranslateSheetState extends Equatable {
     this.status = TranslateSheetStatus.initial,
     this.result,
     this.failure,
+    this.detectedSourceLanguage,
   });
 
   final String sourceLanguageCode;
@@ -33,9 +37,21 @@ class TranslateSheetState extends Equatable {
   final ContextualTranslationResult? result;
   final ContextualTranslationException? failure;
 
+  /// Language of the selected text as the provider last detected it. It
+  /// describes the text, not a request, so it outlives target changes: the
+  /// direction label keeps it and a target equal to it needs no request.
+  final String? detectedSourceLanguage;
+
   bool get isBusy =>
       status == TranslateSheetStatus.loading ||
       status == TranslateSheetStatus.downloadingOfflineModel;
+
+  /// The source language as far as it is known: the reader's choice, or the
+  /// detected language while the source is automatic.
+  String? get knownSourceLanguage =>
+      sourceLanguageCode == autoSourceLanguageCode
+      ? detectedSourceLanguage
+      : sourceLanguageCode;
 
   TranslateSheetState copyWith({
     String? sourceLanguageCode,
@@ -43,6 +59,7 @@ class TranslateSheetState extends Equatable {
     TranslateSheetStatus? status,
     Object? result = _absent,
     Object? failure = _absent,
+    Object? detectedSourceLanguage = _absent,
   }) {
     return TranslateSheetState(
       sourceLanguageCode: sourceLanguageCode ?? this.sourceLanguageCode,
@@ -54,6 +71,9 @@ class TranslateSheetState extends Equatable {
       failure: failure == _absent
           ? this.failure
           : failure as ContextualTranslationException?,
+      detectedSourceLanguage: detectedSourceLanguage == _absent
+          ? this.detectedSourceLanguage
+          : detectedSourceLanguage as String?,
     );
   }
 
@@ -64,6 +84,7 @@ class TranslateSheetState extends Equatable {
     status,
     result,
     failure,
+    detectedSourceLanguage,
   ];
 }
 
@@ -137,15 +158,28 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
       );
       if (!_isCurrentOperation(operationGeneration)) return;
       emit(
-        state.copyWith(status: TranslateSheetStatus.success, result: result),
+        state.copyWith(
+          status: TranslateSheetStatus.success,
+          result: result,
+          detectedSourceLanguage:
+              result.detectedSourceLanguage ?? state.detectedSourceLanguage,
+        ),
       );
     } on ContextualTranslationException catch (error) {
       if (!_isCurrentOperation(operationGeneration)) return;
+      // A same-language answer to an automatic source names the text's
+      // language; with a chosen source it only repeats that choice.
+      final detected =
+          error.reason == ContextualTranslationFailureReason.sameLanguage &&
+              state.sourceLanguageCode == autoSourceLanguageCode
+          ? error.sourceLanguage
+          : null;
       emit(
         state.copyWith(
           status: _statusFor(error.reason),
           failure: error,
           result: null,
+          detectedSourceLanguage: detected ?? state.detectedSourceLanguage,
         ),
       );
     } catch (error, stackTrace) {
@@ -164,33 +198,51 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
     }
   }
 
+  /// Translates from [code]. A source equal to the target needs no request:
+  /// the sheet says so at once.
   Future<void> setSourceLanguage(
     TextSelectionContext selection,
     String code,
   ) async {
     if (isClosed || state.sourceLanguageCode == code) return;
     final operationGeneration = _beginOperation();
+    final next = state.copyWith(sourceLanguageCode: code);
+    final sameLanguage = isSameTranslationLanguage(
+      next.knownSourceLanguage,
+      next.targetLanguageCode,
+    );
     emit(
-      state.copyWith(
-        sourceLanguageCode: code,
-        status: TranslateSheetStatus.initial,
+      next.copyWith(
+        status: sameLanguage
+            ? TranslateSheetStatus.sameLanguage
+            : TranslateSheetStatus.initial,
         result: null,
         failure: null,
       ),
     );
+    if (sameLanguage) return;
     await _runTranslation(selection, operationGeneration: operationGeneration);
   }
 
+  /// Translates into [code] and keeps it as the default target. A target
+  /// equal to the text's known language needs no request: the sheet says so
+  /// at once, and any running request is cancelled.
   Future<void> setTargetLanguage(
     TextSelectionContext selection,
     String code,
   ) async {
     if (isClosed || state.targetLanguageCode == code) return;
     final operationGeneration = _beginOperation();
+    final sameLanguage = isSameTranslationLanguage(
+      state.knownSourceLanguage,
+      code,
+    );
     emit(
       state.copyWith(
         targetLanguageCode: code,
-        status: TranslateSheetStatus.initial,
+        status: sameLanguage
+            ? TranslateSheetStatus.sameLanguage
+            : TranslateSheetStatus.initial,
         result: null,
         failure: null,
       ),
@@ -198,7 +250,7 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
     await _preferencesService.update(
       (prefs) => prefs.copyWith(translationTargetLanguageCode: code),
     );
-    if (!_isCurrentOperation(operationGeneration)) return;
+    if (sameLanguage || !_isCurrentOperation(operationGeneration)) return;
     await _runTranslation(selection, operationGeneration: operationGeneration);
   }
 
@@ -251,6 +303,8 @@ TranslateSheetStatus _statusFor(ContextualTranslationFailureReason reason) {
       TranslateSheetStatus.sourceLanguageRequired,
     ContextualTranslationFailureReason.offlineModelRequired =>
       TranslateSheetStatus.offlineModelRequired,
+    ContextualTranslationFailureReason.sameLanguage =>
+      TranslateSheetStatus.sameLanguage,
     _ => TranslateSheetStatus.failure,
   };
 }
