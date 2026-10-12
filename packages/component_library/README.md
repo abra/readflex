@@ -197,7 +197,10 @@ Reusable presentation-only widgets used across features:
 | `AppSheetDismissGuard`              | Per-step scrim/drag guard inside `showAppBottomSheet` flows |
 | `AppSheetActions`                   | Primary/secondary sheet commands with adaptive stacking and stable busy geometry; `destructiveSecondary` for confirmations; `stacks`/`stackedExtent` let a fixed-height step reserve the second row ahead of layout |
 | `AppSourceQuote`                    | Quoted source phrase with a leading rule that follows the quote's own direction |
-| `AppLexicalMetadataRow`             | Muted reading / IPA pronunciation / part-of-speech line under a headword; IPA stays LTR in the phonetic font, wraps when narrow |
+| `AppLexicalMetadataRow`             | Muted reading / IPA pronunciation / part-of-speech line under a headword; starts on the headword's edge (`textDirection`), IPA stays LTR in the phonetic font, wraps when narrow |
+| `AppSheetActionRow`                 | Sheet text with a trailing utility action (Copy) centered on its first line; optional lead (caption, source) above; `minTextRoom` keeps gaps at any text size |
+| `AppSheetSection` / `AppSheetSectionTitle` | Outlined sheet section (hairline in the divider color, no fill) drawn behind full-width content, with an optional `labelLarge` header title |
+| `appFitLongestWord`                 | Largest font size, down to a minimum, at which a heading's longest word fits; `appSelectableTextCaretMargin` for `SelectableText` boxes |
 | `AppColorSwatchButton`              | Round color sample in a 48dp circular-ink target; selected ring plus a check inked by swatch luminance |
 | `AppStatusMessage`                  | Inline sheet status: start-aligned title/body, optional full-width filled action and progress |
 | `AppSettingsSection`                | Shared settings heading and label/control spacing |
@@ -254,8 +257,30 @@ Screen/drawer content uses a 16dp gutter; sheet content uses 24dp. The owning
 surface applies each outer gutter once. `AppSheetActionRow` accepts a full-width
 sheet row and aligns a 20dp utility glyph with `BottomSheetHeader`, preserving
 the full 48dp target; `textDirection` lets a Copy action trail LTR content in
-an RTL interface. Definition/Translation use it for Copy; other body sections
-retain their 24dp padding. `AppCopyButton` delegates appearance to
+an RTL interface. The action is centered on the first line of the text
+(`firstLineStyle`) by a single-pass render object, not by padding guesses: a
+`lead` above the text (a caption, a source expression) spans both content edges
+in the ambient direction and lets the action move down to the text instead of
+pushing it down. `minTextRoom` is the least room above the first line and below
+the last; at least half the target's excess over the line keeps gaps unchanged
+when text wraps and at large text sizes, where a line is taller than the
+target. Definition/Translation use it for Copy; other body sections retain
+their 24dp padding.
+
+`AppSheetSection` separates the parts of a sheet body that readers must tell
+apart (Translation and Definition results). Its outline is painted behind the
+content, 10dp from either sheet edge (the 24dp gutter less a 48dp target's
+outset), so content keeps the sheet's geometry: text stays on the gutter under
+the sheet title and an `AppSheetActionRow` target reaches exactly to the
+outline. The section pads its content 12dp above and below; content that keeps
+its own room, such as an action row with `minTextRoom`, takes
+`EdgeInsets.zero` and puts the `AppSheetSectionTitle` in the row's lead so the
+action stays centered on the text.
+
+Large headings use `appFitLongestWord` so a word never breaks in the middle at
+large text sizes: one measurement when the word fits, a short binary search on
+the font size only when it does not, with the user's (also nonlinear) text
+scale. Measure for a `SelectableText` box minus `appSelectableTextCaretMargin`. `AppCopyButton` delegates appearance to
 `AppPlainIconButton`, including circular feedback and disabled hit semantics.
 
 Notifications sit on the neutral `ColorScheme.inverseSurface` /

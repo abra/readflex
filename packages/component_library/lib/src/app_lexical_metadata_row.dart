@@ -9,11 +9,13 @@ import 'theme/tokens/app_spacing.dart';
 ///
 /// Every string is already localized or language-specific; the row does not
 /// translate grammatical tags. [pronunciation] is IPA and always renders
-/// left-to-right in the bundled phonetic font. [reading] follows
-/// [textDirection], the headword's own writing direction; part of speech is
-/// interface copy and follows the ambient direction. Each piece keeps its own
-/// semantics node so assistive technology reads them as separate items.
-/// Renders nothing when all three are null or blank.
+/// left-to-right in the bundled phonetic font. [textDirection] is the
+/// headword's own writing direction: the row starts on the headword's edge
+/// and orders its pieces that way, and [reading] is set in it, even in an
+/// interface with the other direction. Without it the row follows the
+/// ambient direction. Each piece keeps its own semantics node so assistive
+/// technology reads them as separate items. Renders nothing when all three
+/// are null or blank.
 class AppLexicalMetadataRow extends StatelessWidget {
   const AppLexicalMetadataRow({
     this.pronunciation,
@@ -39,9 +41,8 @@ class AppLexicalMetadataRow extends StatelessWidget {
     final style = context.text.bodyMedium.copyWith(
       color: context.colors.onSurfaceVariant,
     );
-    // The row is UI chrome and keeps the ambient direction; only the reading
-    // (content in the headword's script) takes the headword direction.
     return Wrap(
+      textDirection: textDirection,
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.xs,
       crossAxisAlignment: WrapCrossAlignment.center,

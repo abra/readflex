@@ -47,6 +47,9 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get dictionaryInContext => 'في هذا السياق';
 
   @override
+  String get dictionaryWordMeaning => 'معنى الكلمة';
+
+  @override
   String get translationAction => 'ترجمة';
 
   @override

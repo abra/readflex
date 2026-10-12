@@ -189,6 +189,12 @@ abstract class ReadflexLocalizations {
   /// **'In this context'**
   String get dictionaryInContext;
 
+  /// No description provided for @dictionaryWordMeaning.
+  ///
+  /// In en, this message translates to:
+  /// **'Word meaning'**
+  String get dictionaryWordMeaning;
+
   /// No description provided for @translationAction.
   ///
   /// In en, this message translates to:

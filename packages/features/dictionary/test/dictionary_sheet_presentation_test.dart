@@ -202,8 +202,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('definitions sit 12dp apart and the last ends 16dp above the '
-      'body end', (tester) async {
+  testWidgets('definitions sit 12dp apart and the last ends inside its '
+      'section', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -236,10 +236,21 @@ void main() {
       ),
     );
     final lastExample = tester.getRect(find.text('Power corrupts.'));
-    expect(secondNumber.top, secondText.top);
-    expect(secondNumber.top - firstExample.bottom, AppSpacing.md);
+    // The number sits on the definition's baseline: test glyphs have their
+    // baseline at three quarters of the line.
+    final theme = Theme.of(tester.element(find.text('2.')));
+    double baseline(Rect rect, TextStyle style) =>
+        rect.top + style.fontSize! * style.height! * 0.75;
+    expect(
+      baseline(secondNumber, theme.textTheme.bodyMedium!),
+      // Line metrics round to device pixels.
+      closeTo(baseline(secondText, theme.textTheme.bodyLarge!), 0.5),
+    );
+    expect(secondText.top - firstExample.bottom, AppSpacing.md);
+    // The last definition ends 12dp inside its section, which ends 16dp
+    // above the sheet inset like the other states.
     final sheet = tester.getRect(find.byType(DictionarySheet));
-    expect(sheet.bottom - lastExample.bottom, AppSpacing.lg);
+    expect(sheet.bottom - lastExample.bottom, AppSpacing.md + AppSpacing.lg);
     final body = find.descendant(
       of: find.byType(SingleChildScrollView),
       matching: find.byType(Scrollable),

@@ -3,8 +3,16 @@ import 'package:contextual_translation_service/contextual_translation_service.da
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'translation_answer_style.dart';
 import 'translation_text_direction.dart';
 
+/// What the reader selected, a quiet label above the translation sections.
+///
+/// The selected word or phrase in `titleMedium` with its reading and
+/// pronunciation on one line; its part of speech and base form follow on a
+/// second line, all on the source text's own edge. The translation, not the
+/// source, is the sheet's only large text. A word too wide for the line at a
+/// large text size shrinks instead of breaking.
 class TranslationLexicalHeader extends StatelessWidget {
   const TranslationLexicalHeader({
     required this.selectedText,
@@ -50,63 +58,78 @@ class TranslationLexicalHeader extends StatelessWidget {
             _normalized(pronunciation) != _normalized(reading)
         ? pronunciation
         : null;
-    final hasMetadata =
-        visibleReading != null ||
-        visiblePronunciation != null ||
-        partOfSpeech != null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (isSingleWord)
-          Semantics(
-            header: true,
-            child: SelectableText(
-              selectedText,
-              key: const ValueKey('translation-selected-fragment'),
-              textDirection: sourceDirection,
-              style: context.text.headlineSmall.copyWith(
-                color: context.colors.onSurface,
-              ),
-            ),
-          )
-        else
-          AppSourceQuote(
-            textDirection: sourceDirection,
-            child: Text(
-              selectedText,
-              key: const ValueKey('translation-selected-fragment'),
-              textDirection: sourceDirection,
-              style: context.text.bodyMedium.copyWith(
-                color: context.colors.onSurface,
-              ),
-            ),
+    final hasPronunciation =
+        visibleReading != null || visiblePronunciation != null;
+    final hasGrammar = partOfSpeech != null || showLemma;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wordStyle = translationWordFit(
+          context,
+          selectedText,
+          context.text.titleMedium.copyWith(
+            letterSpacing: 0,
+            color: context.colors.onSurface,
           ),
-        if (hasMetadata) ...[
-          const SizedBox(height: AppSpacing.xs),
-          AppLexicalMetadataRow(
-            reading: visibleReading,
-            pronunciation: visiblePronunciation,
-            partOfSpeech: partOfSpeech,
-            textDirection: sourceDirection,
-          ),
-        ],
-        if (showLemma) ...[
-          const SizedBox(height: AppSpacing.xs),
-          Wrap(
-            textDirection: sourceDirection,
-            spacing: AppSpacing.xs,
-            children: [
-              Text(l10n.translationBaseForm, style: secondaryStyle),
-              Text(
-                lemma,
-                key: const ValueKey('translation-lemma'),
-                textDirection: translationTextDirection(lemma),
-                style: secondaryStyle,
+          constraints.maxWidth - appSelectableTextCaretMargin,
+        );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              textDirection: sourceDirection,
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.xxs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Semantics(
+                  header: true,
+                  child: SelectableText(
+                    selectedText,
+                    key: const ValueKey('translation-selected-fragment'),
+                    textDirection: sourceDirection,
+                    style: wordStyle,
+                  ),
+                ),
+                if (hasPronunciation)
+                  AppLexicalMetadataRow(
+                    reading: visibleReading,
+                    pronunciation: visiblePronunciation,
+                    textDirection: sourceDirection,
+                  ),
+              ],
+            ),
+            if (hasGrammar) ...[
+              const SizedBox(height: AppSpacing.xxs),
+              Wrap(
+                textDirection: sourceDirection,
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.xxs,
+                children: [
+                  if (partOfSpeech != null)
+                    AppLexicalMetadataRow(
+                      partOfSpeech: partOfSpeech,
+                      textDirection: sourceDirection,
+                    ),
+                  if (showLemma)
+                    Wrap(
+                      textDirection: sourceDirection,
+                      spacing: AppSpacing.xs,
+                      children: [
+                        Text(l10n.translationBaseForm, style: secondaryStyle),
+                        Text(
+                          lemma,
+                          key: const ValueKey('translation-lemma'),
+                          textDirection: translationTextDirection(lemma),
+                          style: secondaryStyle,
+                        ),
+                      ],
+                    ),
+                ],
               ),
             ],
-          ),
-        ],
-      ],
+          ],
+        );
+      },
     );
   }
 }

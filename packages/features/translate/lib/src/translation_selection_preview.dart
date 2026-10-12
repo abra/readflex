@@ -4,15 +4,23 @@ import 'package:shared/shared.dart';
 
 import 'translation_text_direction.dart';
 
+/// The selected text, or with [showContext] its sentence with the selection
+/// in semibold.
+///
+/// [quoted] sets it as a source quote, for the phrase being worked on while
+/// the sheet loads or fails. Unquoted it is the muted source line above its
+/// translation: secondary text with the selection in the body color.
 class TranslationSelectionPreview extends StatelessWidget {
   const TranslationSelectionPreview({
     required this.selection,
     required this.showContext,
+    this.quoted = true,
     super.key,
   });
 
   final TextSelectionContext selection;
   final bool showContext;
+  final bool quoted;
 
   @override
   Widget build(BuildContext context) {
@@ -20,29 +28,41 @@ class TranslationSelectionPreview extends StatelessWidget {
         ? _SelectionPreviewData.contextual(selection)
         : _SelectionPreviewData.plain(selection.effectiveSelectedText);
     final baseStyle = context.text.bodyMedium.copyWith(
-      color: context.colors.onSurface,
+      color: quoted
+          ? context.colors.onSurface
+          : context.colors.onSurfaceVariant,
     );
-    final selectedStyle = baseStyle.copyWith(fontWeight: FontWeight.w600);
+    final selectedStyle = baseStyle.copyWith(
+      color: context.colors.onSurface,
+      fontWeight: FontWeight.w600,
+    );
 
     final textDirection = translationTextDirection(
       '${preview.before}${preview.selected}${preview.after}',
     );
+    final text = Text.rich(
+      key: const ValueKey('translation-selection-preview-text'),
+      textDirection: textDirection,
+      TextSpan(
+        style: baseStyle,
+        children: [
+          if (preview.before.isNotEmpty) TextSpan(text: preview.before),
+          if (preview.selected.isNotEmpty)
+            TextSpan(text: preview.selected, style: selectedStyle),
+          if (preview.after.isNotEmpty) TextSpan(text: preview.after),
+        ],
+      ),
+    );
+    if (!quoted) {
+      return KeyedSubtree(
+        key: const ValueKey('translation-selection-preview'),
+        child: text,
+      );
+    }
     return AppSourceQuote(
       key: const ValueKey('translation-selection-preview'),
       textDirection: textDirection,
-      child: Text.rich(
-        key: const ValueKey('translation-selection-preview-text'),
-        textDirection: textDirection,
-        TextSpan(
-          style: baseStyle,
-          children: [
-            if (preview.before.isNotEmpty) TextSpan(text: preview.before),
-            if (preview.selected.isNotEmpty)
-              TextSpan(text: preview.selected, style: selectedStyle),
-            if (preview.after.isNotEmpty) TextSpan(text: preview.after),
-          ],
-        ),
-      ),
+      child: text,
     );
   }
 }

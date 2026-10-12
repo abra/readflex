@@ -144,10 +144,16 @@ void main() {
     expect(find.text('shut off'), findsOneWidget);
     expect(find.text('verb'), findsOneWidget);
     expect(find.text('phrasal verb'), findsOneWidget);
-    expect(find.byType(Divider), findsOneWidget);
+    // Space separates the entries; the expression comes before the word's
+    // own definitions.
+    expect(find.byType(Divider), findsNothing);
     expect(
       tester.getTopLeft(find.text('shut')).dy,
       lessThan(tester.getTopLeft(find.text('shut off')).dy),
+    );
+    expect(
+      tester.getTopLeft(find.text('shut off')).dy,
+      lessThan(tester.getTopLeft(find.text('To close something.')).dy),
     );
   });
 }

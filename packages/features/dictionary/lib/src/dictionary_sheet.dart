@@ -142,6 +142,12 @@ class _DictionaryBody extends StatelessWidget {
   }
 }
 
+/// The selected word's entry with its contextual expression first.
+///
+/// The headword and its metadata lead, outside the sections. The expression
+/// the word forms in its sentence follows in an outlined **In this context**
+/// section, then the word's own definitions under **Word meaning**, the same
+/// order as Translation. Further entries follow as their own sections.
 class _DictionaryResultView extends StatelessWidget {
   const _DictionaryResultView({
     required this.result,
@@ -155,75 +161,148 @@ class _DictionaryResultView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final entries = result.entries;
+    final word = entries.first;
+    final inContext = entries.length > 1 ? entries[1] : null;
+    // Regular weight: the section titles are the bold lines.
+    final subentryStyle = context.text.titleMedium.copyWith(
+      letterSpacing: 0,
+      fontWeight: FontWeight.w400,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (var index = 0; index < result.entries.length; index++) ...[
-          if (index > 0)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: AppSpacing.md),
-                  Divider(height: 1, color: context.colors.outlineVariant),
-                  const SizedBox(height: AppSpacing.md),
-                  if (index == 1) ...[
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        context.l10n.dictionaryInContext,
-                        style: context.text.labelMedium.copyWith(
-                          color: context.colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                  ],
-                ],
+        _DictionaryEntryHeader(
+          entry: word,
+          selectedText: selectedText,
+          style: context.text.headlineSmall,
+          onCopy: onCopy,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: AppSpacing.md,
+          children: [
+            if (inContext != null)
+              _EntrySection(
+                entry: inContext,
+                title: context.l10n.dictionaryInContext,
+                style: subentryStyle,
+                onCopy: onCopy,
               ),
-            ),
-          _DictionaryEntryView(
-            entry: result.entries[index],
-            selectedText: index == 0 ? selectedText : null,
-            onCopy: onCopy,
-          ),
-        ],
+            if (word.definitions.isNotEmpty)
+              AppSheetSection(
+                title: inContext == null
+                    ? null
+                    : context.l10n.dictionaryWordMeaning,
+                child: _DictionaryDefinitions(entry: word),
+              ),
+            for (final entry in entries.skip(2))
+              _EntrySection(entry: entry, style: subentryStyle, onCopy: onCopy),
+          ],
+        ),
       ],
     );
   }
 }
 
-class _DictionaryEntryView extends StatelessWidget {
-  const _DictionaryEntryView({
+/// An entry in its own outlined section: its lemma row, with the section's
+/// [title] as the row's lead, then its definitions.
+class _EntrySection extends StatelessWidget {
+  const _EntrySection({
     required this.entry,
-    required this.selectedText,
+    required this.style,
     required this.onCopy,
+    this.title,
   });
 
   final DictionaryLexicalEntry entry;
-  final String? selectedText;
+  final TextStyle style;
   final Future<void> Function(String) onCopy;
+  final String? title;
 
   @override
   Widget build(BuildContext context) {
+    // The lemma row keeps the room above and below itself; definitions after
+    // it need the room below.
+    return AppSheetSection(
+      padding: entry.definitions.isEmpty
+          ? EdgeInsets.zero
+          : const EdgeInsets.only(bottom: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _DictionaryEntryHeader(
+            entry: entry,
+            title: title,
+            style: style,
+            onCopy: onCopy,
+          ),
+          _DictionaryDefinitions(entry: entry),
+        ],
+      ),
+    );
+  }
+}
+
+/// An entry's lemma in [style] with its metadata right below it, Copy on the
+/// lemma's line and an optional section [title] above. The row keeps 12dp of
+/// room above and below its text at any text size.
+class _DictionaryEntryHeader extends StatelessWidget {
+  const _DictionaryEntryHeader({
+    required this.entry,
+    required this.style,
+    required this.onCopy,
+    this.selectedText,
+    this.title,
+  });
+
+  final DictionaryLexicalEntry entry;
+  final TextStyle style;
+  final Future<void> Function(String) onCopy;
+
+  /// The selected form, shown before the lemma when it differs.
+  final String? selectedText;
+  final String? title;
+
+  @override
+  Widget build(BuildContext context) {
+    final direction = _contentDirection(entry.lemma);
+    final title = this.title;
     // The backend returns the part of speech in the term's own language; the
     // sheet has no localization map for it, so the raw label is shown.
     final metadata = AppLexicalMetadataRow(
       reading: entry.reading,
       pronunciation: entry.pronunciation,
       partOfSpeech: entry.partOfSpeech,
-      textDirection: _contentDirection(entry.lemma),
+      textDirection: direction,
     );
     final hasMetadata = [
       entry.reading,
       entry.pronunciation,
       entry.partOfSpeech,
     ].any((value) => value != null && value.trim().isNotEmpty);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppSheetActionRow(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final lemmaStyle = appFitLongestWord(
+          style,
+          text: entry.lemma,
+          maxWidth:
+              AppSheetActionRow.childWidthFor(constraints.maxWidth) -
+              appSelectableTextCaretMargin,
+          minFontSize: context.text.bodyMedium.fontSize!,
+          textScaler: MediaQuery.textScalerOf(context),
+          textDirection: direction,
+          locale: Localizations.maybeLocaleOf(context),
+        );
+        return AppSheetActionRow(
+          // Copy trails the lemma, also in an interface of the other
+          // direction.
+          textDirection: direction,
+          firstLineStyle: lemmaStyle,
+          lead: title == null ? null : AppSheetSectionTitle(title),
+          leadSpacing: AppSpacing.sm,
+          minTextRoom: AppSpacing.md,
           action: AppCopyButton(
             key: ValueKey(entry),
             onCopy: () => onCopy(
@@ -237,50 +316,61 @@ class _DictionaryEntryView extends StatelessWidget {
             copiedLabel: context.l10n.commonCopied,
             failureLabel: context.l10n.commonCopyFailed,
           ),
-          child: Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: _DictionaryLemma(
-              lemma: entry.lemma,
-              selectedText: selectedText,
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _DictionaryLemma(
+                lemma: entry.lemma,
+                selectedText: selectedText,
+                style: lemmaStyle,
+              ),
               if (hasMetadata) ...[
                 const SizedBox(height: AppSpacing.xs),
                 metadata,
               ],
-              const SizedBox(height: AppSpacing.md),
-              // Spacing between definitions only, so the last one ends the
-              // entry and the sheet keeps its 16dp bottom inset.
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                spacing: AppSpacing.md,
-                children: [
-                  for (var index = 0; index < entry.definitions.length; index++)
-                    _DefinitionView(
-                      number: index + 1,
-                      definition: entry.definitions[index],
-                    ),
-                ],
-              ),
             ],
           ),
-        ),
-      ],
+        );
+      },
+    );
+  }
+}
+
+/// Numbered definitions of [entry], 12dp apart, ending at the last one.
+class _DictionaryDefinitions extends StatelessWidget {
+  const _DictionaryDefinitions({required this.entry});
+
+  final DictionaryLexicalEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: AppSpacing.md,
+        children: [
+          for (var index = 0; index < entry.definitions.length; index++)
+            _DefinitionView(
+              number: index + 1,
+              definition: entry.definitions[index],
+            ),
+        ],
+      ),
     );
   }
 }
 
 class _DictionaryLemma extends StatelessWidget {
-  const _DictionaryLemma({required this.lemma, required this.selectedText});
+  const _DictionaryLemma({
+    required this.lemma,
+    required this.selectedText,
+    required this.style,
+  });
 
   final String lemma;
   final String? selectedText;
+  final TextStyle style;
 
   @override
   Widget build(BuildContext context) {
@@ -315,10 +405,7 @@ class _DictionaryLemma extends StatelessWidget {
               ),
             ),
           ],
-          Semantics(
-            header: true,
-            child: SelectableText(lemma, style: context.text.headlineSmall),
-          ),
+          Semantics(header: true, child: SelectableText(lemma, style: style)),
         ],
       ),
     );
@@ -339,7 +426,9 @@ class _DefinitionView extends StatelessWidget {
     return Directionality(
       textDirection: _contentDirection(definition.text),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        // The number sits on the definition's first line.
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
           SizedBox(
             // Scale with the user's text size so "10." never wraps.

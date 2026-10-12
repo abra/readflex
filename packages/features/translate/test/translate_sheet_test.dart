@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:domain_models/domain_models.dart';
@@ -431,7 +433,7 @@ void main() {
     (word: 'قدرة', locale: const Locale('en'), direction: TextDirection.rtl),
   ]) {
     testWidgets(
-      'word metadata row keeps the UI direction for ${example.word}',
+      'word metadata row starts on the headword edge: ${example.word}',
       (tester) async {
         await _pumpTranslateSheet(
           tester,
@@ -454,21 +456,24 @@ void main() {
           of: find.byType(AppLexicalMetadataRow),
           matching: find.byType(Wrap),
         );
-        // The row is UI chrome: it follows the app locale, not the headword.
-        expect(tester.widget<Wrap>(metadata).textDirection, isNull);
-        expect(
-          Directionality.of(tester.element(metadata)),
-          example.locale.languageCode == 'ar'
-              ? TextDirection.rtl
-              : TextDirection.ltr,
-        );
-        // The headword still renders in its own direction.
-        expect(
-          tester
-              .widget<AppLexicalMetadataRow>(find.byType(AppLexicalMetadataRow))
-              .textDirection,
-          example.direction,
-        );
+        for (final row in metadata.evaluate()) {
+          expect((row.widget as Wrap).textDirection, example.direction);
+        }
+        final word = tester.getRect(_selectedFragmentFinder);
+        final ipa = tester.getRect(find.text('/ipa/'));
+        final l10n = ReadflexLocalizations.of(
+          tester.element(find.byType(TranslateSheet)),
+        )!;
+        final noun = tester.getRect(find.text(l10n.translationPosNoun));
+        // Pronunciation follows the word; grammar starts under it, on its
+        // edge, in either UI.
+        if (example.direction == TextDirection.ltr) {
+          expect(ipa.left, greaterThan(word.right));
+          expect(noun.left, word.left);
+        } else {
+          expect(ipa.right, lessThan(word.left));
+          expect(noun.right, word.right);
+        }
         expect(tester.takeException(), isNull);
       },
     );
@@ -586,7 +591,7 @@ void main() {
         expect(find.text('идти в банк'), findsOneWidget);
         expect(find.text('банк'), findsNothing);
         expect(find.text('ぎんこうにいく'), findsNothing);
-        _expectSourceQuote(tester, _selectedFragmentFinder);
+        _expectSubject(tester);
       },
     );
   }
@@ -707,8 +712,10 @@ void main() {
       final selectedSpan = _previewSpans(
         tester,
       ).singleWhere((span) => span.text == 'power');
+      final colors = Theme.of(tester.element(_previewFinder)).colorScheme;
       expect(selectedSpan.style?.fontWeight, FontWeight.w600);
-      expect(selectedSpan.style?.color, preview.textSpan?.style?.color);
+      expect(preview.textSpan?.style?.color, colors.onSurfaceVariant);
+      expect(selectedSpan.style?.color, colors.onSurface);
       expect(selectedSpan.style?.backgroundColor, isNull);
 
       final translation = find.byKey(
@@ -727,9 +734,8 @@ void main() {
   );
 
   for (final brightness in Brightness.values) {
-    testWidgets('context emphasis uses only font weight: $brightness', (
-      tester,
-    ) async {
+    testWidgets('the source sentence is muted, the selection in body color: '
+        '$brightness', (tester) async {
       await _pumpTranslateSheet(
         tester,
         selection: _selection,
@@ -737,45 +743,42 @@ void main() {
       );
       final baseStyle = _previewText(tester).textSpan!.style!;
       final theme = Theme.of(tester.element(_previewFinder));
-      expect(baseStyle.color, theme.colorScheme.onSurface);
+      expect(baseStyle.color, theme.colorScheme.onSurfaceVariant);
       expect(
         tester.widget<SelectableText>(_selectedFragmentFinder).style!.color,
         theme.colorScheme.onSurface,
       );
       final background =
           theme.bottomSheetTheme.backgroundColor ?? theme.colorScheme.surface;
-      final luminances = [
-        baseStyle.color!.computeLuminance(),
-        background.computeLuminance(),
-      ]..sort();
-      expect(
-        (luminances.last + 0.05) / (luminances.first + 0.05),
-        greaterThanOrEqualTo(7),
-      );
+      double contrast(Color a, Color b) {
+        final luminances = [a.computeLuminance(), b.computeLuminance()]..sort();
+        return (luminances.last + 0.05) / (luminances.first + 0.05);
+      }
+
+      expect(contrast(baseStyle.color!, background), greaterThanOrEqualTo(4.5));
       final selectedStyle = _previewSpans(
         tester,
       ).singleWhere((span) => span.text == 'power').style!;
       expect(selectedStyle.backgroundColor, isNull);
       expect(selectedStyle.background, isNull);
-      expect(selectedStyle, baseStyle.copyWith(fontWeight: FontWeight.w600));
+      expect(
+        selectedStyle,
+        baseStyle.copyWith(
+          color: theme.colorScheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+      expect(
+        contrast(selectedStyle.color!, background),
+        greaterThanOrEqualTo(7),
+      );
     });
   }
 
-  testWidgets('word is a heading; only the sentence has a quotation rule', (
-    tester,
-  ) async {
+  testWidgets('the word is a label; no result text is quoted', (tester) async {
     await _pumpTranslateSheet(tester, selection: _selection);
-    expect(
-      find.ancestor(of: _selectedFragmentFinder, matching: _quoteSurfaceFinder),
-      findsNothing,
-    );
-    expect(
-      tester.widget<SelectableText>(_selectedFragmentFinder).style!.fontSize,
-      Theme.of(
-        tester.element(_selectedFragmentFinder),
-      ).textTheme.headlineSmall!.fontSize,
-    );
-    _expectSourceQuote(tester, _previewFinder);
+    _expectSubject(tester);
+    _expectMutedSource(tester, _previewFinder);
     expect(
       find.ancestor(
         of: find.byKey(const ValueKey('translation-primary-result')),
@@ -783,6 +786,9 @@ void main() {
       ),
       findsNothing,
     );
+    expect(find.byType(AppSourceQuote), findsNothing);
+    // Space separates the sections; only the details tile keeps its border.
+    expect(find.byType(Divider), findsNothing);
   });
 
   testWidgets(
@@ -842,7 +848,7 @@ void main() {
       _previewText(tester).textSpan?.toPlainText(),
       _paragraphSelection.selectedText,
     );
-    _expectSourceQuote(tester, _previewFinder);
+    _expectMutedSource(tester, _previewFinder);
     expect(find.text('Запуски в наши дни в основном произвольны.'), findsOne);
     expect(find.text('power'), findsNothing);
     expect(find.text('Sentence'), findsNothing);
@@ -930,7 +936,7 @@ void main() {
     );
     expect(find.byTooltip('Copy').hitTestable(), findsOneWidget);
     expect(_previewText(tester).textSpan!.toPlainText(), contextText);
-    _expectSourceQuote(tester, _previewFinder);
+    _expectMutedSource(tester, _previewFinder);
     await tester.drag(
       find.byType(SingleChildScrollView),
       const Offset(0, -300),
@@ -1287,7 +1293,7 @@ void main() {
       tester.widget<SelectableText>(_selectedFragmentFinder).textDirection,
       TextDirection.ltr,
     );
-    _expectSourceQuote(tester, _previewFinder);
+    _expectMutedSource(tester, _previewFinder, uiDirection: TextDirection.rtl);
     for (final key in [
       'translation-primary-result',
       'translation-sentence-result',
@@ -1318,7 +1324,7 @@ void main() {
       tester.widget<SelectableText>(_selectedFragmentFinder).textDirection,
       TextDirection.rtl,
     );
-    _expectSourceQuote(tester, _previewFinder, direction: TextDirection.rtl);
+    _expectMutedSource(tester, _previewFinder, direction: TextDirection.rtl);
     expect(
       _previewText(tester).textSpan!.toPlainText(),
       'توفر هذه البطارية الطاقة للأجهزة.',
@@ -1339,6 +1345,371 @@ void main() {
     );
     expect(find.textContaining('credential leaked'), findsNothing);
     _expectSourceQuote(tester, _previewFinder);
+  });
+
+  group('layout', () {
+    final expressionService = _WordTranslationService(
+      const ContextualTranslationText(
+        baseTranslation: 'удача; судьба',
+        sentenceTranslation: 'Холостяк с солидным состоянием ищет жену.',
+      ),
+      analysis: const ContextualTranslationAnalysis(
+        surfaceForm: 'fortune',
+        lemma: 'fortunes',
+        pronunciation: '/ˈfɔːtʃuːn/',
+        partOfSpeech: 'noun',
+        expressionType: 'word',
+      ),
+      expression: const ContextualTranslationExpression(
+        text: 'good fortune',
+        translation: 'солидное состояние',
+      ),
+      explanation: 'Wealth, not luck.',
+    );
+    const fortune = TextSelectionContext(
+      selectedText: 'fortune',
+      contextText: 'A man in possession of a good fortune must want a wife.',
+      markedContextText:
+          'A man in possession of a good [[fortune]] must want a wife.',
+      sourceId: 'source-1',
+      sourceType: SourceType.book,
+      sourceLanguageHint: 'en',
+    );
+    final primary = find.byKey(const ValueKey('translation-primary-result'));
+    final base = find.byKey(const ValueKey('translation-base-result'));
+    final expression = find.byKey(
+      const ValueKey('translation-contextual-expression'),
+    );
+    final sections = find.byType(AppSheetSection);
+    Rect outline(WidgetTester tester, int index) => tester.getRect(
+      find
+          .descendant(
+            of: sections.at(index),
+            matching: find.byWidgetPredicate(
+              (widget) =>
+                  widget is DecoratedBox &&
+                  (widget.decoration as BoxDecoration?)?.border != null,
+            ),
+          )
+          .first,
+    );
+
+    testWidgets('the selection is a quiet label; the answer is the heading', (
+      tester,
+    ) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: fortune,
+        service: expressionService,
+      );
+      final theme = Theme.of(tester.element(primary));
+      expect(
+        tester.widget<SelectableText>(_selectedFragmentFinder).style,
+        theme.textTheme.titleMedium!.copyWith(
+          letterSpacing: 0,
+          color: theme.colorScheme.onSurface,
+        ),
+      );
+      expect(
+        tester.widget<SelectableText>(primary).style,
+        theme.textTheme.headlineSmall!.copyWith(letterSpacing: 0),
+      );
+      expect(
+        tester.widget<SelectableText>(expression).style,
+        theme.textTheme.titleMedium!.copyWith(
+          letterSpacing: 0,
+          fontWeight: FontWeight.w400,
+        ),
+      );
+      expect(
+        tester.widget<SelectableText>(base).style,
+        theme.textTheme.bodyLarge!.copyWith(letterSpacing: 0),
+      );
+    });
+
+    testWidgets('pronunciation follows the word; grammar and base form are '
+        'on the line below', (tester) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: fortune,
+        service: expressionService,
+      );
+      final word = tester.getRect(_selectedFragmentFinder);
+      final ipa = tester.getRect(find.text('/ˈfɔːtʃuːn/'));
+      final noun = tester.getRect(find.text('Noun'));
+      final baseForm = tester.getRect(find.text('Base form:'));
+      expect(ipa.left, greaterThan(word.right));
+      expect(ipa.center.dy, moreOrLessEquals(word.center.dy, epsilon: 1));
+      expect(noun.left, word.left);
+      expect(noun.top, greaterThanOrEqualTo(word.bottom));
+      expect(baseForm.left, greaterThan(noun.right));
+      expect(baseForm.top, noun.top);
+    });
+
+    testWidgets('each answer, the sentence and the details are outlined '
+        'sections in reading order', (tester) async {
+      tester.view.physicalSize = const Size(390, 2000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await _pumpTranslateSheet(
+        tester,
+        selection: fortune,
+        service: expressionService,
+      );
+      expect(sections, findsNWidgets(4));
+      final contents = [
+        primary,
+        base,
+        _previewFinder,
+        find.text('Meaning & alternatives'),
+      ];
+      for (var i = 0; i < contents.length; i++) {
+        expect(
+          find.descendant(of: sections.at(i), matching: contents[i]),
+          findsOneWidget,
+          reason: 'section $i',
+        );
+      }
+      expect(find.byType(AppSourceQuote), findsNothing);
+      expect(find.byType(Divider), findsNothing);
+    });
+
+    testWidgets('text translation has the answer and the original sections', (
+      tester,
+    ) async {
+      await _pumpTranslateSheet(tester, selection: _paragraphSelection);
+      expect(sections, findsNWidgets(2));
+      expect(
+        find.descendant(of: sections.first, matching: primary),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: sections.last, matching: find.text('Original')),
+        findsOneWidget,
+      );
+      expect(_selectedFragmentFinder, findsNothing);
+    });
+
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('sections are 12dp apart with 12dp inside at ${scale}x', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(390, 3000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await _pumpTranslateSheet(
+          tester,
+          selection: fortune,
+          service: expressionService,
+          textScaler: TextScaler.linear(scale),
+        );
+        final boxes = [for (var i = 0; i < 4; i++) outline(tester, i)];
+        for (var i = 1; i < boxes.length; i++) {
+          expect(boxes[i].top - boxes[i - 1].bottom, AppSpacing.md);
+        }
+        // The selection's lowest line, wherever the test font wraps it.
+        final subjectBottom =
+            [
+                  _selectedFragmentFinder,
+                  find.byType(AppLexicalMetadataRow),
+                  find.text('Base form:'),
+                  find.byKey(const ValueKey('translation-lemma')),
+                ]
+                .expand((finder) => finder.evaluate())
+                .map((element) => tester.getRect(find.byWidget(element.widget)))
+                .map((rect) => rect.bottom)
+                .reduce(math.max);
+        expect(
+          boxes.first.top - subjectBottom,
+          AppSpacing.lg,
+          reason: 'the selection sits 16dp above the first section',
+        );
+        double top(Finder finder, int box) =>
+            tester.getRect(finder).top - boxes[box].top;
+        double bottom(Finder finder, int box) =>
+            boxes[box].bottom - tester.getRect(finder).bottom;
+        expect(top(find.text('In this context'), 0), AppSpacing.md);
+        expect(bottom(primary, 0), AppSpacing.md);
+        expect(top(find.text('Word meaning'), 1), AppSpacing.md);
+        expect(bottom(base, 1), AppSpacing.md);
+        expect(top(find.text('Sentence'), 2), AppSpacing.md);
+        expect(
+          bottom(find.byKey(const ValueKey('translation-sentence-result')), 2),
+          AppSpacing.md,
+        );
+      });
+    }
+
+    testWidgets('titles sit 8dp above their content, the expression 4dp '
+        'above its answer', (tester) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: fortune,
+        service: expressionService,
+      );
+      double gap(Finder above, Finder below) =>
+          tester.getRect(below).top - tester.getRect(above).bottom;
+      expect(gap(find.text('In this context'), expression), AppSpacing.sm);
+      expect(gap(expression, primary), AppSpacing.xs);
+      expect(gap(find.text('Word meaning'), base), AppSpacing.sm);
+      expect(gap(find.text('Sentence'), _previewFinder), AppSpacing.sm);
+      expect(
+        gap(
+          _previewFinder,
+          find.byKey(const ValueKey('translation-sentence-result')),
+        ),
+        AppSpacing.sm,
+      );
+    });
+
+    testWidgets('an answer without a title has 12dp inside its section', (
+      tester,
+    ) async {
+      await _pumpTranslateSheet(tester, selection: _selection);
+      final box = outline(tester, 0);
+      expect(tester.getRect(primary).top - box.top, AppSpacing.md);
+      expect(box.bottom - tester.getRect(primary).bottom, AppSpacing.md);
+    });
+
+    testWidgets('each Copy is centered on its answer and reaches the outline', (
+      tester,
+    ) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: fortune,
+        service: expressionService,
+      );
+      for (final (index, id) in ['primary', 'base'].indexed) {
+        final result = find.byKey(ValueKey('translation-$id-result'));
+        final style = tester.widget<SelectableText>(result).style!;
+        final line = style.fontSize! * style.height!;
+        final copy = tester.getRect(
+          find.byKey(ValueKey('translation-$id-copy')),
+        );
+        expect(
+          copy.center.dy,
+          moreOrLessEquals(tester.getRect(result).top + line / 2),
+          reason: id,
+        );
+        expect(copy.width, moreOrLessEquals(48), reason: id);
+        expect(copy.height, moreOrLessEquals(48), reason: id);
+        expect(copy.right, outline(tester, index).right, reason: id);
+      }
+    });
+
+    testWidgets('titles keep the interface edge; LTR content keeps its own '
+        'in an Arabic UI', (tester) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: fortune,
+        service: expressionService,
+        locale: const Locale('ar'),
+      );
+      final l10n = ReadflexLocalizations.of(
+        tester.element(find.byType(TranslateSheet)),
+      )!;
+      final sheet = tester.getRect(find.byType(TranslateSheet));
+      for (final title in [
+        l10n.translationInContext,
+        l10n.translationWordMeaning,
+        l10n.translationSentence,
+      ]) {
+        expect(
+          sheet.right - tester.getRect(find.text(title)).right,
+          AppSpacing.xl,
+          reason: title,
+        );
+      }
+      for (final content in [
+        _selectedFragmentFinder,
+        expression,
+        primary,
+        base,
+      ]) {
+        expect(tester.getRect(content).left - sheet.left, AppSpacing.xl);
+      }
+      // Copy trails the LTR answers on the right.
+      final copy = tester.getRect(
+        find.byKey(const ValueKey('translation-primary-copy')),
+      );
+      expect(copy.left, greaterThan(tester.getRect(primary).right - 1));
+    });
+
+    testWidgets('a selected phrase is a label like a word; its short answer is '
+        'the heading', (tester) async {
+      await _pumpTranslateSheet(
+        tester,
+        selection: const TextSelectionContext(
+          selectedText: 'in want of',
+          contextText: 'A single man must be in want of a wife.',
+          markedContextText: 'A single man must be [[in want of]] a wife.',
+          sourceId: 'source-1',
+          sourceType: SourceType.book,
+          sourceLanguageHint: 'en',
+        ),
+        service: _WordTranslationService(
+          const ContextualTranslationText(
+            contextualTranslation: 'нуждается в',
+            sentenceTranslation: 'Холостяк нуждается в жене.',
+          ),
+          analysis: const ContextualTranslationAnalysis(
+            surfaceForm: 'in want of',
+            expressionType: 'phrase',
+          ),
+        ),
+      );
+      _expectSubject(tester);
+      final theme = Theme.of(tester.element(primary));
+      expect(
+        tester.widget<SelectableText>(primary).style,
+        theme.textTheme.headlineSmall!.copyWith(letterSpacing: 0),
+      );
+      expect(find.byType(AppLexicalMetadataRow), findsNothing);
+    });
+
+    testWidgets('words too wide at a large text size shrink instead of '
+        'breaking', (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      // Test glyphs are squares: at 2x neither word fits its line at its own
+      // size, both fit at a smaller one.
+      const word = 'fortunes';
+      await _pumpTranslateSheet(
+        tester,
+        selection: const TextSelectionContext(
+          selectedText: word,
+          sourceId: 'source-1',
+          sourceType: SourceType.book,
+        ),
+        textScaler: const TextScaler.linear(2),
+        service: _WordTranslationService(
+          const ContextualTranslationText(contextualTranslation: 'удачный'),
+        ),
+      );
+      final theme = Theme.of(tester.element(_selectedFragmentFinder));
+      const scaled = TextScaler.linear(2);
+      for (final (finder, role) in [
+        (_selectedFragmentFinder, theme.textTheme.titleMedium!),
+        (primary, theme.textTheme.headlineSmall!),
+      ]) {
+        final style = tester.widget<SelectableText>(finder).style!;
+        expect(style.fontSize, lessThan(role.fontSize!));
+        expect(
+          style.fontSize,
+          greaterThanOrEqualTo(theme.textTheme.bodyMedium!.fontSize!),
+        );
+        // One line: the word was not broken.
+        expect(
+          tester.getSize(finder).height,
+          closeTo(scaled.scale(style.fontSize!) * style.height!, 1),
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
   });
 }
 
@@ -1425,6 +1796,42 @@ void _expectSourceQuote(
   expect(quoteRect.height, closeTo(textRect.height + 2 * AppSpacing.xs, 0.01));
 }
 
+/// A source line in a successful result: muted, unquoted, on the gutter of
+/// its own writing direction.
+void _expectMutedSource(
+  WidgetTester tester,
+  Finder text, {
+  TextDirection direction = TextDirection.ltr,
+  TextDirection uiDirection = TextDirection.ltr,
+}) {
+  expect(find.ancestor(of: text, matching: _quoteSurfaceFinder), findsNothing);
+  final widget = tester.widget<Text>(text);
+  expect(widget.textDirection, direction);
+  expect(
+    widget.textSpan!.style!.color,
+    Theme.of(tester.element(text)).colorScheme.onSurfaceVariant,
+  );
+  final rect = tester.getRect(text);
+  final sheet = tester.getRect(find.byType(TranslateSheet));
+  // The box spans both gutters; the text starts on its own start edge.
+  expect(rect.left - sheet.left, AppSpacing.xl);
+  expect(sheet.right - rect.right, AppSpacing.xl);
+  expect(Directionality.of(tester.element(text)), uiDirection);
+}
+
+/// The selection, word or phrase, is a quiet `titleMedium` label, not a
+/// quote.
+void _expectSubject(WidgetTester tester) {
+  expect(
+    find.ancestor(of: _selectedFragmentFinder, matching: _quoteSurfaceFinder),
+    findsNothing,
+  );
+  final fragment = tester.widget<SelectableText>(_selectedFragmentFinder);
+  final theme = Theme.of(tester.element(_selectedFragmentFinder));
+  expect(fragment.style!.fontSize, theme.textTheme.titleMedium!.fontSize);
+  expect(fragment.style!.fontFamily, isNot(AppTypography.fontFamilySerif));
+}
+
 Text _previewText(WidgetTester tester) => tester.widget<Text>(_previewFinder);
 
 List<TextSpan> _previewSpans(WidgetTester tester) {
@@ -1481,10 +1888,16 @@ const _staleMarkedSelection = TextSelectionContext(
 );
 
 class _WordTranslationService implements ContextualTranslationService {
-  _WordTranslationService(this.translation, {this.analysis, this.expression});
+  _WordTranslationService(
+    this.translation, {
+    this.analysis,
+    this.expression,
+    this.explanation,
+  });
 
   final ContextualTranslationText translation;
   final ContextualTranslationAnalysis? analysis;
+  final String? explanation;
   final ContextualTranslationExpression? expression;
   int calls = 0;
 
@@ -1503,6 +1916,7 @@ class _WordTranslationService implements ContextualTranslationService {
       translation: translation,
       analysis: analysis,
       contextualExpression: expression,
+      explanation: explanation,
     );
   }
 

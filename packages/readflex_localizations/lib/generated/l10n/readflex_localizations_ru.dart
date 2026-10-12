@@ -48,6 +48,9 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get dictionaryInContext => 'В этом контексте';
 
   @override
+  String get dictionaryWordMeaning => 'Значение слова';
+
+  @override
   String get translationAction => 'Перевести';
 
   @override

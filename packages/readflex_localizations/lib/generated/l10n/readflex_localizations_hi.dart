@@ -48,6 +48,9 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get dictionaryInContext => 'इस संदर्भ में';
 
   @override
+  String get dictionaryWordMeaning => 'शब्द का अर्थ';
+
+  @override
   String get translationAction => 'अनुवाद करें';
 
   @override

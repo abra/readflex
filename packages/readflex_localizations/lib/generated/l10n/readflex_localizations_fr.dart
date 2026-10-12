@@ -48,6 +48,9 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get dictionaryInContext => 'Dans ce contexte';
 
   @override
+  String get dictionaryWordMeaning => 'Sens du mot';
+
+  @override
   String get translationAction => 'Traduire';
 
   @override

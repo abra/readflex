@@ -62,16 +62,17 @@ their meaning inside the surrounding sentence. Complete sentences, paragraphs,
 and long selections use `text_translation`; in that mode the complete selected
 range is the translation target and lexical analysis fields are not rendered.
 For contextual lookup, the sheet shows the selected fragment and its translation
-first. A word is a selectable serif `headlineSmall` headword (the same role as
-the Definition headword), with optional pronunciation/reading and a localized
-part of speech directly below it in the shared `AppLexicalMetadataRow`. A different lemma appears as
-**Base form** without expanding details. Pronunciation describes the selected
+first. The selection, word or phrase, is a quiet selectable `titleMedium` label,
+not a heading: the translation is the sheet's only large text. Optional
+reading/pronunciation follows the word on its line in the shared
+`AppLexicalMetadataRow`; a localized part of speech and a different lemma as
+**Base form** follow on the line below, without expanding details. Pronunciation describes the selected
 surface form, not its lemma: mismatched or absent `analysis.surface_form` hides
 pronunciation/reading and part of speech. Unknown grammatical tags are omitted.
 Reading is language-aware (e.g. Japanese kana or Chinese pinyin); identical
-reading/pronunciation is not repeated. Metadata aligns with the source word's
-writing direction, independently of the UI locale; IPA always stays
-left-to-right in the bundled phonetic font subset.
+reading/pronunciation is not repeated. Both lines follow the source word's
+writing direction, independently of the UI locale, so they start on the word's
+edge; IPA always stays left-to-right in the bundled phonetic font subset.
 For a single-word selection, **In this context** comes first when the contextual
 answer differs from the general meaning or describes a larger expression. When
 the backend returns a grounded `contextual_expression`, this section names the
@@ -97,22 +98,51 @@ If token IDs identify one selected token within a larger expression, the
 selection retains word presentation and its pronunciation. An expression-level
 tag alone must not hide the pronunciation of that selected word.
 There is no extra tokenizer or Dictionary API request.
-Below the result, the source sentence is paired with its translation. When
-there is no separate contextual answer, it has a Sentence heading.
+Below the result, the source sentence is paired with its translation under a
+**Sentence** caption.
 Book context is sentence-bounded at the
 DOM-range extraction layer, not trimmed or re-segmented in the sheet; unrelated
 sentences and clipped character-window prefixes are not part of that context.
 The selected range from the reader's
-marked-context contract uses semibold emphasis only, retaining the quote's text
-color without a background fill. Long context cannot push the answer
+marked-context contract is semibold in the body color without a background
+fill. Long context cannot push the answer
 below the initial viewport. Text-translation mode shows one complete translation
 followed by the exact selected source under Original, without lexical sections.
-Only the selected word uses the serif `headlineSmall` headword; contextual
-expressions use `titleMedium`. Short contextual answers to a single word receive
-the same `headlineSmall` emphasis when they contain at most 48 graphemes and
-fit in two lines at the user's text scale. The length cap also applies on wide
-screens. Long answers, expression/text translations and the standalone meaning
-keep `bodyLarge` typography with zero letter spacing. The sheet body has a bounded,
+
+### Layout
+
+The selection sits on top as a label; below it every part of the result is its
+own outlined `AppSheetSection`, 12dp apart, so it is clear what is where:
+
+1. the answer, titled **In this context** when there is a contextual section,
+   with the contextual expression right above it;
+2. **Word meaning**, the selected word's general translation;
+3. **Sentence** (or **Original** for text translation), the source muted above
+   its translation;
+4. **Meaning & alternatives**, the collapsed details tile, its title styled as
+   a section title and without a border of its own.
+
+The sheet has one heading: the translation of the selected word or phrase in
+its sentence. A contextual answer (`translationHeadingStyle`), with or without a
+larger expression, uses serif `headlineSmall` when it has at most 48 graphemes
+and fits two lines at the user's text scale; the length cap also applies on
+wide screens. Longer answers, text translations and the standalone word
+meaning keep `bodyLarge` with zero letter spacing. Contextual expressions use
+regular-weight `titleMedium`, so the bold section title stays the bold line.
+
+Every source sits above its translation in the same way: the sentence above
+the sentence translation, the original below a text translation as muted
+`bodyMedium` (`onSurfaceVariant`, at least 4.5:1) with the translation in the
+body color. Sources start on the same 24dp gutter as everything else;
+successful results quote nothing. The quote bar (`AppSourceQuote`) is kept for
+the phrase shown while loading and in failure states, which have no sections.
+
+Inside a section, titles sit 12dp below the outline and 8dp above their
+content, the expression 4dp above its answer, and text ends 12dp above the
+outline at any text size. A section title above an answer is the answer row's
+lead, so Copy stays centered on the answer. A word too wide for its line at a
+large text size shrinks just enough to stay whole (`appFitLongestWord`), never
+below metadata size. The sheet body has a bounded,
 scrollable viewport so long contexts and lexical results do not overflow.
 The shared `ScrollEdgeFadeStack` adds full-width shadows when content extends
 beyond the viewport: below the fixed title and language controls after scrolling,
@@ -121,15 +151,10 @@ without requiring a scroll gesture. Reaching either edge hides its shadow;
 content that fits needs neither. The overlays ignore pointer input and do not
 update translation state or request the service.
 
-Source phrases, sentence context and full selected originals are presented with
-the shared `AppSourceQuote`: a 2px leading rule with a 12px inner inset and no
-background fill.
-Quote text and the standalone word heading use the primary `onSurface` text
-color in both themes; only the rule retains a secondary color.
-The rule follows the source text direction, so Arabic quotes use the right edge
-even in an English interface. It spans the natural text height without intrinsic
-layout passes, including loading and failure previews. Translated answers are
-not styled as quotes. A divider separates the lexical and contextual sections.
+While loading and in failure states the selected phrase is shown with the
+shared `AppSourceQuote`: a 2px leading rule with a 12px inner inset and no
+background fill, quote text in `onSurface`. The rule follows the source text
+direction, so Arabic quotes use the right edge even in an English interface.
 Only optional explanation and alternatives are collapsed by default
 under **Meaning & alternatives**. Expanding them is local widget state: it
 neither sends a request nor rebuilds the Reader WebView. A new result resets
@@ -180,9 +205,13 @@ callback; the View never accesses a service for copying. Success/error feedback
 is local to `AppCopyButton` and does not trigger another translation or rebuild
 the Reader WebView. The full source context and sentence translation remain
 visible in the existing scrollable body.
-Result rows use `AppSheetActionRow`: the Copy glyph follows the header's 24dp
-content edge, with a 48dp tap target extending into the gutter. Copy feedback
-uses the same circular control as Close, without moving the pinned language row.
+Answer rows use `AppSheetActionRow`: the Copy glyph follows the header's 24dp
+content edge, with a 48dp tap target reaching the section outline, centered on
+the answer's first line. The section title and expression above an answer are
+the row's lead, so Copy moves down to the answer instead of pushing it down;
+titles keep the interface's edge while LTR answers keep Copy trailing them in
+an RTL interface. Copy feedback uses the same circular control as Close, without moving
+the pinned language row.
 
 ## Verification
 
@@ -197,10 +226,16 @@ feedback, details reset without extra requests, all ten locale labels, RTL
 content/control direction and 200% text on
 a narrow viewport. Tests also keep the primary result and Copy reachable before
 a long context, check the source/result order for text translation, and prevent
-headline styling of long answers to short words. Quotation tests check the rule
-direction, inset and full height for phrases, paragraphs and failure previews.
-Both themes verify weight-only emphasis without a separate text color or fill.
-They also require the main text color and at least 7:1 quote-to-sheet contrast.
+headline styling of long answers to short words. Layout tests check the quiet
+selection label (pronunciation on its line, grammar and base form below), the
+answer heading for expressions and short phrases, the four outlined sections in
+reading order (two for text translation), 12dp between and inside sections at
+1x and 2x, 8dp titles and the 4dp expression gap, Copy centered on each answer
+and reaching the outline, interface-edge titles in Arabic, and long words that
+shrink instead of breaking at 2x. Both themes verify the muted
+source (at least 4.5:1) with the selection semibold in the body color (at least
+7:1) and no fill; successful results quote nothing, while loading and failure
+previews keep the quote.
 Root `make test-ui` adds modal
 goldens in five visual profiles, including words, complete text, language menus
 and collapsed/expanded lexical details.

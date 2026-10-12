@@ -8,6 +8,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
 
 import 'translate_cubit.dart';
+import 'translation_answer_style.dart';
 import 'translation_details.dart';
 import 'translation_language_direction.dart';
 import 'translation_lexical_header.dart';
@@ -336,127 +337,122 @@ class _TranslationResultView extends StatelessWidget {
         .map((alternative) => alternative.translation.trim())
         .where((translation) => translation.isNotEmpty)
         .toList(growable: false);
+    final l10n = context.l10n;
+    final offline =
+        result.reliability == ContextualTranslationReliability.offline;
+    // The selection on top as a quiet label, then one outlined section per
+    // answer, the sentence and the details. The translation is the only
+    // large text.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (!isTextTranslation) ...[
-                TranslationLexicalHeader(
-                  selectedText: selectedText,
-                  isSingleWord: isSingleWord,
-                  analysis: result.analysis,
+        if (!isTextTranslation)
+          _Gutter(
+            child: TranslationLexicalHeader(
+              selectedText: selectedText,
+              isSingleWord: isSingleWord,
+              analysis: result.analysis,
+            ),
+          ),
+        if (offline) ...[
+          if (!isTextTranslation) const SizedBox(height: AppSpacing.sm),
+          _Gutter(
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: _OfflineBadge(label: l10n.translationOffline),
+            ),
+          ),
+        ],
+        if (!isTextTranslation || offline)
+          const SizedBox(height: AppSpacing.lg),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: AppSpacing.md,
+          children: [
+            // Answer rows keep the section's room themselves, so Copy is
+            // centered on the answer rather than pushed below the title.
+            if (primary != null)
+              AppSheetSection(
+                padding: EdgeInsets.zero,
+                child: _TranslationAnswer(
+                  id: 'primary',
+                  text: primary,
+                  onCopy: onCopy,
+                  emphasized: !isTextTranslation,
+                  title: showContextSection ? l10n.translationInContext : null,
+                  expression: expression?.text,
                 ),
-                const SizedBox(height: AppSpacing.xs),
-              ],
-              if (result.reliability ==
-                  ContextualTranslationReliability.offline) ...[
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: _OfflineBadge(label: context.l10n.translationOffline),
+              ),
+            if (showWordAnswer)
+              AppSheetSection(
+                padding: EdgeInsets.zero,
+                child: _TranslationAnswer(
+                  id: 'base',
+                  text: base,
+                  onCopy: onCopy,
+                  title: l10n.translationWordMeaning,
                 ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              if (showContextSection) ...[
-                const SizedBox(height: AppSpacing.sm),
-                Semantics(
-                  header: true,
-                  child: Text(
-                    context.l10n.translationInContext,
-                    style: context.text.labelMedium.copyWith(
-                      color: context.colors.onSurfaceVariant,
+              ),
+            AppSheetSection(
+              title: isTextTranslation
+                  ? l10n.translationOriginal
+                  : l10n.translationSentence,
+              child: _Gutter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TranslationSelectionPreview(
+                      selection: selection,
+                      showContext: !isTextTranslation,
+                      quoted: false,
                     ),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-              ],
-              if (expression != null)
-                SelectableText(
-                  expression.text,
-                  key: const ValueKey('translation-contextual-expression'),
-                  textDirection: translationTextDirection(expression.text),
-                  style: context.text.titleMedium.copyWith(letterSpacing: 0),
-                ),
-            ],
-          ),
-        ),
-        if (primary != null)
-          _TranslationAnswer(
-            id: 'primary',
-            text: primary,
-            onCopy: onCopy,
-            emphasized: isSingleWord && expression == null,
-          ),
-        if (showWordAnswer) ...[
-          const SizedBox(height: AppSpacing.md),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-            child: Semantics(
-              header: true,
-              child: Text(
-                context.l10n.translationWordMeaning,
-                style: context.text.labelMedium.copyWith(
-                  color: context.colors.onSurfaceVariant,
+                    if (!isTextTranslation &&
+                        sentenceTranslation != null &&
+                        _normalizedAnswer(sentenceTranslation) !=
+                            _normalizedAnswer(primary ?? '')) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      SelectableText(
+                        sentenceTranslation,
+                        key: const ValueKey('translation-sentence-result'),
+                        textDirection: translationTextDirection(
+                          sentenceTranslation,
+                        ),
+                        style: context.text.bodyMedium,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
-          ),
-          _TranslationAnswer(id: 'base', text: base, onCopy: onCopy),
-        ],
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: AppSpacing.md),
-              Divider(height: 1, color: context.colors.outlineVariant),
-              const SizedBox(height: AppSpacing.md),
-              Semantics(
-                header: true,
-                child: Text(
-                  isTextTranslation
-                      ? context.l10n.translationOriginal
-                      : context.l10n.translationSentence,
-                  style: context.text.labelMedium.copyWith(
-                    color: context.colors.onSurfaceVariant,
+            if (!isTextTranslation &&
+                (explanation != null || alternatives.isNotEmpty))
+              AppSheetSection(
+                padding: EdgeInsets.zero,
+                child: _Gutter(
+                  child: TranslationDetails(
+                    key: ValueKey(result.requestId),
+                    explanation: explanation,
+                    alternatives: alternatives,
                   ),
                 ),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              TranslationSelectionPreview(
-                selection: selection,
-                showContext: !isTextTranslation,
-              ),
-              if (!isTextTranslation &&
-                  sentenceTranslation != null &&
-                  _normalizedAnswer(sentenceTranslation) !=
-                      _normalizedAnswer(primary ?? '')) ...[
-                const SizedBox(height: AppSpacing.sm),
-                SelectableText(
-                  sentenceTranslation,
-                  key: const ValueKey('translation-sentence-result'),
-                  textDirection: translationTextDirection(sentenceTranslation),
-                  style: context.text.bodyMedium,
-                ),
-              ],
-              if (!isTextTranslation &&
-                  (explanation != null || alternatives.isNotEmpty)) ...[
-                const SizedBox(height: AppSpacing.md),
-                TranslationDetails(
-                  key: ValueKey(result.requestId),
-                  explanation: explanation,
-                  alternatives: alternatives,
-                ),
-              ],
-            ],
-          ),
+          ],
         ),
       ],
     );
   }
+}
+
+class _Gutter extends StatelessWidget {
+  const _Gutter({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+    child: child,
+  );
 }
 
 final _selectionWhitespacePattern = RegExp(r'\s');
@@ -466,62 +462,94 @@ String _normalizedAnswer(String value) =>
 
 final _answerWhitespacePattern = RegExp(r'\s+');
 
+/// An answer with its Copy action on its first line, under its section
+/// [title] and the source [expression] it translates. The row keeps 12dp of
+/// room inside its section's outline at any text size.
+///
+/// An [emphasized] answer uses the heading style when it is short.
 class _TranslationAnswer extends StatelessWidget {
   const _TranslationAnswer({
     required this.id,
     required this.text,
     required this.onCopy,
     this.emphasized = false,
+    this.title,
+    this.expression,
   });
 
   final String id;
   final String text;
   final Future<void> Function(String) onCopy;
   final bool emphasized;
+  final String? title;
+  final String? expression;
 
   @override
   Widget build(BuildContext context) {
-    return AppSheetActionRow(
-      // An LTR answer in an RTL UI keeps Copy trailing the text it copies.
-      textDirection: translationTextDirection(text),
-      action: KeyedSubtree(
-        key: ValueKey('translation-$id-copy'),
-        child: AppCopyButton(
-          key: ValueKey(text),
-          onCopy: () => onCopy(text),
-          copyLabel: context.l10n.commonCopy,
-          copiedLabel: context.l10n.commonCopied,
-          failureLabel: context.l10n.commonCopyFailed,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(top: AppSpacing.sm),
-        child: LayoutBuilder(
-          builder: (context, constraints) => SelectableText(
+    final direction = translationTextDirection(text);
+    final title = this.title;
+    final expression = this.expression;
+    final source = expression == null
+        ? null
+        : SelectableText(
+            expression,
+            key: const ValueKey('translation-contextual-expression'),
+            textDirection: translationTextDirection(expression),
+            // Regular weight: the section title above is the bold line.
+            style: context.text.titleMedium.copyWith(
+              letterSpacing: 0,
+              fontWeight: FontWeight.w400,
+            ),
+          );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final style = emphasized
+            ? translationHeadingStyle(
+                context,
+                text,
+                AppSheetActionRow.childWidthFor(constraints.maxWidth),
+              )
+            : translationBodyStyle(context);
+        return AppSheetActionRow(
+          // An LTR answer in an RTL UI keeps Copy trailing the text it copies.
+          textDirection: direction,
+          firstLineStyle: style,
+          lead: switch ((title, source)) {
+            (final title?, final source?) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AppSheetSectionTitle(title),
+                const SizedBox(height: AppSpacing.sm),
+                source,
+              ],
+            ),
+            (final title?, null) => AppSheetSectionTitle(title),
+            (null, final source?) => source,
+            (null, null) => null,
+          },
+          // A title is as far from its answer as from any section content;
+          // a source expression sits close to its translation.
+          leadSpacing: source == null ? AppSpacing.sm : AppSpacing.xs,
+          minTextRoom: AppSpacing.md,
+          action: KeyedSubtree(
+            key: ValueKey('translation-$id-copy'),
+            child: AppCopyButton(
+              key: ValueKey(text),
+              onCopy: () => onCopy(text),
+              copyLabel: context.l10n.commonCopy,
+              copiedLabel: context.l10n.commonCopied,
+              failureLabel: context.l10n.commonCopyFailed,
+            ),
+          ),
+          child: SelectableText(
             text,
             key: ValueKey('translation-$id-result'),
-            textDirection: translationTextDirection(text),
-            style: _answerStyle(context, constraints.maxWidth),
+            textDirection: direction,
+            style: style,
           ),
-        ),
-      ),
+        );
+      },
     );
-  }
-
-  TextStyle _answerStyle(BuildContext context, double width) {
-    final body = context.text.bodyLarge.copyWith(letterSpacing: 0);
-    // Wide screens must not turn a sentence-length answer into a heading.
-    if (!emphasized || text.characters.take(49).length > 48) return body;
-    final heading = context.text.headlineSmall.copyWith(letterSpacing: 0);
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: heading),
-      textDirection: translationTextDirection(text),
-      textScaler: MediaQuery.textScalerOf(context),
-      maxLines: 2,
-    )..layout(maxWidth: width);
-    final fits = !painter.didExceedMaxLines;
-    painter.dispose();
-    return fits ? heading : body;
   }
 }
 

@@ -47,6 +47,9 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get dictionaryInContext => 'この文脈では';
 
   @override
+  String get dictionaryWordMeaning => '単語の意味';
+
+  @override
   String get translationAction => '翻訳';
 
   @override

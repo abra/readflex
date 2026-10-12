@@ -217,8 +217,9 @@ void main() {
     expect(retry.width, closeTo(secondary.width, 0.5));
   });
 
-  testWidgets('lexical row keeps the ambient direction for part of speech '
-      'while the reading follows the headword', (tester) async {
+  testWidgets('lexical row follows the headword direction, reading included', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -232,14 +233,14 @@ void main() {
       ),
     );
     final wrap = tester.widget<Wrap>(find.byType(Wrap));
-    expect(wrap.textDirection, isNull);
+    expect(wrap.textDirection, TextDirection.rtl);
     expect(
       tester.widget<Text>(find.text('طاقة')).textDirection,
       TextDirection.rtl,
     );
     expect(
       tester.getTopLeft(find.text('طاقة')).dx,
-      lessThan(tester.getTopLeft(find.text('noun')).dx),
+      greaterThan(tester.getTopLeft(find.text('noun')).dx),
     );
   });
 
@@ -329,6 +330,7 @@ void main() {
           child: Scaffold(
             body: AppSheetActionRow(
               textDirection: TextDirection.ltr,
+              firstLineStyle: const TextStyle(fontSize: 17, height: 1.45),
               action: const Icon(AppIcons.copy),
               child: const Text('power'),
             ),

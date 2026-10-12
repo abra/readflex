@@ -4,6 +4,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'translation_text_direction.dart';
 
+/// Explanation and alternatives, collapsed under **Meaning & alternatives**.
 class TranslationDetails extends StatefulWidget {
   const TranslationDetails({
     required this.explanation,
@@ -23,24 +24,20 @@ class _TranslationDetailsState extends State<TranslationDetails> {
 
   @override
   Widget build(BuildContext context) {
-    final border = Border(
-      top: Divider.createBorderSide(
-        context,
-        width: DividerTheme.of(context).thickness,
-      ),
-    );
     final duration = context.motion(AppMotion.short);
+    // Its section's outline frames the tile, so the tile draws no border; the
+    // title is styled as the section's title.
     return ExpansionTile(
       title: Text(
         context.l10n.translationDetails,
-        style: context.text.bodyMedium,
+        style: context.text.labelLarge,
       ),
       minTileHeight: AppSizes.buttonHeight,
       tilePadding: EdgeInsets.zero,
-      childrenPadding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      childrenPadding: const EdgeInsets.only(bottom: AppSpacing.md),
       expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
-      shape: border,
-      collapsedShape: border,
+      shape: const Border(),
+      collapsedShape: const Border(),
       expansionAnimationStyle: AnimationStyle(duration: duration),
       onExpansionChanged: (expanded) => setState(() => _expanded = expanded),
       trailing: AnimatedRotation(

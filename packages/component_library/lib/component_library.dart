@@ -9,6 +9,7 @@ export 'src/app_button_label.dart';
 export 'src/app_choice_control.dart';
 export 'src/app_settings_section.dart';
 export 'src/app_sheet_action_row.dart';
+export 'src/app_sheet_section.dart';
 export 'src/app_sheet_dismiss_guard.dart';
 export 'src/app_source_quote.dart';
 export 'src/app_lexical_metadata_row.dart';
@@ -28,6 +29,7 @@ export 'src/bottom_sheet_header.dart';
 export 'src/button_loading_indicator.dart';
 export 'src/centered_circular_progress_indicator.dart';
 // Utilities
+export 'src/app_text_fit.dart';
 export 'src/debug_screen_logging.dart';
 export 'src/empty_state.dart';
 export 'src/error_state.dart';

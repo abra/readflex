@@ -46,6 +46,28 @@ void main() {
   );
 
   blocTest<DictionaryCubit, DictionarySheetState>(
+    'a found term without entries is not found',
+    build: () => DictionaryCubit(
+      dictionaryService: _FakeDictionaryService(
+        result: const DictionaryLookupResult(
+          requestId: 'request-1',
+          status: DictionaryLookupStatus.found,
+          term: 'power',
+        ),
+      ),
+    ),
+    act: (cubit) => cubit.lookup(_selection()),
+    expect: () => [
+      const DictionarySheetState(status: DictionarySheetStatus.loading),
+      isA<DictionarySheetState>().having(
+        (state) => state.status,
+        'status',
+        DictionarySheetStatus.notFound,
+      ),
+    ],
+  );
+
+  blocTest<DictionaryCubit, DictionarySheetState>(
     'maps a typed service failure to failure state',
     build: () => DictionaryCubit(
       dictionaryService: _FakeDictionaryService(

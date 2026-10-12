@@ -47,6 +47,9 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get dictionaryInContext => '在此语境中';
 
   @override
+  String get dictionaryWordMeaning => '单词释义';
+
+  @override
   String get translationAction => '翻译';
 
   @override

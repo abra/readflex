@@ -343,10 +343,14 @@ response, obtained in the same provider call. The sheet displays them only when
 the analyzed surface form matches the selected word. It does not call the
 Dictionary service; offline translation remains usable without lexical metadata.
 The same response can supply a larger `contextual_expression` grounded by the
-backend in the selected occurrence. The sheet shows the general word meaning
-directly under the word/phonetics, then names the expression and its translation
-in a separate contextual section with the source sentence. Both answers remain
-visible without expanding details; only explanations and alternatives collapse.
+backend in the selected occurrence. Under the selected word, a quiet label with
+its phonetics, each part of the result is an outlined section: the expression
+and its translation (the heading of the sheet) under **In this context**, then
+the general word meaning, then the source sentence with its translation, then
+the collapsed details. Both answers remain visible without expanding details; only
+explanations and alternatives collapse. The Definition sheet uses the same
+order and sections: headword, contextual expression, the word's own
+definitions.
 Phrase/full-text selections are not expanded, and no second provider request or
 client-side expression search is introduced.
 

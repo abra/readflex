@@ -87,7 +87,7 @@ class DictionaryCubit extends Cubit<DictionarySheetState> {
       if (!_isCurrentLookup(lookupGeneration)) return;
       emit(
         state.copyWith(
-          status: _statusFor(result.status),
+          status: _statusFor(result),
           result: result,
           failure: null,
         ),
@@ -122,8 +122,11 @@ class DictionaryCubit extends Cubit<DictionarySheetState> {
   }
 }
 
-DictionarySheetStatus _statusFor(DictionaryLookupStatus status) {
-  return switch (status) {
+// A found term without entries has nothing to show; it reads as not found.
+DictionarySheetStatus _statusFor(DictionaryLookupResult result) {
+  return switch (result.status) {
+    DictionaryLookupStatus.found when result.entries.isEmpty =>
+      DictionarySheetStatus.notFound,
     DictionaryLookupStatus.found => DictionarySheetStatus.success,
     DictionaryLookupStatus.notFound => DictionarySheetStatus.notFound,
     DictionaryLookupStatus.unsupportedLanguage =>

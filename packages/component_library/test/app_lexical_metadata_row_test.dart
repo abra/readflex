@@ -60,10 +60,58 @@ void main() {
       tester.widget<Text>(find.text('الطاقة')).textDirection,
       TextDirection.rtl,
     );
-    // The row keeps the ambient (LTR) order; only the reading is RTL text.
+  });
+
+  testWidgets('the row starts on the headword edge in either interface', (
+    tester,
+  ) async {
+    for (final (ambient, headword) in [
+      (TextDirection.ltr, TextDirection.rtl),
+      (TextDirection.rtl, TextDirection.ltr),
+    ]) {
+      await tester.pumpWidget(
+        host(
+          Directionality(
+            textDirection: ambient,
+            child: AppLexicalMetadataRow(
+              reading: 'reading',
+              pronunciation: '/ipa/',
+              textDirection: headword,
+            ),
+          ),
+        ),
+      );
+      final row = tester.getRect(find.byType(AppLexicalMetadataRow));
+      final reading = tester.getRect(find.text('reading'));
+      final ipa = tester.getRect(find.text('/ipa/'));
+      final reason = 'headword $headword in a $ambient interface';
+      if (headword == TextDirection.ltr) {
+        expect(reading.left, row.left, reason: reason);
+        expect(ipa.left, greaterThan(reading.right), reason: reason);
+      } else {
+        expect(reading.right, row.right, reason: reason);
+        expect(ipa.right, lessThan(reading.left), reason: reason);
+      }
+    }
+  });
+
+  testWidgets('without a headword direction the row follows the interface', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      host(
+        const Directionality(
+          textDirection: TextDirection.rtl,
+          child: AppLexicalMetadataRow(
+            pronunciation: '/ipa/',
+            partOfSpeech: 'noun',
+          ),
+        ),
+      ),
+    );
     expect(
-      tester.getTopLeft(find.text('/ˈpaʊər/')).dx,
-      greaterThan(tester.getTopLeft(find.text('الطاقة')).dx),
+      tester.getTopLeft(find.text('/ipa/')).dx,
+      greaterThan(tester.getTopLeft(find.text('noun')).dx),
     );
   });
 

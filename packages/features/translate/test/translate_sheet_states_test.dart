@@ -110,6 +110,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AppStatusMessage), findsOneWidget);
     expect(find.byType(AppSourceQuote), findsOneWidget);
+    expect(find.byType(AppSheetSection), findsNothing);
     await tester.tap(find.widgetWithText(FilledButton, 'Retry'));
     await tester.pump();
     expect(service.calls, 2);
@@ -118,44 +119,43 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets(
-    'selected word is a selectable serif headline with a lexical row',
-    (tester) async {
-      await _pumpSheet(
-        tester,
-        locale: const Locale('ar'),
-        service: _GatedService(
-          analysis: const ContextualTranslationAnalysis(
-            surfaceForm: 'power',
-            pronunciation: '/ˈpaʊər/',
-            partOfSpeech: 'noun',
-          ),
-        )..resolveImmediately = true,
-      );
-      final word = find.byKey(const ValueKey('translation-selected-fragment'));
-      final theme = Theme.of(tester.element(word));
-      expect(
-        tester.widget<SelectableText>(word).style,
-        theme.textTheme.headlineSmall!.copyWith(
-          color: theme.colorScheme.onSurface,
+  testWidgets('the selected word is a quiet label with its lexical rows', (
+    tester,
+  ) async {
+    await _pumpSheet(
+      tester,
+      locale: const Locale('ar'),
+      service: _GatedService(
+        analysis: const ContextualTranslationAnalysis(
+          surfaceForm: 'power',
+          pronunciation: '/ˈpaʊər/',
+          partOfSpeech: 'noun',
         ),
-      );
-      expect(
-        theme.textTheme.headlineSmall!.fontFamily,
-        AppTypography.fontFamilySerif,
-      );
-      expect(find.byType(AppLexicalMetadataRow), findsOneWidget);
-      final ipa = find.text('/ˈpaʊər/');
-      expect(Directionality.of(tester.element(ipa)), TextDirection.ltr);
-      expect(
-        tester.widget<Text>(ipa).style!.fontFamily,
-        AppTypography.fontFamilyPhonetic,
-      );
-      final context = tester.element(find.byType(TranslateSheet));
-      expect(find.text(context.l10n.translationPosNoun), findsOneWidget);
-      expect(find.byType(AppSourceQuote), findsOneWidget);
-    },
-  );
+      )..resolveImmediately = true,
+    );
+    final word = find.byKey(const ValueKey('translation-selected-fragment'));
+    final theme = Theme.of(tester.element(word));
+    expect(
+      tester.widget<SelectableText>(word).style,
+      theme.textTheme.titleMedium!.copyWith(
+        letterSpacing: 0,
+        color: theme.colorScheme.onSurface,
+      ),
+    );
+    // One row for the pronunciation, one for the part of speech.
+    expect(find.byType(AppLexicalMetadataRow), findsNWidgets(2));
+    final ipa = find.text('/ˈpaʊər/');
+    expect(Directionality.of(tester.element(ipa)), TextDirection.ltr);
+    expect(
+      tester.widget<Text>(ipa).style!.fontFamily,
+      AppTypography.fontFamilyPhonetic,
+    );
+    final context = tester.element(find.byType(TranslateSheet));
+    expect(find.text(context.l10n.translationPosNoun), findsOneWidget);
+    // A successful result quotes nothing; the quote is for pending states.
+    expect(find.byType(AppSourceQuote), findsNothing);
+    expect(find.byType(AppSheetSection), findsWidgets);
+  });
 
   for (final reduceMotion in [false, true]) {
     testWidgets(
