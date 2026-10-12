@@ -123,7 +123,7 @@ own outlined `AppSheetSection`, 12dp apart, so it is clear what is where:
    a section title and without a border of its own.
 
 The sheet has one heading: the translation of the selected word or phrase in
-its sentence. A contextual answer (`translationHeadingStyle`), with or without a
+its sentence. A contextual answer, with or without a
 larger expression, uses serif `headlineSmall` when it has at most 48 graphemes
 and fits two lines at the user's text scale; the length cap also applies on
 wide screens. Longer answers, text translations and the standalone word
@@ -141,8 +141,10 @@ Inside a section, titles sit 12dp below the outline and 8dp above their
 content, the expression 4dp above its answer, and text ends 12dp above the
 outline at any text size. A section title above an answer is the answer row's
 lead, so Copy stays centered on the answer. A word too wide for its line at a
-large text size shrinks just enough to stay whole (`appFitLongestWord`), never
-below metadata size. The sheet body has a bounded,
+large text size shrinks just enough to stay whole (`appFitSelectableText`),
+never below metadata size. The sheet's internal widgets (selection label,
+sentence preview, details, answer styles) are private parts of
+`translate_sheet.dart`. The sheet body has a bounded,
 scrollable viewport so long contexts and lexical results do not overflow.
 The shared `ScrollEdgeFadeStack` adds full-width shadows when content extends
 beyond the viewport: below the fixed title and language controls after scrolling,
@@ -226,7 +228,8 @@ feedback, details reset without extra requests, all ten locale labels, RTL
 content/control direction and 200% text on
 a narrow viewport. Tests also keep the primary result and Copy reachable before
 a long context, check the source/result order for text translation, and prevent
-headline styling of long answers to short words. Layout tests check the quiet
+headline styling of long answers to short words. Layout tests
+(`translate_sheet_layout_test.dart`) check the quiet
 selection label (pronunciation on its line, grammar and base form below), the
 answer heading for expressions and short phrases, the four outlined sections in
 reading order (two for text translation), 12dp between and inside sections at
@@ -241,7 +244,7 @@ goldens in five visual profiles, including words, complete text, language menus
 and collapsed/expanded lexical details.
 `make test-device DEVICE=<id>` exercises the reader-to-translation flow in a
 native WebView using deterministic services, including equality between the
-book's source sentence, the request context and the visible Sentence quote.
+book's source sentence, the request context and the visible Sentence text.
 It does not test live providers.
 
 `integration_test/translation_sheet_test.dart` is a focused native sheet check

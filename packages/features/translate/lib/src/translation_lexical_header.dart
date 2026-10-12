@@ -1,10 +1,4 @@
-import 'package:component_library/component_library.dart';
-import 'package:contextual_translation_service/contextual_translation_service.dart';
-import 'package:flutter/material.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
-
-import 'translation_answer_style.dart';
-import 'translation_text_direction.dart';
+part of 'translate_sheet.dart';
 
 /// What the reader selected, a quiet label above the translation sections.
 ///
@@ -13,8 +7,8 @@ import 'translation_text_direction.dart';
 /// second line, all on the source text's own edge. The translation, not the
 /// source, is the sheet's only large text. A word too wide for the line at a
 /// large text size shrinks instead of breaking.
-class TranslationLexicalHeader extends StatelessWidget {
-  const TranslationLexicalHeader({
+class _TranslationLexicalHeader extends StatelessWidget {
+  const _TranslationLexicalHeader({
     required this.selectedText,
     required this.isSingleWord,
     this.analysis,
@@ -33,15 +27,15 @@ class TranslationLexicalHeader extends StatelessWidget {
     final matchesSelection =
         _normalized(analysis?.surfaceForm) == _normalized(selectedText);
     final pronunciation = matchesSelection && isSingleWord
-        ? _nonBlank(analysis?.pronunciation)
+        ? _nonEmptyText(analysis?.pronunciation)
         : null;
     final reading = matchesSelection && isSingleWord
-        ? _nonBlank(analysis?.reading)
+        ? _nonEmptyText(analysis?.reading)
         : null;
     final partOfSpeech = matchesSelection && isSingleWord
         ? _partOfSpeechLabel(l10n, analysis?.partOfSpeech)
         : null;
-    final lemma = _nonBlank(analysis?.lemma);
+    final lemma = _nonEmptyText(analysis?.lemma);
     final showLemma =
         lemma != null && _normalized(lemma) != _normalized(selectedText);
     final secondaryStyle = context.text.bodyMedium.copyWith(
@@ -63,14 +57,15 @@ class TranslationLexicalHeader extends StatelessWidget {
     final hasGrammar = partOfSpeech != null || showLemma;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wordStyle = translationWordFit(
+        final wordStyle = appFitSelectableText(
           context,
-          selectedText,
           context.text.titleMedium.copyWith(
             letterSpacing: 0,
             color: context.colors.onSurface,
           ),
-          constraints.maxWidth - appSelectableTextCaretMargin,
+          text: selectedText,
+          boxWidth: constraints.maxWidth,
+          textDirection: sourceDirection,
         );
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -134,14 +129,8 @@ class TranslationLexicalHeader extends StatelessWidget {
   }
 }
 
-String? _nonBlank(String? value) {
-  final text = value?.trim();
-  return text == null || text.isEmpty ? null : text;
-}
-
-final _whitespace = RegExp(r'\s+');
 String? _normalized(String? text) =>
-    _nonBlank(text)?.replaceAll(_whitespace, ' ').toLowerCase();
+    _nonEmptyText(text)?.replaceAll(_whitespaceRun, ' ').toLowerCase();
 
 String? _partOfSpeechLabel(ReadflexLocalizations l10n, String? value) =>
     switch (value?.trim().toLowerCase()) {

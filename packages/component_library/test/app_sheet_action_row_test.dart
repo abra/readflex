@@ -1,5 +1,4 @@
 import 'package:component_library/component_library.dart';
-import 'package:component_library/src/sheet_action_row_layout.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -64,8 +63,14 @@ void main() {
   Rect rect(WidgetTester tester, Key key) => tester.getRect(find.byKey(key));
   Rect rowRect(WidgetTester tester) =>
       tester.getRect(find.byType(AppSheetActionRow));
-  RenderSheetActionRow renderRow(WidgetTester tester) =>
-      tester.renderObject(find.byType(SheetActionRowLayout));
+  // The row's own layout, reached through its public widget.
+  Finder layout() => find.descendant(
+    of: find.byType(AppSheetActionRow),
+    matching: find.byWidgetPredicate(
+      (widget) => widget is SlottedMultiChildRenderObjectWidget,
+    ),
+  );
+  RenderBox renderRow(WidgetTester tester) => tester.renderObject(layout());
 
   for (final direction in TextDirection.values) {
     testWidgets('sheet actions share the header gutter ($direction)', (
@@ -316,7 +321,8 @@ void main() {
     const metricsOnly = TextStyle(fontSize: 20, letterSpacing: 0);
     await pumpRow(tester, style: metricsOnly);
     final body = rect(tester, bodyKey);
-    expect(renderRow(tester).firstLineHeight, body.height);
+    // A single line without a height multiple is as tall as the font's
+    // line; the action is centered on it.
     expect(rect(tester, actionKey).center.dy, body.center.dy);
   });
 
@@ -343,7 +349,7 @@ void main() {
         ),
       ),
     );
-    expect(renderRow(tester).firstLineHeight, 48);
+    // A 2x line is 48 px, as tall as the action: no excess around it.
     final body = rect(tester, bodyKey);
     expect(body.top, rowRect(tester).top);
     expect(rect(tester, actionKey).center.dy, body.top + 24);
@@ -403,8 +409,7 @@ void main() {
         final first = lead == null
             ? rect(tester, bodyKey)
             : tester.getRect(find.text('Lead'));
-        final top =
-            first.top - tester.getTopLeft(find.byType(SheetActionRowLayout)).dy;
+        final top = first.top - tester.getTopLeft(layout()).dy;
         // 15 px ascent of a 20 px glyph, plus half the leading of a 24 px line.
         expect(
           row.getDryBaseline(constraints, TextBaseline.alphabetic),

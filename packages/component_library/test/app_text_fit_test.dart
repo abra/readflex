@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/painting.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A large heading shrinks just enough to keep its longest word whole.
@@ -87,6 +87,60 @@ void main() {
     expect(style.fontSize, lessThanOrEqualTo(10));
     expect(style.fontSize, greaterThan(10 - 0.25));
     expect(widestWord(word, style, scaler), lessThanOrEqualTo(200));
+  });
+
+  group('appFitSelectableText', () {
+    Future<TextStyle> fitIn(
+      WidgetTester tester, {
+      required double boxWidth,
+      TextScaler textScaler = TextScaler.noScaling,
+    }) async {
+      late TextStyle result;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: textScaler),
+            child: Builder(
+              builder: (context) {
+                result = appFitSelectableText(
+                  context,
+                  heading,
+                  text: word,
+                  boxWidth: boxWidth,
+                  textDirection: TextDirection.ltr,
+                );
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+      return result;
+    }
+
+    testWidgets('a word that fits the box keeps the style', (tester) async {
+      // 240 px of word and the caret margin.
+      expect(await fitIn(tester, boxWidth: 243), same(heading));
+    });
+
+    testWidgets('the caret margin is taken off the box', (tester) async {
+      final style = await fitIn(tester, boxWidth: 240);
+      expect(style.fontSize, lessThan(24));
+      expect(style.fontSize! * word.length, lessThanOrEqualTo(237));
+    });
+
+    testWidgets('never below metadata size, at the context text scale', (
+      tester,
+    ) async {
+      final style = await fitIn(
+        tester,
+        boxWidth: 100,
+        textScaler: const TextScaler.linear(2),
+      );
+      final context = tester.element(find.byType(SizedBox).last);
+      expect(style.fontSize, context.text.bodyMedium.fontSize);
+    });
   });
 }
 

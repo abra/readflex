@@ -45,8 +45,7 @@ utility actions.
 ## Presentation
 
 The resolved term appears once as a selectable serif `headlineSmall` headword,
-the same role Translation uses for a selected word, without a selection
-preview card. If the selected form differs from the canonical lemma, the
+the subject of the sheet, without a selection preview card. If the selected form differs from the canonical lemma, the
 heading preserves the connection (for example, `shutting -> shut`). Long forms
 wrap within the available width instead of truncating. Reading, IPA and part
 of speech sit right below it in the shared `AppLexicalMetadataRow`, starting
@@ -54,7 +53,7 @@ on the headword's edge in either interface direction: IPA stays left-to-right
 in the phonetic font and the backend's part-of-speech tag is shown as sent,
 because definitions are monolingual and there is no dictionary POS catalog. At
 a large text size a headword too wide for one word shrinks just enough to stay
-whole (`appFitLongestWord`), never below metadata size. Definitions are
+whole (`appFitSelectableText`), never below metadata size. Definitions are
 `bodyLarge` with a localized number (`dictionaryDefinitionNumber`) on the
 definition's baseline, in a tabular-figure column that scales with the user's
 text size; examples stay muted `bodyMedium` and share the definition's text
@@ -91,7 +90,8 @@ as a quote without introducing a duplicate success preview.
 
 Package tests cover de-duplication, canonical forms, contextual expressions,
 independent copies, RTL content, and 200% text in all ten interface locales.
-Layout tests check the entry order and section titles, the outlined sections
+Layout tests (`dictionary_sheet_layout_test.dart`) check the entry order and
+section titles, the outlined sections
 (one untitled section for a single entry), spacing at 1x and 2x, Copy on each
 lemma line reaching its outline and its side in an Arabic interface,
 baseline-aligned numbers, and long lemmas that shrink instead of breaking.

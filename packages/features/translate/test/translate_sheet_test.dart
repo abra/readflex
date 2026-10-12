@@ -1,17 +1,16 @@
-import 'dart:math' as math;
-
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:translate/translate.dart';
+
+import 'helpers/translate_sheet_harness.dart';
 
 void main() {
   setUp(() {
@@ -34,7 +33,7 @@ void main() {
       addTearDown(
         () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
       );
-      final service = _WordTranslationService(
+      final service = WordTranslationService(
         const ContextualTranslationText(
           baseTranslation: 'сила',
           contextualTranslation: 'питание',
@@ -42,9 +41,9 @@ void main() {
               'Этот аккумулятор обеспечивает аварийное питание.',
         ),
       );
-      await _pumpTranslateSheet(
+      await pumpTranslateSheet(
         tester,
-        selection: _selection,
+        selection: powerSelection,
         service: service,
       );
       final primary = find.byKey(const ValueKey('translation-primary-result'));
@@ -118,7 +117,7 @@ void main() {
     testWidgets('shows the source scope of ${example.expression}', (
       tester,
     ) async {
-      final service = _WordTranslationService(
+      final service = WordTranslationService(
         ContextualTranslationText(
           baseTranslation: example.base,
           sentenceTranslation: 'A complete translated sentence.',
@@ -128,7 +127,7 @@ void main() {
           translation: example.translated,
         ),
       );
-      await _pumpTranslateSheet(
+      await pumpTranslateSheet(
         tester,
         service: service,
         selection: TextSelectionContext(
@@ -170,14 +169,14 @@ void main() {
   testWidgets('rather without a larger expression keeps both word meanings', (
     tester,
   ) async {
-    final service = _WordTranslationService(
+    final service = WordTranslationService(
       const ContextualTranslationText(
         baseTranslation: 'скорее; довольно',
         contextualTranslation: 'довольно',
         sentenceTranslation: 'Здесь довольно тихо.',
       ),
     );
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
       service: service,
       selection: const TextSelectionContext(
@@ -220,7 +219,7 @@ void main() {
     ),
   ]) {
     testWidgets(example.name, (tester) async {
-      await _pumpTranslateSheet(
+      await pumpTranslateSheet(
         tester,
         selection: const TextSelectionContext(
           selectedText: 'off',
@@ -228,7 +227,7 @@ void main() {
           sourceId: 'source-1',
           sourceType: SourceType.book,
         ),
-        service: _WordTranslationService(
+        service: WordTranslationService(
           example.translation,
           expression: const ContextualTranslationExpression(
             text: 'switched off',
@@ -277,10 +276,10 @@ void main() {
     ),
   }.entries) {
     testWidgets('does not duplicate word answer: ${entry.key}', (tester) async {
-      await _pumpTranslateSheet(
+      await pumpTranslateSheet(
         tester,
-        selection: _selection,
-        service: _WordTranslationService(entry.value),
+        selection: powerSelection,
+        service: WordTranslationService(entry.value),
       );
       expect(
         find.byKey(const ValueKey('translation-primary-result')),
@@ -303,12 +302,12 @@ void main() {
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
-        await _pumpTranslateSheet(
+        await pumpTranslateSheet(
           tester,
-          selection: _selection,
+          selection: powerSelection,
           locale: locale,
           textScaler: const TextScaler.linear(2),
-          service: _WordTranslationService(
+          service: WordTranslationService(
             const ContextualTranslationText(
               baseTranslation: 'ordinary meaning with several words',
               contextualTranslation: 'معنى الكلمة في سياق الجملة',
@@ -355,14 +354,14 @@ void main() {
     );
   }
 
-  for (final selection in [_phraseSelection, _paragraphSelection]) {
+  for (final selection in [_phraseSelection, paragraphSelection]) {
     testWidgets(
       'base answer does not change multi-word selection: ${selection.selectedText}',
       (tester) async {
-        await _pumpTranslateSheet(
+        await pumpTranslateSheet(
           tester,
           selection: selection,
-          service: _WordTranslationService(
+          service: WordTranslationService(
             const ContextualTranslationText(
               baseTranslation: 'base',
               contextualTranslation: 'contextual answer',
@@ -389,7 +388,7 @@ void main() {
     testWidgets(
       'word within $expressionType keeps pronunciation and base form',
       (tester) async {
-        final service = _WordTranslationService(
+        final service = WordTranslationService(
           const ContextualTranslationText(contextualTranslation: 'отключающий'),
           analysis: ContextualTranslationAnalysis(
             selectedTokenIds: const [3],
@@ -403,7 +402,7 @@ void main() {
             expressionType: expressionType,
           ),
         );
-        await _pumpTranslateSheet(
+        await pumpTranslateSheet(
           tester,
           service: service,
           selection: const TextSelectionContext(
@@ -435,7 +434,7 @@ void main() {
     testWidgets(
       'word metadata row starts on the headword edge: ${example.word}',
       (tester) async {
-        await _pumpTranslateSheet(
+        await pumpTranslateSheet(
           tester,
           locale: example.locale,
           selection: TextSelectionContext(
@@ -443,7 +442,7 @@ void main() {
             sourceId: 'source-1',
             sourceType: SourceType.book,
           ),
-          service: _WordTranslationService(
+          service: WordTranslationService(
             const ContextualTranslationText(baseTranslation: 'word meaning'),
             analysis: ContextualTranslationAnalysis(
               surfaceForm: example.word,
@@ -459,7 +458,7 @@ void main() {
         for (final row in metadata.evaluate()) {
           expect((row.widget as Wrap).textDirection, example.direction);
         }
-        final word = tester.getRect(_selectedFragmentFinder);
+        final word = tester.getRect(selectedFragmentFinder);
         final ipa = tester.getRect(find.text('/ipa/'));
         final l10n = ReadflexLocalizations.of(
           tester.element(find.byType(TranslateSheet)),
@@ -483,10 +482,10 @@ void main() {
     testWidgets(
       'does not attribute pronunciation of $surface to selected word',
       (tester) async {
-        await _pumpTranslateSheet(
+        await pumpTranslateSheet(
           tester,
-          selection: _selection,
-          service: _WordTranslationService(
+          selection: powerSelection,
+          service: WordTranslationService(
             const ContextualTranslationText(contextualTranslation: 'питание'),
             analysis: ContextualTranslationAnalysis(
               surfaceForm: surface,
@@ -508,10 +507,10 @@ void main() {
   testWidgets('blank metadata and unknown grammar add no empty controls', (
     tester,
   ) async {
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
-      selection: _selection,
-      service: _WordTranslationService(
+      selection: powerSelection,
+      service: WordTranslationService(
         const ContextualTranslationText(contextualTranslation: 'питание'),
         analysis: const ContextualTranslationAnalysis(
           surfaceForm: ' power ',
@@ -532,14 +531,14 @@ void main() {
     testWidgets(
       'reading for ${entry.key} is visible without duplicate pronunciation',
       (tester) async {
-        await _pumpTranslateSheet(
+        await pumpTranslateSheet(
           tester,
           selection: TextSelectionContext(
             selectedText: entry.key,
             sourceId: 'source-1',
             sourceType: SourceType.book,
           ),
-          service: _WordTranslationService(
+          service: WordTranslationService(
             const ContextualTranslationText(contextualTranslation: 'банк'),
             analysis: ContextualTranslationAnalysis(
               surfaceForm: entry.key,
@@ -567,14 +566,14 @@ void main() {
     testWidgets(
       'a non-spaced phrase stays a phrase: tokens $selectedTokenIds',
       (tester) async {
-        await _pumpTranslateSheet(
+        await pumpTranslateSheet(
           tester,
           selection: const TextSelectionContext(
             selectedText: '銀行に行く',
             sourceId: 'source-1',
             sourceType: SourceType.book,
           ),
-          service: _WordTranslationService(
+          service: WordTranslationService(
             const ContextualTranslationText(
               baseTranslation: 'банк',
               contextualTranslation: 'идти в банк',
@@ -591,7 +590,7 @@ void main() {
         expect(find.text('идти в банк'), findsOneWidget);
         expect(find.text('банк'), findsNothing);
         expect(find.text('ぎんこうにいく'), findsNothing);
-        _expectSubject(tester);
+        expectSubject(tester);
       },
     );
   }
@@ -612,9 +611,9 @@ void main() {
       addTearDown(
         () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
       );
-      await _pumpTranslateSheet(
+      await pumpTranslateSheet(
         tester,
-        selection: _paragraphSelection,
+        selection: paragraphSelection,
         service: service,
       );
       await tester.tap(find.byTooltip('Copy'));
@@ -637,9 +636,9 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
-      selection: _selection,
+      selection: powerSelection,
       service: _SourceRequiredService(),
       textScaler: const TextScaler.linear(2),
     );
@@ -664,7 +663,11 @@ void main() {
     tester,
   ) async {
     final service = _SourceRequiredService();
-    await _pumpTranslateSheet(tester, selection: _selection, service: service);
+    await pumpTranslateSheet(
+      tester,
+      selection: powerSelection,
+      service: service,
+    );
     expect(service.sources, ['auto']);
     expect(find.text('Retry'), findsNothing);
 
@@ -682,7 +685,7 @@ void main() {
     'renders contextual source preview and compact language selectors',
     (tester) async {
       final semantics = tester.ensureSemantics();
-      await _pumpTranslateSheet(tester, selection: _selection);
+      await pumpTranslateSheet(tester, selection: powerSelection);
 
       expect(find.text('From'), findsNothing);
       expect(find.text('To'), findsNothing);
@@ -712,7 +715,7 @@ void main() {
       final selectedSpan = _previewSpans(
         tester,
       ).singleWhere((span) => span.text == 'power');
-      final colors = Theme.of(tester.element(_previewFinder)).colorScheme;
+      final colors = Theme.of(tester.element(previewFinder)).colorScheme;
       expect(selectedSpan.style?.fontWeight, FontWeight.w600);
       expect(preview.textSpan?.style?.color, colors.onSurfaceVariant);
       expect(selectedSpan.style?.color, colors.onSurface);
@@ -736,16 +739,16 @@ void main() {
   for (final brightness in Brightness.values) {
     testWidgets('the source sentence is muted, the selection in body color: '
         '$brightness', (tester) async {
-      await _pumpTranslateSheet(
+      await pumpTranslateSheet(
         tester,
-        selection: _selection,
+        selection: powerSelection,
         brightness: brightness,
       );
       final baseStyle = _previewText(tester).textSpan!.style!;
-      final theme = Theme.of(tester.element(_previewFinder));
+      final theme = Theme.of(tester.element(previewFinder));
       expect(baseStyle.color, theme.colorScheme.onSurfaceVariant);
       expect(
-        tester.widget<SelectableText>(_selectedFragmentFinder).style!.color,
+        tester.widget<SelectableText>(selectedFragmentFinder).style!.color,
         theme.colorScheme.onSurface,
       );
       final background =
@@ -776,13 +779,13 @@ void main() {
   }
 
   testWidgets('the word is a label; no result text is quoted', (tester) async {
-    await _pumpTranslateSheet(tester, selection: _selection);
-    _expectSubject(tester);
-    _expectMutedSource(tester, _previewFinder);
+    await pumpTranslateSheet(tester, selection: powerSelection);
+    expectSubject(tester);
+    _expectMutedSource(tester, previewFinder);
     expect(
       find.ancestor(
         of: find.byKey(const ValueKey('translation-primary-result')),
-        matching: _quoteSurfaceFinder,
+        matching: quoteSurfaceFinder,
       ),
       findsNothing,
     );
@@ -794,10 +797,10 @@ void main() {
   testWidgets(
     'lexical lookup keeps the sentence visible and details collapsed',
     (tester) async {
-      await _pumpTranslateSheet(
+      await pumpTranslateSheet(
         tester,
-        selection: _selection,
-        service: const _FakeTranslationService(includeLexicalDetails: true),
+        selection: powerSelection,
+        service: const FakeTranslationService(includeLexicalDetails: true),
       );
 
       expect(find.text('питание'), findsOneWidget);
@@ -817,10 +820,10 @@ void main() {
       );
       expect(
         tester.getTopLeft(primary).dy,
-        lessThan(tester.getTopLeft(_previewFinder).dy),
+        lessThan(tester.getTopLeft(previewFinder).dy),
       );
       expect(
-        tester.getTopLeft(_previewFinder).dy,
+        tester.getTopLeft(previewFinder).dy,
         lessThan(tester.getTopLeft(sentence).dy),
       );
       expect(
@@ -838,17 +841,17 @@ void main() {
   testWidgets('text translation uses exact source and hides lexical fields', (
     tester,
   ) async {
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
-      selection: _paragraphSelection,
-      service: const _FakeTranslationService(includeLexicalDetails: true),
+      selection: paragraphSelection,
+      service: const FakeTranslationService(includeLexicalDetails: true),
     );
 
     expect(
       _previewText(tester).textSpan?.toPlainText(),
-      _paragraphSelection.selectedText,
+      paragraphSelection.selectedText,
     );
-    _expectMutedSource(tester, _previewFinder);
+    _expectMutedSource(tester, previewFinder);
     expect(find.text('Запуски в наши дни в основном произвольны.'), findsOne);
     expect(find.text('power'), findsNothing);
     expect(find.text('Sentence'), findsNothing);
@@ -862,7 +865,7 @@ void main() {
     expect(find.text('Original'), findsOneWidget);
     expect(
       tester.getTopLeft(translation).dy,
-      lessThan(tester.getTopLeft(_previewFinder).dy),
+      lessThan(tester.getTopLeft(previewFinder).dy),
     );
     expect(
       translationWidget.style,
@@ -875,7 +878,7 @@ void main() {
   testWidgets('short multi-word translation uses readable body typography', (
     tester,
   ) async {
-    await _pumpTranslateSheet(tester, selection: _phraseSelection);
+    await pumpTranslateSheet(tester, selection: _phraseSelection);
 
     final translation = find.byKey(
       const ValueKey('translation-primary-result'),
@@ -892,10 +895,10 @@ void main() {
   testWidgets('a long answer to one word still uses body typography', (
     tester,
   ) async {
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
-      selection: _selection,
-      service: const _FakeTranslationService(
+      selection: powerSelection,
+      service: const FakeTranslationService(
         primary: 'A longer explanation of the selected word in this context.',
       ),
     );
@@ -919,7 +922,7 @@ void main() {
         'Before. ${List.filled(100, 'More context.').join(' ')} '
         'The power bank is compact.';
     final service = _RecordingTranslationService();
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
       selection: TextSelectionContext(
         selectedText: 'power',
@@ -936,7 +939,7 @@ void main() {
     );
     expect(find.byTooltip('Copy').hitTestable(), findsOneWidget);
     expect(_previewText(tester).textSpan!.toPlainText(), contextText);
-    _expectMutedSource(tester, _previewFinder);
+    _expectMutedSource(tester, previewFinder);
     await tester.drag(
       find.byType(SingleChildScrollView),
       const Offset(0, -300),
@@ -949,7 +952,7 @@ void main() {
   testWidgets('malformed marked context falls back to clean context text', (
     tester,
   ) async {
-    await _pumpTranslateSheet(tester, selection: _malformedMarkedSelection);
+    await pumpTranslateSheet(tester, selection: _malformedMarkedSelection);
 
     final preview = _previewText(tester);
     expect(
@@ -966,7 +969,7 @@ void main() {
   testWidgets('stale marked context is rejected for the current selection', (
     tester,
   ) async {
-    await _pumpTranslateSheet(tester, selection: _staleMarkedSelection);
+    await pumpTranslateSheet(tester, selection: _staleMarkedSelection);
 
     expect(
       _previewText(tester).textSpan?.toPlainText(),
@@ -1009,9 +1012,9 @@ void main() {
           includeLexicalDetails: true,
           alternativeCount: 20,
         );
-        await _pumpTranslateSheet(
+        await pumpTranslateSheet(
           tester,
-          selection: _selection,
+          selection: powerSelection,
           service: service,
           locale: profile.locale,
           textScaler: TextScaler.linear(profile.scale),
@@ -1072,7 +1075,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(service.calls, 2);
         expect(service.requests.last.targetLanguage, 'de');
-        expect(service.requests.last.selection.text, _selection.selectedText);
+        expect(
+          service.requests.last.selection.text,
+          powerSelection.selectedText,
+        );
         expect(find.text('Lexical explanation'), findsNothing);
         expect(tester.takeException(), isNull);
       },
@@ -1087,9 +1093,9 @@ void main() {
         includeLexicalDetails: true,
         alternativeCount: 20,
       );
-      await _pumpTranslateSheet(
+      await pumpTranslateSheet(
         tester,
-        selection: _selection,
+        selection: powerSelection,
         service: service,
         brightness: brightness,
       );
@@ -1169,10 +1175,10 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
-      selection: _selection,
-      service: const _FakeTranslationService(
+      selection: powerSelection,
+      service: const FakeTranslationService(
         includeLexicalDetails: true,
         alternativeCount: 16,
       ),
@@ -1194,7 +1200,11 @@ void main() {
     tester,
   ) async {
     final service = _RecordingTranslationService(includeLexicalDetails: true);
-    await _pumpTranslateSheet(tester, selection: _selection, service: service);
+    await pumpTranslateSheet(
+      tester,
+      selection: powerSelection,
+      service: service,
+    );
     final toggle = find.text('Meaning & alternatives');
     await tester.tap(toggle);
     await tester.pumpAndSettle();
@@ -1205,7 +1215,7 @@ void main() {
     expect(service.calls, 1);
     expect(
       _previewText(tester).textSpan!.toPlainText(),
-      _selection.contextText,
+      powerSelection.contextText,
     );
   });
 
@@ -1213,7 +1223,11 @@ void main() {
     tester,
   ) async {
     final service = _RecordingTranslationService(includeLexicalDetails: true);
-    await _pumpTranslateSheet(tester, selection: _selection, service: service);
+    await pumpTranslateSheet(
+      tester,
+      selection: powerSelection,
+      service: service,
+    );
     await tester.tap(find.text('Meaning & alternatives'));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('translation-target-language')));
@@ -1223,14 +1237,14 @@ void main() {
     expect(service.calls, 2);
     expect(service.requests.last.targetLanguage, 'de');
     expect(service.requests.last.sourceLanguage, 'auto');
-    expect(service.requests.last.selection.text, _selection.selectedText);
+    expect(service.requests.last.selection.text, powerSelection.selectedText);
     expect(find.text('Lexical explanation'), findsNothing);
     expect(find.text('English'), findsOneWidget);
     expect(find.text('Deutsch'), findsOneWidget);
   });
 
   testWidgets('no empty details control is shown', (tester) async {
-    await _pumpTranslateSheet(tester, selection: _selection);
+    await pumpTranslateSheet(tester, selection: powerSelection);
     expect(find.byType(ExpansionTile), findsNothing);
   });
 
@@ -1238,10 +1252,10 @@ void main() {
     testWidgets('translation surface and action are localized: $locale', (
       tester,
     ) async {
-      await _pumpTranslateSheet(
+      await pumpTranslateSheet(
         tester,
-        selection: _selection,
-        service: const _FakeTranslationService(includeLexicalDetails: true),
+        selection: powerSelection,
+        service: const FakeTranslationService(includeLexicalDetails: true),
         locale: locale,
       );
       final context = tester.element(find.byType(TranslateSheet));
@@ -1269,7 +1283,11 @@ void main() {
     tester,
   ) async {
     final service = _RecordingTranslationService();
-    await _pumpTranslateSheet(tester, selection: _selection, service: service);
+    await pumpTranslateSheet(
+      tester,
+      selection: powerSelection,
+      service: service,
+    );
     await tester.tap(find.byKey(const ValueKey('translation-target-language')));
     await tester.pumpAndSettle();
     final option = find.widgetWithText(MenuItemButton, 'Русский');
@@ -1282,18 +1300,18 @@ void main() {
   testWidgets('LTR source and result keep their direction in an Arabic UI', (
     tester,
   ) async {
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
-      selection: _selection,
+      selection: powerSelection,
       locale: const Locale('ar'),
-      service: const _FakeTranslationService(includeLexicalDetails: true),
+      service: const FakeTranslationService(includeLexicalDetails: true),
     );
     expect(_previewText(tester).textDirection, TextDirection.ltr);
     expect(
-      tester.widget<SelectableText>(_selectedFragmentFinder).textDirection,
+      tester.widget<SelectableText>(selectedFragmentFinder).textDirection,
       TextDirection.ltr,
     );
-    _expectMutedSource(tester, _previewFinder, uiDirection: TextDirection.rtl);
+    _expectMutedSource(tester, previewFinder, uiDirection: TextDirection.rtl);
     for (final key in [
       'translation-primary-result',
       'translation-sentence-result',
@@ -1308,7 +1326,7 @@ void main() {
   testWidgets('Arabic source keeps its direction in an English UI', (
     tester,
   ) async {
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
       selection: const TextSelectionContext(
         selectedText: 'الطاقة',
@@ -1321,10 +1339,10 @@ void main() {
     );
     expect(_previewText(tester).textDirection, TextDirection.rtl);
     expect(
-      tester.widget<SelectableText>(_selectedFragmentFinder).textDirection,
+      tester.widget<SelectableText>(selectedFragmentFinder).textDirection,
       TextDirection.rtl,
     );
-    _expectMutedSource(tester, _previewFinder, direction: TextDirection.rtl);
+    _expectMutedSource(tester, previewFinder, direction: TextDirection.rtl);
     expect(
       _previewText(tester).textSpan!.toPlainText(),
       'توفر هذه البطارية الطاقة للأجهزة.',
@@ -1332,9 +1350,9 @@ void main() {
   });
 
   testWidgets('does not render raw service failure details', (tester) async {
-    await _pumpTranslateSheet(
+    await pumpTranslateSheet(
       tester,
-      selection: _selection,
+      selection: powerSelection,
       service: const _FailingTranslationService(),
     );
 
@@ -1344,434 +1362,16 @@ void main() {
       findsOneWidget,
     );
     expect(find.textContaining('credential leaked'), findsNothing);
-    _expectSourceQuote(tester, _previewFinder);
-  });
-
-  group('layout', () {
-    final expressionService = _WordTranslationService(
-      const ContextualTranslationText(
-        baseTranslation: 'удача; судьба',
-        sentenceTranslation: 'Холостяк с солидным состоянием ищет жену.',
-      ),
-      analysis: const ContextualTranslationAnalysis(
-        surfaceForm: 'fortune',
-        lemma: 'fortunes',
-        pronunciation: '/ˈfɔːtʃuːn/',
-        partOfSpeech: 'noun',
-        expressionType: 'word',
-      ),
-      expression: const ContextualTranslationExpression(
-        text: 'good fortune',
-        translation: 'солидное состояние',
-      ),
-      explanation: 'Wealth, not luck.',
-    );
-    const fortune = TextSelectionContext(
-      selectedText: 'fortune',
-      contextText: 'A man in possession of a good fortune must want a wife.',
-      markedContextText:
-          'A man in possession of a good [[fortune]] must want a wife.',
-      sourceId: 'source-1',
-      sourceType: SourceType.book,
-      sourceLanguageHint: 'en',
-    );
-    final primary = find.byKey(const ValueKey('translation-primary-result'));
-    final base = find.byKey(const ValueKey('translation-base-result'));
-    final expression = find.byKey(
-      const ValueKey('translation-contextual-expression'),
-    );
-    final sections = find.byType(AppSheetSection);
-    Rect outline(WidgetTester tester, int index) => tester.getRect(
-      find
-          .descendant(
-            of: sections.at(index),
-            matching: find.byWidgetPredicate(
-              (widget) =>
-                  widget is DecoratedBox &&
-                  (widget.decoration as BoxDecoration?)?.border != null,
-            ),
-          )
-          .first,
-    );
-
-    testWidgets('the selection is a quiet label; the answer is the heading', (
-      tester,
-    ) async {
-      await _pumpTranslateSheet(
-        tester,
-        selection: fortune,
-        service: expressionService,
-      );
-      final theme = Theme.of(tester.element(primary));
-      expect(
-        tester.widget<SelectableText>(_selectedFragmentFinder).style,
-        theme.textTheme.titleMedium!.copyWith(
-          letterSpacing: 0,
-          color: theme.colorScheme.onSurface,
-        ),
-      );
-      expect(
-        tester.widget<SelectableText>(primary).style,
-        theme.textTheme.headlineSmall!.copyWith(letterSpacing: 0),
-      );
-      expect(
-        tester.widget<SelectableText>(expression).style,
-        theme.textTheme.titleMedium!.copyWith(
-          letterSpacing: 0,
-          fontWeight: FontWeight.w400,
-        ),
-      );
-      expect(
-        tester.widget<SelectableText>(base).style,
-        theme.textTheme.bodyLarge!.copyWith(letterSpacing: 0),
-      );
-    });
-
-    testWidgets('pronunciation follows the word; grammar and base form are '
-        'on the line below', (tester) async {
-      await _pumpTranslateSheet(
-        tester,
-        selection: fortune,
-        service: expressionService,
-      );
-      final word = tester.getRect(_selectedFragmentFinder);
-      final ipa = tester.getRect(find.text('/ˈfɔːtʃuːn/'));
-      final noun = tester.getRect(find.text('Noun'));
-      final baseForm = tester.getRect(find.text('Base form:'));
-      expect(ipa.left, greaterThan(word.right));
-      expect(ipa.center.dy, moreOrLessEquals(word.center.dy, epsilon: 1));
-      expect(noun.left, word.left);
-      expect(noun.top, greaterThanOrEqualTo(word.bottom));
-      expect(baseForm.left, greaterThan(noun.right));
-      expect(baseForm.top, noun.top);
-    });
-
-    testWidgets('each answer, the sentence and the details are outlined '
-        'sections in reading order', (tester) async {
-      tester.view.physicalSize = const Size(390, 2000);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      await _pumpTranslateSheet(
-        tester,
-        selection: fortune,
-        service: expressionService,
-      );
-      expect(sections, findsNWidgets(4));
-      final contents = [
-        primary,
-        base,
-        _previewFinder,
-        find.text('Meaning & alternatives'),
-      ];
-      for (var i = 0; i < contents.length; i++) {
-        expect(
-          find.descendant(of: sections.at(i), matching: contents[i]),
-          findsOneWidget,
-          reason: 'section $i',
-        );
-      }
-      expect(find.byType(AppSourceQuote), findsNothing);
-      expect(find.byType(Divider), findsNothing);
-    });
-
-    testWidgets('text translation has the answer and the original sections', (
-      tester,
-    ) async {
-      await _pumpTranslateSheet(tester, selection: _paragraphSelection);
-      expect(sections, findsNWidgets(2));
-      expect(
-        find.descendant(of: sections.first, matching: primary),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: sections.last, matching: find.text('Original')),
-        findsOneWidget,
-      );
-      expect(_selectedFragmentFinder, findsNothing);
-    });
-
-    for (final scale in [1.0, 2.0]) {
-      testWidgets('sections are 12dp apart with 12dp inside at ${scale}x', (
-        tester,
-      ) async {
-        tester.view.physicalSize = const Size(390, 3000);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        await _pumpTranslateSheet(
-          tester,
-          selection: fortune,
-          service: expressionService,
-          textScaler: TextScaler.linear(scale),
-        );
-        final boxes = [for (var i = 0; i < 4; i++) outline(tester, i)];
-        for (var i = 1; i < boxes.length; i++) {
-          expect(boxes[i].top - boxes[i - 1].bottom, AppSpacing.md);
-        }
-        // The selection's lowest line, wherever the test font wraps it.
-        final subjectBottom =
-            [
-                  _selectedFragmentFinder,
-                  find.byType(AppLexicalMetadataRow),
-                  find.text('Base form:'),
-                  find.byKey(const ValueKey('translation-lemma')),
-                ]
-                .expand((finder) => finder.evaluate())
-                .map((element) => tester.getRect(find.byWidget(element.widget)))
-                .map((rect) => rect.bottom)
-                .reduce(math.max);
-        expect(
-          boxes.first.top - subjectBottom,
-          AppSpacing.lg,
-          reason: 'the selection sits 16dp above the first section',
-        );
-        double top(Finder finder, int box) =>
-            tester.getRect(finder).top - boxes[box].top;
-        double bottom(Finder finder, int box) =>
-            boxes[box].bottom - tester.getRect(finder).bottom;
-        expect(top(find.text('In this context'), 0), AppSpacing.md);
-        expect(bottom(primary, 0), AppSpacing.md);
-        expect(top(find.text('Word meaning'), 1), AppSpacing.md);
-        expect(bottom(base, 1), AppSpacing.md);
-        expect(top(find.text('Sentence'), 2), AppSpacing.md);
-        expect(
-          bottom(find.byKey(const ValueKey('translation-sentence-result')), 2),
-          AppSpacing.md,
-        );
-      });
-    }
-
-    testWidgets('titles sit 8dp above their content, the expression 4dp '
-        'above its answer', (tester) async {
-      await _pumpTranslateSheet(
-        tester,
-        selection: fortune,
-        service: expressionService,
-      );
-      double gap(Finder above, Finder below) =>
-          tester.getRect(below).top - tester.getRect(above).bottom;
-      expect(gap(find.text('In this context'), expression), AppSpacing.sm);
-      expect(gap(expression, primary), AppSpacing.xs);
-      expect(gap(find.text('Word meaning'), base), AppSpacing.sm);
-      expect(gap(find.text('Sentence'), _previewFinder), AppSpacing.sm);
-      expect(
-        gap(
-          _previewFinder,
-          find.byKey(const ValueKey('translation-sentence-result')),
-        ),
-        AppSpacing.sm,
-      );
-    });
-
-    testWidgets('an answer without a title has 12dp inside its section', (
-      tester,
-    ) async {
-      await _pumpTranslateSheet(tester, selection: _selection);
-      final box = outline(tester, 0);
-      expect(tester.getRect(primary).top - box.top, AppSpacing.md);
-      expect(box.bottom - tester.getRect(primary).bottom, AppSpacing.md);
-    });
-
-    testWidgets('each Copy is centered on its answer and reaches the outline', (
-      tester,
-    ) async {
-      await _pumpTranslateSheet(
-        tester,
-        selection: fortune,
-        service: expressionService,
-      );
-      for (final (index, id) in ['primary', 'base'].indexed) {
-        final result = find.byKey(ValueKey('translation-$id-result'));
-        final style = tester.widget<SelectableText>(result).style!;
-        final line = style.fontSize! * style.height!;
-        final copy = tester.getRect(
-          find.byKey(ValueKey('translation-$id-copy')),
-        );
-        expect(
-          copy.center.dy,
-          moreOrLessEquals(tester.getRect(result).top + line / 2),
-          reason: id,
-        );
-        expect(copy.width, moreOrLessEquals(48), reason: id);
-        expect(copy.height, moreOrLessEquals(48), reason: id);
-        expect(copy.right, outline(tester, index).right, reason: id);
-      }
-    });
-
-    testWidgets('titles keep the interface edge; LTR content keeps its own '
-        'in an Arabic UI', (tester) async {
-      await _pumpTranslateSheet(
-        tester,
-        selection: fortune,
-        service: expressionService,
-        locale: const Locale('ar'),
-      );
-      final l10n = ReadflexLocalizations.of(
-        tester.element(find.byType(TranslateSheet)),
-      )!;
-      final sheet = tester.getRect(find.byType(TranslateSheet));
-      for (final title in [
-        l10n.translationInContext,
-        l10n.translationWordMeaning,
-        l10n.translationSentence,
-      ]) {
-        expect(
-          sheet.right - tester.getRect(find.text(title)).right,
-          AppSpacing.xl,
-          reason: title,
-        );
-      }
-      for (final content in [
-        _selectedFragmentFinder,
-        expression,
-        primary,
-        base,
-      ]) {
-        expect(tester.getRect(content).left - sheet.left, AppSpacing.xl);
-      }
-      // Copy trails the LTR answers on the right.
-      final copy = tester.getRect(
-        find.byKey(const ValueKey('translation-primary-copy')),
-      );
-      expect(copy.left, greaterThan(tester.getRect(primary).right - 1));
-    });
-
-    testWidgets('a selected phrase is a label like a word; its short answer is '
-        'the heading', (tester) async {
-      await _pumpTranslateSheet(
-        tester,
-        selection: const TextSelectionContext(
-          selectedText: 'in want of',
-          contextText: 'A single man must be in want of a wife.',
-          markedContextText: 'A single man must be [[in want of]] a wife.',
-          sourceId: 'source-1',
-          sourceType: SourceType.book,
-          sourceLanguageHint: 'en',
-        ),
-        service: _WordTranslationService(
-          const ContextualTranslationText(
-            contextualTranslation: 'нуждается в',
-            sentenceTranslation: 'Холостяк нуждается в жене.',
-          ),
-          analysis: const ContextualTranslationAnalysis(
-            surfaceForm: 'in want of',
-            expressionType: 'phrase',
-          ),
-        ),
-      );
-      _expectSubject(tester);
-      final theme = Theme.of(tester.element(primary));
-      expect(
-        tester.widget<SelectableText>(primary).style,
-        theme.textTheme.headlineSmall!.copyWith(letterSpacing: 0),
-      );
-      expect(find.byType(AppLexicalMetadataRow), findsNothing);
-    });
-
-    testWidgets('words too wide at a large text size shrink instead of '
-        'breaking', (tester) async {
-      tester.view.physicalSize = const Size(320, 568);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      // Test glyphs are squares: at 2x neither word fits its line at its own
-      // size, both fit at a smaller one.
-      const word = 'fortunes';
-      await _pumpTranslateSheet(
-        tester,
-        selection: const TextSelectionContext(
-          selectedText: word,
-          sourceId: 'source-1',
-          sourceType: SourceType.book,
-        ),
-        textScaler: const TextScaler.linear(2),
-        service: _WordTranslationService(
-          const ContextualTranslationText(contextualTranslation: 'удачный'),
-        ),
-      );
-      final theme = Theme.of(tester.element(_selectedFragmentFinder));
-      const scaled = TextScaler.linear(2);
-      for (final (finder, role) in [
-        (_selectedFragmentFinder, theme.textTheme.titleMedium!),
-        (primary, theme.textTheme.headlineSmall!),
-      ]) {
-        final style = tester.widget<SelectableText>(finder).style!;
-        expect(style.fontSize, lessThan(role.fontSize!));
-        expect(
-          style.fontSize,
-          greaterThanOrEqualTo(theme.textTheme.bodyMedium!.fontSize!),
-        );
-        // One line: the word was not broken.
-        expect(
-          tester.getSize(finder).height,
-          closeTo(scaled.scale(style.fontSize!) * style.height!, 1),
-        );
-      }
-      expect(tester.takeException(), isNull);
-    });
+    _expectSourceQuote(tester, previewFinder);
   });
 }
-
-Future<void> _pumpTranslateSheet(
-  WidgetTester tester, {
-  required TextSelectionContext selection,
-  ContextualTranslationService service = const _FakeTranslationService(),
-  TextScaler textScaler = TextScaler.noScaling,
-  Locale locale = const Locale('en'),
-  Brightness brightness = Brightness.light,
-}) async {
-  final preferences = await PreferencesService.create(
-    supportedCodes: ReadflexSupportedLocales.codes,
-  );
-  addTearDown(preferences.dispose);
-  await preferences.update(
-    (prefs) => prefs.copyWith(translationTargetLanguageCode: 'ru'),
-  );
-
-  await tester.pumpWidget(
-    MaterialApp(
-      locale: locale,
-      supportedLocales: ReadflexSupportedLocales.locales,
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
-      theme: brightness == Brightness.light
-          ? AppTheme.light()
-          : AppTheme.dark(),
-      builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: textScaler),
-        child: child!,
-      ),
-      home: Scaffold(
-        body: TranslateSheet(
-          selection: selection,
-          translationService: service,
-          preferencesService: preferences,
-        ),
-      ),
-    ),
-  );
-  await tester.pumpAndSettle();
-}
-
-Finder get _previewFinder =>
-    find.byKey(const ValueKey('translation-selection-preview-text'));
-
-Finder get _selectedFragmentFinder =>
-    find.byKey(const ValueKey('translation-selected-fragment'));
-
-Finder get _quoteSurfaceFinder => find.byWidgetPredicate(
-  (widget) =>
-      widget is Container &&
-      widget.decoration is BoxDecoration &&
-      (widget.decoration! as BoxDecoration).border is BorderDirectional,
-);
 
 void _expectSourceQuote(
   WidgetTester tester,
   Finder text, {
   TextDirection direction = TextDirection.ltr,
 }) {
-  final surface = find.ancestor(of: text, matching: _quoteSurfaceFinder);
+  final surface = find.ancestor(of: text, matching: quoteSurfaceFinder);
   expect(surface, findsOneWidget);
   final container = tester.widget<Container>(surface);
   final decoration = container.decoration! as BoxDecoration;
@@ -1804,7 +1404,7 @@ void _expectMutedSource(
   TextDirection direction = TextDirection.ltr,
   TextDirection uiDirection = TextDirection.ltr,
 }) {
-  expect(find.ancestor(of: text, matching: _quoteSurfaceFinder), findsNothing);
+  expect(find.ancestor(of: text, matching: quoteSurfaceFinder), findsNothing);
   final widget = tester.widget<Text>(text);
   expect(widget.textDirection, direction);
   expect(
@@ -1819,48 +1419,12 @@ void _expectMutedSource(
   expect(Directionality.of(tester.element(text)), uiDirection);
 }
 
-/// The selection, word or phrase, is a quiet `titleMedium` label, not a
-/// quote.
-void _expectSubject(WidgetTester tester) {
-  expect(
-    find.ancestor(of: _selectedFragmentFinder, matching: _quoteSurfaceFinder),
-    findsNothing,
-  );
-  final fragment = tester.widget<SelectableText>(_selectedFragmentFinder);
-  final theme = Theme.of(tester.element(_selectedFragmentFinder));
-  expect(fragment.style!.fontSize, theme.textTheme.titleMedium!.fontSize);
-  expect(fragment.style!.fontFamily, isNot(AppTypography.fontFamilySerif));
-}
-
-Text _previewText(WidgetTester tester) => tester.widget<Text>(_previewFinder);
+Text _previewText(WidgetTester tester) => tester.widget<Text>(previewFinder);
 
 List<TextSpan> _previewSpans(WidgetTester tester) {
   final root = _previewText(tester).textSpan! as TextSpan;
   return root.children!.whereType<TextSpan>().toList(growable: false);
 }
-
-const _selection = TextSelectionContext(
-  selectedText: 'power',
-  normalizedSelectedText: 'power',
-  contextText: 'This power bank provides emergency power.',
-  markedContextText: 'This [[power]] bank provides emergency power.',
-  normalizedMarkedContextText: 'This [[power]] bank provides emergency power.',
-  sourceId: 'source-1',
-  sourceType: SourceType.article,
-  sourceLanguageHint: 'en',
-);
-
-const _paragraphSelection = TextSelectionContext(
-  selectedText: 'Launches are mostly arbitrary these days.',
-  contextText:
-      'Before this point. Launches are mostly arbitrary these days. After it.',
-  markedContextText:
-      'Before this point. [[Launches are mostly arbitrary these days.]] '
-      'After it.',
-  sourceId: 'source-1',
-  sourceType: SourceType.article,
-  sourceLanguageHint: 'en',
-);
 
 const _phraseSelection = TextSelectionContext(
   selectedText: 'power bank',
@@ -1887,99 +1451,6 @@ const _staleMarkedSelection = TextSelectionContext(
   sourceLanguageHint: 'en',
 );
 
-class _WordTranslationService implements ContextualTranslationService {
-  _WordTranslationService(
-    this.translation, {
-    this.analysis,
-    this.expression,
-    this.explanation,
-  });
-
-  final ContextualTranslationText translation;
-  final ContextualTranslationAnalysis? analysis;
-  final String? explanation;
-  final ContextualTranslationExpression? expression;
-  int calls = 0;
-
-  @override
-  Future<ContextualTranslationResult> translate(
-    ContextualTranslationRequest request, {
-    bool allowOfflineModelDownload = false,
-    Future<void>? abortTrigger,
-  }) async {
-    calls++;
-    return ContextualTranslationResult(
-      requestId: request.requestId,
-      mode: request.mode,
-      status: ContextualTranslationStatus.resolved,
-      reliability: ContextualTranslationReliability.verified,
-      translation: translation,
-      analysis: analysis,
-      contextualExpression: expression,
-      explanation: explanation,
-    );
-  }
-
-  @override
-  void dispose() {}
-}
-
-class _FakeTranslationService implements ContextualTranslationService {
-  const _FakeTranslationService({
-    this.includeLexicalDetails = false,
-    this.alternativeCount = 1,
-    this.primary,
-  });
-
-  final bool includeLexicalDetails;
-  final int alternativeCount;
-  final String? primary;
-
-  @override
-  Future<ContextualTranslationResult> translate(
-    ContextualTranslationRequest request, {
-    bool allowOfflineModelDownload = false,
-    Future<void>? abortTrigger,
-  }) async {
-    final isTextTranslation = request.mode == selectedTextTranslationMode;
-    return ContextualTranslationResult(
-      requestId: request.requestId,
-      mode: request.mode,
-      status: ContextualTranslationStatus.resolved,
-      reliability: ContextualTranslationReliability.verified,
-      detectedSourceLanguage: 'en',
-      targetLanguage: request.targetLanguage,
-      analysis: includeLexicalDetails
-          ? const ContextualTranslationAnalysis(lemma: 'power')
-          : null,
-      translation: ContextualTranslationText(
-        contextualTranslation:
-            primary ??
-            (isTextTranslation
-                ? 'Запуски в наши дни в основном произвольны.'
-                : includeLexicalDetails
-                ? 'питание'
-                : 'сила'),
-        sentenceTranslation: includeLexicalDetails
-            ? 'Этот аккумулятор обеспечивает аварийное питание.'
-            : null,
-      ),
-      explanation: includeLexicalDetails ? 'Lexical explanation' : null,
-      alternatives: includeLexicalDetails
-          ? List.generate(
-              alternativeCount,
-              (index) => ContextualTranslationAlternative(
-                translation: index == 0 ? 'релизы' : 'вариант ${index + 1}',
-              ),
-            )
-          : const [],
-    );
-  }
-
-  @override
-  void dispose() {}
-}
-
 class _FailingTranslationService implements ContextualTranslationService {
   const _FailingTranslationService();
 
@@ -2000,7 +1471,7 @@ class _FailingTranslationService implements ContextualTranslationService {
   void dispose() {}
 }
 
-class _RecordingTranslationService extends _FakeTranslationService {
+class _RecordingTranslationService extends FakeTranslationService {
   _RecordingTranslationService({
     super.includeLexicalDetails,
     super.alternativeCount,
@@ -2040,7 +1511,7 @@ class _SourceRequiredService implements ContextualTranslationService {
         'Source required',
       );
     }
-    return const _FakeTranslationService().translate(request);
+    return const FakeTranslationService().translate(request);
   }
 
   @override

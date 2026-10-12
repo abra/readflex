@@ -1,8 +1,13 @@
-import 'package:flutter/material.dart';
+import 'dart:math' as math;
 
-import 'sheet_action_row_layout.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+
 import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
+
+part 'sheet_action_row_layout.dart';
+part 'sheet_action_row_slot.dart';
 
 /// Full-width sheet row: text with a utility action, such as Copy, whose
 /// glyph shares the header's content edge. The 48dp target extends into the
@@ -63,7 +68,7 @@ class AppSheetActionRow extends StatelessWidget {
         start: AppSpacing.xl,
         end: AppSpacing.xl - AppSizes.iconActionOutset,
       ),
-      child: SheetActionRowLayout(
+      child: _SheetActionRowLayout(
         lead: lead == null
             ? null
             : Directionality(textDirection: ambient, child: lead),

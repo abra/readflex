@@ -30,14 +30,19 @@ class AppLexicalMetadataRow extends StatelessWidget {
   final String? partOfSpeech;
   final TextDirection? textDirection;
 
+  /// Whether every piece is null or blank: the row then renders nothing,
+  /// and callers drop the spacing around it.
+  bool get isEmpty =>
+      _nonBlank(reading) == null &&
+      _nonBlank(pronunciation) == null &&
+      _nonBlank(partOfSpeech) == null;
+
   @override
   Widget build(BuildContext context) {
+    if (isEmpty) return const SizedBox.shrink();
     final reading = _nonBlank(this.reading);
     final pronunciation = _nonBlank(this.pronunciation);
     final partOfSpeech = _nonBlank(this.partOfSpeech);
-    if (reading == null && pronunciation == null && partOfSpeech == null) {
-      return const SizedBox.shrink();
-    }
     final style = context.text.bodyMedium.copyWith(
       color: context.colors.onSurfaceVariant,
     );

@@ -1,26 +1,24 @@
-import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
-import 'package:shared/shared.dart';
-
-import 'translation_text_direction.dart';
+part of 'translate_sheet.dart';
 
 /// The selected text, or with [showContext] its sentence with the selection
 /// in semibold.
-///
-/// [quoted] sets it as a source quote, for the phrase being worked on while
-/// the sheet loads or fails. Unquoted it is the muted source line above its
-/// translation: secondary text with the selection in the body color.
-class TranslationSelectionPreview extends StatelessWidget {
-  const TranslationSelectionPreview({
+class _TranslationSelectionPreview extends StatelessWidget {
+  /// The selected text as a source quote, for the phrase being worked on
+  /// while the sheet loads or fails.
+  const _TranslationSelectionPreview.quote({required this.selection})
+    : showContext = false,
+      _quoted = true;
+
+  /// The muted source line above its translation: secondary text with the
+  /// selection in the body color.
+  const _TranslationSelectionPreview.source({
     required this.selection,
     required this.showContext,
-    this.quoted = true,
-    super.key,
-  });
+  }) : _quoted = false;
 
   final TextSelectionContext selection;
   final bool showContext;
-  final bool quoted;
+  final bool _quoted;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +26,7 @@ class TranslationSelectionPreview extends StatelessWidget {
         ? _SelectionPreviewData.contextual(selection)
         : _SelectionPreviewData.plain(selection.effectiveSelectedText);
     final baseStyle = context.text.bodyMedium.copyWith(
-      color: quoted
+      color: _quoted
           ? context.colors.onSurface
           : context.colors.onSurfaceVariant,
     );
@@ -53,7 +51,7 @@ class TranslationSelectionPreview extends StatelessWidget {
         ],
       ),
     );
-    if (!quoted) {
+    if (!_quoted) {
       return KeyedSubtree(
         key: const ValueKey('translation-selection-preview'),
         child: text,
@@ -145,4 +143,4 @@ int? _uniqueMatchIndex(String text, String selection) {
 }
 
 String _collapseWhitespace(String value) =>
-    value.replaceAll(RegExp(r'\s+'), ' ').trim();
+    value.replaceAll(_whitespaceRun, ' ').trim();

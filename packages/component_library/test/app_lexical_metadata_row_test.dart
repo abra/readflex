@@ -162,4 +162,19 @@ void main() {
     expect(find.byType(Text), findsNothing);
     expect(tester.getSize(find.byType(AppLexicalMetadataRow)).height, 0);
   });
+
+  test('isEmpty is true only when every piece is null or blank', () {
+    expect(const AppLexicalMetadataRow().isEmpty, isTrue);
+    expect(
+      const AppLexicalMetadataRow(
+        reading: ' ',
+        pronunciation: '',
+        partOfSpeech: '\n',
+      ).isEmpty,
+      isTrue,
+    );
+    expect(const AppLexicalMetadataRow(partOfSpeech: 'noun').isEmpty, isFalse);
+    expect(const AppLexicalMetadataRow(pronunciation: '/ɪ/').isEmpty, isFalse);
+    expect(const AppLexicalMetadataRow(reading: 'よみ').isEmpty, isFalse);
+  });
 }

@@ -8,14 +8,15 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
 
 import 'translate_cubit.dart';
-import 'translation_answer_style.dart';
-import 'translation_details.dart';
 import 'translation_language_direction.dart';
-import 'translation_lexical_header.dart';
 import 'translate_sheet_outcome.dart';
 import 'translation_selection_mode.dart';
-import 'translation_selection_preview.dart';
 import 'translation_text_direction.dart';
+
+part 'translation_answer_style.dart';
+part 'translation_details.dart';
+part 'translation_lexical_header.dart';
+part 'translation_selection_preview.dart';
 
 /// Shows the translation sheet for [selection]. Completes with
 /// [TranslateSheetOutcome.define] when the reader asked for the definition
@@ -139,10 +140,7 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (state.status != TranslateSheetStatus.success) ...[
-                TranslationSelectionPreview(
-                  selection: selection,
-                  showContext: false,
-                ),
+                _TranslationSelectionPreview.quote(selection: selection),
                 const SizedBox(height: AppSpacing.md),
               ],
               _TranslateBody(
@@ -332,6 +330,14 @@ class _TranslationResultView extends StatelessWidget {
     final sentenceTranslation = _nonEmptyText(
       result.translation.sentenceTranslation,
     );
+    // A sentence translation equal to the answer adds nothing.
+    final visibleSentenceTranslation =
+        !isTextTranslation &&
+            sentenceTranslation != null &&
+            _normalizedAnswer(sentenceTranslation) !=
+                _normalizedAnswer(primary ?? '')
+        ? sentenceTranslation
+        : null;
     final explanation = _nonEmptyText(result.explanation);
     final alternatives = result.alternatives
         .map((alternative) => alternative.translation.trim())
@@ -348,7 +354,8 @@ class _TranslationResultView extends StatelessWidget {
       children: [
         if (!isTextTranslation)
           _Gutter(
-            child: TranslationLexicalHeader(
+            child: _TranslationLexicalHeader(
+              key: const ValueKey('translation-lexical-header'),
               selectedText: selectedText,
               isSingleWord: isSingleWord,
               analysis: result.analysis,
@@ -393,43 +400,17 @@ class _TranslationResultView extends StatelessWidget {
                   title: l10n.translationWordMeaning,
                 ),
               ),
-            AppSheetSection(
-              title: isTextTranslation
-                  ? l10n.translationOriginal
-                  : l10n.translationSentence,
-              child: _Gutter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TranslationSelectionPreview(
-                      selection: selection,
-                      showContext: !isTextTranslation,
-                      quoted: false,
-                    ),
-                    if (!isTextTranslation &&
-                        sentenceTranslation != null &&
-                        _normalizedAnswer(sentenceTranslation) !=
-                            _normalizedAnswer(primary ?? '')) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      SelectableText(
-                        sentenceTranslation,
-                        key: const ValueKey('translation-sentence-result'),
-                        textDirection: translationTextDirection(
-                          sentenceTranslation,
-                        ),
-                        style: context.text.bodyMedium,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+            _SentenceSection(
+              selection: selection,
+              isTextTranslation: isTextTranslation,
+              translation: visibleSentenceTranslation,
             ),
             if (!isTextTranslation &&
                 (explanation != null || alternatives.isNotEmpty))
               AppSheetSection(
                 padding: EdgeInsets.zero,
                 child: _Gutter(
-                  child: TranslationDetails(
+                  child: _TranslationDetails(
                     key: ValueKey(result.requestId),
                     explanation: explanation,
                     alternatives: alternatives,
@@ -455,12 +436,58 @@ class _Gutter extends StatelessWidget {
   );
 }
 
+/// The selection's sentence, or for text translation the original, in its
+/// section: the source muted, its [translation] below when there is one.
+class _SentenceSection extends StatelessWidget {
+  const _SentenceSection({
+    required this.selection,
+    required this.isTextTranslation,
+    required this.translation,
+  });
+
+  final TextSelectionContext selection;
+  final bool isTextTranslation;
+
+  /// The sentence translation to show, `null` when absent or redundant.
+  final String? translation;
+
+  @override
+  Widget build(BuildContext context) {
+    final translation = this.translation;
+    return AppSheetSection(
+      title: isTextTranslation
+          ? context.l10n.translationOriginal
+          : context.l10n.translationSentence,
+      child: _Gutter(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _TranslationSelectionPreview.source(
+              selection: selection,
+              showContext: !isTextTranslation,
+            ),
+            if (translation != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              SelectableText(
+                translation,
+                key: const ValueKey('translation-sentence-result'),
+                textDirection: translationTextDirection(translation),
+                style: context.text.bodyMedium,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 final _selectionWhitespacePattern = RegExp(r'\s');
 
 String _normalizedAnswer(String value) =>
-    value.replaceAll(_answerWhitespacePattern, ' ').trim().toLowerCase();
+    value.replaceAll(_whitespaceRun, ' ').trim().toLowerCase();
 
-final _answerWhitespacePattern = RegExp(r'\s+');
+final _whitespaceRun = RegExp(r'\s+');
 
 /// An answer with its Copy action on its first line, under its section
 /// [title] and the source [expression] it translates. The row keeps 12dp of
@@ -504,12 +531,12 @@ class _TranslationAnswer extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final style = emphasized
-            ? translationHeadingStyle(
+            ? _answerHeadingStyle(
                 context,
                 text,
                 AppSheetActionRow.childWidthFor(constraints.maxWidth),
               )
-            : translationBodyStyle(context);
+            : _answerBodyStyle(context);
         return AppSheetActionRow(
           // An LTR answer in an RTL UI keeps Copy trailing the text it copies.
           textDirection: direction,

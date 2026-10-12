@@ -200,7 +200,7 @@ Reusable presentation-only widgets used across features:
 | `AppLexicalMetadataRow`             | Muted reading / IPA pronunciation / part-of-speech line under a headword; starts on the headword's edge (`textDirection`), IPA stays LTR in the phonetic font, wraps when narrow |
 | `AppSheetActionRow`                 | Sheet text with a trailing utility action (Copy) centered on its first line; optional lead (caption, source) above; `minTextRoom` keeps gaps at any text size |
 | `AppSheetSection` / `AppSheetSectionTitle` | Outlined sheet section (hairline in the divider color, no fill) drawn behind full-width content, with an optional `labelLarge` header title |
-| `appFitLongestWord`                 | Largest font size, down to a minimum, at which a heading's longest word fits; `appSelectableTextCaretMargin` for `SelectableText` boxes |
+| `appFitLongestWord` / `appFitSelectableText` | Largest font size, down to a minimum, at which a heading's longest word fits; `appFitSelectableText` applies the sheet rule (box width less `appSelectableTextCaretMargin`, metadata-size floor) |
 | `AppColorSwatchButton`              | Round color sample in a 48dp circular-ink target; selected ring plus a check inked by swatch luminance |
 | `AppStatusMessage`                  | Inline sheet status: start-aligned title/body, optional full-width filled action and progress |
 | `AppSettingsSection`                | Shared settings heading and label/control spacing |
@@ -265,7 +265,8 @@ pushing it down. `minTextRoom` is the least room above the first line and below
 the last; at least half the target's excess over the line keeps gaps unchanged
 when text wraps and at large text sizes, where a line is taller than the
 target. Definition/Translation use it for Copy; other body sections retain
-their 24dp padding.
+their 24dp padding. `AppCopyButton` delegates appearance to
+`AppPlainIconButton`, including circular feedback and disabled hit semantics.
 
 `AppSheetSection` separates the parts of a sheet body that readers must tell
 apart (Translation and Definition results). Its outline is painted behind the
@@ -280,8 +281,10 @@ action stays centered on the text.
 Large headings use `appFitLongestWord` so a word never breaks in the middle at
 large text sizes: one measurement when the word fits, a short binary search on
 the font size only when it does not, with the user's (also nonlinear) text
-scale. Measure for a `SelectableText` box minus `appSelectableTextCaretMargin`. `AppCopyButton` delegates appearance to
-`AppPlainIconButton`, including circular feedback and disabled hit semantics.
+scale. `appFitSelectableText` is the sheet rule in one call: a `SelectableText`
+box width (the caret margin is taken off), the context's text scale and locale,
+and never below metadata size. `AppLexicalMetadataRow.isEmpty` tells callers
+when the row renders nothing, so they can drop the spacing around it.
 
 Notifications sit on the neutral `ColorScheme.inverseSurface` /
 `onInverseSurface` plate (gray900 on light, darkGray50 on dark, overriding the

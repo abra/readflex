@@ -1,4 +1,6 @@
-import 'package:flutter/painting.dart';
+import 'package:flutter/widgets.dart';
+
+import 'theme/extensions/build_context_ext.dart';
 
 /// Width a `SelectableText` keeps after its text for the caret: Flutter's
 /// 1dp caret gap plus the default 2dp cursor. Text measured for a
@@ -60,6 +62,26 @@ TextStyle appFitLongestWord(
     painter.dispose();
   }
 }
+
+/// [style] for a `SelectableText` in a box [boxWidth] wide, shrunk with
+/// [appFitLongestWord] so that its longest word stays whole: at the
+/// context's text scale and locale, never below metadata size
+/// (`bodyMedium`). The caret margin is taken off [boxWidth] here.
+TextStyle appFitSelectableText(
+  BuildContext context,
+  TextStyle style, {
+  required String text,
+  required double boxWidth,
+  required TextDirection textDirection,
+}) => appFitLongestWord(
+  style,
+  text: text,
+  maxWidth: boxWidth - appSelectableTextCaretMargin,
+  minFontSize: context.text.bodyMedium.fontSize!,
+  textScaler: MediaQuery.textScalerOf(context),
+  textDirection: textDirection,
+  locale: Localizations.maybeLocaleOf(context),
+);
 
 // Finer steps than this are not visible in a heading.
 const _sizePrecision = 0.25;

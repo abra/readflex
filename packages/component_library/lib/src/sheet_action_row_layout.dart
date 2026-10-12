@@ -1,16 +1,12 @@
-import 'dart:math' as math;
+part of 'app_sheet_action_row.dart';
 
-import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
-
-import 'sheet_action_row_slot.dart';
-
-/// Lays out an `AppSheetActionRow`: optional lead text across the row, the
+/// Lays out an [AppSheetActionRow]: optional lead text across the row, the
 /// body text beside the action, and the action centered on the body's first
 /// line.
-class SheetActionRowLayout
-    extends SlottedMultiChildRenderObjectWidget<SheetActionRowSlot, RenderBox> {
-  const SheetActionRowLayout({
+class _SheetActionRowLayout
+    extends
+        SlottedMultiChildRenderObjectWidget<_SheetActionRowSlot, RenderBox> {
+  const _SheetActionRowLayout({
     required this.body,
     required this.action,
     required this.firstLineHeight,
@@ -18,7 +14,6 @@ class SheetActionRowLayout
     required this.leadEndInset,
     required this.minTextRoom,
     this.lead,
-    super.key,
   });
 
   final Widget? lead;
@@ -30,18 +25,18 @@ class SheetActionRowLayout
   final double minTextRoom;
 
   @override
-  Iterable<SheetActionRowSlot> get slots => SheetActionRowSlot.values;
+  Iterable<_SheetActionRowSlot> get slots => _SheetActionRowSlot.values;
 
   @override
-  Widget? childForSlot(SheetActionRowSlot slot) => switch (slot) {
-    SheetActionRowSlot.lead => lead,
-    SheetActionRowSlot.body => body,
-    SheetActionRowSlot.action => action,
+  Widget? childForSlot(_SheetActionRowSlot slot) => switch (slot) {
+    _SheetActionRowSlot.lead => lead,
+    _SheetActionRowSlot.body => body,
+    _SheetActionRowSlot.action => action,
   };
 
   @override
-  RenderSheetActionRow createRenderObject(BuildContext context) =>
-      RenderSheetActionRow(
+  _RenderSheetActionRow createRenderObject(BuildContext context) =>
+      _RenderSheetActionRow(
         textDirection: Directionality.of(context),
         firstLineHeight: firstLineHeight,
         leadSpacing: leadSpacing,
@@ -52,7 +47,7 @@ class SheetActionRowLayout
   @override
   void updateRenderObject(
     BuildContext context,
-    RenderSheetActionRow renderObject,
+    _RenderSheetActionRow renderObject,
   ) {
     renderObject
       ..textDirection = Directionality.of(context)
@@ -63,7 +58,7 @@ class SheetActionRowLayout
   }
 }
 
-/// Render object of [SheetActionRowLayout].
+/// Render object of [_SheetActionRowLayout].
 ///
 /// The body takes the width beside the action; the lead spans the row up to
 /// [leadEndInset] from its end, so lead text keeps both content edges in
@@ -72,9 +67,9 @@ class SheetActionRowLayout
 /// that line moves the text down unless lead text already gives it room.
 /// [minTextRoom] is the least room above the first line of text, lead or
 /// body, and below the last one; room the action takes counts toward it.
-class RenderSheetActionRow extends RenderBox
-    with SlottedContainerRenderObjectMixin<SheetActionRowSlot, RenderBox> {
-  RenderSheetActionRow({
+class _RenderSheetActionRow extends RenderBox
+    with SlottedContainerRenderObjectMixin<_SheetActionRowSlot, RenderBox> {
+  _RenderSheetActionRow({
     required TextDirection textDirection,
     required double firstLineHeight,
     required double leadSpacing,
@@ -126,16 +121,16 @@ class RenderSheetActionRow extends RenderBox
     markNeedsLayout();
   }
 
-  RenderBox? get _lead => childForSlot(SheetActionRowSlot.lead);
-  RenderBox get _body => childForSlot(SheetActionRowSlot.body)!;
-  RenderBox get _action => childForSlot(SheetActionRowSlot.action)!;
+  RenderBox? get _lead => childForSlot(_SheetActionRowSlot.lead);
+  RenderBox get _body => childForSlot(_SheetActionRowSlot.body)!;
+  RenderBox get _action => childForSlot(_SheetActionRowSlot.action)!;
 
   // Reading order: paint, hit testing and semantics follow it.
   @override
   Iterable<RenderBox> get children => [
-    ?childForSlot(SheetActionRowSlot.lead),
-    ?childForSlot(SheetActionRowSlot.body),
-    ?childForSlot(SheetActionRowSlot.action),
+    ?childForSlot(_SheetActionRowSlot.lead),
+    ?childForSlot(_SheetActionRowSlot.body),
+    ?childForSlot(_SheetActionRowSlot.action),
   ];
 
   // The one decision behind layout, dry layout, intrinsics and baselines.

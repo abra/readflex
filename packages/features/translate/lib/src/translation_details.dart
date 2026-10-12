@@ -1,12 +1,8 @@
-import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
-
-import 'translation_text_direction.dart';
+part of 'translate_sheet.dart';
 
 /// Explanation and alternatives, collapsed under **Meaning & alternatives**.
-class TranslationDetails extends StatefulWidget {
-  const TranslationDetails({
+class _TranslationDetails extends StatefulWidget {
+  const _TranslationDetails({
     required this.explanation,
     required this.alternatives,
     super.key,
@@ -16,10 +12,10 @@ class TranslationDetails extends StatefulWidget {
   final List<String> alternatives;
 
   @override
-  State<TranslationDetails> createState() => _TranslationDetailsState();
+  State<_TranslationDetails> createState() => _TranslationDetailsState();
 }
 
-class _TranslationDetailsState extends State<TranslationDetails> {
+class _TranslationDetailsState extends State<_TranslationDetails> {
   bool _expanded = false;
 
   @override

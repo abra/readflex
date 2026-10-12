@@ -277,23 +277,14 @@ class _DictionaryEntryHeader extends StatelessWidget {
       partOfSpeech: entry.partOfSpeech,
       textDirection: direction,
     );
-    final hasMetadata = [
-      entry.reading,
-      entry.pronunciation,
-      entry.partOfSpeech,
-    ].any((value) => value != null && value.trim().isNotEmpty);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final lemmaStyle = appFitLongestWord(
+        final lemmaStyle = appFitSelectableText(
+          context,
           style,
           text: entry.lemma,
-          maxWidth:
-              AppSheetActionRow.childWidthFor(constraints.maxWidth) -
-              appSelectableTextCaretMargin,
-          minFontSize: context.text.bodyMedium.fontSize!,
-          textScaler: MediaQuery.textScalerOf(context),
+          boxWidth: AppSheetActionRow.childWidthFor(constraints.maxWidth),
           textDirection: direction,
-          locale: Localizations.maybeLocaleOf(context),
         );
         return AppSheetActionRow(
           // Copy trails the lemma, also in an interface of the other
@@ -324,7 +315,7 @@ class _DictionaryEntryHeader extends StatelessWidget {
                 selectedText: selectedText,
                 style: lemmaStyle,
               ),
-              if (hasMetadata) ...[
+              if (!metadata.isEmpty) ...[
                 const SizedBox(height: AppSpacing.xs),
                 metadata,
               ],
