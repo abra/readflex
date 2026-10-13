@@ -170,7 +170,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
             ),
           )
           .catchError((Object error) {
-            debugPrint('[reader-eval] $label failed: $error');
+            if (kDebugMode) debugPrint('[reader-eval] $label failed: $error');
           }),
     );
   }
@@ -392,11 +392,9 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       debugPrint(message.message);
       return;
     }
-    final level = message.messageLevel.toString();
-    if (!shouldLogReaderConsoleMessage(debugMode: kDebugMode, level: level)) {
-      return;
-    }
-    debugPrint('[reader-console] $level: ${message.message}');
+    // Page output is a debug aid: release builds print nothing from the page.
+    if (!kDebugMode) return;
+    debugPrint('[reader-console] ${message.messageLevel}: ${message.message}');
   }
 
   void _failLoad(ReaderLoadFailure failure) {
@@ -461,7 +459,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     handlers.add(
       handlerName: 'onJsError',
       callback: (args) {
-        if (args.isEmpty) return;
+        if (!kDebugMode || args.isEmpty) return;
         final raw = args.first;
         if (raw is! Map) {
           debugPrint('[reader-js-error] $raw');
@@ -615,10 +613,12 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       final recoveredAt = progress != null && progress > 0
           ? ' at progress=${progress.toStringAsFixed(4)}'
           : ' at chapter 1';
-      debugPrint(
-        '[reader-recovery] post-crash reload completed via $source; book is open'
-        '$recoveredAt (saved deep CFI was discarded)',
-      );
+      if (kDebugMode) {
+        debugPrint(
+          '[reader-recovery] post-crash reload completed via $source; book is '
+          'open$recoveredAt (saved deep CFI was discarded)',
+        );
+      }
       _recoveringFromCrash = false;
     }
 

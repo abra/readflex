@@ -53,6 +53,16 @@ Flutter or WebView versions.
 The JS book/article controllers ignore native long-press events while dragging
 a reader handle; native input delays must not reset the selected range.
 
+## Console messages
+
+`InAppWebViewChromeClient.onConsoleMessage` still forwards every JavaScript
+console message to Flutter, then reports it as handled. Upstream returns
+WebView's default `false`, which makes WebView also write the message to logcat
+(`chromium` tag) in every build, release included. Readflex decides in Dart
+what to print: debug builds print the page's messages, release builds print
+nothing. iOS WebViews never write console messages to the system log, so both
+platforms now behave alike.
+
 ## Verification
 
 With Flutter dependencies resolved and the project's supported JDK selected,
@@ -63,8 +73,9 @@ run from `android/`:
 ```
 
 JUnit/Mockito tests cover repeated menu preparation, rejected creation, normal
-destruction, callback wrapping, floating-mode geometry, reader opt-in settings
-and finite normalized gesture coordinates. Magnifier tests cover coordinate
+destruction, callback wrapping, floating-mode geometry, reader opt-in settings,
+finite normalized gesture coordinates and console messages forwarded to
+Flutter while kept out of logcat. Magnifier tests cover coordinate
 conversion, frame coalescing, stale gesture requests, cancellation, disposal,
 hidden/detached/unfocused views and unsupported/failing native implementations.
 They cannot certify

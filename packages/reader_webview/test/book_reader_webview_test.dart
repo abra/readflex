@@ -1781,29 +1781,6 @@ void main() {
     });
   });
 
-  group('console logging', () {
-    test('keeps warning noise out of release logs', () {
-      expect(
-        shouldLogReaderConsoleMessage(
-          debugMode: false,
-          level: 'WARNING',
-        ),
-        isFalse,
-      );
-      expect(
-        shouldLogReaderConsoleMessage(debugMode: false, level: 'ERROR'),
-        isTrue,
-      );
-      expect(
-        shouldLogReaderConsoleMessage(
-          debugMode: true,
-          level: 'WARNING',
-        ),
-        isTrue,
-      );
-    });
-  });
-
   group('asset extraction', () {
     test('bundles the demand-loaded comic thumbnail module', () async {
       TestWidgetsFlutterBinding.ensureInitialized();
@@ -1835,7 +1812,7 @@ void main() {
     });
 
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_165');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_166');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

@@ -36,6 +36,16 @@ Flutter -> JS:  goToCfi, goToBookmark, goToSectionIndex, goToPercent, goToHref,
                 showImageAreaSelectionPreview, clearImageAreaSelectionPreview
 ```
 
+What the page reports is a debug aid. Console messages, uncaught JS errors
+(`onJsError`) and failed Flutter -> JS commands are printed only in debug
+builds; profile and release builds print nothing from the page on any
+platform. The one exception is an explicit opt-in trace such as
+`READFLEX_TRACE_READER_STARTUP` (see Book Startup). The Android WebView plugin
+marks every console message handled, otherwise WebView would also write it to
+logcat in release builds (see
+`third_party/flutter_inappwebview_android/README.readflex.md`). pdf.js runs at
+its errors-only verbosity, so repairs of damaged files stay quiet in debug too.
+
 Shared selection/click/external-link handlers are registered by
 `registerSharedReaderHandlers` so the widget body stays focused on
 position + annotation glue. `onImageClick` is not part of the bridge: the book

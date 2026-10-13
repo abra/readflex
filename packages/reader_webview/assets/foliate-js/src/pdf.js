@@ -671,7 +671,11 @@ const makeTOCItem = item => ({
 
 export const makePDF = async file => {
     const data = new Uint8Array(await file.arrayBuffer())
-    const pdf = await pdfjsLib.getDocument({ data }).promise
+    // Damaged real-world files make pdf.js warn while it repairs them; only its
+    // errors reach the console, which Android WebView also writes to logcat.
+    const pdf = await pdfjsLib.getDocument({
+        data, verbosity: pdfjsLib.VerbosityLevel.ERRORS,
+    }).promise
 
     // Text pages keep native selection under zoom; see readflex_page_zoom.js.
     // A portrait screen reads one page at a time: spreads would draw the

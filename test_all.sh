@@ -76,7 +76,7 @@ run "highlight_repository"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/h
 run "connectivity_service"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/connectivity_service"
 run "contextual_translation_service" "$FLUTTER test test/" "$SCRIPT_DIR/packages/contextual_translation_service"
 run "dictionary_service"           "$FLUTTER test test/" "$SCRIPT_DIR/packages/dictionary_service"
-run "device_screen_brightness"    "$FLUTTER test test/" "$SCRIPT_DIR/packages/device_screen_brightness"
+run "device_screen_brightness"    "$FLUTTER test test/" "$SCRIPT_DIR/third_party/device_screen_brightness"
 run "screen_control_service"       "$FLUTTER test test/" "$SCRIPT_DIR/packages/screen_control_service"
 run "preferences_service"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/preferences_service"
 run "reader_server"               "$FLUTTER test test/" "$SCRIPT_DIR/packages/reader_server"

@@ -229,7 +229,7 @@ packages:
   device_screen_brightness:
     dependency: transitive
     description:
-      path: "packages/device_screen_brightness"
+      path: "third_party/device_screen_brightness"
       relative: true
     source: path
     version: "0.3.1"

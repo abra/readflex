@@ -257,7 +257,6 @@ vocabulary features is `189e2cc1`.
 | `connectivity_service` | Reactive connectivity status and UI scope. | UI signal only; services still handle their own failures. |
 | `contextual_translation_service` | Contextual translation request/result contracts, remote client, cache, and ML Kit offline fallback coordinator. | Used by the `translate` feature. |
 | `dictionary_service` | System definition UI bridge contract and typed HTTP client/models for monolingual dictionary lookup. | Used by the `dictionary` feature; native implementations live in the app runners. |
-| `device_screen_brightness` | Native/plugin brightness access. | Low-level platform package used by `screen_control_service`. |
 | `monitoring` | Logger, log observers, analytics/error reporter contracts, GlitchTip reporting, and no-op fallbacks. | GlitchTip is active when configured; analytics remains a no-op. |
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, and app composition. |
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
@@ -269,6 +268,18 @@ vocabulary features is `189e2cc1`.
 Some infrastructure packages are used by only one feature today. That is still
 valid when the package boundary hides a platform/backend/lifecycle concern that
 must remain replaceable.
+
+### Vendored Packages (`third_party/`)
+
+Third-party packages Readflex patches live in `third_party/`, not `packages/`:
+they keep their upstream license, structure and style, and each one's
+`README.readflex.md` records the patch and how to recheck it when updating.
+
+| Package | Upstream | Readflex patch | Used through |
+|---------|----------|----------------|--------------|
+| `device_screen_brightness` | 0.3.1 (MIT) | Linear Android window brightness. | Path dependency of `screen_control_service`. |
+| `flutter_inappwebview_android` | 1.1.3 (Apache-2.0) | Reader selection handles and magnifier; console messages kept out of logcat. | Root `dependency_overrides`. |
+| `flutter_inappwebview_ios` | 1.1.2 (Apache-2.0) | Hides the modern iOS edit menu when context menus are disabled. | Root `dependency_overrides`. |
 
 ### Feature Packages
 

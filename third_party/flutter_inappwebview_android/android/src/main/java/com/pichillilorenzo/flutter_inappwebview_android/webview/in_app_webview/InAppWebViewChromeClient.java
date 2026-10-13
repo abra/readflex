@@ -734,12 +734,20 @@ public class InAppWebViewChromeClient extends WebChromeClient implements PluginR
 
   @Override
   public boolean onConsoleMessage(ConsoleMessage consoleMessage) {
-    if (inAppWebView != null && inAppWebView.channelDelegate != null) {
-      inAppWebView.channelDelegate.onConsoleMessage(
+    return forwardConsoleMessage(
+            inAppWebView != null ? inAppWebView.channelDelegate : null, consoleMessage);
+  }
+
+  // Readflex patch: Flutter receives every message and decides what to print.
+  // WebView also writes an unhandled message to logcat, in release builds too.
+  static boolean forwardConsoleMessage(@Nullable WebViewChannelDelegate channelDelegate,
+                                       ConsoleMessage consoleMessage) {
+    if (channelDelegate != null) {
+      channelDelegate.onConsoleMessage(
               consoleMessage.message(),
               consoleMessage.messageLevel().ordinal());
     }
-    return super.onConsoleMessage(consoleMessage);
+    return true;
   }
 
   @Override

@@ -95,15 +95,6 @@ String buildReaderSearchStartScript({
 }
 
 @visibleForTesting
-bool shouldLogReaderConsoleMessage({
-  required bool debugMode,
-  required String level,
-}) {
-  if (debugMode) return true;
-  return level.toLowerCase().contains('error');
-}
-
-@visibleForTesting
 String buildReaderCommandScript({
   required String label,
   required String expression,

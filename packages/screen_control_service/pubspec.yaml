@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   device_screen_brightness:
-    path: ../device_screen_brightness
+    path: ../../third_party/device_screen_brightness
   wakelock_plus: 1.5.2
 
 dev_dependencies:

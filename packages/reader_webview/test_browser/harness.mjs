@@ -171,7 +171,9 @@ export async function pointers(page, steps) {
 // 72 pt margins and a blue figure; page 0 links to page 2; the last page holds
 // only a short centred title. With [embeddedFont] (TrueType bytes) the body is
 // set in that font, which pdf.js loads as a document font like real books.
-export function makePdf({ pages = 6, embeddedFont = null } = {}) {
+// [brokenXref] points `startxref` at nothing, so pdf.js repairs the file and
+// warns, as it does for many damaged real-world PDFs.
+export function makePdf({ pages = 6, embeddedFont = null, brokenXref = false } = {}) {
     const objects = []
     const add = body => { objects.push(body); return objects.length }
     const catalog = add(null)
@@ -220,7 +222,7 @@ export function makePdf({ pages = 6, embeddedFont = null } = {}) {
     const xref = pdf.length
     pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
     for (const offset of offsets) pdf += `${String(offset).padStart(10, '0')} 00000 n \n`
-    pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalog} 0 R >>\nstartxref\n${xref}\n%%EOF\n`
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalog} 0 R >>\nstartxref\n${brokenXref ? 9 : xref}\n%%EOF\n`
     return Buffer.from(pdf, 'latin1')
 }
 
@@ -229,12 +231,14 @@ export function makePdf({ pages = 6, embeddedFont = null } = {}) {
 // check that released bitmaps were freed.
 export async function openPdf(t, {
     pages = 6, hostTaps = false, style = {}, deviceScaleFactor = 3, viewport = { width: 390, height: 844 },
-    embeddedFont = null, controlledClock = false,
+    embeddedFont = null, controlledClock = false, brokenXref = false,
 } = {}) {
     const harness = await createHarness(t, { deviceScaleFactor })
     const { page, origin } = harness
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
+    const consoleMessages = []
+    page.on('console', message => consoleMessages.push(message.text()))
     t.after(() => assert.deepEqual(errors, []))
     if (controlledClock) await page.clock.install()
     await page.addInitScript(() => {
@@ -253,7 +257,7 @@ export async function openPdf(t, {
         }
     })
     await page.setViewportSize(viewport)
-    const bytes = makePdf({ pages, embeddedFont })
+    const bytes = makePdf({ pages, embeddedFont, brokenXref })
     await page.route('**/foliate-js/src/remote_file.js', route => route.fulfill({
         contentType: 'text/javascript',
         body: `export class RemoteFile {
@@ -277,7 +281,7 @@ export async function openPdf(t, {
     await page.waitForFunction(() => window.bridgeCalls.some(([name]) => name === 'onLoadEnd'))
     await waitForPdfPage(page)
     await page.evaluate(() => { window.bridgeCalls.length = 0 })
-    return harness
+    return { ...harness, consoleMessages }
 }
 
 // Waits until the current page bitmap is drawn into a laid-out frame.

@@ -315,7 +315,7 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
     handlers.add(
       handlerName: 'onJsError',
       callback: (args) {
-        if (args.isEmpty) return;
+        if (!kDebugMode || args.isEmpty) return;
         final data = readerBridgeMap(args.first);
         if (data == null) {
           debugPrint('[article-reader-js-error] ${args.first}');
@@ -396,7 +396,9 @@ class ArticleHtmlReaderWebViewState extends State<ArticleHtmlReaderWebView>
 ''',
           )
           .catchError((Object error) {
-            debugPrint('[article-reader-eval] $label failed: $error');
+            if (kDebugMode) {
+              debugPrint('[article-reader-eval] $label failed: $error');
+            }
           }),
     );
   }

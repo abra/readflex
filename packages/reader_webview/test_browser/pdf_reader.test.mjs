@@ -600,6 +600,14 @@ test('a touch on a saved PDF highlight opens it instead of toggling chrome', asy
     assert.equal(calls.filter(([name]) => name === 'onClick').length, 0)
 })
 
+test('a damaged PDF opens without pdf.js warnings in the console', async t => {
+    // Android WebView writes console messages to logcat, release builds included.
+    const { page, consoleMessages } = await openPdf(t, { brokenXref: true })
+    await page.evaluate(() => window.reader.view.renderer.next())
+    await waitForPdfPage(page, 1)
+    assert.deepEqual(consoleMessages.filter(text => text.startsWith('Warning:')), [])
+})
+
 test('PDF reports its page count, outline and searchable text to Flutter', async t => {
     const { page } = await openPdf(t)
     await page.waitForFunction(() => window.bridgeCalls.some(([name, value]) =>
