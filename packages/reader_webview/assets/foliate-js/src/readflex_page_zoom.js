@@ -3,6 +3,12 @@ import Panzoom from './vendor/panzoom.js'
 const DOUBLE_TAP_MS = 280
 const TAP_DISTANCE = 32
 const DRAG_DISTANCE = 8
+const COMPATIBILITY_CLICK_MS = 500
+
+// A touch tap can turn the page before the browser delivers that touch's
+// click, which then lands on the next page. The WebView has one touch stream,
+// so the window outlives the page zoom that opened it.
+let compatibilityClickUntil = 0
 
 // Coordinates inside a fitted iframe are not viewport coordinates. Include
 // ancestor transforms as well as the renderer's original page-fit scale.
@@ -33,7 +39,6 @@ export function createPageZoom(stage, host, onTap, {
     let pendingTap = null
     let frame = 0
     let suppressClickUntil = 0
-    let compatibilityClickUntil = 0
     let settleFrame = 0
     const zoom = Panzoom(stage, {
         noBind: true, minScale: 1, maxScale: 4, contain: 'outside',
@@ -169,7 +174,7 @@ export function createPageZoom(stage, host, onTap, {
                     const { clientX: x, clientY: y } = asPointer(pointer)
                     // A link handles its own click; it is not a reader tap.
                     if (linkOf(event.target)) return
-                    compatibilityClickUntil = performance.now() + 500
+                    compatibilityClickUntil = performance.now() + COMPATIBILITY_CLICK_MS
                     if (!hostTaps) onTap({ x, y })
                 }
             }
@@ -217,7 +222,10 @@ export function createPageZoom(stage, host, onTap, {
         get blocksPageSwipe() { return isZoomed() || active || performance.now() < suppressClickUntil },
         tapFromHost(point) {
             // Area editing owns its native touches, including taps on handles.
-            if (hostTaps && !selectionActive() && !linkAt(point)) onTap(point)
+            if (!hostTaps || selectionActive() || linkAt(point)) return
+            // WebKit can deliver this touch's DOM events after the forwarded tap.
+            compatibilityClickUntil = performance.now() + COMPATIBILITY_CLICK_MS
+            onTap(point)
         },
         tap(point, singleTap) {
             if (disposed || active || performance.now() < suppressClickUntil) return
@@ -256,6 +264,9 @@ export function createPageZoom(stage, host, onTap, {
             cancelAnimationFrame(settleFrame)
             disposed = true
             listeners.abort()
+            // WebKit sends a tap's click to the document the touch began in,
+            // even while that page animates away. A leaving page has no taps.
+            for (const doc of documents) doc.addEventListener('click', stop, true)
             documents.clear()
             zoom.destroy()
         },

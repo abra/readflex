@@ -229,13 +229,14 @@ export function makePdf({ pages = 6, embeddedFont = null } = {}) {
 // check that released bitmaps were freed.
 export async function openPdf(t, {
     pages = 6, hostTaps = false, style = {}, deviceScaleFactor = 3, viewport = { width: 390, height: 844 },
-    embeddedFont = null,
+    embeddedFont = null, controlledClock = false,
 } = {}) {
     const harness = await createHarness(t, { deviceScaleFactor })
     const { page, origin } = harness
     const errors = []
     page.on('pageerror', error => errors.push(error.message))
     t.after(() => assert.deepEqual(errors, []))
+    if (controlledClock) await page.clock.install()
     await page.addInitScript(() => {
         window.__pageCanvases = []
         // Counts PDF page documents parsed for search, not for display.

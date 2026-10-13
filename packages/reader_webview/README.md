@@ -789,6 +789,12 @@ side. The bullets below describe comics; PDF differences follow them.
   arena; JS ignores their duplicate DOM taps. Long press, pinch and pan remain
   WebView-owned. Android uses DOM pointer taps. Neither text readers nor native
   plugin settings are changed by this workaround.
+- An edge tap can start its page turn before the browser sends the click of
+  the same touch, so one tap must not turn two pages. WebKit sends that click
+  to the page the touch began on, even while it animates away; a leaving page
+  ignores every click. A click that lands on the next page instead is ignored
+  for 500 ms after a touch tap; that window belongs to the WebView, not to one
+  page, and a forwarded iOS tap opens it as well.
 
 PDF pages also advertise `rendition.selectableText`, which changes page zoom
 for text:

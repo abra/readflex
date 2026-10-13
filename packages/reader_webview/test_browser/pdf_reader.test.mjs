@@ -311,6 +311,83 @@ test('host-forwarded taps skip PDF links and reach the reader elsewhere', async 
     assert.equal((await pdfState(page)).clicks.length, 1)
 })
 
+// The click a browser sends after a touch, hit-tested on the page shown now.
+const touchClick = (page, x, y) => page.evaluate(({ x, y }) => {
+    const renderer = window.reader.view.renderer
+    const doc = renderer.getContents().find(({ index }) => index === renderer.index).doc
+    const frame = doc.defaultView.frameElement
+    const rect = frame.getBoundingClientRect()
+    const clientX = (x - rect.left) * frame.clientWidth / rect.width
+    const clientY = (y - rect.top) * frame.clientHeight / rect.height
+    ;(doc.elementFromPoint(clientX, clientY) ?? doc.body).dispatchEvent(new doc.defaultView.MouseEvent(
+        'click', { bubbles: true, cancelable: true, clientX, clientY, screenX: x, screenY: y }))
+}, { x, y })
+
+// Flutter answers an edge tap with a turn, which can finish before the browser
+// delivers the click of the same touch. Time stands still, so the result does
+// not depend on how fast the machine turns the page.
+const openForEdgeTurn = async (t, options) => {
+    const { page } = await openPdf(t, { ...options, controlledClock: true })
+    // A ready next page lets the turn finish without timers.
+    await page.evaluate(() => window.reader.view.book.sections[1].load())
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
+    return page
+}
+
+test('the click of an edge touch does not turn the next page as well', async t => {
+    const page = await openForEdgeTurn(t)
+    await tap(page, 380, 420)
+    assert.equal((await pdfState(page)).clicks.length, 1)
+    await page.evaluate(() => window.pageRight())
+    assert.equal((await pdfState(page)).index, 1)
+    await touchClick(page, 380, 420)
+    assert.equal((await pdfState(page)).clicks.length, 1, 'the click is not another tap')
+    await tap(page, 380, 420)
+    assert.equal((await pdfState(page)).clicks.length, 2, 'the next touch is')
+})
+
+test('a host-forwarded edge tap turns one page when WebKit sends the touch late', async t => {
+    const page = await openForEdgeTurn(t, { hostTaps: true })
+    await page.evaluate(() => window.handlePageTouchTap(380, 420))
+    assert.equal((await pdfState(page)).clicks.length, 1)
+    await page.evaluate(() => window.pageRight())
+    // The touch never reached the first page; its click lands on the next one.
+    await touchClick(page, 380, 420)
+    const state = await pdfState(page)
+    assert.equal(state.index, 1)
+    assert.equal(state.clicks.length, 1)
+    await page.evaluate(() => window.handlePageTouchTap(380, 420))
+    assert.equal((await pdfState(page)).clicks.length, 2, 'the next forwarded tap still counts')
+})
+
+test('the click WebKit sends to the page the touch began on is not another tap', async t => {
+    const page = await openForEdgeTurn(t, { hostTaps: true })
+    await tap(page, 380, 420)
+    await page.evaluate(() => window.handlePageTouchTap(380, 420))
+    assert.equal((await pdfState(page)).clicks.length, 1)
+    // WebKit dispatches a tap's click in the document the touch began in, even
+    // when that page is already animating away.
+    await page.evaluate(async x => {
+        const renderer = window.reader.view.renderer
+        const touched = renderer.getContents().find(({ index }) => index === renderer.index).doc
+        void window.pageRight()
+        // Paused timers do not run; a message is a task that still does.
+        const nextTask = () => new Promise(resolve => {
+            const channel = new MessageChannel()
+            channel.port1.onmessage = resolve
+            channel.port2.postMessage(null)
+        })
+        while (renderer.getContents().length < 2) await nextTask()
+        touched.body.dispatchEvent(new touched.defaultView.MouseEvent(
+            'click', { bubbles: true, cancelable: true, clientX: x, clientY: 1200 }))
+    }, PAGE_WIDTH - 20)
+    assert.equal((await pdfState(page)).clicks.length, 1, 'the click is not another tap')
+    await page.clock.resume()
+    await waitForPdfPage(page, 1)
+    await page.waitForTimeout(400)
+    assert.equal((await pdfState(page)).index, 1, 'one tap turns one page')
+})
+
 test('margin crops enlarge text pages, skip sparse ones and stay sharp', async t => {
     const { page } = await openPdf(t)
     const before = await pdfState(page)
