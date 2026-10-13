@@ -23,7 +23,7 @@
   "translationGeneralMeaning": "Общее значение",
   "translationGeneralMeaningOf": "Общее значение: {word}",
   "translationInExpression": "В выражении",
-  "translationBaseForm": "Начальная форма:",
+  "translationBaseForm": "Начальная форма: {lemma}",
   "translationPosNoun": "Существительное",
   "translationPosVerb": "Глагол",
   "translationPosAdjective": "Прилагательное",

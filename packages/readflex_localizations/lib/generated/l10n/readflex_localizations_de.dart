@@ -88,7 +88,9 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
   String get translationInExpression => 'Im Ausdruck';
 
   @override
-  String get translationBaseForm => 'Grundform:';
+  String translationBaseForm(String lemma) {
+    return 'Grundform: $lemma';
+  }
 
   @override
   String get translationPosNoun => 'Substantiv';

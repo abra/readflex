@@ -88,7 +88,9 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get translationInExpression => 'इस अभिव्यक्ति में';
 
   @override
-  String get translationBaseForm => 'मूल रूप:';
+  String translationBaseForm(String lemma) {
+    return 'मूल रूप: $lemma';
+  }
 
   @override
   String get translationPosNoun => 'संज्ञा';

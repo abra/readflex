@@ -88,7 +88,9 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get translationInExpression => 'В выражении';
 
   @override
-  String get translationBaseForm => 'Начальная форма:';
+  String translationBaseForm(String lemma) {
+    return 'Начальная форма: $lemma';
+  }
 
   @override
   String get translationPosNoun => 'Существительное';

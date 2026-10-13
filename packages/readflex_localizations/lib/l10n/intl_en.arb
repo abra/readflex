@@ -37,7 +37,15 @@
       }
     }
   },
-  "translationBaseForm": "Base form:",
+  "translationBaseForm": "Base form: {lemma}",
+  "@translationBaseForm": {
+    "description": "The base form of the selected word, under it in the Translation sheet.",
+    "placeholders": {
+      "lemma": {
+        "type": "String"
+      }
+    }
+  },
   "translationPosNoun": "Noun",
   "translationPosVerb": "Verb",
   "translationPosAdjective": "Adjective",

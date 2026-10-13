@@ -23,7 +23,7 @@
   "translationGeneralMeaning": "المعنى العام",
   "translationGeneralMeaningOf": "المعنى العام: {word}",
   "translationInExpression": "في التعبير",
-  "translationBaseForm": "الصيغة الأساسية:",
+  "translationBaseForm": "الصيغة الأساسية: {lemma}",
   "translationPosNoun": "اسم",
   "translationPosVerb": "فعل",
   "translationPosAdjective": "صفة",

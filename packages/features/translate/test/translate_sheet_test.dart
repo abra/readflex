@@ -415,12 +415,8 @@ void main() {
         expect(find.text('shutting'), findsOneWidget);
         expect(find.text('/ˈʃʌtɪŋ/').hitTestable(), findsOneWidget);
         expect(find.text('Verb'), findsOneWidget);
-        expect(find.text('Base form:'), findsOneWidget);
-        expect(
-          find.byKey(const ValueKey('translation-lemma')).hitTestable(),
-          findsOneWidget,
-        );
-        expect(find.text('shut'), findsOneWidget);
+        expect(baseFormFinder.hitTestable(), findsOneWidget);
+        expect(baseFormText(tester), 'Base form: \u2066shut\u2069');
         expect(find.byType(ExpansionTile), findsNothing);
         expect(service.calls, 1);
       },
@@ -522,7 +518,7 @@ void main() {
       ),
     );
     expect(find.byType(AppLexicalMetadataRow), findsNothing);
-    expect(find.byKey(const ValueKey('translation-lemma')), findsNothing);
+    expect(baseFormFinder, findsNothing);
     expect(find.text('unrecognized_tag'), findsNothing);
     expect(find.byType(ExpansionTile), findsNothing);
   });

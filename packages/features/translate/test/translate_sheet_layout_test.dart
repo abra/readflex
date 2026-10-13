@@ -2,6 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
@@ -99,7 +100,7 @@ void main() {
       final word = tester.getRect(selectedFragmentFinder);
       final ipa = tester.getRect(find.text('/ˈfɔːtʃuːn/'));
       final noun = tester.getRect(find.text('Noun'));
-      final baseForm = tester.getRect(find.text('Base form:'));
+      final baseForm = tester.getRect(baseFormFinder);
       expect(ipa.left, greaterThan(word.right));
       expect(ipa.center.dy, moreOrLessEquals(word.center.dy, epsilon: 1));
       expect(noun.left, word.left);
@@ -107,6 +108,188 @@ void main() {
       expect(baseForm.left, greaterThan(noun.right));
       expect(baseForm.top, noun.top);
     });
+
+    final grammarExamples = [
+      (
+        direction: TextDirection.ltr,
+        selection: fortune,
+        service: expressionService,
+        partOfSpeech: 'Noun',
+      ),
+      (
+        direction: TextDirection.rtl,
+        selection: const TextSelectionContext(
+          selectedText: 'كتب',
+          sourceId: 'source-1',
+          sourceType: SourceType.book,
+        ),
+        service: WordTranslationService(
+          const ContextualTranslationText(baseTranslation: 'написал'),
+          analysis: const ContextualTranslationAnalysis(
+            surfaceForm: 'كتب',
+            lemma: 'كتابة',
+            partOfSpeech: 'verb',
+          ),
+        ),
+        partOfSpeech: 'Verb',
+      ),
+    ];
+
+    for (final example in grammarExamples) {
+      testWidgets(
+        '${example.direction.name} grammar line starts on the word edge and '
+        'reads in its order',
+        (tester) async {
+          await pumpTranslateSheet(
+            tester,
+            selection: example.selection,
+            service: example.service,
+          );
+          final word = tester.getRect(selectedFragmentFinder);
+          final partOfSpeech = tester.getRect(find.text(example.partOfSpeech));
+          final dot = tester.getRect(find.text(' · '));
+          final baseForm = tester.getRect(baseFormFinder);
+          if (example.direction == TextDirection.ltr) {
+            expect(partOfSpeech.left, word.left);
+            expect(dot.left, moreOrLessEquals(partOfSpeech.right));
+            expect(baseForm.left, moreOrLessEquals(dot.right));
+          } else {
+            expect(partOfSpeech.right, word.right);
+            expect(dot.right, moreOrLessEquals(partOfSpeech.left));
+            expect(baseForm.right, moreOrLessEquals(dot.left));
+          }
+          expect(baseForm.top, partOfSpeech.top);
+        },
+      );
+
+      testWidgets(
+        '${example.direction.name} base form that does not fit the line moves '
+        'below the part of speech, without the dot',
+        (tester) async {
+          tester.view.physicalSize = const Size(320, 568);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          // Test glyphs are squares: the part of speech, the dot and the base
+          // form are over 300dp together, wider than the 272dp line.
+          await pumpTranslateSheet(
+            tester,
+            selection: example.selection,
+            service: example.service,
+          );
+          expect(find.text(' · '), findsNothing);
+          final partOfSpeech = tester.getRect(find.text(example.partOfSpeech));
+          final baseForm = tester.getRect(baseFormFinder);
+          expect(baseForm.top - partOfSpeech.bottom, AppSpacing.xxs);
+          if (example.direction == TextDirection.ltr) {
+            expect(baseForm.left, partOfSpeech.left);
+          } else {
+            expect(baseForm.right, partOfSpeech.right);
+          }
+          // Its own wrapped lines keep that edge too.
+          expect(
+            tester.widget<Text>(baseFormFinder).textAlign,
+            example.direction == TextDirection.ltr
+                ? TextAlign.left
+                : TextAlign.right,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
+    for (final example in [
+      (
+        name: 'part of speech',
+        analysis: const ContextualTranslationAnalysis(
+          surfaceForm: 'fortune',
+          partOfSpeech: 'noun',
+        ),
+        shown: find.text('Noun'),
+      ),
+      (
+        name: 'base form',
+        analysis: const ContextualTranslationAnalysis(
+          surfaceForm: 'fortune',
+          lemma: 'fortunes',
+        ),
+        shown: baseFormFinder,
+      ),
+    ]) {
+      testWidgets('${example.name} alone has no dot', (tester) async {
+        await pumpTranslateSheet(
+          tester,
+          selection: fortune,
+          service: WordTranslationService(
+            const ContextualTranslationText(baseTranslation: 'удача'),
+            analysis: example.analysis,
+          ),
+        );
+        expect(example.shown, findsOneWidget);
+        expect(find.text(' · '), findsNothing);
+      });
+    }
+
+    testWidgets('the dot is not announced', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpTranslateSheet(
+        tester,
+        selection: fortune,
+        service: expressionService,
+      );
+      expect(find.text(' · '), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('·')), findsNothing);
+      expect(find.bySemanticsLabel('Noun'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp('^Base form: .fortunes.\$')),
+        findsOneWidget,
+      );
+      semantics.dispose();
+    });
+
+    for (final example in [
+      (locale: const Locale('en'), word: 'كتب', lemma: 'كتابة'),
+      (locale: const Locale('ar'), word: 'strongest', lemma: 'strong'),
+    ]) {
+      testWidgets('the base form label precedes ${example.lemma} in the '
+          '${example.locale} reading order', (tester) async {
+        await pumpTranslateSheet(
+          tester,
+          locale: example.locale,
+          selection: TextSelectionContext(
+            selectedText: example.word,
+            sourceId: 'source-1',
+            sourceType: SourceType.book,
+          ),
+          service: WordTranslationService(
+            const ContextualTranslationText(baseTranslation: 'перевод'),
+            analysis: ContextualTranslationAnalysis(
+              surfaceForm: example.word,
+              lemma: example.lemma,
+            ),
+          ),
+        );
+        final paragraph = tester.renderObject<RenderParagraph>(
+          find.descendant(of: baseFormFinder, matching: find.byType(RichText)),
+        );
+        final text = baseFormText(tester);
+        final lemmaStart = text.indexOf(example.lemma);
+        Rect span(int start, int end) => paragraph
+            .getBoxesForSelection(
+              TextSelection(baseOffset: start, extentOffset: end),
+            )
+            .map((box) => box.toRect())
+            .reduce((a, b) => a.expandToInclude(b));
+        // Everything before the lemma's isolate is the label.
+        final label = span(0, lemmaStart - 1);
+        final lemma = span(lemmaStart, lemmaStart + example.lemma.length);
+        if (example.locale.languageCode == 'en') {
+          expect(lemma.left, greaterThanOrEqualTo(label.right - 0.5));
+        } else {
+          expect(lemma.right, lessThanOrEqualTo(label.left + 0.5));
+        }
+      });
+    }
 
     testWidgets('each answer, the sentence and the details are outlined '
         'sections in reading order', (tester) async {

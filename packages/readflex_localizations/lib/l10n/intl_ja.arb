@@ -23,7 +23,7 @@
   "translationGeneralMeaning": "一般的な意味",
   "translationGeneralMeaningOf": "「{word}」の一般的な意味",
   "translationInExpression": "表現の中で",
-  "translationBaseForm": "基本形：",
+  "translationBaseForm": "基本形：{lemma}",
   "translationPosNoun": "名詞",
   "translationPosVerb": "動詞",
   "translationPosAdjective": "形容詞",

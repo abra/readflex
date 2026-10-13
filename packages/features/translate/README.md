@@ -66,7 +66,13 @@ first. The selection, word or phrase, is a quiet selectable `titleMedium` label,
 not a heading: the translation is the sheet's only large text. Optional
 reading/pronunciation follows the word on its line in the shared
 `AppLexicalMetadataRow`; a localized part of speech and a different lemma as
-**Base form** follow on the line below, without expanding details. Pronunciation describes the selected
+**Base form** follow on the line below, without expanding details. On one line
+they are joined by ` · `, like metadata elsewhere in the app; when they do not
+fit, the base form moves below the part of speech without the dot. The base
+form is one localized phrase (`translationBaseForm`, e.g. `Base form: {lemma}`)
+in the interface direction, with the lemma isolated in its own direction, so
+the label always precedes the lemma and the phrase wraps between words.
+Pronunciation describes the selected
 surface form, not its lemma: mismatched or absent `analysis.surface_form` hides
 pronunciation/reading and part of speech. Unknown grammatical tags are omitted.
 Reading is language-aware (e.g. Japanese kana or Chinese pinyin); identical
@@ -143,7 +149,7 @@ outline at any text size. A section title above an answer is the answer row's
 lead, so Copy stays centered on the answer. A word too wide for its line at a
 large text size shrinks just enough to stay whole (`appFitSelectableText`),
 never below metadata size. The sheet's internal widgets (selection label,
-sentence preview, details, answer styles) are private parts of
+sentence preview, grammar line, details, answer styles) are private parts of
 `translate_sheet.dart`. The sheet body has a bounded,
 scrollable viewport so long contexts and lexical results do not overflow.
 The shared `ScrollEdgeFadeStack` adds full-width shadows when content extends
@@ -230,7 +236,8 @@ a narrow viewport. Tests also keep the primary result and Copy reachable before
 a long context, check the source/result order for text translation, and prevent
 headline styling of long answers to short words. Layout tests
 (`translate_sheet_layout_test.dart`) check the quiet
-selection label (pronunciation on its line, grammar and base form below), the
+selection label (pronunciation on its line, grammar and base form below,
+joined by a dot or stacked without it, in either direction), the
 answer heading for expressions and short phrases, the four outlined sections in
 reading order (two for text translation), 12dp between and inside sections at
 1x and 2x, 8dp titles and the 4dp expression gap, Copy centered on each answer

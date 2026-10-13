@@ -57,6 +57,13 @@ Finder get previewFinder =>
 Finder get selectedFragmentFinder =>
     find.byKey(const ValueKey('translation-selected-fragment'));
 
+Finder get baseFormFinder =>
+    find.byKey(const ValueKey('translation-base-form'));
+
+/// The base form phrase, with the lemma's direction isolates.
+String baseFormText(WidgetTester tester) =>
+    tester.widget<Text>(baseFormFinder).data!;
+
 Finder get quoteSurfaceFinder => find.byWidgetPredicate(
   (widget) =>
       widget is Container &&

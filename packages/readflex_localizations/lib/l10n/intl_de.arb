@@ -23,7 +23,7 @@
   "translationGeneralMeaning": "Allgemeine Bedeutung",
   "translationGeneralMeaningOf": "Allgemeine Bedeutung: {word}",
   "translationInExpression": "Im Ausdruck",
-  "translationBaseForm": "Grundform:",
+  "translationBaseForm": "Grundform: {lemma}",
   "translationPosNoun": "Substantiv",
   "translationPosVerb": "Verb",
   "translationPosAdjective": "Adjektiv",

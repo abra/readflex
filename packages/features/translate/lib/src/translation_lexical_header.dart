@@ -4,7 +4,8 @@ part of 'translate_sheet.dart';
 ///
 /// The selected word or phrase in `titleMedium` with its reading and
 /// pronunciation on one line; its part of speech and base form follow on a
-/// second line, all on the source text's own edge. The translation, not the
+/// second line ([_TranslationGrammarLine]), all on the source text's own
+/// edge. The translation, not the
 /// source, is the sheet's only large text. A word too wide for the line at a
 /// large text size shrinks instead of breaking.
 class _TranslationLexicalHeader extends StatelessWidget {
@@ -38,9 +39,6 @@ class _TranslationLexicalHeader extends StatelessWidget {
     final lemma = _nonEmptyText(analysis?.lemma);
     final showLemma =
         lemma != null && _normalized(lemma) != _normalized(selectedText);
-    final secondaryStyle = context.text.bodyMedium.copyWith(
-      color: context.colors.onSurfaceVariant,
-    );
     // Identical reading/pronunciation is shown once; a reading equal to the
     // word itself adds nothing.
     final visibleReading =
@@ -95,31 +93,10 @@ class _TranslationLexicalHeader extends StatelessWidget {
             ),
             if (hasGrammar) ...[
               const SizedBox(height: AppSpacing.xxs),
-              Wrap(
+              _TranslationGrammarLine(
+                partOfSpeech: partOfSpeech,
+                lemma: showLemma ? lemma : null,
                 textDirection: sourceDirection,
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.xxs,
-                children: [
-                  if (partOfSpeech != null)
-                    AppLexicalMetadataRow(
-                      partOfSpeech: partOfSpeech,
-                      textDirection: sourceDirection,
-                    ),
-                  if (showLemma)
-                    Wrap(
-                      textDirection: sourceDirection,
-                      spacing: AppSpacing.xs,
-                      children: [
-                        Text(l10n.translationBaseForm, style: secondaryStyle),
-                        Text(
-                          lemma,
-                          key: const ValueKey('translation-lemma'),
-                          textDirection: translationTextDirection(lemma),
-                          style: secondaryStyle,
-                        ),
-                      ],
-                    ),
-                ],
               ),
             ],
           ],

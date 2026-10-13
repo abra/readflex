@@ -87,7 +87,9 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get translationInExpression => '在表达中';
 
   @override
-  String get translationBaseForm => '原形：';
+  String translationBaseForm(String lemma) {
+    return '原形：$lemma';
+  }
 
   @override
   String get translationPosNoun => '名词';

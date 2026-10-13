@@ -261,11 +261,11 @@ abstract class ReadflexLocalizations {
   /// **'In the expression'**
   String get translationInExpression;
 
-  /// No description provided for @translationBaseForm.
+  /// The base form of the selected word, under it in the Translation sheet.
   ///
   /// In en, this message translates to:
-  /// **'Base form:'**
-  String get translationBaseForm;
+  /// **'Base form: {lemma}'**
+  String translationBaseForm(String lemma);
 
   /// No description provided for @translationPosNoun.
   ///

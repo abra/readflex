@@ -23,7 +23,7 @@
   "translationGeneralMeaning": "一般含义",
   "translationGeneralMeaningOf": "{word}的一般含义",
   "translationInExpression": "在表达中",
-  "translationBaseForm": "原形：",
+  "translationBaseForm": "原形：{lemma}",
   "translationPosNoun": "名词",
   "translationPosVerb": "动词",
   "translationPosAdjective": "形容词",

@@ -87,7 +87,9 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get translationInExpression => '表現の中で';
 
   @override
-  String get translationBaseForm => '基本形：';
+  String translationBaseForm(String lemma) {
+    return '基本形：$lemma';
+  }
 
   @override
   String get translationPosNoun => '名詞';

@@ -88,7 +88,9 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get translationInExpression => 'Dans l’expression';
 
   @override
-  String get translationBaseForm => 'Forme de base :';
+  String translationBaseForm(String lemma) {
+    return 'Forme de base : $lemma';
+  }
 
   @override
   String get translationPosNoun => 'Nom';

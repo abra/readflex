@@ -23,7 +23,7 @@
   "translationGeneralMeaning": "सामान्य अर्थ",
   "translationGeneralMeaningOf": "{word} का सामान्य अर्थ",
   "translationInExpression": "इस अभिव्यक्ति में",
-  "translationBaseForm": "मूल रूप:",
+  "translationBaseForm": "मूल रूप: {lemma}",
   "translationPosNoun": "संज्ञा",
   "translationPosVerb": "क्रिया",
   "translationPosAdjective": "विशेषण",

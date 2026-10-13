@@ -15,6 +15,7 @@ import 'translation_text_direction.dart';
 
 part 'translation_answer_style.dart';
 part 'translation_details.dart';
+part 'translation_grammar_line.dart';
 part 'translation_lexical_header.dart';
 part 'translation_selection_preview.dart';
 

@@ -87,7 +87,9 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get translationInExpression => 'في التعبير';
 
   @override
-  String get translationBaseForm => 'الصيغة الأساسية:';
+  String translationBaseForm(String lemma) {
+    return 'الصيغة الأساسية: $lemma';
+  }
 
   @override
   String get translationPosNoun => 'اسم';
