@@ -60,7 +60,7 @@ flowchart TB
 
   subgraph mobile["Readflex mobile app"]
     appShell["Flutter app shell\nlib/app"]
-    features["Feature packages\nlibrary, import_flow, reader, highlight, translate, dictionary"]
+    features["Feature packages\nlibrary, import_flow, reader, highlight, translate, dictionary, onboarding"]
     repos["Repositories and services\ncontent, preferences, connectivity, translation, dictionary, screen control"]
     db["Drift SQLite database\nreadflex.db"]
     files["App documents files\nbooks, articles, reader assets"]

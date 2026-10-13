@@ -63,6 +63,8 @@ dependencies:
     path: packages/features/dictionary
   reader:
     path: packages/features/reader
+  onboarding:
+    path: packages/features/onboarding
 
   # External packages
   flutter_bloc: ^9.1.1
@@ -107,11 +109,6 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
-
-  # Onboarding shows the app icon at 80dp. The 2.0x/3.0x variants beside it
-  # are picked by device pixel ratio, so the 1024px source is never decoded.
-  assets:
-    - assets/onboarding/app_icon.png
 
   # Fonts live physically inside packages/component_library/fonts/ but must
   # be declared here at the APP level to be bundled into the built app and

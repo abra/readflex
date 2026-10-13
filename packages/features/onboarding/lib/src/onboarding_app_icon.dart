@@ -1,9 +1,12 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 
-/// The app icon asset shown at the top of onboarding. Its 2.0x and 3.0x
-/// variants are resolved by device pixel ratio.
-const onboardingAppIconAsset = 'assets/onboarding/app_icon.png';
+/// The app icon shown at the top of onboarding, bundled with this package.
+/// Its 2.0x and 3.0x variants are resolved by device pixel ratio.
+const onboardingAppIcon = AssetImage(
+  'assets/app_icon.png',
+  package: 'onboarding',
+);
 
 /// The app's own icon, the one the reader just tapped, so the first screen
 /// reads as Readflex greeting them rather than as a promotion.
@@ -32,8 +35,8 @@ class OnboardingAppIcon extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: radius,
-        child: Image.asset(
-          onboardingAppIconAsset,
+        child: Image(
+          image: onboardingAppIcon,
           width: size,
           height: size,
           excludeFromSemantics: true,

@@ -91,6 +91,7 @@ run "highlight"                   "$FLUTTER test test/" "$SCRIPT_DIR/packages/fe
 run "translate"                   "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/translate"
 run "dictionary"                  "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/dictionary"
 run "reader"                      "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/reader"
+run "onboarding"                  "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/onboarding"
 
 echo ""
 echo "────────────────────────────"

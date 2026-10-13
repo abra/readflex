@@ -1,0 +1,30 @@
+name: onboarding
+description: First-launch welcome screen.
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  component_library:
+    path: ../../component_library
+  readflex_localizations:
+    path: ../../readflex_localizations
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Onboarding shows the app icon at 80dp. The 2.0x/3.0x variants beside it
+  # are picked by device pixel ratio, so the 1024px source is never decoded.
+  assets:
+    - assets/app_icon.png

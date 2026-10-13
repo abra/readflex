@@ -3,10 +3,10 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:readflex/app/screens/onboarding_app_icon.dart';
-import 'package:readflex/app/screens/onboarding_feature_list.dart';
-import 'package:readflex/app/screens/onboarding_heading.dart';
-import 'package:readflex/app/screens/onboarding_screen.dart';
+import 'package:onboarding/onboarding.dart';
+import 'package:onboarding/src/onboarding_app_icon.dart';
+import 'package:onboarding/src/onboarding_feature_list.dart';
+import 'package:onboarding/src/onboarding_heading.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'golden_support.dart';
@@ -39,7 +39,7 @@ void main() {
     );
     await tester.runAsync(
       () => precacheImage(
-        const AssetImage(onboardingAppIconAsset),
+        onboardingAppIcon,
         tester.element(find.byType(OnboardingScreen)),
       ),
     );
@@ -67,7 +67,7 @@ void main() {
           matching: find.byType(Image),
         ),
       );
-      expect((image.image as AssetImage).assetName, onboardingAppIconAsset);
+      expect(image.image, onboardingAppIcon);
       expect(image.excludeFromSemantics, isTrue);
       expect(
         tester.getSize(find.byType(OnboardingAppIcon)),

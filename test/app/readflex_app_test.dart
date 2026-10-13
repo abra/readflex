@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:library_feature/library_feature.dart';
+import 'package:onboarding/onboarding.dart';
 import 'package:readflex/app/routing.dart';
-import 'package:readflex/app/screens/onboarding_screen.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import '../support/ui_test_app.dart';

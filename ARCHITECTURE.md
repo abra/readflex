@@ -72,7 +72,7 @@ The root package (`readflex`) is the composition and integration layer.
 | `lib/app/readflex_app.dart` | Material app, theme/locale and a router retained across preference changes. |
 | `lib/app/app_lifecycle.dart` | Restores a stopped reader server on iOS resume; best-effort resource disposal on detach, not pause or widget unmount. |
 | `lib/app/routing.dart` | GoRouter route table, route guards, navigation callbacks, feature wiring. |
-| `lib/app/screens` | App-only screens that are not reusable feature packages. |
+| `lib/app/screens` | Recovery screen for a failed bootstrap, shown before dependencies and the router exist. |
 
 There is no global service locator. App-wide objects are created once in
 `composition.dart`, stored in `DependenciesContainer`, mounted in the widget
@@ -291,6 +291,7 @@ they keep their upstream license, structure and style, and each one's
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `readflex_localizations`, `shared` |
 | `translate` | Reader text action and contextual translation bottom sheet. | `component_library`, `contextual_translation_service`, `preferences_service`, `readflex_localizations`, `shared` |
 | `dictionary` | Reader Define action and monolingual definition bottom sheet with system-first fallback. | `component_library`, `dictionary_service`, `readflex_localizations`, `shared` |
+| `onboarding` | First-launch welcome screen; the router persists completion and picks the destination. | `component_library`, `readflex_localizations` |
 
 `library_feature` is the Dart package name because `library` is a Dart language
 keyword in source syntax. The user-facing label remains "Library".
@@ -619,10 +620,10 @@ feature package      UI and state management
 - It passes repositories/services from `DependenciesContainer`.
 - It creates navigation callbacks and result callbacks.
 - It gates entry routes such as onboarding. Onboarding is one welcome screen
-  (`lib/app/screens/`): the app icon, "Welcome to Readflex" and four feature
-  rows of equal weight. Selecting text is taught in the reader by its one-time
-  tip, not drawn here. Both Add your first book and Not now mark it completed
-  before going to Library.
+  (the `onboarding` feature): the app icon, "Welcome to Readflex" and four
+  feature rows of equal weight. Selecting text is taught in the reader by its
+  one-time tip, not drawn here. Both Add your first book and Not now mark it
+  completed before going to Library.
 Features should express navigation needs through callbacks. They should not
 call GoRouter to navigate to sibling features directly.
 

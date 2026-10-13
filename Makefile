@@ -30,7 +30,8 @@ PACKAGES = \
 	packages/features/highlight \
 	packages/features/translate \
 	packages/features/dictionary \
-	packages/features/reader
+	packages/features/reader \
+	packages/features/onboarding
 
 ROOT_ANALYZE_PATHS = lib test integration_test test_driver benchmarks
 
