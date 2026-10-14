@@ -187,6 +187,38 @@ forms retain explicit dismissal and never bypass their discard decision.
 The import cubit retains URL drafts across menu navigation, not across closing
 the sheet; closing still does not cancel an already-started import.
 
+## Wide Windows
+
+Layouts follow the window, never the device. `AppWindowSize.isWide` in
+`component_library` is the one rule: a window at least 840 wide (Material
+expanded) and 480 tall (medium). Phones in either orientation and narrow iPad
+Split View windows keep the phone layout; full-screen iPads and large windows
+get the wide one. It reads `MediaQuery.sizeOf`, so callers rebuild only when
+the window is resized or rotated. Features decide with it or with their own
+`LayoutBuilder` constraints, and keep one widget tree per surface: a number
+(columns, a width cap) is a parameter of the existing widget, a different
+structure would be its own widget chosen in one place. Phone layouts are
+unchanged; the phone golden profiles prove it.
+
+- Library: the grid adds columns once covers would pass 160dp, the list shows
+  two columns of rows, and the empty state stops at the onboarding width
+  (`AppSizes.centeredColumnMaxWidth`).
+- Reader: a measure of 32em of body text and the Auto / One / Two Columns
+  choice reach foliate through `FoliateStyle`; foliate lays out one column or
+  a landscape spread in one pass, and articles keep one centred column. See
+  the reader and reader_webview READMEs.
+
+Reading text size is not a layout, so it has its own rule: a tablet-sized
+window, at least 600 on its shortest side (Android's `sw600dp`), renders book
+and article text 12.5% larger (`readerDeviceFontScale` in the reader). The
+shortest side ignores orientation, so rotation never resizes the text, phones
+stay phones in landscape, and a narrow Split View window reads like a phone.
+The reader's own text size stays at 100%; the multiplier only reaches
+`FoliateStyle`.
+
+Bottom sheets keep Material's 640dp width on wide windows. Side panels and
+popovers for tablets are not implemented.
+
 ## Localization
 
 `readflex_localizations` is the single source of truth for supported locales,
@@ -695,6 +727,8 @@ second production dependency path.
 
 `make test-ui` runs these root flows and exact golden comparisons using bundled
 fonts and explicit light/dark, compact/large-text, landscape, and RTL/tablet profiles.
+Wide-window goldens (`tablet_layout_golden_test.dart`) render the changed
+surfaces at 1032 × 1376 and 1376 × 1032 in the existing profiles' themes.
 `make update-goldens` is a separate, deliberate baseline update. Test fonts and
 committed PNG baselines are not application assets. `make test-device DEVICE=<id>`
 is opt-in and preserves the device's real viewport. It records screenshots under

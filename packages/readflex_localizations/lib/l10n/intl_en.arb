@@ -693,6 +693,22 @@
   "@readerPageTurnVerticalShort": {
     "description": "Short label of the vertical page-turn option"
   },
+  "readerColumns": "Columns",
+  "@readerColumns": {
+    "description": "Appearance section title: how many text columns a book page shows in a wide window"
+  },
+  "readerColumnsAuto": "Auto",
+  "@readerColumnsAuto": {
+    "description": "Columns option: one column in portrait, two pages side by side in landscape"
+  },
+  "readerColumnsOne": "One",
+  "@readerColumnsOne": {
+    "description": "Columns option: always one column"
+  },
+  "readerColumnsTwo": "Two",
+  "@readerColumnsTwo": {
+    "description": "Columns option: always two pages side by side"
+  },
   "readerChapterRead": "Read",
   "@readerChapterRead": {
     "description": "Accessibility value of a chapter before the current one"

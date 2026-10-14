@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +9,34 @@ import 'library_grid_tile.dart';
 import 'library_selection_cubit.dart';
 import 'library_layout.dart';
 
-/// Lazy grid with up to three columns, leaving room for scaled cover text.
+// A tile keeps room for its cover text at normal size: three columns at
+// 320dp. Text scales both limits up to 150%.
+const double _kGridMinTileWidth = 88;
+// Wider windows add columns rather than grow covers past this.
+const double _kGridMaxTileWidth = 160;
+// The most columns that fit phone-sized covers.
+const int _kGridFittingMaxColumns = 6;
+const double _kGridMaxTextScale = 1.5;
+
+/// Columns of the Library grid in [width] logical pixels.
+///
+/// Phones fit as many tiles as their text allows, up to six. A wider window
+/// adds a column whenever covers would pass the largest tile, so a tablet
+/// shows more covers instead of bigger ones; phone results stay the same.
+@visibleForTesting
+int libraryGridColumnCount(double width, {required double textScale}) {
+  final scale = textScale.clamp(1.0, _kGridMaxTextScale);
+  // Tiles plus one gap each fill the width inside the gutters plus one gap.
+  final space = width - AppSpacing.lg * 2 + AppSpacing.md;
+  final fitting = (space / (_kGridMinTileWidth * scale + AppSpacing.md))
+      .floor()
+      .clamp(1, _kGridFittingMaxColumns);
+  final bounded = (space / (_kGridMaxTileWidth * scale + AppSpacing.md)).ceil();
+  return math.max(fitting, bounded);
+}
+
+/// Lazy grid with up to three columns on phones, leaving room for scaled
+/// cover text; wider windows add columns (see [libraryGridColumnCount]).
 ///
 /// A non-null [continueReadingSource] puts its full-width card above the
 /// grid, scrolling with it; [sources] leave it out.
@@ -35,15 +64,10 @@ class LibraryGridView extends StatelessWidget {
     final textScale = MediaQuery.textScalerOf(context).scale(12) / 12;
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Keep three columns at 320dp with normal text; enlarged text gets two.
-        final minTileWidth = 88 * textScale.clamp(1.0, 1.5);
-        final columns =
-            ((constraints.maxWidth - AppSpacing.lg * 2 + AppSpacing.md) /
-                    (minTileWidth + AppSpacing.md))
-                .floor()
-                // Phones stay at three columns; tablets get more instead of
-                // oversized covers.
-                .clamp(1, 6);
+        final columns = libraryGridColumnCount(
+          constraints.maxWidth,
+          textScale: textScale,
+        );
         return CustomScrollView(
           controller: scrollController,
           physics: const AlwaysScrollableScrollPhysics(

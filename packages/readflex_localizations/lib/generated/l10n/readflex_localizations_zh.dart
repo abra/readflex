@@ -1133,6 +1133,18 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get readerPageTurnVerticalShort => '纵向';
 
   @override
+  String get readerColumns => '分栏';
+
+  @override
+  String get readerColumnsAuto => '自动';
+
+  @override
+  String get readerColumnsOne => '单栏';
+
+  @override
+  String get readerColumnsTwo => '双栏';
+
+  @override
   String get readerChapterRead => '已读';
 
   @override

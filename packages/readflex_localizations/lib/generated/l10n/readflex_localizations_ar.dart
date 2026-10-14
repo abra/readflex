@@ -1172,6 +1172,18 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get readerPageTurnVerticalShort => 'عمودي';
 
   @override
+  String get readerColumns => 'الأعمدة';
+
+  @override
+  String get readerColumnsAuto => 'تلقائي';
+
+  @override
+  String get readerColumnsOne => 'عمود';
+
+  @override
+  String get readerColumnsTwo => 'عمودان';
+
+  @override
   String get readerChapterRead => 'مقروء';
 
   @override

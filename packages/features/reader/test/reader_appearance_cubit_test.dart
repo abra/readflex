@@ -132,6 +132,50 @@ void main() {
     );
 
     blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
+      'setColumns persists a source-specific override',
+      build: () => ReaderAppearanceCubit(
+        preferencesService: preferencesService,
+        sourceId: _sourceId,
+      ),
+      act: (cubit) => cubit.setColumns(ReaderColumns.two),
+      expect: () => [
+        isA<ReaderAppearanceState>().having(
+          (s) => s.effectiveAppearance.columns,
+          'columns',
+          ReaderColumns.two,
+        ),
+      ],
+      verify: (cubit) {
+        expect(
+          preferencesService.readerAppearanceOverrideFor(_sourceId)?.columns,
+          ReaderColumns.two,
+        );
+        expect(cubit.state.hasOverride, isTrue);
+      },
+    );
+
+    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
+      'choosing the global columns clears the override, Reset clears it too',
+      build: () => ReaderAppearanceCubit(
+        preferencesService: preferencesService,
+        sourceId: _sourceId,
+      ),
+      act: (cubit) async {
+        await cubit.setColumns(ReaderColumns.one);
+        await cubit.setColumns(ReaderColumns.auto);
+        await cubit.setColumns(ReaderColumns.two);
+        await cubit.reset();
+      },
+      verify: (cubit) {
+        expect(cubit.state.effectiveAppearance.columns, ReaderColumns.auto);
+        expect(
+          preferencesService.readerAppearanceOverrideFor(_sourceId),
+          isNull,
+        );
+      },
+    );
+
+    blocTest<ReaderAppearanceCubit, ReaderAppearanceState>(
       'PDF pages trim margins and follow the theme until a book opts out',
       build: () => ReaderAppearanceCubit(
         preferencesService: preferencesService,

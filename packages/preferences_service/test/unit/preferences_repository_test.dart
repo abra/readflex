@@ -79,6 +79,7 @@ void main() {
         readerPageTurnStyle: ReaderPageTurnStyle.vertical,
         readerTrimPageMargins: false,
         readerPageColors: ReaderPageColors.original,
+        readerColumns: ReaderColumns.one,
         readerSearchHistory: ['design patterns', 'bloc'],
         readerBrightness: 0.65,
         readerLastCustomBrightness: 0.8,
@@ -93,6 +94,7 @@ void main() {
             pageTurnStyle: ReaderPageTurnStyle.horizontal,
             trimPageMargins: true,
             pageColors: ReaderPageColors.theme,
+            columns: ReaderColumns.two,
             brightnessOverride: 0.42,
           ),
         },
@@ -116,6 +118,7 @@ void main() {
               pageTurnStyle: ReaderPageTurnStyle.horizontal,
               trimPageMargins: true,
               pageColors: ReaderPageColors.theme,
+              columns: ReaderColumns.two,
               brightnessOverride: 0.42,
             ),
           },
@@ -150,6 +153,7 @@ void main() {
       expect(map['readerUseBookLayout'], isFalse);
       expect(map['readerTrimPageMargins'], isTrue);
       expect(map['readerPageColors'], 'theme');
+      expect(map['readerColumns'], 'auto');
       expect(map['readerPageTurnStyle'], 'vertical');
       expect(map.containsKey('readerBrightnessOverride'), isFalse);
       expect(map['readerBrightness'], isNull);
@@ -235,6 +239,7 @@ void main() {
         expect(prefs.readerPageTurnStyle, ReaderPageTurnStyle.horizontal);
         expect(prefs.readerTrimPageMargins, isTrue);
         expect(prefs.readerPageColors, ReaderPageColors.theme);
+        expect(prefs.readerColumns, ReaderColumns.auto);
         expect(prefs.readerSearchHistory, isEmpty);
         expect(prefs.readerBrightness, isNull);
         expect(prefs.readerLastCustomBrightness, 0.7);

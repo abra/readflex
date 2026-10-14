@@ -22,7 +22,7 @@ class OnboardingScreen extends StatelessWidget {
 
   /// Content and actions stop growing at this width, so a tablet keeps the
   /// phone's single column instead of stretching rows and buttons.
-  static const maxContentWidth = 480.0;
+  static const maxContentWidth = AppSizes.centeredColumnMaxWidth;
 
   /// Space between the greeting and the feature list.
   static const featuresSpacing = AppSpacing.xl + AppSpacing.sm;

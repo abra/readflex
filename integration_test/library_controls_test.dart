@@ -34,7 +34,14 @@ void main() {
   }
 
   void expectSheetCloseAlignment(WidgetTester tester) {
-    final sheet = find.byType(BottomSheet).last;
+    // The sheet's surface: on a wide window the BottomSheet spans the screen
+    // and centres its 640dp Material.
+    final sheet = find
+        .descendant(
+          of: find.byType(BottomSheet).last,
+          matching: find.byType(Material),
+        )
+        .first;
     final header = find.ancestor(
       of: find.widgetWithIcon(AppPlainIconButton, AppIcons.close).hitTestable(),
       matching: find.byType(BottomSheetHeader),

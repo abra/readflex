@@ -64,6 +64,7 @@ import 'reader_swipe_to_delete.dart';
 import 'reader_system_ui_overlay.dart';
 import 'reader_tap_action.dart';
 import 'reader_tap_zone_hint.dart';
+import 'reader_text_columns.dart';
 import 'reader_text_line_height.dart';
 import 'reader_toc_active_index.dart';
 import 'reader_toc_progress.dart';

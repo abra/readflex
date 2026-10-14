@@ -23,6 +23,11 @@ import 'library_layout.dart';
 ///
 /// A non-null [continueReadingSource] puts its full-width card first,
 /// scrolling with the rows; [sources] leave it out.
+///
+/// A wide window ([AppWindowSize]) lays the rows out in two columns, read
+/// across then down, so a tablet line neither stretches a row nor leaves it
+/// mostly empty. Each line is as tall as its taller row; rows keep their own
+/// height, and every line after the first starts with both hairlines.
 class LibraryListView extends StatelessWidget {
   const LibraryListView({
     required this.sources,
@@ -47,6 +52,8 @@ class LibraryListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final continueReadingSource = this.continueReadingSource;
     final leadingCount = continueReadingSource == null ? 0 : 1;
+    final columns = AppWindowSize.isWide(context) ? 2 : 1;
+    final lineCount = (sources.length + columns - 1) ~/ columns;
     // Rows own the 16dp gutter so selection tints and the swipe background
     // run edge to edge.
     return ListView.builder(
@@ -58,7 +65,7 @@ class LibraryListView extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
-      itemCount: sources.length + leadingCount,
+      itemCount: lineCount + leadingCount,
       itemBuilder: (context, itemIndex) {
         if (continueReadingSource != null && itemIndex == 0) {
           // The first row's own top padding completes the gap below.
@@ -76,29 +83,106 @@ class LibraryListView extends StatelessWidget {
             ),
           );
         }
-        final index = itemIndex - leadingCount;
-        final source = sources[index];
-        final tile = BookLibraryListTile(
-          source: source,
-          isSelected: selection.contains(source.id),
-          isSelectionMode: selection.isActive,
-          showTopDivider: index > 0,
-          onTap: () => onSourcePressed(source),
-          onLongPress: () => onSourceLongPressed(source),
-        );
-
-        if (selection.isActive) {
-          return tile;
+        final line = itemIndex - leadingCount;
+        if (columns == 1) {
+          return _LibraryListRow(
+            source: sources[line],
+            selection: selection,
+            showTopDivider: line > 0,
+            onSourcePressed: onSourcePressed,
+            onSourceLongPressed: onSourceLongPressed,
+            onConfirmSwipeDelete: onConfirmSwipeDelete,
+          );
         }
-
-        return Dismissible(
-          key: ValueKey('library-row-${source.id}'),
-          direction: DismissDirection.endToStart,
-          background: const _SwipeDeleteBackground(),
-          confirmDismiss: (_) => onConfirmSwipeDelete(source),
-          child: tile,
+        final first = line * 2;
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _LibraryListRow(
+                source: sources[first],
+                selection: selection,
+                showTopDivider: line > 0,
+                gutters: _kStartColumnGutters,
+                onSourcePressed: onSourcePressed,
+                onSourceLongPressed: onSourceLongPressed,
+                onConfirmSwipeDelete: onConfirmSwipeDelete,
+              ),
+            ),
+            Expanded(
+              child: first + 1 < sources.length
+                  ? _LibraryListRow(
+                      source: sources[first + 1],
+                      selection: selection,
+                      showTopDivider: line > 0,
+                      gutters: _kEndColumnGutters,
+                      onSourcePressed: onSourcePressed,
+                      onSourceLongPressed: onSourceLongPressed,
+                      onConfirmSwipeDelete: onConfirmSwipeDelete,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
         );
       },
+    );
+  }
+}
+
+// Two columns keep the screen gutters outside and the grid's 12dp gap
+// between them.
+const _kStartColumnGutters = EdgeInsetsDirectional.only(
+  start: AppSpacing.lg,
+  end: AppSpacing.md / 2,
+);
+const _kEndColumnGutters = EdgeInsetsDirectional.only(
+  start: AppSpacing.md / 2,
+  end: AppSpacing.lg,
+);
+
+/// One source row; swiping it deletes the source unless a selection is
+/// active.
+class _LibraryListRow extends StatelessWidget {
+  const _LibraryListRow({
+    required this.source,
+    required this.selection,
+    required this.showTopDivider,
+    required this.onSourcePressed,
+    required this.onSourceLongPressed,
+    required this.onConfirmSwipeDelete,
+    this.gutters = kLibraryListRowGutters,
+  });
+
+  final LibrarySource source;
+  final LibrarySelectionState selection;
+  final bool showTopDivider;
+  final EdgeInsetsDirectional gutters;
+  final void Function(LibrarySource source) onSourcePressed;
+  final void Function(LibrarySource source) onSourceLongPressed;
+  final Future<bool> Function(LibrarySource source) onConfirmSwipeDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final tile = BookLibraryListTile(
+      source: source,
+      isSelected: selection.contains(source.id),
+      isSelectionMode: selection.isActive,
+      showTopDivider: showTopDivider,
+      gutters: gutters,
+      onTap: () => onSourcePressed(source),
+      onLongPress: () => onSourceLongPressed(source),
+    );
+
+    if (selection.isActive) {
+      return tile;
+    }
+
+    return Dismissible(
+      key: ValueKey('library-row-${source.id}'),
+      direction: DismissDirection.endToStart,
+      background: const _SwipeDeleteBackground(),
+      confirmDismiss: (_) => onConfirmSwipeDelete(source),
+      child: tile,
     );
   }
 }

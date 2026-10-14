@@ -1,4 +1,5 @@
 import { markReaderStartup } from './readflex_startup.js'
+import { pageColumnLayout } from './readflex_page_columns.js'
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -840,6 +841,8 @@ export class Paginator extends HTMLElement {
     this.#container.append(this.#view.element)
     return this.#view
   }
+  // Readflex: the last Auto column decision, kept across height-only resizes.
+  #autoColumns = null
   #beforeRender({ vertical, rtl }) {
     this.#selectionScrollOffset = null
     this.#vertical = vertical
@@ -919,11 +922,17 @@ export class Paginator extends HTMLElement {
       return { flow, margin, gap, columnWidth, topMargin, bottomMargin }
     }
 
-    const divisor = maxColumnCount == 0
-      ? Math.min(2, Math.ceil(size / maxInlineSize))
-      : maxColumnCount
-
-    const columnWidth = (size / divisor) - gap
+    // Readflex patch: an explicit max-inline-size is the reader's measure for
+    // horizontal text. Columns keep it by widening the margins, and Auto
+    // (max-column-count 0) picks a spread from it; see readflex_page_columns.
+    const measure = !vertical && this.hasAttribute('max-inline-size')
+      ? maxInlineSize
+      : null
+    const { columns: divisor, gap: columnGap, columnWidth, auto } = pageColumnLayout({
+      width, height, size, gap, maxColumnCount, maxInlineSize, measure,
+      previous: this.#autoColumns,
+    })
+    this.#autoColumns = auto
     this.setAttribute('dir', this.#rtl ? 'rtl' : 'ltr')
 
     const marginalDivisor = vertical
@@ -931,7 +940,7 @@ export class Paginator extends HTMLElement {
       : divisor
     const marginalStyle = {
       gridTemplateColumns: `repeat(${marginalDivisor}, 1fr)`,
-      gap: `${gap}px`,
+      gap: `${columnGap}px`,
       direction: this.#pageProgressionRtl ? 'rtl' : 'ltr',
     }
     // Object.assign(this.#header.style, marginalStyle)
@@ -943,7 +952,7 @@ export class Paginator extends HTMLElement {
     // this.#header.replaceChildren(...heads)
     // this.#footer.replaceChildren(...feet)
 
-    return { height, width, margin, gap, columnWidth, topMargin, bottomMargin }
+    return { height, width, margin, gap: columnGap, columnWidth, topMargin, bottomMargin }
   }
   render() {
     if (!this.#view) return

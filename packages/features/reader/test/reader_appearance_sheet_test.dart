@@ -1465,6 +1465,222 @@ void main() {
     semantics.dispose();
   });
 
+  group('text columns', () {
+    const tabletLandscape = Size(1376, 1032);
+    final columnsControl = find.byKey(const ValueKey('reader-columns-control'));
+
+    void setWindow(WidgetTester tester, Size size) {
+      tester.view
+        ..physicalSize = size
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+    }
+
+    // A fresh host, so a sheet from the previous case cannot cover "Open".
+    Future<void> reopen(
+      WidgetTester tester, {
+      bool showColumnControls = false,
+      bool pdfControls = false,
+      Locale locale = const Locale('en'),
+      TextScaler textScaler = TextScaler.noScaling,
+    }) async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.openAppearanceSheet(
+        cubit,
+        showColumnControls: showColumnControls,
+        pdfControls: pdfControls,
+        locale: locale,
+        textScaler: textScaler,
+      );
+    }
+
+    testWidgets('a narrow window never offers columns', (tester) async {
+      for (final size in const [Size(390, 844), Size(844, 390)]) {
+        setWindow(tester, size);
+        await reopen(tester, showColumnControls: true);
+        final l10n = tester.element(find.byType(BottomSheet)).l10n;
+
+        expect(
+          find.byType(BottomSheet),
+          findsOneWidget,
+          reason: 'the sheet is open',
+        );
+        expect(columnsControl, findsNothing, reason: '$size');
+        expect(find.text(l10n.readerColumns), findsNothing, reason: '$size');
+      }
+    });
+
+    testWidgets('a wide window offers columns to reflowable books only', (
+      tester,
+    ) async {
+      setWindow(tester, tabletLandscape);
+      // Articles and PDF pages: the caller leaves the row out.
+      await reopen(tester);
+      expect(
+        find.byType(BottomSheet),
+        findsOneWidget,
+        reason: 'the sheet is open',
+      );
+      expect(columnsControl, findsNothing);
+      await reopen(tester, pdfControls: true);
+      expect(
+        find.byType(BottomSheet),
+        findsOneWidget,
+        reason: 'the sheet is open',
+      );
+      expect(columnsControl, findsNothing);
+
+      await reopen(tester, showColumnControls: true);
+      final l10n = tester.element(find.byType(BottomSheet)).l10n;
+      await tester.ensureVisible(columnsControl);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.readerColumns), findsOneWidget);
+      for (final label in [
+        l10n.readerColumnsAuto,
+        l10n.readerColumnsOne,
+        l10n.readerColumnsTwo,
+      ]) {
+        expect(
+          find.descendant(of: columnsControl, matching: find.text(label)),
+          findsOneWidget,
+          reason: label,
+        );
+      }
+      // Columns follow page turn, the last labeled choice.
+      expect(
+        tester.getTopLeft(columnsControl).dy,
+        greaterThan(
+          tester
+              .getBottomLeft(
+                find.byKey(const ValueKey('reader-page-turn-control')),
+              )
+              .dy,
+        ),
+      );
+    });
+
+    testWidgets('choices ink and persist per book; Auto inherits', (
+      tester,
+    ) async {
+      setWindow(tester, tabletLandscape);
+      await tester.openAppearanceSheet(cubit, showColumnControls: true);
+      final l10n = tester.element(find.byType(BottomSheet)).l10n;
+      await tester.ensureVisible(columnsControl);
+      await tester.pumpAndSettle();
+      final selectedForeground = tester
+          .element(columnsControl)
+          .colors
+          .selectedControlForeground;
+      Color? iconColor(IconData icon) =>
+          IconTheme.of(tester.element(find.byIcon(icon))).color;
+
+      expect(iconColor(AppIcons.columnsAuto), selectedForeground);
+      expect(iconColor(AppIcons.columnsTwo), isNot(selectedForeground));
+
+      await tester.tap(find.text(l10n.readerColumnsTwo));
+      await tester.pumpAndSettle();
+      expect(cubit.state.effectiveAppearance.columns, ReaderColumns.two);
+      expect(
+        preferencesService.readerAppearanceOverrideFor(_sourceId)?.columns,
+        ReaderColumns.two,
+      );
+      expect(iconColor(AppIcons.columnsTwo), selectedForeground);
+      expect(iconColor(AppIcons.columnsAuto), isNot(selectedForeground));
+
+      await tester.tap(find.text(l10n.readerColumnsOne));
+      await tester.pumpAndSettle();
+      expect(cubit.state.effectiveAppearance.columns, ReaderColumns.one);
+
+      await tester.tap(find.text(l10n.readerColumnsAuto));
+      await tester.pumpAndSettle();
+      expect(cubit.state.effectiveAppearance.columns, ReaderColumns.auto);
+      expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
+    });
+
+    testWidgets('the row follows the window while the sheet is open', (
+      tester,
+    ) async {
+      setWindow(tester, tabletLandscape);
+      await tester.openAppearanceSheet(cubit, showColumnControls: true);
+      expect(columnsControl, findsOneWidget);
+
+      // Split View narrows the app below the wide threshold.
+      tester.view.physicalSize = const Size(678, 1032);
+      await tester.pumpAndSettle();
+      expect(columnsControl, findsNothing);
+
+      tester.view.physicalSize = tabletLandscape;
+      await tester.pumpAndSettle();
+      expect(columnsControl, findsOneWidget);
+    });
+
+    testWidgets('choices announce their names and selection', (tester) async {
+      final semantics = tester.ensureSemantics();
+      setWindow(tester, tabletLandscape);
+      await cubit.setColumns(ReaderColumns.one);
+      await tester.openAppearanceSheet(cubit, showColumnControls: true);
+      final l10n = tester.element(find.byType(BottomSheet)).l10n;
+      await tester.ensureVisible(columnsControl);
+      await tester.pumpAndSettle();
+
+      for (final (label, selected) in [
+        (l10n.readerColumnsAuto, false),
+        (l10n.readerColumnsOne, true),
+        (l10n.readerColumnsTwo, false),
+      ]) {
+        expect(
+          tester.getSemantics(find.text(label)),
+          isSemantics(
+            label: label,
+            isButton: true,
+            isEnabled: true,
+            hasSelectedState: true,
+            isSelected: selected,
+            isInMutuallyExclusiveGroup: true,
+            hasTapAction: true,
+          ),
+          reason: label,
+        );
+      }
+      semantics.dispose();
+    });
+
+    testWidgets('every locale and 200% text keep the row on screen', (
+      tester,
+    ) async {
+      setWindow(tester, const Size(1032, 1376));
+      for (final locale in ReadflexSupportedLocales.locales) {
+        for (final scale in const [1.0, 2.0]) {
+          await reopen(
+            tester,
+            showColumnControls: true,
+            locale: locale,
+            textScaler: TextScaler.linear(scale),
+          );
+          await tester.ensureVisible(columnsControl);
+          await tester.pumpAndSettle();
+          final l10n = tester.element(find.byType(BottomSheet)).l10n;
+          for (final label in [
+            l10n.readerColumnsAuto,
+            l10n.readerColumnsOne,
+            l10n.readerColumnsTwo,
+          ]) {
+            final text = find.text(label);
+            expect(text, findsOneWidget, reason: '$locale $scale $label');
+            final paragraph = tester.renderObject<RenderParagraph>(text);
+            expect(
+              paragraph.didExceedMaxLines,
+              isFalse,
+              reason: '$locale $scale $label',
+            );
+          }
+          expect(tester.takeException(), isNull, reason: '$locale $scale');
+        }
+      }
+    });
+  });
+
   testWidgets('appearance controls keep named 48dp targets', (tester) async {
     tester.view.physicalSize = const Size(390, 1400);
     tester.view.devicePixelRatio = 1;
@@ -1713,6 +1929,7 @@ extension on WidgetTester {
   Future<void> openAppearanceSheet(
     ReaderAppearanceCubit cubit, {
     bool showPageTurnControls = true,
+    bool showColumnControls = false,
     bool pdfControls = false,
     Locale locale = const Locale('en'),
     bool disableAnimations = false,
@@ -1746,6 +1963,7 @@ extension on WidgetTester {
                     onPressed: () => showReaderAppearanceSheet(
                       context,
                       showPageTurnControls: showPageTurnControls,
+                      showColumnControls: showColumnControls,
                       pdfControls: pdfControls,
                     ),
                     child: const Text('Open'),

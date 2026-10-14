@@ -162,6 +162,54 @@ the final page-turn control and font sample. Native reader flows check equal
 step heights, manual return, DOM style updates,
 persistence across reopening and reset to inherited settings.
 
+### Text columns in wide windows
+
+A wide window (`AppWindowSize.isWide`: at least 840 × 480, never a phone)
+keeps lines readable. `readerTextColumns` (`reader_text_columns.dart`) gives
+`FoliateStyle` a measure of `kReaderMaxLineWidthEm` (32em of body text, about
+68 characters) and the reader's Columns choice:
+
+- **Auto** (default, `maxColumnCount` 0): one column in portrait; in
+  landscape two pages side by side while each keeps most of the measure, so
+  large text or a short window falls back to one column.
+- **One**: one column at the measure; the margins grow around it.
+- **Two**: a spread in either orientation.
+
+Foliate applies it in one layout pass, including on rotation, so the style
+reaches the WebView again only when the window crosses the wide threshold or
+the choice changes. Narrow windows, phones included, keep one column across
+the page whatever the choice says; articles always keep one column at the
+measure; PDF and comic pages keep their own layout. Appearance shows
+**Columns** (Auto / One / Two, under Page turn) only for reflowable books in a
+wide window (`showReaderAppearanceSheet(showColumnControls:)`); the choice is
+a per-book override like the other rows (`ReaderAppearanceCubit.setColumns`,
+`ReaderAppearanceOverride.columns`) and Reset clears it. Root
+`test/ui/reader_text_layout_test.dart` follows the style through window
+changes; `reader_webview` browser tests cover the layout itself.
+
+### Text size in tablet-sized windows
+
+`readerDeviceFontScale` (`reader_device_font_scale.dart`) multiplies the base
+font size that `FoliateStyle` sends to the page. The reader's own text size
+(100% by default in Appearance) applies on top and never changes. It combines
+two independent corrections:
+
+- A tablet-sized window, at least 600 on its shortest side like Android's
+  `sw600dp`, gets 12.5% larger text on every platform: 18px instead of 16px.
+  A tablet is held further away, and the 32em measure grows with the text, so
+  lines keep their length in characters. The shortest side ignores
+  orientation: rotation never resizes the text, phones stay phones in
+  landscape, and a narrow Split View or Slide Over window reads like a phone.
+  The style reaches the WebView again only when a resize crosses that
+  threshold.
+- Android WebViews render text smaller than iOS at the same size, so Android
+  adds up to 12% on phones and 4% on tablets.
+
+The platform is `defaultTargetPlatform`, not the `Theme`'s: the correction
+belongs to the WebView engine the app runs on, which the plugin picks the same
+way. Books and articles share the multiplier; PDF and comic pages are images
+and ignore it.
+
 ```dart
 abstract class TextAction {
   String get label;

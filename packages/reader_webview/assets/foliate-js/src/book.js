@@ -3580,6 +3580,16 @@ const shouldUpdateReaderCSS = (oldStyle, nextStyle, flow) => {
   return readerCSSKeys.some(key => oldStyle?.[key] !== nextStyle?.[key])
 }
 
+// Readflex: the reader's measure in CSS pixels, from ems of the body text
+// (`getReaderStylePrelude` sizes it 16px × fontSize × textScale), so a line
+// keeps its length in characters at every text size. `null` without one.
+const maxLineWidthPx = style => {
+  const em = Number(style?.maxLineWidthEm)
+  if (!Number.isFinite(em) || em <= 0) return null
+  const proseFontSize = 16 * (Number(style.fontSize) || 1) * (Number(style.textScale) || 1)
+  return Math.round(em * proseFontSize)
+}
+
 const setRendererAttribute = (renderer, name, value) => {
   const nextValue = `${value ?? ''}`
   if (renderer.getAttribute(name) === nextValue) return
@@ -3629,6 +3639,12 @@ const setStyle = (oldStyle) => {
   setRendererAttribute(renderer, 'background-color', style.backgroundColor)
   applyShellThemeColors()
   setRendererAttribute(renderer, 'max-column-count', style.maxColumnCount)
+  // Readflex patch: wide windows cap each column at the reader's measure;
+  // without one a column spans the page.
+  const maxLineWidth = maxLineWidthPx(style)
+  maxLineWidth
+    ? setRendererAttribute(renderer, 'max-inline-size', `${maxLineWidth}px`)
+    : removeRendererAttribute(renderer, 'max-inline-size')
   setRendererAttribute(renderer, 'bgimg-url', style.backgroundImage)
 
   turn.animated ? setRendererAttribute(renderer, 'animated', 'true')

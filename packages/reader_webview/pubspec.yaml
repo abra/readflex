@@ -36,6 +36,7 @@ flutter:
     - assets/foliate-js/src/progress.js
     - assets/foliate-js/src/text-walker.js
     - assets/foliate-js/src/paginator.js
+    - assets/foliate-js/src/readflex_page_columns.js
     - assets/foliate-js/src/tts.js
     - assets/foliate-js/src/search.js
     - assets/foliate-js/src/readflex_search_occlusion.js

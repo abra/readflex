@@ -19,6 +19,7 @@ const _baseRA = ReaderAppearancePreferences(
   pageTurnStyle: ReaderPageTurnStyle.horizontal,
   trimPageMargins: true,
   pageColors: ReaderPageColors.theme,
+  columns: ReaderColumns.auto,
 );
 
 void main() {
@@ -267,6 +268,7 @@ void main() {
         pageTurnStyle: ReaderPageTurnStyle.horizontal,
         trimPageMargins: true,
         pageColors: ReaderPageColors.theme,
+        columns: ReaderColumns.auto,
       );
       expect(a, equals(b));
       expect(a.hashCode, b.hashCode);
@@ -308,6 +310,50 @@ void main() {
         _baseRA,
         isNot(equals(_baseRA.copyWith(pageColors: ReaderPageColors.original))),
       );
+      expect(
+        _baseRA,
+        isNot(equals(_baseRA.copyWith(columns: ReaderColumns.two))),
+      );
+      expect(
+        _baseRA.hashCode,
+        isNot(_baseRA.copyWith(columns: ReaderColumns.one).hashCode),
+      );
+    });
+
+    test('text columns follow the window by default', () {
+      expect(
+        ReaderAppearancePreferences.defaults.columns,
+        ReaderColumns.auto,
+      );
+      const prefs = Preferences();
+      expect(prefs.readerColumns, ReaderColumns.auto);
+      expect(prefs.readerAppearance.columns, ReaderColumns.auto);
+      expect(
+        prefs.copyWith(readerColumns: ReaderColumns.two).readerAppearance,
+        ReaderAppearancePreferences.defaults.copyWith(
+          columns: ReaderColumns.two,
+        ),
+      );
+      expect(
+        prefs,
+        isNot(equals(prefs.copyWith(readerColumns: ReaderColumns.one))),
+      );
+    });
+
+    test('ReaderColumns reads its IDs and falls back to auto', () {
+      expect(ReaderColumns.values, [
+        ReaderColumns.auto,
+        ReaderColumns.one,
+        ReaderColumns.two,
+      ]);
+      for (final columns in ReaderColumns.values) {
+        expect(ReaderColumns.fromId(columns.id), columns);
+        expect(ReaderColumns.tryFromId(columns.id), columns);
+      }
+      expect(ReaderColumns.fromId('three'), ReaderColumns.auto);
+      expect(ReaderColumns.fromId(null), ReaderColumns.auto);
+      expect(ReaderColumns.tryFromId('three'), isNull);
+      expect(ReaderColumns.tryFromId(null), isNull);
     });
 
     test('PDF pages trim margins and follow the theme by default', () {
@@ -416,6 +462,41 @@ void main() {
 
       final cleared = source.copyWith(trimPageMargins: null, pageColors: null);
       expect(cleared.isEmpty, isTrue);
+    });
+
+    test('text columns round-trip, apply, inherit and clear', () {
+      const source = ReaderAppearanceOverride(columns: ReaderColumns.two);
+      final json = source.toJson();
+      expect(json, {'columns': 'two'});
+      expect(ReaderAppearanceOverride.fromJson(json), source);
+      expect(source.isEmpty, isFalse);
+      expect(source, isNot(const ReaderAppearanceOverride()));
+      expect(source.hashCode, isNot(const ReaderAppearanceOverride().hashCode));
+
+      expect(
+        source.applyTo(ReaderAppearancePreferences.defaults).columns,
+        ReaderColumns.two,
+      );
+      expect(
+        const ReaderAppearanceOverride(
+          columns: ReaderColumns.auto,
+        ).withoutValuesMatching(ReaderAppearancePreferences.defaults).isEmpty,
+        isTrue,
+      );
+      expect(source.copyWith(columns: null).isEmpty, isTrue);
+      expect(
+        source.copyWith(fontId: 'sans').columns,
+        ReaderColumns.two,
+        reason: 'unrelated edits keep the columns',
+      );
+    });
+
+    test('unreadable text columns are ignored', () {
+      for (final value in const <Object?>['three', '', 2, true]) {
+        final loaded = ReaderAppearanceOverride.fromJson({'columns': value});
+        expect(loaded.columns, isNull, reason: '$value');
+        expect(loaded.isEmpty, isTrue, reason: '$value');
+      }
     });
 
     test('unreadable PDF page options are ignored', () {

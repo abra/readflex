@@ -1133,6 +1133,18 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get readerPageTurnVerticalShort => '縦';
 
   @override
+  String get readerColumns => '段組み';
+
+  @override
+  String get readerColumnsAuto => '自動';
+
+  @override
+  String get readerColumnsOne => '1段';
+
+  @override
+  String get readerColumnsTwo => '2段';
+
+  @override
   String get readerChapterRead => '既読';
 
   @override

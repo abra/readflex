@@ -31,9 +31,12 @@ const EdgeInsets _sectionGutterInset = EdgeInsets.symmetric(
 /// Opens the reader Appearance sheet. [pdfControls] swaps the text controls
 /// (font, size, spacing, alignment, margins) for the PDF page controls:
 /// margin crop and page colors. The theme and page turn rows stay.
+/// [showColumnControls] offers text columns for a reflowable book; the row
+/// appears only while the window is wide.
 Future<void> showReaderAppearanceSheet(
   BuildContext context, {
   bool showPageTurnControls = true,
+  bool showColumnControls = false,
   bool pdfControls = false,
   VoidCallback? onFullyHidden,
 }) {
@@ -46,6 +49,7 @@ Future<void> showReaderAppearanceSheet(
       value: cubit,
       child: _ReaderAppearanceSheet(
         showPageTurnControls: showPageTurnControls,
+        showColumnControls: showColumnControls,
         pdfControls: pdfControls,
       ),
     ),
@@ -56,10 +60,12 @@ Future<void> showReaderAppearanceSheet(
 class _ReaderAppearanceSheet extends StatefulWidget {
   const _ReaderAppearanceSheet({
     required this.showPageTurnControls,
+    required this.showColumnControls,
     required this.pdfControls,
   });
 
   final bool showPageTurnControls;
+  final bool showColumnControls;
   final bool pdfControls;
 
   @override
@@ -166,6 +172,7 @@ class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
             maintainSize: true,
             child: _AppearanceSettings(
               showPageTurnControls: widget.showPageTurnControls,
+              showColumnControls: widget.showColumnControls,
               pdfControls: widget.pdfControls,
               onFont: () => _showFont(true),
             ),
@@ -191,11 +198,13 @@ class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
 class _AppearanceSettings extends StatelessWidget {
   const _AppearanceSettings({
     required this.showPageTurnControls,
+    required this.showColumnControls,
     required this.pdfControls,
     required this.onFont,
   });
 
   final bool showPageTurnControls;
+  final bool showColumnControls;
   final bool pdfControls;
   final VoidCallback onFont;
 
@@ -212,6 +221,7 @@ class _AppearanceSettings extends StatelessWidget {
           ? _PdfAppearanceControls(showPageTurnControls: showPageTurnControls)
           : _LayeredAppearanceControls(
               showPageTurnControls: showPageTurnControls,
+              showColumnControls: showColumnControls,
               onFont: onFont,
             ),
     );
@@ -248,19 +258,23 @@ class _ResetAppearanceButton extends StatelessWidget {
 }
 
 /// Book and article controls: the theme, the compact rows (font, size,
-/// spacing, margins), then the labeled choices.
+/// spacing, margins), then the labeled choices. Text columns join them in a
+/// wide window, the only place they change the page.
 class _LayeredAppearanceControls extends StatelessWidget {
   const _LayeredAppearanceControls({
     required this.showPageTurnControls,
+    required this.showColumnControls,
     required this.onFont,
   });
 
   final bool showPageTurnControls;
+  final bool showColumnControls;
   final VoidCallback onFont;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final showColumns = showColumnControls && AppWindowSize.isWide(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -284,6 +298,13 @@ class _LayeredAppearanceControls extends StatelessWidget {
                 AppSettingsSection(
                   title: l10n.readerPageTurn,
                   child: const _PageTurnControl(),
+                ),
+              ],
+              if (showColumns) ...[
+                const SizedBox(height: AppSpacing.lg),
+                AppSettingsSection(
+                  title: l10n.readerColumns,
+                  child: const _ColumnsControl(),
                 ),
               ],
             ],
@@ -791,6 +812,41 @@ class _PageTurnControl extends StatelessWidget {
           value: ReaderPageTurnStyle.vertical,
           icon: AppIcons.pageTurnVertical,
           label: context.l10n.readerPageTurnVerticalShort,
+        ),
+      ],
+    );
+  }
+}
+
+class _ColumnsControl extends StatelessWidget {
+  const _ColumnsControl();
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = context.select<ReaderAppearanceCubit, ReaderColumns>(
+      (c) => c.state.effectiveAppearance.columns,
+    );
+    final cubit = context.read<ReaderAppearanceCubit>();
+    final l10n = context.l10n;
+    return AppChoiceControl<ReaderColumns>(
+      key: const ValueKey('reader-columns-control'),
+      selected: columns,
+      onChanged: (value) => cubit.setColumns(value),
+      options: [
+        AppChoiceOption(
+          value: ReaderColumns.auto,
+          icon: AppIcons.columnsAuto,
+          label: l10n.readerColumnsAuto,
+        ),
+        AppChoiceOption(
+          value: ReaderColumns.one,
+          icon: AppIcons.columnsOne,
+          label: l10n.readerColumnsOne,
+        ),
+        AppChoiceOption(
+          value: ReaderColumns.two,
+          icon: AppIcons.columnsTwo,
+          label: l10n.readerColumnsTwo,
         ),
       ],
     );

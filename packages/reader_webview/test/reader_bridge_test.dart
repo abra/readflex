@@ -728,6 +728,8 @@ void main() {
       expect(map['textAlign'], '');
       expect(map['pageTurnStyle'], 'slide');
       expect(map['maxColumnCount'], 0);
+      expect(map.containsKey('maxLineWidthEm'), isTrue);
+      expect(map['maxLineWidthEm'], isNull);
       expect(map['writingMode'], 'horizontal-tb');
       expect(map['backgroundImage'], '');
       expect(map['allowScript'], false);
@@ -759,6 +761,26 @@ void main() {
       expect(
         base,
         isNot(const FoliateStyle(pageColors: FoliatePageColors.theme)),
+      );
+    });
+
+    test('text columns reach the reader by their wire names', () {
+      const style = FoliateStyle(maxColumnCount: 2, maxLineWidthEm: 32);
+      final map = style.toMap();
+
+      expect(map['maxColumnCount'], 2);
+      expect(map['maxLineWidthEm'], 32);
+    });
+
+    test('text columns take part in equality', () {
+      const capped = FoliateStyle(maxLineWidthEm: 32);
+      expect(capped, const FoliateStyle(maxLineWidthEm: 32));
+      expect(capped.hashCode, const FoliateStyle(maxLineWidthEm: 32).hashCode);
+      expect(capped, isNot(const FoliateStyle()));
+      expect(capped, isNot(const FoliateStyle(maxLineWidthEm: 30)));
+      expect(
+        const FoliateStyle(),
+        isNot(const FoliateStyle(maxColumnCount: 1)),
       );
     });
 
@@ -811,7 +833,7 @@ void main() {
 
     test('toMap has expected key count', () {
       const style = FoliateStyle();
-      expect(style.toMap().length, 33);
+      expect(style.toMap().length, 34);
     });
   });
 

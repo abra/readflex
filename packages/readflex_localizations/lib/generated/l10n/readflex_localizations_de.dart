@@ -1171,6 +1171,18 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
   String get readerPageTurnVerticalShort => 'Vertikal';
 
   @override
+  String get readerColumns => 'Spalten';
+
+  @override
+  String get readerColumnsAuto => 'Auto';
+
+  @override
+  String get readerColumnsOne => 'Eine';
+
+  @override
+  String get readerColumnsTwo => 'Zwei';
+
+  @override
   String get readerChapterRead => 'Gelesen';
 
   @override

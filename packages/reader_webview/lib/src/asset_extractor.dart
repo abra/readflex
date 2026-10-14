@@ -24,7 +24,7 @@ class AssetExtractor {
 
   // Bump when bundled reader HTML/JS assets must be re-extracted even if the
   // app version/build number did not change, e.g. release-mode device testing.
-  static const assetRevision = 'reader_webview_assets_166';
+  static const assetRevision = 'reader_webview_assets_167';
 
   @visibleForTesting
   static String extractionVersionFor(String version) =>
@@ -48,6 +48,7 @@ class AssetExtractor {
     'assets/foliate-js/src/progress.js',
     'assets/foliate-js/src/text-walker.js',
     'assets/foliate-js/src/paginator.js',
+    'assets/foliate-js/src/readflex_page_columns.js',
     'assets/foliate-js/src/tts.js',
     'assets/foliate-js/src/search.js',
     'assets/foliate-js/src/readflex_search_occlusion.js',

@@ -25,6 +25,10 @@ abstract final class AppSizes {
   /// Tinted circle behind the icon of an empty or error state.
   static const double stateIconFrame = 56;
 
+  /// Widest centered column of a welcome or empty screen: its heading and
+  /// full-width buttons stop growing here on tablets.
+  static const double centeredColumnMaxWidth = 480;
+
   /// Material's regular floating action button (Library "+").
   static const double floatingActionButton = 56;
 

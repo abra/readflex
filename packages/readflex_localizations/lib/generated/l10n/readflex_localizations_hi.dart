@@ -1155,6 +1155,18 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get readerPageTurnVerticalShort => 'लंबवत';
 
   @override
+  String get readerColumns => 'कॉलम';
+
+  @override
+  String get readerColumnsAuto => 'ऑटो';
+
+  @override
+  String get readerColumnsOne => 'एक';
+
+  @override
+  String get readerColumnsTwo => 'दो';
+
+  @override
   String get readerChapterRead => 'पढ़ा गया';
 
   @override

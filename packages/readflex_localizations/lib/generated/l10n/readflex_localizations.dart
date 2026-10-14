@@ -2144,6 +2144,30 @@ abstract class ReadflexLocalizations {
   /// **'Vertical'**
   String get readerPageTurnVerticalShort;
 
+  /// Appearance section title: how many text columns a book page shows in a wide window
+  ///
+  /// In en, this message translates to:
+  /// **'Columns'**
+  String get readerColumns;
+
+  /// Columns option: one column in portrait, two pages side by side in landscape
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get readerColumnsAuto;
+
+  /// Columns option: always one column
+  ///
+  /// In en, this message translates to:
+  /// **'One'**
+  String get readerColumnsOne;
+
+  /// Columns option: always two pages side by side
+  ///
+  /// In en, this message translates to:
+  /// **'Two'**
+  String get readerColumnsTwo;
+
   /// Accessibility value of a chapter before the current one
   ///
   /// In en, this message translates to:

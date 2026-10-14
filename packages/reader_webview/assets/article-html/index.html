@@ -71,6 +71,10 @@
     main {
       box-sizing: border-box;
       width: 100%;
+      /* Wide windows keep a readable line: the reader's measure plus the side
+         margins. Unset, the article spans the window. */
+      max-width: var(--rf-main-max-width, none);
+      margin-inline: auto;
       min-height: 100vh;
       padding-block-start: calc(var(--rf-top-margin) + var(--rf-safe-area-top));
       padding-block-end: calc(var(--rf-bottom-margin) + var(--rf-safe-area-bottom));
@@ -452,6 +456,15 @@
         root.setProperty('--readflex-hyphens', style.hyphenate ? 'auto' : 'manual')
         root.setProperty('--rf-font-weight', Number(style.fontWeight) || 400)
         root.setProperty('--rf-side-margin', articleSidePadding(style.sideMargin, '3.2vw'))
+        const maxLineWidthEm = Number(style.maxLineWidthEm)
+        if (Number.isFinite(maxLineWidthEm) && maxLineWidthEm > 0) {
+          root.setProperty(
+            '--rf-main-max-width',
+            `calc(${Math.round(maxLineWidthEm * proseFontSizePx)}px + 2 * var(--rf-side-margin))`,
+          )
+        } else {
+          root.removeProperty('--rf-main-max-width')
+        }
         root.setProperty('--rf-top-margin', cssLengthPx(style.topMargin, '56px'))
         root.setProperty('--rf-bottom-margin', cssLengthPx(style.bottomMargin, '72px'))
         root.setProperty('--rf-safe-area-top', cssLengthPx(style.safeAreaTop, '0px'))

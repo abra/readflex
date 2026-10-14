@@ -10,7 +10,9 @@ const double _buttonGap = AppSpacing.sm + AppSpacing.xxs;
 
 /// First-run Library: what to add and the two ways to add it.
 ///
-/// Applies the 16dp screen gutter once, like `EmptyState`.
+/// Applies the 16dp screen gutter once, like `EmptyState`. In a wide window
+/// ([AppWindowSize]) the column stops at the onboarding width, so the
+/// buttons keep a button's proportions.
 class LibraryEmptyState extends StatelessWidget {
   const LibraryEmptyState({required this.onImportPressed, super.key});
 
@@ -26,68 +28,75 @@ class LibraryEmptyState extends StatelessWidget {
     final onImportPressed = this.onImportPressed;
     final mutedStyle = text.bodySmall.copyWith(color: colors.onSurfaceVariant);
 
+    final maxWidth = AppWindowSize.isWide(context)
+        ? AppSizes.centeredColumnMaxWidth
+        : double.infinity;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                key: const ValueKey('libraryEmptyIconFrame'),
-                width: _iconFrameSize,
-                height: _iconFrameSize,
-                decoration: BoxDecoration(
-                  color: context.actionForeground.withValues(
-                    alpha: _iconFrameAlpha,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  key: const ValueKey('libraryEmptyIconFrame'),
+                  width: _iconFrameSize,
+                  height: _iconFrameSize,
+                  decoration: BoxDecoration(
+                    color: context.actionForeground.withValues(
+                      alpha: _iconFrameAlpha,
+                    ),
+                    shape: BoxShape.circle,
                   ),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  AppIcons.book,
-                  size: AppIconSize.lg,
-                  color: context.actionForeground,
+                  child: Icon(
+                    AppIcons.book,
+                    size: AppIconSize.lg,
+                    color: context.actionForeground,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              l10n.libraryEmptyTitle,
-              textAlign: TextAlign.center,
-              style: text.headlineSmall.copyWith(color: colors.onSurface),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              l10n.libraryEmptySubtitle,
-              textAlign: TextAlign.center,
-              style: mutedStyle,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            FilledButton.icon(
-              key: const ValueKey('libraryEmptyUploadFile'),
-              onPressed: onImportPressed == null
-                  ? null
-                  : () => onImportPressed(LibraryImportEntry.file),
-              icon: const Icon(AppIcons.uploadFile, size: AppIconSize.sm),
-              label: AppButtonLabel(l10n.libraryUploadFile),
-            ),
-            const SizedBox(height: _buttonGap),
-            OutlinedButton.icon(
-              key: const ValueKey('libraryEmptySaveArticle'),
-              onPressed: onImportPressed == null
-                  ? null
-                  : () => onImportPressed(LibraryImportEntry.article),
-              icon: const Icon(AppIcons.link, size: AppIconSize.sm),
-              label: AppButtonLabel(l10n.librarySaveArticleAction),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.importFileKinds,
-              textAlign: TextAlign.center,
-              style: mutedStyle,
-            ),
-          ],
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                l10n.libraryEmptyTitle,
+                textAlign: TextAlign.center,
+                style: text.headlineSmall.copyWith(color: colors.onSurface),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                l10n.libraryEmptySubtitle,
+                textAlign: TextAlign.center,
+                style: mutedStyle,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              FilledButton.icon(
+                key: const ValueKey('libraryEmptyUploadFile'),
+                onPressed: onImportPressed == null
+                    ? null
+                    : () => onImportPressed(LibraryImportEntry.file),
+                icon: const Icon(AppIcons.uploadFile, size: AppIconSize.sm),
+                label: AppButtonLabel(l10n.libraryUploadFile),
+              ),
+              const SizedBox(height: _buttonGap),
+              OutlinedButton.icon(
+                key: const ValueKey('libraryEmptySaveArticle'),
+                onPressed: onImportPressed == null
+                    ? null
+                    : () => onImportPressed(LibraryImportEntry.article),
+                icon: const Icon(AppIcons.link, size: AppIconSize.sm),
+                label: AppButtonLabel(l10n.librarySaveArticleAction),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                l10n.importFileKinds,
+                textAlign: TextAlign.center,
+                style: mutedStyle,
+              ),
+            ],
+          ),
         ),
       ),
     );

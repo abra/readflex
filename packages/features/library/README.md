@@ -86,6 +86,25 @@ keystrokes don't churn bloc state.
 List separators use the shared `DividerTheme` for color and thickness, matching
 the import sheet. They are painted above cover shadows so the line stays visible.
 
+Wide windows (`AppWindowSize.isWide`: at least 840 × 480, so never a phone)
+use the extra width without stretching anything:
+
+- The grid keeps its phone rule (as many 88dp tiles as fit, up to six; text
+  scales the tile up to 150%) and adds a column whenever covers would pass
+  160dp, so a 13-inch iPad shows eight covers in landscape instead of six
+  huge ones (`libraryGridColumnCount`). Every phone width gives the same
+  count as before.
+- The list lays its rows out in two columns, read across then down, with the
+  screen gutters outside and the grid's 12dp gap between them
+  (`BookLibraryListTile.gutters`). Each line is as tall as its taller row;
+  every line after the first starts with both hairlines. Swipe to delete
+  and selection work per row as in one column.
+- The empty library's column stops at `AppSizes.centeredColumnMaxWidth`
+  (480), the onboarding width, so its buttons keep a button's shape.
+
+The header, search field and Continue reading band span the window in both
+layouts.
+
 Empty-state is handled twice: truly empty library vs. a search or collection
 that shows nothing.
 The empty library (`LibraryEmptyState`) shows the book icon in a 72dp circle

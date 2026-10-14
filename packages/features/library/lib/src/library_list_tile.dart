@@ -9,7 +9,9 @@ import 'library_source_semantics.dart';
 
 const double _kArticleIconAlpha = 0.4;
 // Content sits on the screen gutter; the selection tint is full-bleed.
-const double _kListRowHorizontalPadding = AppSpacing.lg;
+const kLibraryListRowGutters = EdgeInsetsDirectional.symmetric(
+  horizontal: AppSpacing.lg,
+);
 const double _kListRowVerticalPadding = AppSpacing.md;
 const double _kListSelectionBackgroundInset = AppSpacing.xs;
 // Least space between the title block and the status line once a long title
@@ -22,6 +24,8 @@ const int _kListTitleMaxLines = 2;
 /// Layout: 60×90 cover at the start; beside it the title (two lines) and the
 /// author or site at the cover's top, and the kind and reading status at its
 /// bottom; a top hairline except on the first row (see [showTopDivider]).
+/// [gutters] place the content and the hairline; the tint and the tap area
+/// fill the row.
 class BookLibraryListTile extends StatelessWidget {
   const BookLibraryListTile({
     required this.source,
@@ -30,11 +34,13 @@ class BookLibraryListTile extends StatelessWidget {
     this.onLongPress,
     this.isSelected = false,
     this.isSelectionMode = false,
+    this.gutters = kLibraryListRowGutters,
     super.key,
   });
 
   final LibrarySource source;
   final bool showTopDivider;
+  final EdgeInsetsDirectional gutters;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final bool isSelected;
@@ -85,6 +91,7 @@ class BookLibraryListTile extends StatelessWidget {
       subtitle: [?subtitle, ?sourceName].join(' · '),
       textDirection: coverTextDirection,
       showTopDivider: showTopDivider,
+      gutters: gutters,
       isSelected: isSelected,
       semanticsLabel: librarySourceSemanticsLabel(source, l10n),
       semanticsValue: librarySourceSemanticsValue(source, l10n),
@@ -159,6 +166,7 @@ class _ListRowShell extends StatelessWidget {
     required this.textDirection,
     required this.statusBuilder,
     required this.showTopDivider,
+    required this.gutters,
     required this.semanticsLabel,
     required this.semanticsValue,
     required this.reportsSelectedState,
@@ -180,6 +188,7 @@ class _ListRowShell extends StatelessWidget {
   )
   statusBuilder;
   final bool showTopDivider;
+  final EdgeInsetsDirectional gutters;
   final bool isSelected;
   final String semanticsLabel;
   final String semanticsValue;
@@ -240,9 +249,8 @@ class _ListRowShell extends StatelessWidget {
                 ),
               ),
             Container(
-              padding: const EdgeInsets.symmetric(
-                vertical: _kListRowVerticalPadding,
-                horizontal: _kListRowHorizontalPadding,
+              padding: gutters.add(
+                const EdgeInsets.symmetric(vertical: _kListRowVerticalPadding),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -321,11 +329,13 @@ class _ListRowShell extends StatelessWidget {
               // Paint the separator above this row's cover shadow. A bottom
               // divider on the previous row can be covered by the next row's
               // shadow because list children paint in order.
-              const Positioned(
-                left: _kListRowHorizontalPadding,
-                right: _kListRowHorizontalPadding,
+              PositionedDirectional(
+                start: gutters.start,
+                end: gutters.end,
                 top: 0,
-                child: Divider(key: ValueKey('libraryListRowTopDivider')),
+                child: const Divider(
+                  key: ValueKey('libraryListRowTopDivider'),
+                ),
               ),
           ],
         ),

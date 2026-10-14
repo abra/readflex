@@ -49,6 +49,7 @@ repository loading resolves the device locale to a supported language.
 | `readerPageTurnStyle`      | `ReaderPageTurnStyle` | `horizontal` |
 | `readerTrimPageMargins`    | `bool`      | `true`      |
 | `readerPageColors`         | `ReaderPageColors` | `theme` |
+| `readerColumns`            | `ReaderColumns` | `auto` |
 | `readerBrightness`         | `double?`   | `null`      |
 | `readerLastCustomBrightness` | `double`  | `0.7`       |
 | `readerSearchHistory`      | `List<String>` | `[]`     |
@@ -64,6 +65,11 @@ are on by default because a phone shows a printed page about a third smaller
 with its margins, and a white page breaks dark and tinted themes. Readers
 change them per book from the reader's Appearance sheet, which stores a
 `ReaderAppearanceOverride`.
+
+`readerColumns` (Auto / One / Two) applies to reflowable books in a wide
+window only; the reader keeps one column across a narrow window whatever it
+says. Readers change it per book from Appearance, like the other rows; an
+unknown stored ID reads back as Auto.
 
 The two `readerSelectionTip*` fields back the reader's one-time "Press and
 hold a word" tip. Storage only records what happened; the show limit and

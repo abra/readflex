@@ -280,6 +280,9 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     final readerState = context.read<ReaderBloc>().state;
     final showPageTurnControls = readerState.sourceType != SourceType.article;
     final pdfControls = readerState.document?.format == BookFormat.pdf;
+    final showColumnControls =
+        showPageTurnControls &&
+        !readerHasZoomablePages(readerState.document?.format);
     final initialPageTurnStyle =
         appearanceCubit.state.effectiveAppearance.pageTurnStyle;
     final wasChromeVisible = uiCubit.state.chromeVisible;
@@ -293,6 +296,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     await showReaderAppearanceSheet(
       context,
       showPageTurnControls: showPageTurnControls,
+      showColumnControls: showColumnControls,
       pdfControls: pdfControls,
       onFullyHidden: () {
         if (!mounted) return;
@@ -950,20 +954,31 @@ class _ReaderTapEdgeIndicatorDriver extends StatelessWidget {
   }
 }
 
+/// [columns] is `null` for articles, which scroll as one column; image pages
+/// ([fixedLayout]) keep their own layout.
 FoliateStyle _readerWebViewStyle({
   required BuildContext context,
   required Uri serverBaseUri,
   required ReaderAppearancePreferences appearance,
   required ReaderThemeData readerTheme,
+  required ReaderColumns? columns,
+  bool fixedLayout = false,
   double? topMargin,
   double? bottomMargin,
   String customCSS = '',
 }) {
   final fontPreset = ReaderFontPreset.fromId(appearance.fontId);
+  final textColumns = readerTextColumns(
+    wideWindow: AppWindowSize.isWide(context),
+    fixedLayout: fixedLayout,
+    columns: columns,
+  );
   final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
   final mediaPadding = MediaQuery.paddingOf(context);
   final deviceFontScale = readerDeviceFontScale(
-    platform: Theme.of(context).platform,
+    // The WebView engine the app runs on, not the look a Theme adapts to:
+    // the plugin picks its platform implementation the same way.
+    platform: defaultTargetPlatform,
     viewportSize: MediaQuery.sizeOf(context),
   );
 
@@ -1003,7 +1018,8 @@ FoliateStyle _readerWebViewStyle({
       ReaderPageColors.theme => FoliatePageColors.theme,
       ReaderPageColors.original => FoliatePageColors.original,
     },
-    maxColumnCount: 1,
+    maxColumnCount: textColumns.maxColumnCount,
+    maxLineWidthEm: textColumns.maxLineWidthEm,
   );
 }
 
@@ -1241,6 +1257,8 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
       serverBaseUri: widget.serverBaseUri,
       appearance: appearance,
       readerTheme: widget.readerTheme,
+      columns: appearance.columns,
+      fixedLayout: readerHasZoomablePages(state.document?.format),
       customCSS: customCSS,
     );
 
@@ -1522,6 +1540,7 @@ class _ReaderArticleHtmlBodyState extends State<_ReaderArticleHtmlBody> {
       serverBaseUri: widget.serverBaseUri,
       appearance: appearance,
       readerTheme: widget.readerTheme,
+      columns: null,
       topMargin: _kArticleReaderTopMargin,
       bottomMargin: _kArticleReaderBottomMargin,
       customCSS: customCSS,

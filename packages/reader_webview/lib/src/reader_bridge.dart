@@ -844,6 +844,7 @@ class FoliateStyle {
     this.textAlign = '',
     this.pageTurnStyle = 'slide',
     this.maxColumnCount = 0,
+    this.maxLineWidthEm,
     this.writingMode = 'horizontal-tb',
     this.backgroundImage = '',
     this.allowScript = false,
@@ -892,7 +893,16 @@ class FoliateStyle {
 
   /// `'slide'` for horizontal turns or `'vertical'` for vertical turns.
   final String pageTurnStyle;
+
+  /// Text columns per page of a reflowable book: `0` lets foliate choose,
+  /// `1` and `2` are exact.
   final int maxColumnCount;
+
+  /// Longest text line in ems of the body text. Wide windows widen the
+  /// margins to keep it, so a line keeps its length in characters at every
+  /// text size; with `0` columns foliate shows a landscape spread only while
+  /// both pages keep most of it. `null` lets one column span the page.
+  final double? maxLineWidthEm;
 
   /// `'horizontal-tb'` or `'vertical-rl'`.
   final String writingMode;
@@ -943,6 +953,7 @@ class FoliateStyle {
     'textAlign': textAlign,
     'pageTurnStyle': pageTurnStyle,
     'maxColumnCount': maxColumnCount,
+    'maxLineWidthEm': maxLineWidthEm,
     'writingMode': writingMode,
     'backgroundImage': backgroundImage,
     'allowScript': allowScript,
@@ -988,6 +999,7 @@ class FoliateStyle {
           textAlign == other.textAlign &&
           pageTurnStyle == other.pageTurnStyle &&
           maxColumnCount == other.maxColumnCount &&
+          maxLineWidthEm == other.maxLineWidthEm &&
           writingMode == other.writingMode &&
           backgroundImage == other.backgroundImage &&
           allowScript == other.allowScript &&
@@ -1024,6 +1036,7 @@ class FoliateStyle {
     textAlign,
     pageTurnStyle,
     maxColumnCount,
+    maxLineWidthEm,
     writingMode,
     backgroundImage,
     allowScript,

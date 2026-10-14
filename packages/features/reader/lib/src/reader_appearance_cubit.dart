@@ -128,6 +128,15 @@ class ReaderAppearanceCubit extends Cubit<ReaderAppearanceState> {
     await _persistOverride(next);
   }
 
+  /// Reflowable books in a wide window: one column, a spread, or either by
+  /// orientation.
+  Future<void> setColumns(ReaderColumns columns) async {
+    final next = state.sourceOverride.copyWith(
+      columns: columns == state.globalAppearance.columns ? null : columns,
+    );
+    await _persistOverride(next);
+  }
+
   /// PDF only: crop blank page margins, or show whole pages.
   Future<void> setTrimPageMargins(bool trim) async {
     final next = state.sourceOverride.copyWith(

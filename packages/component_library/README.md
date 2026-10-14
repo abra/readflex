@@ -89,7 +89,7 @@ as static semantic token classes:
 |-------------|---------|
 | `AppSpacing` | Layout gaps and insets (`xxs` … `xxl`) |
 | `AppRadius` | Shape scale (`xs`, `sm`, `md`, `lg`, `xl`, `full`) |
-| `AppSizes` | Control heights and tap targets |
+| `AppSizes` | Control heights and tap targets; `centeredColumnMaxWidth` (480) is where a welcome or empty screen's column stops on tablets |
 | `AppIconSize` | Standard icon sizes |
 | `AppMotion` | Implicit-animation durations (`quick` 120ms, `short` 200ms, `medium` 300ms) |
 | `AppElevation` / `AppShadows` | Shared depth language |
@@ -221,6 +221,7 @@ Reusable presentation-only widgets used across features:
 | `ScrollEdgeFade`                    | Scroll-edge fade: top/bottom darken (0.14 alpha in light mode); start/end dissolve a horizontal strip into `surfaceColor` (default scaffold background) |
 | `SelectionPreviewCard`              | Compact preview of selected text with its own `textDirection` |
 | `showAppBottomSheet`                | Shared modal bottom-sheet presentation helper  |
+| `AppWindowSize`                     | When a surface switches to its wide layout: `isWide(context)` is true for a window at least 840 wide (Material expanded) and 480 tall (medium), so phones in either orientation and narrow Split View windows keep the phone layout. It depends on the window size only, never padding or insets, and never on the device type: iPad windows resize while the app runs |
 
 ## What Belongs Here
 

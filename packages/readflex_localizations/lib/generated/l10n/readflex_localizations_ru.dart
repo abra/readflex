@@ -1171,6 +1171,18 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerPageTurnVerticalShort => 'Вертикально';
 
   @override
+  String get readerColumns => 'Колонки';
+
+  @override
+  String get readerColumnsAuto => 'Авто';
+
+  @override
+  String get readerColumnsOne => 'Одна';
+
+  @override
+  String get readerColumnsTwo => 'Две';
+
+  @override
   String get readerChapterRead => 'Прочитано';
 
   @override

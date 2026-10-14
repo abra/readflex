@@ -30,6 +30,7 @@ export 'src/button_loading_indicator.dart';
 export 'src/centered_circular_progress_indicator.dart';
 // Utilities
 export 'src/app_text_fit.dart';
+export 'src/app_window_size.dart';
 export 'src/debug_screen_logging.dart';
 export 'src/empty_state.dart';
 export 'src/error_state.dart';

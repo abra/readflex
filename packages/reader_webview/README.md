@@ -322,6 +322,41 @@ The book shell's host document and footnote dialog follow the same palette:
 host background matches the reader background (no grey between pages), and the
 dialog uses a translucent reader background with a divider-coloured border.
 
+### Text Columns and Line Length
+
+`FoliateStyle.maxColumnCount` sets the text columns of a reflowable page
+(`0` lets foliate choose, `1`, `2`) and `FoliateStyle.maxLineWidthEm` the
+reader's measure in ems of the body text. The app sends a measure only to
+wide windows; without one a page lays out as before, one column across the
+page.
+
+- `book.js` turns the measure into CSS pixels (16px × `fontSize` ×
+  `textScale`, the body size it sets), so a line keeps its length in
+  characters at every text size, and sets it as the renderer's
+  `max-inline-size` attribute, removing the attribute without a measure.
+- The paginator patch reads an explicit `max-inline-size` as the measure for
+  horizontal text. `readflex_page_columns.js` (pure, unit tested in
+  `test_js/`) keeps each column within it by widening the outer margins and
+  the spread's gutter, so `columns × (columnWidth + gap)` still equals the
+  page and every page offset holds. With `max-column-count` 0 it shows a
+  spread only on a landscape page whose two columns keep at least 62.5% of
+  the measure (about 40 characters at 32em); otherwise one column. Without
+  an explicit attribute, upstream behaviour is unchanged.
+- The page re-lays itself on resize and rotation in the same pass, keeping
+  the reading position; Flutter resends the style only when the window
+  crosses the wide threshold. The paginator keeps its last Auto decision
+  while only the height changes, so the keyboard opening for search does not
+  turn a portrait page into a spread; a new width, measure or margin decides
+  again.
+- The article shell caps `<main>` at the measure plus the side margins and
+  centres it; without a measure the article spans the window.
+
+`test_browser/reader_columns.test.mjs` runs the production loader in
+Chromium and WebKit: phones keep one column, Auto in portrait and landscape
+(including a rotation and back), One, Two, large text, a window that turns
+narrow, the keyboard shortening the page, the reading position across a
+column change, and the article cap.
+
 ### Text Selection
 
 On touch devices the native DOM selection remains active while the reader

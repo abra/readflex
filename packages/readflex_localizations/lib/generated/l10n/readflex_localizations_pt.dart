@@ -1165,6 +1165,18 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   String get readerPageTurnVerticalShort => 'Vertical';
 
   @override
+  String get readerColumns => 'Colunas';
+
+  @override
+  String get readerColumnsAuto => 'Auto';
+
+  @override
+  String get readerColumnsOne => 'Uma';
+
+  @override
+  String get readerColumnsTwo => 'Duas';
+
+  @override
   String get readerChapterRead => 'Lido';
 
   @override
