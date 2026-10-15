@@ -841,8 +841,6 @@ export class Paginator extends HTMLElement {
     this.#container.append(this.#view.element)
     return this.#view
   }
-  // Readflex: the last Auto column decision, kept across height-only resizes.
-  #autoColumns = null
   #beforeRender({ vertical, rtl }) {
     this.#selectionScrollOffset = null
     this.#vertical = vertical
@@ -925,14 +923,16 @@ export class Paginator extends HTMLElement {
     // Readflex patch: an explicit max-inline-size is the reader's measure for
     // horizontal text. Columns keep it by widening the margins, and Auto
     // (max-column-count 0) picks a spread from it; see readflex_page_columns.
+    // Orientation comes from the window: index.html sizes the page to the
+    // visual viewport, which the keyboard shortens, while innerWidth and
+    // innerHeight keep the window's size.
     const measure = !vertical && this.hasAttribute('max-inline-size')
       ? maxInlineSize
       : null
-    const { columns: divisor, gap: columnGap, columnWidth, auto } = pageColumnLayout({
-      width, height, size, gap, maxColumnCount, maxInlineSize, measure,
-      previous: this.#autoColumns,
+    const { columns: divisor, gap: columnGap, columnWidth } = pageColumnLayout({
+      landscape: innerWidth > innerHeight,
+      size, gap, maxColumnCount, maxInlineSize, measure,
     })
-    this.#autoColumns = auto
     this.setAttribute('dir', this.#rtl ? 'rtl' : 'ltr')
 
     const marginalDivisor = vertical

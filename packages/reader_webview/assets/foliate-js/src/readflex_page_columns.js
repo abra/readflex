@@ -19,35 +19,28 @@ const upstreamColumns = (size, maxInlineSize) =>
     Math.min(2, Math.ceil(size / maxInlineSize))
 
 // Columns for `maxColumnCount` (0 = automatic). With a `measure`, Auto shows
-// a spread only on a landscape page whose two columns each keep most of it.
-// `previous` is the last Auto decision: a change of height alone, such as the
-// keyboard opening over the page, keeps it, so the page does not turn into a
-// spread while the reader searches. Rotation and window resizes change the
-// width and decide again.
+// a spread only in a `landscape` window whose two columns each keep most of
+// it. Orientation is the window's, not the page's: the keyboard shortens the
+// page but never the window, so searching, even across a rotation, does not
+// turn a portrait page into a spread.
 export const pageColumnCount = ({
-    width, height, size, gap, maxColumnCount, maxInlineSize, measure = null,
-    previous = null,
+    landscape, size, gap, maxColumnCount, maxInlineSize, measure = null,
 }) => {
     if (maxColumnCount > 0) return maxColumnCount
     if (!measure) return upstreamColumns(size, maxInlineSize)
-    if (previous && previous.width === width && previous.measure === measure
-        && previous.gap === gap) return previous.columns
-    return width > height && size / 2 - gap >= measure * AUTO_SPREAD_MIN_MEASURE
+    return landscape && size / 2 - gap >= measure * AUTO_SPREAD_MIN_MEASURE
         ? 2
         : 1
 }
 
 // The page's columns, the gap between them (twice the outer margin) and the
-// column width. Without a `measure` the columns fill the page. `auto` is the
-// decision to pass back as `previous` next time, or `null` outside Auto.
+// column width. Without a `measure` the columns fill the page.
 export const pageColumnLayout = ({
-    width, height, size, gap, maxColumnCount, maxInlineSize, measure = null,
-    previous = null,
+    landscape, size, gap, maxColumnCount, maxInlineSize, measure = null,
 }) => {
     const columns = pageColumnCount({
-        width, height, size, gap, maxColumnCount, maxInlineSize, measure, previous,
+        landscape, size, gap, maxColumnCount, maxInlineSize, measure,
     })
     const columnGap = measure ? Math.max(gap, size / columns - measure) : gap
-    const auto = maxColumnCount > 0 || !measure ? null : { width, measure, gap, columns }
-    return { columns, gap: columnGap, columnWidth: size / columns - columnGap, auto }
+    return { columns, gap: columnGap, columnWidth: size / columns - columnGap }
 }

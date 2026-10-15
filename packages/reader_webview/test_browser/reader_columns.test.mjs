@@ -9,6 +9,10 @@ import { createHarness } from './harness.mjs'
 const portrait = { width: 1032, height: 1376 }
 const landscape = { width: 1376, height: 1032 }
 const phone = { width: 390, height: 844 }
+// What the keyboard takes off a 13-inch iPad's page, measured in each
+// orientation.
+const keyboardPortrait = 403
+const keyboardLandscape = 498
 // 18px body text: 16px × fontSize, as book.js sizes it.
 const fontSize = 1.125
 const measurePx = em => Math.round(em * 16 * fontSize)
@@ -97,6 +101,30 @@ const resize = async (page, viewport) => {
         requestAnimationFrame(() => requestAnimationFrame(resolve))))
 }
 
+// The iPadOS keyboard shortens the visual viewport, not the window: the shell
+// (index.html) sizes the page to the visual viewport, so the page gets
+// shorter while innerWidth and innerHeight keep the window's size. Takes
+// `height` off the page after every resize; `rotateTo` turns the window with
+// the keyboard up, so the first page the paginator sees is already short.
+async function keyboard(page, height, rotateTo = null) {
+    await page.evaluate(height => {
+        window.testKeyboardHeight = height
+        if (window.testKeyboard) return
+        window.testKeyboard = () => document.documentElement.style.setProperty(
+            '--readflex-viewport-height', `${innerHeight - window.testKeyboardHeight}px`)
+        // Added after the shell's listeners, so it has the last word.
+        window.addEventListener('resize', window.testKeyboard)
+        window.visualViewport?.addEventListener('resize', window.testKeyboard)
+    }, height)
+    if (rotateTo) await page.setViewportSize(rotateTo)
+    else await page.evaluate(() => window.testKeyboard())
+    await page.evaluate(() => new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))))
+}
+
+const pageHeight = page => page.evaluate(() =>
+    Math.round(window.reader.view.renderer.getBoundingClientRect().height))
+
 test('a phone keeps one column across the page without a measure', async t => {
     const page = await openBook(t, { viewport: phone })
     const result = await layout(page)
@@ -132,20 +160,40 @@ test('Auto turns into a spread when the tablet rotates, and back', async t => {
 })
 
 test('the keyboard shortening the page keeps the Auto layout', async t => {
-    // Searching opens the keyboard: the page gets shorter than it is wide.
+    // Searching opens the keyboard: the page gets wider than it is tall.
     const page = await openBook(t, {
         viewport: portrait,
         style: { maxColumnCount: 0, maxLineWidthEm: 32 },
     })
-    await resize(page, { width: portrait.width, height: 700 })
+    await keyboard(page, keyboardPortrait)
+    assert.equal(await pageHeight(page), portrait.height - keyboardPortrait)
     assert.equal((await layout(page)).columns, 1, 'no spread while searching')
-    await resize(page, portrait)
+    await keyboard(page, 0)
     assert.equal((await layout(page)).columns, 1)
 
     await resize(page, landscape)
     assert.equal((await layout(page)).columns, 2)
-    await resize(page, { width: landscape.width, height: 520 })
+    await keyboard(page, keyboardLandscape)
     assert.equal((await layout(page)).columns, 2, 'the spread stays')
+})
+
+test('rotating with the keyboard up follows the window', async t => {
+    const page = await openBook(t, {
+        viewport: landscape,
+        style: { maxColumnCount: 0, maxLineWidthEm: 32 },
+    })
+    await keyboard(page, keyboardLandscape)
+    assert.equal((await layout(page)).columns, 2)
+
+    await keyboard(page, keyboardPortrait, portrait)
+    assert.equal(await pageHeight(page), portrait.height - keyboardPortrait)
+    assert.equal((await layout(page)).columns, 1, 'no spread in portrait')
+    await keyboard(page, 0)
+    assert.equal((await layout(page)).columns, 1, 'one column once the keyboard closes')
+
+    await keyboard(page, keyboardPortrait)
+    await keyboard(page, keyboardLandscape, landscape)
+    assert.equal((await layout(page)).columns, 2, 'the spread returns in landscape')
 })
 
 test('One keeps a single column at the measure in landscape', async t => {

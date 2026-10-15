@@ -89,7 +89,7 @@ as static semantic token classes:
 |-------------|---------|
 | `AppSpacing` | Layout gaps and insets (`xxs` … `xxl`) |
 | `AppRadius` | Shape scale (`xs`, `sm`, `md`, `lg`, `xl`, `full`) |
-| `AppSizes` | Control heights and tap targets; `centeredColumnMaxWidth` (480) is where a welcome or empty screen's column stops on tablets |
+| `AppSizes` | Control heights and tap targets; `centeredColumnMaxWidth` (480) is where a welcome or empty screen's column stops on tablets and landscape phones |
 | `AppIconSize` | Standard icon sizes |
 | `AppMotion` | Implicit-animation durations (`quick` 120ms, `short` 200ms, `medium` 300ms) |
 | `AppElevation` / `AppShadows` | Shared depth language |

@@ -14,9 +14,9 @@ const MEASURE = 32 * 18
 // The gap foliate derives from an 8% side margin: -g / (g - 1) * size.
 const gapFor = size => 0.08 / 0.92 * size
 
+// A full-window page; `landscape` is the window's shape.
 const page = ({ width, height, maxColumnCount, measure = null, gap }) => ({
-    width,
-    height,
+    landscape: width > height,
     size: width,
     gap: gap ?? gapFor(width),
     maxColumnCount,
@@ -124,44 +124,20 @@ test('a very wide spread caps both pages and widens the gutter', () => {
     assertFillsPage(layout, 2560)
 })
 
-test('a height-only change keeps the Auto decision', () => {
-    // The keyboard opening over a portrait tablet shrinks the page's height
-    // below its width.
-    const portraitPage = page({ width: 1032, height: 1376, maxColumnCount: 0, measure: MEASURE })
-    const first = pageColumnLayout(portraitPage)
-    assert.equal(first.columns, 1)
-    assert.deepEqual(first.auto, { width: 1032, measure: MEASURE, gap: portraitPage.gap, columns: 1 })
-    const keyboard = pageColumnLayout({ ...portraitPage, height: 700, previous: first.auto })
-    assert.equal(keyboard.columns, 1, 'no spread while searching')
-
-    const landscapePage = page({ width: 1376, height: 1032, maxColumnCount: 0, measure: MEASURE })
-    const spread = pageColumnLayout(landscapePage)
-    assert.equal(spread.columns, 2)
-    assert.equal(
-        pageColumnLayout({ ...landscapePage, height: 500, previous: spread.auto }).columns,
-        2,
-        'the spread stays while the keyboard is up',
-    )
+test('the window decides the orientation, not the page', () => {
+    // The keyboard can make a portrait window's page wider than it is tall;
+    // the page's height is not an input.
+    const portraitWindow = page({ width: 1032, height: 1376, maxColumnCount: 0, measure: MEASURE })
+    assert.equal(pageColumnCount(portraitWindow), 1)
+    // A landscape window of the same width, such as Stage Manager, spreads.
+    assert.equal(pageColumnCount({ ...portraitWindow, landscape: true }), 2)
 })
 
-test('width, measure and margin changes decide Auto again', () => {
-    const portraitPage = page({ width: 1032, height: 1376, maxColumnCount: 0, measure: MEASURE })
-    const previous = pageColumnLayout(portraitPage).auto
-    // Rotation.
-    const rotated = page({ width: 1376, height: 1032, maxColumnCount: 0, measure: MEASURE })
-    assert.equal(pageColumnCount({ ...rotated, previous }), 2)
-    // Larger text at the same width.
-    const landscape = pageColumnLayout(rotated)
-    assert.equal(pageColumnCount({ ...rotated, measure: MEASURE * 2, previous: landscape.auto }), 1)
-    // Wider margins at the same width.
-    assert.equal(
-        pageColumnCount({ ...rotated, gap: rotated.size / 2 - 1, previous: landscape.auto }),
-        1,
-    )
-})
-
-test('exact counts and pages without a measure keep no Auto decision', () => {
-    assert.equal(pageColumnLayout(page({ width: 1376, height: 1032, maxColumnCount: 1, measure: MEASURE })).auto, null)
-    assert.equal(pageColumnLayout(page({ width: 390, height: 844, maxColumnCount: 1 })).auto, null)
-    assert.equal(pageColumnLayout(page({ width: 1376, height: 1032, maxColumnCount: 0 })).auto, null)
+test('exact counts and pages without a measure ignore the orientation', () => {
+    for (const landscape of [false, true]) {
+        const tablet = page({ width: 1032, height: 1376, maxColumnCount: 2, measure: MEASURE })
+        assert.equal(pageColumnCount({ ...tablet, landscape }), 2)
+        const upstream = page({ width: 1032, height: 1376, maxColumnCount: 0 })
+        assert.equal(pageColumnCount({ ...upstream, landscape }), 2)
+    }
 })

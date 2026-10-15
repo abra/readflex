@@ -10,9 +10,9 @@ const double _buttonGap = AppSpacing.sm + AppSpacing.xxs;
 
 /// First-run Library: what to add and the two ways to add it.
 ///
-/// Applies the 16dp screen gutter once, like `EmptyState`. In a wide window
-/// ([AppWindowSize]) the column stops at the onboarding width, so the
-/// buttons keep a button's proportions.
+/// Applies the 16dp screen gutter once, like `EmptyState`. Like onboarding,
+/// the column stops at [AppSizes.centeredColumnMaxWidth], so on tablets and
+/// landscape phones the buttons keep a button's proportions.
 class LibraryEmptyState extends StatelessWidget {
   const LibraryEmptyState({required this.onImportPressed, super.key});
 
@@ -28,15 +28,13 @@ class LibraryEmptyState extends StatelessWidget {
     final onImportPressed = this.onImportPressed;
     final mutedStyle = text.bodySmall.copyWith(color: colors.onSurfaceVariant);
 
-    final maxWidth = AppWindowSize.isWide(context)
-        ? AppSizes.centeredColumnMaxWidth
-        : double.infinity;
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
+          constraints: const BoxConstraints(
+            maxWidth: AppSizes.centeredColumnMaxWidth,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,

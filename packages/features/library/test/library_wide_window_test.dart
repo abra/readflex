@@ -1,8 +1,7 @@
-import 'dart:math' as math;
-
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show SemanticsNode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_empty_state.dart';
 import 'package:library_feature/src/library_grid_view.dart';
@@ -39,6 +38,17 @@ int _phoneColumns(double width, double textScale) =>
 
 double _tileWidth(double width, int columns) =>
     (width - AppSpacing.lg * 2 - AppSpacing.md * (columns - 1)) / columns;
+
+/// The first label in [node]'s subtree: what a screen reader reads for it.
+String _semanticsLabel(SemanticsNode node) {
+  if (node.label.isNotEmpty) return node.label;
+  var label = '';
+  node.visitChildren((child) {
+    label = _semanticsLabel(child);
+    return label.isEmpty;
+  });
+  return label;
+}
 
 void main() {
   group('grid columns', () {
@@ -123,6 +133,7 @@ void main() {
       WidgetTester tester, {
       required Size window,
       int count = 5,
+      LibrarySource? continueReadingSource,
       LibrarySelectionState selection = const LibrarySelectionState(),
       TextDirection textDirection = TextDirection.ltr,
       List<LibrarySource>? deleteRequests,
@@ -143,6 +154,7 @@ void main() {
             child: Scaffold(
               body: LibraryListView(
                 sources: _sources(count),
+                continueReadingSource: continueReadingSource,
                 selection: selection,
                 scrollController: controller,
                 onSourcePressed: (_) {},
@@ -255,6 +267,37 @@ void main() {
       expect(find.byType(Dismissible), findsNothing);
     });
 
+    for (final window in const [_tabletLandscape, _phonePortrait]) {
+      testWidgets('screen readers count sources, not lines ($window)', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await pumpList(
+            tester,
+            window: window,
+            count: 3,
+            continueReadingSource: _sources(4).last,
+          );
+
+          final list = find.semantics
+              .byPredicate((node) => node.scrollChildCount != null)
+              .evaluate()
+              .single;
+          expect(list.scrollChildCount, 4);
+          expect(list.scrollIndex, 0);
+          final items = <int?, String>{};
+          list.visitChildren((item) {
+            items[item.indexInParent] = _semanticsLabel(item);
+            return true;
+          });
+          expect(items, {0: 'Book 3', 1: 'Book 0', 2: 'Book 1', 3: 'Book 2'});
+        } finally {
+          semantics.dispose();
+        }
+      });
+    }
+
     for (final window in const [_phonePortrait, _phoneLandscape]) {
       testWidgets('a phone keeps one column ($window)', (tester) async {
         await pumpList(tester, window: window, count: 3);
@@ -288,10 +331,17 @@ void main() {
       );
     }
 
-    testWidgets('a wide window stops the column at the onboarding width', (
-      tester,
-    ) async {
-      for (final window in const [_tabletPortrait, _tabletLandscape]) {
+    testWidgets('the column stops at the onboarding width', (tester) async {
+      for (final window in const [
+        _tabletPortrait,
+        _tabletLandscape,
+        // iPad Air 11-inch and iPad mini in portrait: narrow, not phones.
+        Size(820, 1180),
+        Size(744, 1133),
+        // A Split View half and a phone in landscape.
+        Size(678, 1032),
+        _phoneLandscape,
+      ]) {
         final button = await uploadButton(tester, window);
         expect(
           button.width,
@@ -302,12 +352,14 @@ void main() {
       }
     });
 
-    testWidgets('phones keep buttons across the screen', (tester) async {
-      for (final window in const [_phonePortrait, _phoneLandscape]) {
+    testWidgets('phones in portrait keep buttons across the screen', (
+      tester,
+    ) async {
+      for (final window in const [Size(320, 568), _phonePortrait]) {
         final button = await uploadButton(tester, window);
         expect(
           button.width,
-          math.max(0, window.width - AppSpacing.lg * 2),
+          window.width - AppSpacing.lg * 2,
           reason: '$window',
         );
       }

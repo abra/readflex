@@ -27,7 +27,8 @@ import 'library_layout.dart';
 /// A wide window ([AppWindowSize]) lays the rows out in two columns, read
 /// across then down, so a tablet line neither stretches a row nor leaves it
 /// mostly empty. Each line is as tall as its taller row; rows keep their own
-/// height, and every line after the first starts with both hairlines.
+/// height, and every line after the first starts with both hairlines. Screen
+/// readers still count sources, not lines, as in the grid.
 class LibraryListView extends StatelessWidget {
   const LibraryListView({
     required this.sources,
@@ -56,7 +57,7 @@ class LibraryListView extends StatelessWidget {
     final lineCount = (sources.length + columns - 1) ~/ columns;
     // Rows own the 16dp gutter so selection tints and the swipe background
     // run edge to edge.
-    return ListView.builder(
+    return ListView.custom(
       controller: scrollController,
       padding: EdgeInsets.only(bottom: libraryContentBottomPadding(context)),
       // Bouncing parent guarantees the elastic snap-back even on
@@ -65,66 +66,80 @@ class LibraryListView extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(
         parent: BouncingScrollPhysics(),
       ),
-      itemCount: lineCount + leadingCount,
-      itemBuilder: (context, itemIndex) {
-        if (continueReadingSource != null && itemIndex == 0) {
-          // The first row's own top padding completes the gap below.
-          return Padding(
-            padding: const EdgeInsets.only(
-              top: kLibraryContentTopPadding,
-              bottom: kLibraryContinueReadingGap - kLibraryContentTopPadding,
-            ),
-            child: LibraryContinueReadingCard(
-              source: continueReadingSource,
-              isSelectionMode: selection.isActive,
-              isSelected: selection.contains(continueReadingSource.id),
-              onPressed: () => onSourcePressed(continueReadingSource),
-              onLongPressed: () => onSourceLongPressed(continueReadingSource),
-            ),
-          );
-        }
-        final line = itemIndex - leadingCount;
-        if (columns == 1) {
-          return _LibraryListRow(
-            source: sources[line],
-            selection: selection,
-            showTopDivider: line > 0,
-            onSourcePressed: onSourcePressed,
-            onSourceLongPressed: onSourceLongPressed,
-            onConfirmSwipeDelete: onConfirmSwipeDelete,
-          );
-        }
-        final first = line * 2;
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _LibraryListRow(
-                source: sources[first],
-                selection: selection,
-                showTopDivider: line > 0,
-                gutters: _kStartColumnGutters,
-                onSourcePressed: onSourcePressed,
-                onSourceLongPressed: onSourceLongPressed,
-                onConfirmSwipeDelete: onConfirmSwipeDelete,
+      // A line can hold two sources, so screen readers count the card and
+      // the sources, each carrying its own index instead of the line's.
+      semanticChildCount: sources.length + leadingCount,
+      childrenDelegate: SliverChildBuilderDelegate(
+        childCount: lineCount + leadingCount,
+        addSemanticIndexes: false,
+        (context, itemIndex) {
+          if (continueReadingSource != null && itemIndex == 0) {
+            // The first row's own top padding completes the gap below.
+            return IndexedSemantics(
+              index: 0,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  top: kLibraryContentTopPadding,
+                  bottom:
+                      kLibraryContinueReadingGap - kLibraryContentTopPadding,
+                ),
+                child: LibraryContinueReadingCard(
+                  source: continueReadingSource,
+                  isSelectionMode: selection.isActive,
+                  isSelected: selection.contains(continueReadingSource.id),
+                  onPressed: () => onSourcePressed(continueReadingSource),
+                  onLongPressed: () =>
+                      onSourceLongPressed(continueReadingSource),
+                ),
               ),
-            ),
-            Expanded(
-              child: first + 1 < sources.length
-                  ? _LibraryListRow(
-                      source: sources[first + 1],
-                      selection: selection,
-                      showTopDivider: line > 0,
-                      gutters: _kEndColumnGutters,
-                      onSourcePressed: onSourcePressed,
-                      onSourceLongPressed: onSourceLongPressed,
-                      onConfirmSwipeDelete: onConfirmSwipeDelete,
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ],
-        );
-      },
+            );
+          }
+          final line = itemIndex - leadingCount;
+          if (columns == 1) {
+            return _LibraryListRow(
+              source: sources[line],
+              semanticIndex: leadingCount + line,
+              selection: selection,
+              showTopDivider: line > 0,
+              onSourcePressed: onSourcePressed,
+              onSourceLongPressed: onSourceLongPressed,
+              onConfirmSwipeDelete: onConfirmSwipeDelete,
+            );
+          }
+          final first = line * 2;
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _LibraryListRow(
+                  source: sources[first],
+                  semanticIndex: leadingCount + first,
+                  selection: selection,
+                  showTopDivider: line > 0,
+                  gutters: _kStartColumnGutters,
+                  onSourcePressed: onSourcePressed,
+                  onSourceLongPressed: onSourceLongPressed,
+                  onConfirmSwipeDelete: onConfirmSwipeDelete,
+                ),
+              ),
+              Expanded(
+                child: first + 1 < sources.length
+                    ? _LibraryListRow(
+                        source: sources[first + 1],
+                        semanticIndex: leadingCount + first + 1,
+                        selection: selection,
+                        showTopDivider: line > 0,
+                        gutters: _kEndColumnGutters,
+                        onSourcePressed: onSourcePressed,
+                        onSourceLongPressed: onSourceLongPressed,
+                        onConfirmSwipeDelete: onConfirmSwipeDelete,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -141,10 +156,11 @@ const _kEndColumnGutters = EdgeInsetsDirectional.only(
 );
 
 /// One source row; swiping it deletes the source unless a selection is
-/// active.
+/// active. [semanticIndex] is its place in the list for screen readers.
 class _LibraryListRow extends StatelessWidget {
   const _LibraryListRow({
     required this.source,
+    required this.semanticIndex,
     required this.selection,
     required this.showTopDivider,
     required this.onSourcePressed,
@@ -154,6 +170,7 @@ class _LibraryListRow extends StatelessWidget {
   });
 
   final LibrarySource source;
+  final int semanticIndex;
   final LibrarySelectionState selection;
   final bool showTopDivider;
   final EdgeInsetsDirectional gutters;
@@ -173,16 +190,17 @@ class _LibraryListRow extends StatelessWidget {
       onLongPress: () => onSourceLongPressed(source),
     );
 
-    if (selection.isActive) {
-      return tile;
-    }
-
-    return Dismissible(
-      key: ValueKey('library-row-${source.id}'),
-      direction: DismissDirection.endToStart,
-      background: const _SwipeDeleteBackground(),
-      confirmDismiss: (_) => onConfirmSwipeDelete(source),
-      child: tile,
+    return IndexedSemantics(
+      index: semanticIndex,
+      child: selection.isActive
+          ? tile
+          : Dismissible(
+              key: ValueKey('library-row-${source.id}'),
+              direction: DismissDirection.endToStart,
+              background: const _SwipeDeleteBackground(),
+              confirmDismiss: (_) => onConfirmSwipeDelete(source),
+              child: tile,
+            ),
     );
   }
 }

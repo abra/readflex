@@ -200,9 +200,9 @@ the window is resized or rotated. Features decide with it or with their own
 structure would be its own widget chosen in one place. Phone layouts are
 unchanged; the phone golden profiles prove it.
 
-- Library: the grid adds columns once covers would pass 160dp, the list shows
-  two columns of rows, and the empty state stops at the onboarding width
-  (`AppSizes.centeredColumnMaxWidth`).
+- Library: the grid adds columns once covers would pass 160dp and the list
+  shows two columns of rows. The empty state, like onboarding, stops at
+  `AppSizes.centeredColumnMaxWidth` in every window.
 - Reader: a measure of 32em of body text and the Auto / One / Two Columns
   choice reach foliate through `FoliateStyle`; foliate lays out one column or
   a landscape spread in one pass, and articles keep one centred column. See

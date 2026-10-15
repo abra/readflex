@@ -26,7 +26,7 @@ abstract final class AppSizes {
   static const double stateIconFrame = 56;
 
   /// Widest centered column of a welcome or empty screen: its heading and
-  /// full-width buttons stop growing here on tablets.
+  /// full-width buttons stop growing here on tablets and landscape phones.
   static const double centeredColumnMaxWidth = 480;
 
   /// Material's regular floating action button (Library "+").

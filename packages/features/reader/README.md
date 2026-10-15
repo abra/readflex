@@ -162,6 +162,50 @@ the final page-turn control and font sample. Native reader flows check equal
 step heights, manual return, DOM style updates,
 persistence across reopening and reset to inherited settings.
 
+```dart
+abstract class TextAction {
+  String get label;
+  IconData get icon;
+  Future<void> onExecute(BuildContext context, TextSelectionContext selection);
+}
+```
+
+## Architecture — independent units of state
+
+| Unit                          | Responsibility                                                             |
+|-------------------------------|----------------------------------------------------------------------------|
+| `ReaderBloc`                  | Content: load source document + highlights/bookmarks, debounced position save (500ms) |
+| `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
+| `ReaderSearchCubit`           | Search debounce, streamed results, recent queries, active match and return anchor |
+| `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`) and adjustment phase             |
+| `ReaderImageSelectionCubit`   | Current image-page area selection for comics/fixed-layout pages            |
+| `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
+| `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |
+| `ReaderBrightnessCubit`       | System/custom reader brightness state and active window override lifecycle |
+| `ReaderPageThumbnailCubit`   | UI-only bounded preview queue/cache, owned by the visible Pages or Highlights tab |
+| `ReaderSelectionTipCubit`     | One-time "Press and hold a word" tip: when it shows, hides and ends for good |
+
+### PDF page appearance
+
+PDF pages are images, so the Appearance sheet swaps its text controls for page
+controls: the theme, Margins (Whole page or Trimmed), Page colors (Theme or
+Original) and Page turn, each a caption above a full-width choice, 16dp apart. `showReaderAppearanceSheet(pdfControls: true)` builds
+this variant without the font step, and the chrome's appearance button reads
+"Appearance" instead of "Font" for PDF.
+
+- **Defaults.** Trimmed and Theme come from `ReaderAppearancePreferences`
+  (`trimPageMargins`, `pageColors`). Changes in the sheet are per-book
+  overrides through `ReaderAppearanceCubit`; Reset returns to the defaults.
+- **Delivery.** The reader maps both into `FoliateStyle.cropPageMargins` and
+  `FoliateStyle.pageColors`; `reader_webview` crops and recolors the bitmaps.
+  Other formats ignore them.
+- **Progress.** The bottom chrome shows `percent · page / total` for PDF from
+  the zero-based page fixed layouts report, so page 15 reads 15.
+
+`test/ui/reader_pdf_controls_test.dart` drives the sheet, the WebView style
+and the Pages tab end to end; `reader_appearance_sheet_test.dart` covers the
+variant's controls, persistence, Reset, semantics and 2x text.
+
 ### Text columns in wide windows
 
 A wide window (`AppWindowSize.isWide`: at least 840 × 480, never a phone)
@@ -209,50 +253,6 @@ The platform is `defaultTargetPlatform`, not the `Theme`'s: the correction
 belongs to the WebView engine the app runs on, which the plugin picks the same
 way. Books and articles share the multiplier; PDF and comic pages are images
 and ignore it.
-
-```dart
-abstract class TextAction {
-  String get label;
-  IconData get icon;
-  Future<void> onExecute(BuildContext context, TextSelectionContext selection);
-}
-```
-
-## Architecture — independent units of state
-
-| Unit                          | Responsibility                                                             |
-|-------------------------------|----------------------------------------------------------------------------|
-| `ReaderBloc`                  | Content: load source document + highlights/bookmarks, debounced position save (500ms) |
-| `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
-| `ReaderSearchCubit`           | Search debounce, streamed results, recent queries, active match and return anchor |
-| `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`) and adjustment phase             |
-| `ReaderImageSelectionCubit`   | Current image-page area selection for comics/fixed-layout pages            |
-| `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
-| `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |
-| `ReaderBrightnessCubit`       | System/custom reader brightness state and active window override lifecycle |
-| `ReaderPageThumbnailCubit`   | UI-only bounded preview queue/cache, owned by the visible Pages or Highlights tab |
-| `ReaderSelectionTipCubit`     | One-time "Press and hold a word" tip: when it shows, hides and ends for good |
-
-### PDF page appearance
-
-PDF pages are images, so the Appearance sheet swaps its text controls for page
-controls: the theme, Margins (Whole page or Trimmed), Page colors (Theme or
-Original) and Page turn, each a caption above a full-width choice, 16dp apart. `showReaderAppearanceSheet(pdfControls: true)` builds
-this variant without the font step, and the chrome's appearance button reads
-"Appearance" instead of "Font" for PDF.
-
-- **Defaults.** Trimmed and Theme come from `ReaderAppearancePreferences`
-  (`trimPageMargins`, `pageColors`). Changes in the sheet are per-book
-  overrides through `ReaderAppearanceCubit`; Reset returns to the defaults.
-- **Delivery.** The reader maps both into `FoliateStyle.cropPageMargins` and
-  `FoliateStyle.pageColors`; `reader_webview` crops and recolors the bitmaps.
-  Other formats ignore them.
-- **Progress.** The bottom chrome shows `percent · page / total` for PDF from
-  the zero-based page fixed layouts report, so page 15 reads 15.
-
-`test/ui/reader_pdf_controls_test.dart` drives the sheet, the WebView style
-and the Pages tab end to end; `reader_appearance_sheet_test.dart` covers the
-variant's controls, persistence, Reset, semantics and 2x text.
 
 ### One-time selection tip
 

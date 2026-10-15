@@ -98,9 +98,9 @@ use the extra width without stretching anything:
   screen gutters outside and the grid's 12dp gap between them
   (`BookLibraryListTile.gutters`). Each line is as tall as its taller row;
   every line after the first starts with both hairlines. Swipe to delete
-  and selection work per row as in one column.
-- The empty library's column stops at `AppSizes.centeredColumnMaxWidth`
-  (480), the onboarding width, so its buttons keep a button's shape.
+  and selection work per row as in one column, and screen readers count
+  sources, not lines: each row and the Continue reading card carry their own
+  index, as in the grid.
 
 The header, search field and Continue reading band span the window in both
 layouts.
@@ -113,7 +113,9 @@ subtitle, then two full-width commands stacked 10dp apart: filled **Upload a
 file** (`LibraryImportEntry.file`) and outlined **Save an article**
 (`LibraryImportEntry.article`), followed by the muted file kinds caption. It
 applies the 16dp screen gutter once and disables both commands while an
-import flow is open.
+import flow is open. Like onboarding, its column stops at
+`AppSizes.centeredColumnMaxWidth` (480) in every window, so on tablets and
+landscape phones the buttons keep a button's shape.
 When a non-empty library lists nothing, the body says why and offers the one
 way out. A search without matches shows No results found / Try a different
 search with **Clear search** (`commonClearSearch`), which empties the field,

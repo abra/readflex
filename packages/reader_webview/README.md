@@ -344,18 +344,18 @@ page.
   an explicit attribute, upstream behaviour is unchanged.
 - The page re-lays itself on resize and rotation in the same pass, keeping
   the reading position; Flutter resends the style only when the window
-  crosses the wide threshold. The paginator keeps its last Auto decision
-  while only the height changes, so the keyboard opening for search does not
-  turn a portrait page into a spread; a new width, measure or margin decides
-  again.
+  crosses the wide threshold. Auto takes the orientation from the window
+  (`innerWidth` / `innerHeight`), not the page: the shell sizes the page to
+  the visual viewport, which the iPadOS keyboard shortens, so searching, even
+  across a rotation, never turns a portrait page into a spread.
 - The article shell caps `<main>` at the measure plus the side margins and
   centres it; without a measure the article spans the window.
 
 `test_browser/reader_columns.test.mjs` runs the production loader in
 Chromium and WebKit: phones keep one column, Auto in portrait and landscape
 (including a rotation and back), One, Two, large text, a window that turns
-narrow, the keyboard shortening the page, the reading position across a
-column change, and the article cap.
+narrow, the keyboard shortening the page (also across a rotation), the
+reading position across a column change, and the article cap.
 
 ### Text Selection
 
