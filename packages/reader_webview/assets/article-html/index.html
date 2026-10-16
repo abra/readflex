@@ -29,6 +29,9 @@
       --rf-bottom-margin: 72px;
       --rf-safe-area-top: 0px;
       --rf-safe-area-bottom: 0px;
+      /* The larger side inset: a display cutout beside a landscape page. */
+      --rf-safe-area-inline: 0px;
+      --rf-inline-padding: max(var(--rf-side-margin), var(--rf-safe-area-inline));
       --rf-background-color: #ffffff;
       --rf-font-color: #000000;
       --rf-accent-color: #000000;
@@ -78,7 +81,7 @@
       min-height: 100vh;
       padding-block-start: calc(var(--rf-top-margin) + var(--rf-safe-area-top));
       padding-block-end: calc(var(--rf-bottom-margin) + var(--rf-safe-area-bottom));
-      padding-inline: var(--rf-side-margin);
+      padding-inline: var(--rf-inline-padding);
     }
 
     p,
@@ -460,7 +463,7 @@
         if (Number.isFinite(maxLineWidthEm) && maxLineWidthEm > 0) {
           root.setProperty(
             '--rf-main-max-width',
-            `calc(${Math.round(maxLineWidthEm * proseFontSizePx)}px + 2 * var(--rf-side-margin))`,
+            `calc(${Math.round(maxLineWidthEm * proseFontSizePx)}px + 2 * var(--rf-inline-padding))`,
           )
         } else {
           root.removeProperty('--rf-main-max-width')
@@ -469,6 +472,10 @@
         root.setProperty('--rf-bottom-margin', cssLengthPx(style.bottomMargin, '72px'))
         root.setProperty('--rf-safe-area-top', cssLengthPx(style.safeAreaTop, '0px'))
         root.setProperty('--rf-safe-area-bottom', cssLengthPx(style.safeAreaBottom, '0px'))
+        root.setProperty(
+          '--rf-safe-area-inline',
+          cssLengthPx(Math.max(Number(style.safeAreaLeft) || 0, Number(style.safeAreaRight) || 0), '0px'),
+        )
         root.setProperty('--rf-background-color', style.backgroundColor || '#ffffff')
         root.setProperty('--rf-font-color', style.fontColor || '#000000')
         root.setProperty('--rf-accent-color', style.accentColor || '#000000')

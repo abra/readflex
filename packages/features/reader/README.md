@@ -231,6 +231,11 @@ a per-book override like the other rows (`ReaderAppearanceCubit.setColumns`,
 `test/ui/reader_text_layout_test.dart` follows the style through window
 changes; `reader_webview` browser tests cover the layout itself.
 
+In every window the style also carries the side safe-area insets
+(`MediaQuery.padding` left/right), so book and article text stays clear of a
+landscape phone's display cutout while the page and its tap zones still fill
+the window. The tap-edge lines sit inside the same insets.
+
 ### Text size in tablet-sized windows
 
 `readerDeviceFontScale` (`reader_device_font_scale.dart`) multiplies the base

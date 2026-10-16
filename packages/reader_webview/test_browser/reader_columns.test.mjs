@@ -305,3 +305,83 @@ test('an article without a measure spans the window', async t => {
     const result = await articleWidths(page)
     assert.ok(Math.abs(result.main.width - landscape.width) <= 1, `${result.main.width}`)
 })
+
+// A landscape phone: the display cutout takes 62px on each side, as iOS
+// reports for iPhone 17 Pro. Text keeps clear of it; the page still fills
+// the window, so edge taps keep working there.
+const landscapePhone = { width: 874, height: 402 }
+const cutout = { safeAreaLeft: 62, safeAreaRight: 62 }
+
+// Where the first page's text starts and ends, in window coordinates.
+const firstPageText = page => page.evaluate(() => {
+    const renderer = window.reader.view.renderer
+    const { doc } = renderer.getContents()[0]
+    const size = renderer.getBoundingClientRect().width
+    const rects = [...doc.querySelectorAll('p')]
+        .flatMap(p => [...p.getClientRects()])
+        .filter(rect => rect.width > 0 && rect.left < size)
+    const css = doc.defaultView.getComputedStyle(doc.documentElement)
+    return {
+        left: Math.min(...rects.map(rect => rect.left)),
+        right: Math.max(...rects.map(rect => rect.right)),
+        paddingLeft: parseFloat(css.paddingLeft),
+        paddingRight: parseFloat(css.paddingRight),
+        size,
+    }
+})
+
+for (const pageTurnStyle of ['slide', 'scroll']) {
+    test(`book text keeps clear of a landscape cutout (${pageTurnStyle})`, async t => {
+        const style = { sideMargin: 3, pageTurnStyle }
+        const page = await openBook(t, { viewport: landscapePhone, style })
+        const bare = await firstPageText(page)
+        assert.ok(bare.paddingLeft < 62, `without insets the margin stays the reader's: ${bare.paddingLeft}`)
+
+        await changeStyle(page, { ...style, ...cutout })
+        const safe = await firstPageText(page)
+        assert.ok(safe.paddingLeft >= 62 - 0.5, `start padding ${safe.paddingLeft}`)
+        assert.ok(safe.paddingRight >= 62 - 0.5, `end padding ${safe.paddingRight}`)
+        assert.ok(safe.left >= 62 - 0.5, `text starts at ${safe.left}`)
+        assert.ok(safe.right <= safe.size - 62 + 0.5, `text ends at ${safe.right}`)
+        assert.equal(safe.size, landscapePhone.width, 'the page still fills the window')
+
+        // Rotating back to portrait drops the insets and the wider margin.
+        await changeStyle(page, { ...style, safeAreaLeft: 0, safeAreaRight: 0 })
+        assert.ok(Math.abs((await firstPageText(page)).left - bare.left) < 0.5)
+    })
+}
+
+test('a wide reader margin already clear of the cutout is kept', async t => {
+    const style = { sideMargin: 20, ...cutout }
+    const page = await openBook(t, { viewport: landscapePhone, style })
+    const result = await layout(page)
+    // 20% → -g / (g - 1) × size; the inset asks for less.
+    assert.ok(Math.abs(result.gap - 0.2 / 0.8 * landscapePhone.width) < 1, `${result.gap}`)
+})
+
+test('article text keeps clear of a landscape cutout', async t => {
+    const style = { fontSize, textScale: 1, sideMargin: 3 }
+    const page = await openArticle(t, { viewport: landscapePhone, style })
+    const text = () => page.evaluate(() => {
+        const rects = [...document.querySelectorAll('main p')]
+            .flatMap(p => [...p.getClientRects()])
+        return {
+            left: Math.min(...rects.map(rect => rect.left)),
+            right: Math.max(...rects.map(rect => rect.right)),
+        }
+    })
+    assert.ok((await text()).left < 62, 'without insets the margin stays the reader\'s')
+
+    await changeStyle(page, { ...style, ...cutout })
+    const safe = await text()
+    assert.ok(safe.left >= 62 - 0.5, `text starts at ${safe.left}`)
+    assert.ok(safe.right <= landscapePhone.width - 62 + 0.5, `text ends at ${safe.right}`)
+
+    // With a measure the line keeps its length and stays centred.
+    await changeStyle(page, { ...style, ...cutout, maxLineWidthEm: 32 })
+    const measured = await articleWidths(page)
+    assert.ok(Math.abs(measured.content - measurePx(32)) <= 1, `${measured.content}`)
+    const left = measured.main.left
+    const right = measured.window - measured.main.right
+    assert.ok(Math.abs(left - right) <= 1, `centred: ${left} vs ${right}`)
+})

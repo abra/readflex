@@ -166,6 +166,32 @@ void main() {
     await closeSheetAndUnmount(tester);
   });
 
+  testWidgets('book and article text get the window side insets', (
+    tester,
+  ) async {
+    FoliateStyle bookStyle() => tester
+        .widget<BookReaderWebView>(find.byType(BookReaderWebView))
+        .foliateStyle;
+    // iPhone 17 Pro in landscape: the cutout side and the opposite side both
+    // report 62pt.
+    const cutout = FakeViewPadding(left: 62, right: 62, bottom: 21);
+    for (final (source, style) in [
+      (find.byKey(ValueKey('library-grid-${app.book!.id}')), bookStyle),
+      (find.text(ReadingFixture.articleTitle), () => articleStyle(tester)),
+    ]) {
+      tester.view.padding = cutout;
+      addTearDown(tester.view.resetPadding);
+      await open(tester, source, window: const Size(874, 402));
+      expect((style().safeAreaLeft, style().safeAreaRight), (62.0, 62.0));
+
+      // Back in portrait the sides are free again.
+      tester.view.padding = const FakeViewPadding(top: 62, bottom: 34);
+      await resize(tester, phone);
+      expect((style().safeAreaLeft, style().safeAreaRight), (0.0, 0.0));
+      await unmountUi(tester);
+    }
+  });
+
   group('text size', () {
     // iOS renders the reader's 100% as 16px; Android adds its own WebView
     // correction, covered by the readerDeviceFontScale unit tests.

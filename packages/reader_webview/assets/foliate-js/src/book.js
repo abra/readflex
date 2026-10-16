@@ -3590,6 +3590,14 @@ const maxLineWidthPx = style => {
   return Math.round(em * proseFontSize)
 }
 
+// Readflex: the larger of the left and right safe-area insets, in CSS px.
+const safeInlineInsetPx = style => {
+  const insets = [style?.safeAreaLeft, style?.safeAreaRight]
+    .map(Number)
+    .filter(value => Number.isFinite(value) && value > 0)
+  return insets.length ? Math.max(...insets) : 0
+}
+
 const setRendererAttribute = (renderer, name, value) => {
   const nextValue = `${value ?? ''}`
   if (renderer.getAttribute(name) === nextValue) return
@@ -3636,6 +3644,9 @@ const setStyle = (oldStyle) => {
   setRendererAttribute(renderer, 'top-margin', `${style.topMargin}px`)
   setRendererAttribute(renderer, 'bottom-margin', `${style.bottomMargin}px`)
   setRendererAttribute(renderer, 'gap', `${style.sideMargin}%`)
+  // Readflex patch: the paginator keeps both side margins clear of the
+  // larger horizontal safe-area inset (a display cutout in landscape).
+  setRendererAttribute(renderer, 'safe-inline-inset', `${safeInlineInsetPx(style)}px`)
   setRendererAttribute(renderer, 'background-color', style.backgroundColor)
   applyShellThemeColors()
   setRendererAttribute(renderer, 'max-column-count', style.maxColumnCount)

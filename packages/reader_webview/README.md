@@ -350,12 +350,22 @@ page.
   across a rotation, never turns a portrait page into a spread.
 - The article shell caps `<main>` at the measure plus the side margins and
   centres it; without a measure the article spans the window.
+- `FoliateStyle.safeAreaLeft` / `safeAreaRight` carry the window's side
+  insets (the display cutout beside a landscape phone page, 62pt on each
+  side of an iPhone 17 Pro). Text keeps both side margins clear of the larger
+  one while the page still fills the window, so edge taps keep working there.
+  `book.js` sets it as the renderer's `safe-inline-inset` attribute and
+  `readflex_page_columns.js` uses it as the least gap (margins and the
+  spread's gutter share one gap); scrolled pages pad by at least the inset.
+  The article shell pads `<main>` by at least the inset. A reader margin that
+  is already wider stays as it is; vertical text ignores it.
 
 `test_browser/reader_columns.test.mjs` runs the production loader in
 Chromium and WebKit: phones keep one column, Auto in portrait and landscape
 (including a rotation and back), One, Two, large text, a window that turns
 narrow, the keyboard shortening the page (also across a rotation), the
-reading position across a column change, and the article cap.
+reading position across a column change, the article cap, and book (paged
+and scrolled) and article text keeping clear of a landscape cutout.
 
 ### Text Selection
 

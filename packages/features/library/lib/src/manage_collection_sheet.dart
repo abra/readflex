@@ -19,7 +19,6 @@ const double _collectionSourceRowHeight =
 const double _collectionSourceDividerHeight = 1;
 // EmptyState(compact) adds its own 16dp padding around one bodyMedium line.
 const double _emptyCollectionListHeightEstimate = 80;
-const double _manageCollectionTextFieldHeightEstimate = 56;
 const double _manageCollectionCountLabelHeightEstimate = 18;
 const double _manageCollectionDeleteBodyHeightEstimate = 88;
 const double _manageCollectionManageMinStepHeight = 336;
@@ -70,6 +69,23 @@ double _textWidth(BuildContext context, String text, TextStyle style) {
   final width = painter.width;
   painter.dispose();
   return width;
+}
+
+/// Unscaled name-field height for the step estimate, which scales as a whole:
+/// one measured line of the field's text inside the theme's content padding.
+/// Fonts round line heights (Geist sets 17pt × 1.45 on 25), so a fixed
+/// estimate leaves short lists scrolling by a pixel.
+double _nameFieldHeight(BuildContext context) {
+  final painter = TextPainter(
+    text: TextSpan(text: ' ', style: context.text.bodyLarge),
+    textDirection: Directionality.of(context),
+  )..layout();
+  final lineHeight = painter.preferredLineHeight;
+  painter.dispose();
+  final padding =
+      Theme.of(context).inputDecorationTheme.contentPadding?.vertical ??
+      AppSpacing.lg * 2;
+  return lineHeight + padding;
 }
 
 /// Whether the count label and the delete button cannot share one row at
@@ -301,7 +317,7 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
               .clamp(0.0, _collectionSourcesMaxHeight)
               .toDouble();
     final renameHeight = widget.scope.canRename
-        ? _manageCollectionTextFieldHeightEstimate + AppSpacing.lg
+        ? _nameFieldHeight(context) + AppSpacing.lg
         : 0.0;
     final l10n = context.l10n;
     // With a delete button the count row is a 48dp target row, or the label

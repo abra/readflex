@@ -42,6 +42,8 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!visible) return const SizedBox.shrink();
     final color = readerTheme.primaryTextColor.withValues(alpha: 0.35);
+    // Side lines stay clear of a display cutout beside a landscape page.
+    final safeArea = MediaQuery.maybePaddingOf(context) ?? EdgeInsets.zero;
     return Positioned.fill(
       child: IgnorePointer(
         child: LayoutBuilder(
@@ -61,6 +63,7 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
                   : _sideLines(
                       metrics,
                       color,
+                      safeArea: safeArea,
                       respectRtlProgression: true,
                     ),
             );
@@ -101,6 +104,7 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
   List<Widget> _sideLines(
     _ReaderTapEdgeMetrics metrics,
     Color color, {
+    required EdgeInsets safeArea,
     required bool respectRtlProgression,
   }) {
     final canGoLeft = respectRtlProgression && pageProgressionRtl
@@ -118,7 +122,7 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
       if (canGoLeft)
         Positioned(
           key: const Key('readerTapEdgeLeft'),
-          left: _kReaderTapEdgeInset,
+          left: safeArea.left + _kReaderTapEdgeInset,
           top: lineTop,
           width: _kReaderTapEdgeThickness,
           height: lineHeight,
@@ -127,7 +131,7 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
       if (canGoRight)
         Positioned(
           key: const Key('readerTapEdgeRight'),
-          right: _kReaderTapEdgeInset,
+          right: safeArea.right + _kReaderTapEdgeInset,
           top: lineTop,
           width: _kReaderTapEdgeThickness,
           height: lineHeight,

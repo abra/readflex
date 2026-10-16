@@ -106,7 +106,22 @@ void main() {
     if (mount) await tester.pumpWidget(app.widget);
     // Keep the simulator's real size; the integration binding must not impose
     // an 800x600 tablet-sized test surface on a phone.
-    await tapUi(tester, find.byKey(ValueKey('library-grid-${app.book!.id}')));
+    // A started book leaves the grid for the Continue reading card.
+    final tile = find.byKey(ValueKey('library-grid-${app.book!.id}'));
+    final continueReading = find.byKey(
+      const ValueKey('libraryContinueReadingCard'),
+    );
+    await waitForUi(
+      tester,
+      () =>
+          tile.hitTestable().evaluate().isNotEmpty ||
+          continueReading.hitTestable().evaluate().isNotEmpty,
+      description: 'book in Library',
+    );
+    await tapUi(
+      tester,
+      tile.hitTestable().evaluate().isNotEmpty ? tile : continueReading,
+    );
     await waitForUi(
       tester,
       () {
@@ -183,6 +198,14 @@ void main() {
       description: 'selection action menu',
     );
   }
+
+  // A toast placed while chrome was hidden keeps the bottom edge, so the
+  // capsule would come back under it (toast_service places a toast once).
+  Future<void> waitForSaveToastGone(WidgetTester tester) => waitForUi(
+    tester,
+    () => find.text('Highlight saved').evaluate().isEmpty,
+    description: 'save confirmation dismissed before showing chrome',
+  );
 
   Future<void> showChrome(WidgetTester tester) async {
     if (find.byTooltip('Back').hitTestable().evaluate().isEmpty) {
@@ -445,14 +468,15 @@ void main() {
       await tapUi(tester, find.byTooltip('Back'));
       expect(tester.getRect(find.byType(BottomSheet)), appearanceBounds);
       await tapUi(tester, find.byTooltip('Increase text size'));
-      final vertical = find.byTooltip('Vertical page turn');
+      final vertical = find.text('Vertical');
       await tester.ensureVisible(vertical);
       await tapUi(tester, vertical);
       await waitForUi(tester, () {
         final appearance = app.preferencesService.readerAppearanceOverrideFor(
           app.book!.id,
         );
-        return appearance?.themeId == 'night' &&
+        // "Night" is the near-black preset, stored as `mist`.
+        return appearance?.themeId == 'mist' &&
             appearance?.fontId == 'sans' &&
             (appearance?.textScale ?? 1) > 1 &&
             appearance?.pageTurnStyle == ReaderPageTurnStyle.vertical;
@@ -912,6 +936,7 @@ void main() {
         () => find.byType(ReaderHighlightControls).evaluate().isEmpty,
         description: 'highlight menu dismissed',
       );
+      await waitForSaveToastGone(tester);
       await bookState(tester).debugController!.evaluateJavascript(
         source:
             "void window.flutter_inappwebview.callHandler('onClick', {x: 0.5, y: 0.5})",
@@ -1038,6 +1063,7 @@ void main() {
       expect(repeated.id, merged.id);
       expect(repeated.note, 'Keep my note');
 
+      await waitForSaveToastGone(tester);
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Back'));
       await openBook(tester, mount: false);
@@ -1191,19 +1217,25 @@ void main() {
         );
         // Put the exact active match behind the overlay using native WebView
         // scrolling, not a mock marker or a second copy of the article layout.
-        await controller.evaluateJavascript(
-          source: '''(() => {
-          const rect = document.querySelector('mark.readflex-search-match').getBoundingClientRect();
+        const activeMatch =
+            "[...CSS.highlights.get('readflex-search-active')][0]";
+        final scrolled = await controller.evaluateJavascript(
+          source:
+              '''(() => {
+          const rect = $activeMatch.getBoundingClientRect();
           window.scrollBy(0, rect.top - (window.innerHeight - 40));
+          return true;
         })()''',
         );
+        expect(scrolled, isTrue);
         await tester.pump(const Duration(milliseconds: 300));
         final edge = await controller.evaluateJavascript(
-          source: '''(() => {
+          source:
+              '''(() => {
           const marker = document.querySelector('[data-readflex-search-occlusion] > rect');
           if (!marker) return null;
           const bar = marker.getBoundingClientRect();
-          const word = document.querySelector('mark.readflex-search-match').getBoundingClientRect();
+          const word = $activeMatch.getBoundingClientRect();
           return {left: bar.left, width: bar.width, wordLeft: word.left, wordWidth: word.width};
         })()''',
         );

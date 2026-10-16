@@ -141,3 +141,42 @@ test('exact counts and pages without a measure ignore the orientation', () => {
         assert.equal(pageColumnCount({ ...upstream, landscape }), 2)
     }
 })
+
+test('a landscape phone keeps both margins clear of the cutout', () => {
+    // iPhone 17 Pro in landscape: 874pt wide, 62pt insets on both sides.
+    const input = page({ width: 874, height: 402, maxColumnCount: 1 })
+    const layout = pageColumnLayout({ ...input, safeInset: 62 })
+    assert.equal(layout.columns, 1)
+    close(layout.gap / 2, 62, 'each outer margin reaches the inset')
+    assertFillsPage(layout, 874)
+})
+
+test('a side margin wider than the inset is kept', () => {
+    const input = page({ width: 874, height: 402, maxColumnCount: 1, gap: 200 })
+    const layout = pageColumnLayout({ ...input, safeInset: 62 })
+    close(layout.gap, 200, 'the reader margin wins')
+})
+
+test('no inset leaves every layout unchanged', () => {
+    for (const input of [
+        page({ width: 390, height: 844, maxColumnCount: 1 }),
+        page({ width: 1376, height: 1032, maxColumnCount: 0, measure: MEASURE }),
+        page({ width: 1032, height: 1376, maxColumnCount: 2, measure: MEASURE }),
+    ]) {
+        assert.deepEqual(pageColumnLayout({ ...input, safeInset: 0 }), pageColumnLayout(input))
+    }
+})
+
+test('a spread widens its gutter with the margins and decides on that gap', () => {
+    const width = 1376
+    const gap = 40
+    const input = page({ width, height: 1032, maxColumnCount: 2, gap })
+    const layout = pageColumnLayout({ ...input, safeInset: 60 })
+    close(layout.gap, 120, 'margins and gutter share one gap')
+    assertFillsPage(layout, width)
+    // Auto counts the wider gap, so an inset can turn a spread into one page.
+    const threshold = width / 2 - MEASURE * AUTO_SPREAD_MIN_MEASURE
+    const edge = page({ width, height: 1032, maxColumnCount: 0, measure: MEASURE, gap: 10 })
+    assert.equal(pageColumnCount({ ...edge, safeInset: threshold / 2 }), 2)
+    assert.equal(pageColumnCount({ ...edge, safeInset: threshold / 2 + 1 }), 1)
+})

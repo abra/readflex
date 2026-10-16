@@ -180,6 +180,49 @@ void main() {
     );
   });
 
+  testWidgets('side edge lines stay clear of landscape cutout insets', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: Size(874, 402),
+          padding: EdgeInsets.fromLTRB(62, 0, 62, 20),
+        ),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Stack(
+            children: [
+              ReaderTapEdgeIndicator(
+                readerTheme: ReaderThemePreset.paper.data,
+                axis: ReaderTapAxis.horizontal,
+                pageProgressionRtl: false,
+                canGoPrevious: true,
+                canGoNext: true,
+                contentTopMargin: 65,
+                contentBottomMargin: 35,
+                contentSideMargin: 8,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<Positioned>(find.byKey(const Key('readerTapEdgeLeft')))
+          .left,
+      66.0,
+    );
+    expect(
+      tester
+          .widget<Positioned>(find.byKey(const Key('readerTapEdgeRight')))
+          .right,
+      66.0,
+    );
+  });
+
   group('readerTapZoneHintInk', () {
     double contrast(Color a, Color b) {
       final la = a.computeLuminance();

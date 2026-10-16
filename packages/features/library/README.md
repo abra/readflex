@@ -447,6 +447,10 @@ gutter while the ink bleeds into it; it mirrors in RTL. When the label and
 the count cannot share the line (large text, long translations, measured with
 `TextPainter` like the sibling sites), the row stacks: count on its own line,
 button below aligned to the end. The step-height estimate uses the same rule.
+The estimate also measures the name field (one `bodyLarge` line inside the
+input theme's padding) instead of assuming 56dp: Geist sets 17pt × 1.45 on a
+25dp line, and a fixed guess left a one- or two-item list scrolling by 1dp
+with its edge fade showing.
 There is no separate delete entry, hairline or gap above the footer any more.
 Both the fixed and the scrolling layout keep one rhythm: the source list's
 own 16dp bottom after the last row, then the shared footer padding

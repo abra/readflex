@@ -564,6 +564,7 @@ export class Paginator extends HTMLElement {
   static observedAttributes = [
     'flow', 'gap', 'top-margin', 'bottom-margin', 'background-color',
     'max-inline-size', 'max-block-size', 'max-column-count', 'page-turn-axis',
+    'safe-inline-inset',
   ]
   #root = this.attachShadow({ mode: 'open' })
   // Readflex patch: same rAF coalescing as View#observer above.
@@ -817,6 +818,7 @@ export class Paginator extends HTMLElement {
       case 'gap':
       case 'max-column-count':
       case 'max-inline-size':
+      case 'safe-inline-inset':
         // needs explicit `render()` as it doesn't necessarily resize
         this.#top.style.setProperty('--_' + name, value)
         this.render()
@@ -868,6 +870,12 @@ export class Paginator extends HTMLElement {
     // computation with NaN (a NaN scroll target is silently ignored).
     this.#margin = Number.isFinite(margin) ? margin : 0
 
+    // Readflex patch: margins along a horizontal line stay clear of the
+    // display cutout beside a landscape page (the larger side inset, in px).
+    const safeInset = vertical
+      ? 0
+      : parseFloat(style.getPropertyValue('--_safe-inline-inset')) || 0
+
     const g = parseFloat(style.getPropertyValue('--_gap')) / 100
     // The gap will be a percentage of the #container, not the whole view.
     // This means the outer padding will be bigger than the column gap. Let
@@ -917,7 +925,11 @@ export class Paginator extends HTMLElement {
       // this.#header.replaceChildren()
       // this.#footer.replaceChildren()
 
-      return { flow, margin, gap, columnWidth, topMargin, bottomMargin }
+      // Scrolled pages pad each side by the whole gap.
+      return {
+        flow, margin, gap: Math.max(gap, safeInset), columnWidth, topMargin,
+        bottomMargin,
+      }
     }
 
     // Readflex patch: an explicit max-inline-size is the reader's measure for
@@ -931,7 +943,7 @@ export class Paginator extends HTMLElement {
       : null
     const { columns: divisor, gap: columnGap, columnWidth } = pageColumnLayout({
       landscape: innerWidth > innerHeight,
-      size, gap, maxColumnCount, maxInlineSize, measure,
+      size, gap, maxColumnCount, maxInlineSize, measure, safeInset,
     })
     this.setAttribute('dir', this.#rtl ? 'rtl' : 'ltr')
 

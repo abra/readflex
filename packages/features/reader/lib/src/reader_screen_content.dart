@@ -999,6 +999,8 @@ FoliateStyle _readerWebViewStyle({
     bottomMargin: bottomMargin ?? layout.bottomMargin,
     safeAreaTop: mediaPadding.top,
     safeAreaBottom: mediaPadding.bottom,
+    safeAreaLeft: mediaPadding.left,
+    safeAreaRight: mediaPadding.right,
     sideMargin: appearance.sideMargin,
     justify: appearance.textAlignment == ReaderTextAlignment.justify,
     hyphenate: layout.hyphenate,

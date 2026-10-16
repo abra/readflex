@@ -659,6 +659,46 @@ void main() {
     });
   }
 
+  for (final (count, window, ratio, locale) in [
+    (1, const Size(402, 874), 1.0, const Locale('en')),
+    (2, const Size(402, 874), 1.0, const Locale('en')),
+    // Every locale on a 390 phone and a 320 one at 1x and 2x: the count row
+    // stacks where "Delete collection" is long, and the estimate follows.
+    for (final locale in ReadflexSupportedLocales.locales)
+      for (final (window, ratio) in [
+        (const Size(390, 844), 1.0),
+        (const Size(320, 568), 1.0),
+        (const Size(320, 568), 2.0),
+      ])
+        (1, window, ratio, locale),
+  ]) {
+    testWidgets('a collection of $count fits without scrolling '
+        '(${window.width.round()}@${ratio.round()}x $locale)', (tester) async {
+      tester.view.physicalSize = window * ratio;
+      tester.view.devicePixelRatio = ratio;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await open(tester, sources: manySources(count), locale: locale);
+      final sheet = find.byKey(const ValueKey('manageCollectionContent'));
+      final list = find.descendant(
+        of: find.descendant(of: sheet, matching: find.byType(ListView)),
+        matching: find.byType(Scrollable),
+      );
+      // Geist rounds the 17pt field line up to 25: the step estimate must
+      // measure the name field, not assume 56dp.
+      expect(tester.state<ScrollableState>(list).position.maxScrollExtent, 0);
+      expect(
+        tester
+            .widgetList<ScrollEdgeFade>(
+              find.descendant(of: sheet, matching: find.byType(ScrollEdgeFade)),
+            )
+            .every((fade) => !fade.visible),
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('scrolling layout keeps the same gaps around the delete entry '
       'and commands', (tester) async {
     tester.view.physicalSize = const Size(390, 844);

@@ -722,6 +722,8 @@ void main() {
       expect(map['bottomMargin'], 50);
       expect(map['safeAreaTop'], 0);
       expect(map['safeAreaBottom'], 0);
+      expect(map['safeAreaLeft'], 0);
+      expect(map['safeAreaRight'], 0);
       expect(map['sideMargin'], 8);
       expect(map['justify'], true);
       expect(map['hyphenate'], false);
@@ -784,6 +786,25 @@ void main() {
       );
     });
 
+    test('side safe areas reach the reader and take part in equality', () {
+      const landscape = FoliateStyle(safeAreaLeft: 62, safeAreaRight: 62);
+      final map = landscape.toMap();
+
+      expect(map['safeAreaLeft'], 62);
+      expect(map['safeAreaRight'], 62);
+      expect(
+        landscape,
+        const FoliateStyle(safeAreaLeft: 62, safeAreaRight: 62),
+      );
+      expect(
+        landscape.hashCode,
+        const FoliateStyle(safeAreaLeft: 62, safeAreaRight: 62).hashCode,
+      );
+      // Rotating changes them, so the reader must receive a new style.
+      expect(landscape, isNot(const FoliateStyle()));
+      expect(landscape, isNot(const FoliateStyle(safeAreaLeft: 62)));
+    });
+
     test('override flags can be disabled', () {
       const style = FoliateStyle(
         overrideFont: false,
@@ -833,7 +854,7 @@ void main() {
 
     test('toMap has expected key count', () {
       const style = FoliateStyle();
-      expect(style.toMap().length, 34);
+      expect(style.toMap().length, 36);
     });
   });
 

@@ -838,6 +838,8 @@ class FoliateStyle {
     this.bottomMargin = 50,
     this.safeAreaTop = 0,
     this.safeAreaBottom = 0,
+    this.safeAreaLeft = 0,
+    this.safeAreaRight = 0,
     this.sideMargin = 8,
     this.justify = true,
     this.hyphenate = false,
@@ -883,6 +885,12 @@ class FoliateStyle {
   final double bottomMargin;
   final double safeAreaTop;
   final double safeAreaBottom;
+
+  /// Side insets of the window (a display cutout in landscape). Text keeps
+  /// both side margins clear of the larger one; the page itself still fills
+  /// the window.
+  final double safeAreaLeft;
+  final double safeAreaRight;
 
   /// Side margin in percent.
   final double sideMargin;
@@ -947,6 +955,8 @@ class FoliateStyle {
     'bottomMargin': bottomMargin,
     'safeAreaTop': safeAreaTop,
     'safeAreaBottom': safeAreaBottom,
+    'safeAreaLeft': safeAreaLeft,
+    'safeAreaRight': safeAreaRight,
     'sideMargin': sideMargin,
     'justify': justify,
     'hyphenate': hyphenate,
@@ -993,6 +1003,8 @@ class FoliateStyle {
           bottomMargin == other.bottomMargin &&
           safeAreaTop == other.safeAreaTop &&
           safeAreaBottom == other.safeAreaBottom &&
+          safeAreaLeft == other.safeAreaLeft &&
+          safeAreaRight == other.safeAreaRight &&
           sideMargin == other.sideMargin &&
           justify == other.justify &&
           hyphenate == other.hyphenate &&
@@ -1030,6 +1042,8 @@ class FoliateStyle {
     bottomMargin,
     safeAreaTop,
     safeAreaBottom,
+    safeAreaLeft,
+    safeAreaRight,
     sideMargin,
     justify,
     hyphenate,

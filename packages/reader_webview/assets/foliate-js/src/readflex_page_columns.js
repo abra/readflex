@@ -18,6 +18,11 @@ export const AUTO_SPREAD_MIN_MEASURE = 0.625
 const upstreamColumns = (size, maxInlineSize) =>
     Math.min(2, Math.ceil(size / maxInlineSize))
 
+// The narrowest gap that keeps each outer margin clear of a `safeInset`
+// (a display cutout beside a landscape page). Margins and the spread's gutter
+// share one gap, so both widen together.
+const minimumGap = (gap, safeInset) => Math.max(gap, 2 * (safeInset || 0))
+
 // Columns for `maxColumnCount` (0 = automatic). With a `measure`, Auto shows
 // a spread only in a `landscape` window whose two columns each keep most of
 // it. Orientation is the window's, not the page's: the keyboard shortens the
@@ -25,10 +30,12 @@ const upstreamColumns = (size, maxInlineSize) =>
 // turn a portrait page into a spread.
 export const pageColumnCount = ({
     landscape, size, gap, maxColumnCount, maxInlineSize, measure = null,
+    safeInset = 0,
 }) => {
     if (maxColumnCount > 0) return maxColumnCount
     if (!measure) return upstreamColumns(size, maxInlineSize)
-    return landscape && size / 2 - gap >= measure * AUTO_SPREAD_MIN_MEASURE
+    const pageGap = minimumGap(gap, safeInset)
+    return landscape && size / 2 - pageGap >= measure * AUTO_SPREAD_MIN_MEASURE
         ? 2
         : 1
 }
@@ -37,10 +44,14 @@ export const pageColumnCount = ({
 // column width. Without a `measure` the columns fill the page.
 export const pageColumnLayout = ({
     landscape, size, gap, maxColumnCount, maxInlineSize, measure = null,
+    safeInset = 0,
 }) => {
     const columns = pageColumnCount({
-        landscape, size, gap, maxColumnCount, maxInlineSize, measure,
+        landscape, size, gap, maxColumnCount, maxInlineSize, measure, safeInset,
     })
-    const columnGap = measure ? Math.max(gap, size / columns - measure) : gap
+    const pageGap = minimumGap(gap, safeInset)
+    const columnGap = measure
+        ? Math.max(pageGap, size / columns - measure)
+        : pageGap
     return { columns, gap: columnGap, columnWidth: size / columns - columnGap }
 }
