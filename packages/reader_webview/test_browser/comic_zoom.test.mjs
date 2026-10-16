@@ -45,6 +45,19 @@ const state = page => page.evaluate(() => {
         positions: window.bridgeCalls.filter(([name]) => name === 'onRelocated').length }
 })
 
+// Zooms in with a double tap on a page opened with `controlledClock`. Page time
+// stands still between the two clicks, so protocol latency under load cannot
+// stretch the interval past the 280ms double-tap window; real time resumes
+// afterwards.
+async function doubleTapZoom(page, x, y) {
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
+    await page.mouse.click(x, y)
+    await page.clock.runFor(80)
+    await page.mouse.click(x, y)
+    await page.clock.runFor(350)
+    await page.clock.resume()
+}
+
 test('comic thumbnails load on demand, are bounded and leave navigation unchanged', async t => {
     const { page, requests } = await openComic(t)
     assert.equal(requests.some(url => url.endsWith('readflex_comic_thumbnail.js')), false)
@@ -224,7 +237,8 @@ test('comic double tap zooms at the tapped area without toggling chrome', async 
         }
     })
     // Keep real hit-testing/input, but do not let protocol scheduling latency
-    // change the gesture interval. The other gesture tests use real time.
+    // change the gesture interval (see doubleTapZoom); this one also checks
+    // that nothing fires between the taps.
     const doubleTap = async () => {
         await page.mouse.click(150, 330)
         await page.clock.runFor(80)
@@ -253,15 +267,20 @@ test('comic double tap zooms at the tapped area without toggling chrome', async 
 })
 
 test('a single comic tap still opens chrome, including while zoomed', async t => {
-    const { page } = await openComic(t)
+    const { page } = await openComic(t, { controlledClock: true })
+    await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000))
+    const before = await state(page)
     await page.mouse.click(195, 420)
-    await page.waitForTimeout(350)
+    await page.clock.runFor(350)
     assert.equal((await state(page)).clicks.length, 1)
-    await page.mouse.dblclick(150, 330, { delay: 80 })
-    await page.waitForTimeout(350)
+    await page.mouse.click(150, 330)
+    await page.clock.runFor(80)
+    await page.mouse.click(150, 330)
+    await page.clock.runFor(350)
+    assert.ok((await state(page)).width > before.width * 2, 'zoomed')
     // Edge taps in a zoomed page must not turn it accidentally.
     await page.mouse.click(25, 400)
-    await page.waitForTimeout(350)
+    await page.clock.runFor(350)
     assert.deepEqual((await state(page)).clicks.at(-1), { x: 0.5, y: 0.5 })
 })
 
@@ -332,9 +351,8 @@ test('centre taps outside the double-tap window remain two single taps', async t
 })
 
 test('panning is bounded, does not click or change the comic location', async t => {
-    const { page } = await openComic(t)
-    await page.mouse.dblclick(195, 420, { delay: 80 })
-    await page.waitForTimeout(350)
+    const { page } = await openComic(t, { controlledClock: true })
+    await doubleTapZoom(page, 195, 420)
     const before = await state(page)
     await page.mouse.move(150, 330)
     await page.mouse.down()
@@ -363,19 +381,17 @@ test('host taps do not dismiss an image-area draft being edited', async t => {
 })
 
 test('page changes and rotation reset zoom and cancel deferred taps', async t => {
-    const { page } = await openComic(t)
+    const { page } = await openComic(t, { controlledClock: true })
     const before = await state(page)
     await page.mouse.click(195, 420)
     await page.evaluate(() => window.reader.view.next())
     await page.waitForTimeout(350)
     assert.equal((await state(page)).clicks.length, 0)
-    await page.mouse.dblclick(195, 420, { delay: 80 })
-    await page.waitForTimeout(350)
+    await doubleTapZoom(page, 195, 420)
     await page.evaluate(() => window.reader.view.next())
     await page.waitForTimeout(350)
     assert.ok(Math.abs((await state(page)).width - before.width) < 1)
-    await page.mouse.dblclick(195, 420, { delay: 80 })
-    await page.waitForTimeout(350)
+    await doubleTapZoom(page, 195, 420)
     await page.setViewportSize({ width: 844, height: 390 })
     await page.waitForTimeout(350)
     assert.ok((await state(page)).width < 422)
@@ -389,15 +405,14 @@ test('fixed-layout EPUB does not acquire comic zoom or deferred taps', async t =
 
 for (const axis of ['slide', 'vertical']) for (const rtl of [false, true]) {
     test(`comic ${axis} rtl=${rtl} swipes turn at fit scale but pan when zoomed`, async t => {
-        const { page } = await openComic(t, { axis, rtl })
+        const { page } = await openComic(t, { axis, rtl, controlledClock: true })
         const start = await state(page)
         await pointer(page, 'pointerdown', 290, 540)
         await pointer(page, 'pointermove', axis === 'vertical' ? 290 : 90, axis === 'vertical' ? 290 : 540)
         await pointer(page, 'pointerup', axis === 'vertical' ? 290 : 90, axis === 'vertical' ? 290 : 540)
         await page.waitForTimeout(350)
         assert.equal((await state(page)).index, start.index + 1)
-        await page.mouse.dblclick(195, 420, { delay: 80 })
-        await page.waitForTimeout(350)
+        await doubleTapZoom(page, 195, 420)
         const zoomed = await state(page)
         await pointer(page, 'pointerdown', 290, 540)
         await pointer(page, 'pointermove', axis === 'vertical' ? 290 : 90, axis === 'vertical' ? 290 : 540)
@@ -434,9 +449,8 @@ test('pinch is clamped, cancels long press and permits panning after one finger 
 })
 
 test('zoomed long press retains image-area coordinates and selection ownership', async t => {
-    const { page } = await openComic(t)
-    await page.mouse.dblclick(195, 420, { delay: 80 })
-    await page.waitForTimeout(350)
+    const { page } = await openComic(t, { controlledClock: true })
+    await doubleTapZoom(page, 195, 420)
     await page.mouse.move(195, 420)
     await page.mouse.down()
     await page.waitForTimeout(330)
@@ -454,9 +468,8 @@ test('zoomed long press retains image-area coordinates and selection ownership',
 })
 
 test('pointer bursts are batched and never send per-move Flutter messages', async t => {
-    const { page } = await openComic(t)
-    await page.mouse.dblclick(195, 420, { delay: 80 })
-    await page.waitForTimeout(350)
+    const { page } = await openComic(t, { controlledClock: true })
+    await doubleTapZoom(page, 195, 420)
     const result = await page.evaluate(async () => {
         const r = reader.view.renderer
         const doc = r.getContents().find(x => x.index === r.index).doc

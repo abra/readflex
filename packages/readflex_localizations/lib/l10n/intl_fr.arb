@@ -121,7 +121,7 @@
   "libraryDeletedSuffix": " supprimé",
   "libraryItemsDeleted": "{count, plural, one{Élément supprimé} other{{count} éléments supprimés}}",
   "libraryDeleteFailed": "{count, plural, one{Impossible de supprimer l'élément} other{Impossible de supprimer les éléments}}",
-  "libraryAddToCollection": "Ajouter à une collection",
+  "libraryAddToCollection": "Dans une collection",
   "libraryEmptyTitle": "Votre bibliothèque est vide",
   "libraryEmptySubtitle": "Ajoutez votre premier livre ou article",
   "libraryNoResultsTitle": "Aucun résultat",

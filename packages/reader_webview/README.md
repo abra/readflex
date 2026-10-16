@@ -326,9 +326,9 @@ dialog uses a translucent reader background with a divider-coloured border.
 
 `FoliateStyle.maxColumnCount` sets the text columns of a reflowable page
 (`0` lets foliate choose, `1`, `2`) and `FoliateStyle.maxLineWidthEm` the
-reader's measure in ems of the body text. The app sends a measure only to
-wide windows; without one a page lays out as before, one column across the
-page.
+reader's measure in ems of the body text. The app sends the measure to every
+window and a column choice other than one only to wide windows; without a
+measure a page lays out as upstream does, one column across the page.
 
 - `book.js` turns the measure into CSS pixels (16px × `fontSize` ×
   `textScale`, the body size it sets), so a line keeps its length in
@@ -653,9 +653,10 @@ including malicious markup, preserved styles/CFIs, image policy, load errors and
 highlight geometry/pixel changes at desktop and mobile sizes. Flutter tests
 use the plugin platform interface to simulate renderer death and late callbacks.
 MOBI sanitizer tests also check KF8-style XHTML anchors and internal links;
-these do not replace a full binary KF8 fixture. The comic double-tap timing tests
-use Playwright's controlled clock for mouse/touch sequences so protocol scheduling
-cannot turn the gesture into two single taps; other gesture tests use real time.
+these do not replace a full binary KF8 fixture. Every comic double tap in the
+tests runs on Playwright's controlled clock, so protocol scheduling under load
+cannot stretch it past the 280ms window into two single taps; tests that only
+need a zoomed page use `doubleTapZoom`, which resumes real time afterwards.
 Symbol-font pixel tests wait for the font loaded by production code rather than
 forcing a load or assuming a fixed delay is sufficient.
 Book search regression tests cover final-character matches, empty text nodes,

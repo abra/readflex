@@ -206,12 +206,17 @@ this variant without the font step, and the chrome's appearance button reads
 and the Pages tab end to end; `reader_appearance_sheet_test.dart` covers the
 variant's controls, persistence, Reset, semantics and 2x text.
 
-### Text columns in wide windows
+### Line length and text columns
+
+`readerTextColumns` (`reader_text_columns.dart`) keeps lines readable. In
+every window it gives `FoliateStyle` a measure of `kReaderMaxLineWidthEm`
+(32em of body text, about 68 characters), so a phone in landscape and a
+tablet in portrait centre one column of it instead of running ~85 characters
+across the page. A phone page in portrait is narrower than the measure, even
+at the smallest reader size, and lays out as before.
 
 A wide window (`AppWindowSize.isWide`: at least 840 × 480, never a phone)
-keeps lines readable. `readerTextColumns` (`reader_text_columns.dart`) gives
-`FoliateStyle` a measure of `kReaderMaxLineWidthEm` (32em of body text, about
-68 characters) and the reader's Columns choice:
+also gets the reader's Columns choice:
 
 - **Auto** (default, `maxColumnCount` 0): one column in portrait; in
   landscape two pages side by side while each keeps most of the measure, so
@@ -221,8 +226,8 @@ keeps lines readable. `readerTextColumns` (`reader_text_columns.dart`) gives
 
 Foliate applies it in one layout pass, including on rotation, so the style
 reaches the WebView again only when the window crosses the wide threshold or
-the choice changes. Narrow windows, phones included, keep one column across
-the page whatever the choice says; articles always keep one column at the
+the choice changes. Narrow windows, phones included, keep one column at the
+measure whatever the choice says; articles always keep one column at the
 measure; PDF and comic pages keep their own layout. Appearance shows
 **Columns** (Auto / One / Two, under Page turn) only for reflowable books in a
 wide window (`showReaderAppearanceSheet(showColumnControls:)`); the choice is

@@ -438,7 +438,7 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   }
 
   @override
-  String get libraryAddToCollection => 'Ajouter à une collection';
+  String get libraryAddToCollection => 'Dans une collection';
 
   @override
   String get libraryEmptyTitle => 'Votre bibliothèque est vide';

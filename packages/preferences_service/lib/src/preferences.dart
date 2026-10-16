@@ -72,7 +72,7 @@ enum ReaderPageColors {
 }
 
 /// Text columns of reflowable books in a wide window. Narrow windows, phones
-/// included, always show one column across the page.
+/// included, always show one column.
 enum ReaderColumns {
   /// One column in portrait; two pages side by side in landscape while both
   /// keep a readable line length.

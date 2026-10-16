@@ -4,7 +4,9 @@ import 'package:reader/src/reader_text_columns.dart';
 
 void main() {
   group('readerTextColumns', () {
-    test('a narrow window keeps one column across the page', () {
+    test('a narrow window keeps one column at the measure', () {
+      // Phones, landscape included: the Columns choice made on a tablet does
+      // not apply, the line length does.
       for (final columns in [null, ...ReaderColumns.values]) {
         expect(
           readerTextColumns(
@@ -12,7 +14,7 @@ void main() {
             fixedLayout: false,
             columns: columns,
           ),
-          kReaderFullWidthColumn,
+          (maxColumnCount: 1, maxLineWidthEm: kReaderMaxLineWidthEm),
           reason: '$columns',
         );
       }
@@ -45,11 +47,18 @@ void main() {
       );
     });
 
-    test('a wide article keeps one column at the measure', () {
-      expect(
-        readerTextColumns(wideWindow: true, fixedLayout: false, columns: null),
-        (maxColumnCount: 1, maxLineWidthEm: kReaderMaxLineWidthEm),
-      );
+    test('an article keeps one column at the measure in any window', () {
+      for (final wideWindow in [false, true]) {
+        expect(
+          readerTextColumns(
+            wideWindow: wideWindow,
+            fixedLayout: false,
+            columns: null,
+          ),
+          (maxColumnCount: 1, maxLineWidthEm: kReaderMaxLineWidthEm),
+          reason: 'wideWindow: $wideWindow',
+        );
+      }
     });
 
     test('image pages keep their own layout in any window', () {

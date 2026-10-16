@@ -2005,7 +2005,7 @@ void main() {
 
     final actionRect = tester.getRect(
       find.ancestor(
-        of: find.text('Ajouter à une collection'),
+        of: find.text('Dans une collection'),
         matching: find.byType(FilledButton),
       ),
     );

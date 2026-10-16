@@ -2,11 +2,13 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SemanticsNode;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_empty_state.dart';
 import 'package:library_feature/src/library_grid_view.dart';
 import 'package:library_feature/src/library_list_tile.dart';
 import 'package:library_feature/src/library_list_view.dart';
+import 'package:library_feature/src/library_selection_bar.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -364,5 +366,173 @@ void main() {
         );
       }
     });
+  });
+
+  group('selection bar', () {
+    // The smallest wide window: Split View halves and phones stay narrow.
+    const smallestWide = Size(840, 480);
+
+    Future<void> pumpBar(
+      WidgetTester tester, {
+      required Size window,
+      double ratio = 1,
+      double textScale = 1,
+      String locale = 'en',
+    }) async {
+      tester.view
+        ..physicalSize = window * ratio
+        ..devicePixelRatio = ratio;
+      tester.platformDispatcher.textScaleFactorTestValue = textScale;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final cubit = LibrarySelectionCubit()
+        ..toggle('b-0')
+        ..toggle('b-1');
+      addTearDown(cubit.close);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          locale: Locale(locale),
+          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          supportedLocales: ReadflexSupportedLocales.locales,
+          home: BlocProvider.value(
+            value: cubit,
+            child: Scaffold(
+              bottomNavigationBar: LibrarySelectionBar(
+                onAddToCollection: () {},
+                onDelete: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final close = find.widgetWithIcon(AppPlainIconButton, AppIcons.close);
+    final delete = find.widgetWithIcon(AppPlainIconButton, AppIcons.delete);
+    final add = find.byType(FilledButton);
+
+    Finder count(WidgetTester tester) => find.text(
+      tester
+          .element(find.byType(LibrarySelectionBar))
+          .l10n
+          .librarySelectedCount(2),
+    );
+
+    for (final window in const [
+      _tabletPortrait,
+      _tabletLandscape,
+      smallestWide,
+    ]) {
+      testWidgets('a wide window keeps bulk actions in one row ($window)', (
+        tester,
+      ) async {
+        await pumpBar(tester, window: window);
+        final closeRect = tester.getRect(close);
+        for (final item in [count(tester), add, delete]) {
+          expect(
+            tester.getRect(item).center.dy,
+            closeTo(closeRect.center.dy, .5),
+            reason: '$item',
+          );
+        }
+        expect(tester.getRect(find.byIcon(AppIcons.close)).left, AppSpacing.lg);
+        expect(
+          window.width - tester.getRect(find.byIcon(AppIcons.delete)).right,
+          AppSpacing.lg,
+        );
+        // The command keeps its own width beside Delete, not the row's.
+        final addRect = tester.getRect(add);
+        expect(
+          addRect.width,
+          closeTo(
+            tester
+                .renderObject<RenderBox>(add)
+                .getMaxIntrinsicWidth(
+                  double.infinity,
+                ),
+            .5,
+          ),
+        );
+        expect(tester.getRect(delete).left - addRect.right, AppSpacing.md);
+        expect(
+          tester.getRect(find.byType(LibrarySelectionBar)).height,
+          1 + AppSpacing.sm * 2 + closeRect.height + AppSpacing.lg,
+          reason: 'divider, one padded row, the safe footer',
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('right-to-left mirrors the row', (tester) async {
+      await pumpBar(tester, window: _tabletLandscape, locale: 'ar');
+      expect(
+        _tabletLandscape.width -
+            tester.getRect(find.byIcon(AppIcons.close)).right,
+        AppSpacing.lg,
+      );
+      expect(tester.getRect(find.byIcon(AppIcons.delete)).left, AppSpacing.lg);
+      expect(
+        tester.getRect(add).left - tester.getRect(delete).right,
+        AppSpacing.md,
+      );
+      expect(
+        tester.getRect(count(tester)).right,
+        lessThan(tester.getRect(close).left),
+      );
+    });
+
+    for (final window in const [_phonePortrait, _phoneLandscape]) {
+      testWidgets('a phone keeps the count above the command ($window)', (
+        tester,
+      ) async {
+        await pumpBar(tester, window: window);
+        final addRect = tester.getRect(add);
+        expect(tester.getRect(count(tester)).bottom, lessThan(addRect.top));
+        expect(addRect.left, AppSpacing.lg);
+        expect(tester.getRect(delete).left - addRect.right, AppSpacing.md);
+        expect(
+          window.width - tester.getRect(find.byIcon(AppIcons.delete)).right,
+          AppSpacing.lg,
+        );
+      });
+    }
+
+    for (final locale in ReadflexSupportedLocales.locales) {
+      for (final (window, ratio, textScale) in const [
+        (smallestWide, 1.0, 1.0),
+        (smallestWide, 1.0, 2.0),
+        (_tabletPortrait, 2.0, 1.0),
+        (_phonePortrait, 1.0, 1.0),
+        (Size(320, 568), 1.0, 1.0),
+        (Size(320, 568), 2.0, 1.0),
+      ]) {
+        testWidgets(
+          'the bar lays out (${window.width.round()}@${ratio.round()}x, '
+          'text ${textScale}x, ${locale.toLanguageTag()})',
+          (tester) async {
+            await pumpBar(
+              tester,
+              window: window,
+              ratio: ratio,
+              textScale: textScale,
+              locale: locale.toLanguageTag(),
+            );
+            expect(tester.takeException(), isNull);
+            // A wide window keeps the command in the count's row at every text
+            // size. Whether labels wrap depends on the font: the test font is
+            // about twice as wide as Geist, so root
+            // `library_selection_bar_test.dart` checks text with the app's
+            // fonts.
+            if (window.width >= smallestWide.width) {
+              expect(
+                tester.getRect(add).center.dy,
+                closeTo(tester.getRect(close).center.dy, .5),
+              );
+            }
+          },
+        );
+      }
+    }
   });
 }

@@ -101,6 +101,10 @@ use the extra width without stretching anything:
   and selection work per row as in one column, and screen readers count
   sources, not lines: each row and the Continue reading card carry their own
   index, as in the grid.
+- The selection bar keeps cancel, the count, Add to collection and delete in
+  one row; the command keeps its own width, at most half the row, so large
+  text wraps its label rather than squeezing the count. Phones keep the two
+  rows described below.
 
 The header, search field and Continue reading band span the window in both
 layouts.
@@ -381,8 +385,10 @@ text and buttons.
 Source repositories, not LibraryBloc, own atomic membership cleanup on deletion.
 
 Selection hides the bottom capsule and shows a bottom action bar: selected count,
-explicit cancel, add to collection, and secondary delete. Scaffold reserves its
-height, including `AppBottomSafeArea` and 16dp below the commands. Cancel/trash
+explicit cancel, add to collection, and secondary delete. On a phone the count
+sits above the command, which spans the row up to the trash; a wide window puts
+everything in one row (see above). Scaffold reserves its height, including
+`AppBottomSafeArea` and 16dp below the phone commands. Cancel/trash
 glyphs align with the screen's 16dp gutter while retaining 48dp targets
 (`AppSizes.iconActionOutset`); the trash stays `error` as the bar's bulk
 destructive command and the filled label goes through `AppButtonLabel`.

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
+import 'package:library_feature/src/library_selection_bar.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
@@ -120,6 +121,32 @@ void main() {
         VisualProfile.phone,
         'tablet-library-grid-$name',
       );
+      await unmountUi(tester);
+    });
+  }
+
+  for (final (profile, window, name) in [
+    (VisualProfile.phone, portrait, 'portrait'),
+    (VisualProfile.tabletRtl, landscape, 'landscape'),
+  ]) {
+    testWidgets('selection bar keeps one row ${profile.name} $name', (
+      tester,
+    ) async {
+      final app = (await tester.runAsync(() => library(layout: 'grid')))!;
+      addTearDown(app.dispose);
+      await pumpGoldenSurface(
+        tester,
+        profile,
+        (_) => libraryScreen(app),
+        surfaceSize: window,
+      );
+      await waitForBooks(tester);
+      await tester.longPress(find.text('Middlemarch'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dune'));
+      await tester.pumpAndSettle();
+      expect(find.byType(LibrarySelectionBar), findsOneWidget);
+      await expectUiGolden(tester, profile, 'tablet-library-selection-$name');
       await unmountUi(tester);
     });
   }

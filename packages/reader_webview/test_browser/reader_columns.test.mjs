@@ -2,13 +2,15 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHarness } from './harness.mjs'
 
-// Text columns and line length in wide windows. Flutter sends
-// `maxLineWidthEm` only to wide windows; phones keep one column across the
-// page. Runs the production loader, paginator and article shell.
+// Text columns and line length. Flutter sends the 32em `maxLineWidthEm` to
+// every window and the Columns choice only to wide ones, so phones keep one
+// column. Runs the production loader, paginator and article shell.
 
 const portrait = { width: 1032, height: 1376 }
 const landscape = { width: 1376, height: 1032 }
 const phone = { width: 390, height: 844 }
+// iPhone 17 Pro Max, the widest phone in portrait.
+const widestPhone = { width: 440, height: 956 }
 // What the keyboard takes off a 13-inch iPad's page, measured in each
 // orientation.
 const keyboardPortrait = 403
@@ -133,6 +135,23 @@ test('a phone keeps one column across the page without a measure', async t => {
     assert.ok(result.columnWidth > phone.width * 0.85, `${result.columnWidth} spans the page`)
 })
 
+for (const viewport of [phone, widestPhone]) {
+    test(`the measure leaves a portrait phone page as it was (${viewport.width})`, async t => {
+        // Phone text (16px) at the smallest reader size and margin: the
+        // narrowest measure on the widest page still overflows it.
+        const style = { fontSize: 1, textScale: 0.85, sideMargin: 2 }
+        const page = await openBook(t, { viewport, style })
+        const bare = await layout(page)
+
+        await changeStyle(page, { ...baseStyle, ...style, maxLineWidthEm: 32 })
+        const measured = await layout(page)
+        assert.equal(measured.attribute, `${Math.round(32 * 16 * 0.85)}px`)
+        assert.equal(measured.columns, 1)
+        assert.equal(measured.columnWidth, bare.columnWidth)
+        assert.equal(measured.gap, bare.gap)
+    })
+}
+
 test('Auto shows one column at the measure on a portrait tablet', async t => {
     const page = await openBook(t, {
         viewport: portrait,
@@ -225,17 +244,19 @@ test('larger text widens the measure and drops the Auto spread', async t => {
     assert.equal(result.columns, 1)
 })
 
-test('a window that becomes narrow loses the measure', async t => {
+test('a window that becomes narrow keeps one column at the measure', async t => {
     const page = await openBook(t, {
-        viewport: portrait,
-        style: { maxColumnCount: 0, maxLineWidthEm: 32 },
+        viewport: landscape,
+        style: { maxColumnCount: 2, maxLineWidthEm: 32 },
     })
-    // Flutter sends the narrow-window style when Split View shrinks the app.
-    await changeStyle(page, { ...baseStyle, maxColumnCount: 1, maxLineWidthEm: null })
+    // Split View shrinks the app; Flutter sends the narrow-window style,
+    // which drops the Columns choice and keeps the measure.
+    await resize(page, { width: 375, height: landscape.height })
+    await changeStyle(page, { ...baseStyle, maxColumnCount: 1, maxLineWidthEm: 32 })
     const result = await layout(page)
-    assert.equal(result.attribute, null)
+    assert.equal(result.attribute, `${measurePx(32)}px`)
     assert.equal(result.columns, 1)
-    assert.ok(result.columnWidth > portrait.width * 0.85, `${result.columnWidth} spans the page`)
+    assert.ok(result.columnWidth > 375 * 0.85, `${result.columnWidth} spans the page`)
 })
 
 test('reading position survives a change of columns', async t => {
@@ -348,6 +369,25 @@ for (const pageTurnStyle of ['slide', 'scroll']) {
         // Rotating back to portrait drops the insets and the wider margin.
         await changeStyle(page, { ...style, safeAreaLeft: 0, safeAreaRight: 0 })
         assert.ok(Math.abs((await firstPageText(page)).left - bare.left) < 0.5)
+    })
+}
+
+for (const pageTurnStyle of ['slide', 'scroll']) {
+    test(`a landscape phone centres the measure clear of the cutout (${pageTurnStyle})`, async t => {
+        // What Flutter sends a phone in landscape: 16px text, one column,
+        // the measure and the side insets.
+        const style = { fontSize: 1, sideMargin: 3, pageTurnStyle, ...cutout }
+        const page = await openBook(t, { viewport: landscapePhone, style })
+        const bare = await firstPageText(page)
+
+        await changeStyle(page, { ...baseStyle, ...style, maxLineWidthEm: 32 })
+        const measured = await firstPageText(page)
+        const measure = 32 * 16
+        const margin = (landscapePhone.width - measure) / 2
+        assert.ok(bare.right - bare.left > measure + 100, `without it the line spans ${bare.right - bare.left}`)
+        assert.ok(Math.abs(measured.left - margin) <= 1, `text starts at ${measured.left}`)
+        assert.ok(Math.abs(measured.right - (landscapePhone.width - margin)) <= 1, `text ends at ${measured.right}`)
+        assert.equal(measured.size, landscapePhone.width, 'the page still fills the window')
     })
 }
 

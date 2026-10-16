@@ -96,9 +96,14 @@ void main() {
       tester,
       find.byKey(ValueKey('library-grid-${app.book!.id}')),
     );
-    expect(bookStyle(tester), (columns: 1, lineEm: null), reason: 'phone');
+    expect(bookStyle(tester), (columns: 1, lineEm: 32.0), reason: 'phone');
 
+    // A phone in landscape keeps the measure; foliate re-lays the page.
     scripts.clear();
+    await resize(tester, phoneLandscape);
+    expect(bookStyle(tester), (columns: 1, lineEm: 32.0));
+    expect(styleScripts(scripts), isEmpty);
+
     await resize(tester, tabletLandscape);
     expect(bookStyle(tester), (columns: 0, lineEm: 32.0));
     expect(
@@ -137,24 +142,28 @@ void main() {
     Navigator.of(tester.element(control)).pop();
     await tester.pumpAndSettle();
 
-    // A narrow window ignores the tablet choice.
+    // A narrow window ignores the tablet choice but keeps the measure.
     await resize(tester, phoneLandscape);
-    expect(bookStyle(tester), (columns: 1, lineEm: null));
+    expect(bookStyle(tester), (columns: 1, lineEm: 32.0));
     await resize(tester, tabletLandscape);
     expect(bookStyle(tester), (columns: 2, lineEm: 32.0));
     await unmountUi(tester);
   });
 
-  testWidgets('an article keeps one column at the measure in a wide window', (
+  testWidgets('an article keeps one column at the measure in every window', (
     tester,
   ) async {
     await open(tester, find.text(ReadingFixture.articleTitle));
-    FoliateStyle style() => articleStyle(tester);
-    expect(style().maxLineWidthEm, isNull);
+    (int, double?) columns() => (
+      articleStyle(tester).maxColumnCount,
+      articleStyle(tester).maxLineWidthEm,
+    );
+    expect(columns(), (1, 32.0), reason: 'phone');
+    await resize(tester, phoneLandscape);
+    expect(columns(), (1, 32.0));
 
     await resize(tester, tabletLandscape);
-    expect(style().maxColumnCount, 1);
-    expect(style().maxLineWidthEm, 32);
+    expect(columns(), (1, 32.0));
 
     final readerContext = tester.element(find.byType(ArticleHtmlReaderWebView));
     readerContext.read<ReaderUiCubit>().showChrome();
