@@ -86,7 +86,10 @@ the current sentence at 1200 per minute, falling back to scroll progress for
 articles without sentence anchors. The article shell walks its text once after
 load and keeps per-sentence offsets in a `WeakMap`, so an emit is one lookup and
 scrolling adds no DOM walk or layout read. The end of the article reports 0,
-and reaching it is emitted even inside the usual emit throttle.
+and reaching it is emitted even inside the usual emit throttle. While scrolling
+the shell sends at most one position per 140ms (each one becomes a reader
+state), then the place the scroll settles on; forced reasons (load, anchor,
+style, resize) go at once (`test_browser/article_position_rate.test.mjs`).
 `BookPosition.minutesLeft` is null when the value is missing, negative or not
 finite. `test_browser/article_minutes_left.test.mjs` covers both engines.
 
@@ -310,6 +313,32 @@ rechecking and when `overrideColor` is disabled. Fixed-layout books are excluded
 Background images/gradients and image pixels are not analyzed or recolored, so
 this is not a guarantee of contrast for text over arbitrary artwork.
 `customCSS` remains an independent overlay even with `overrideColor: false`.
+A CSS update reruns the guard only when a color-related style changes (text or
+background color, background image, custom CSS, `overrideColor`,
+`useBookLayout`, flow): text size, spacing and font cannot change its result,
+and the pass reads computed style for every text element.
+
+Other per-chapter and per-page work is kept to what a book needs:
+
+- A chapter view ignores renders until its document loads. The paginator's
+  frame-coalesced ResizeObserver could reach a new view while its iframe still
+  held `about:blank`, size it to 0px from the empty body, and make the
+  chapter's first layout run at that width, several times slower on Chromium
+  (`test_browser/paginator_view_load.test.mjs`).
+- Text nodes are saved and rewritten only for text rewrites (Chinese
+  conversion, vertical-writing quotes); rewriting every node of an ordinary
+  chapter again invalidated its whole layout on each load.
+- The current page's bookmark anchor (a CFI and a word probe) is computed only
+  while the book has bookmarks, and removing a highlight does not compute it
+  (`test_browser/book_bookmark_state.test.mjs`).
+- Metadata extraction (`importing`) returns the parsed book before
+  `foliate-view` opens it, so import samples no chapters for direction and
+  loads no renderer.
+- Annotation syncs from Flutter (`renderAnnotations` at load, highlight and
+  bookmark diffs) go in one `evaluateJavascript` per sync
+  (`buildReaderCommandsScript`): a theme change restyles every highlight, a
+  removal and an addition each. Commands keep their order, and one that fails
+  does not stop the rest.
 
 `test_browser/book_theme_colors.test.mjs` exercises the production EPUB loader
 and styling in Chromium/WebKit: nested publisher blocks, tables, semantic

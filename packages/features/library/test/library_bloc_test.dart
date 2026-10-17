@@ -675,6 +675,146 @@ void main() {
     });
   });
 
+  group('saved progress', () {
+    late FakeBookRepository repository;
+    final reading = Book(
+      id: 'reading',
+      title: 'Reading',
+      filePath: '/reading.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 1),
+      lastOpenedAt: DateTime(2026, 1, 5),
+      readingProgress: 0.1,
+    );
+    final other = Book(
+      id: 'other',
+      title: 'Other',
+      filePath: '/other.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 2),
+      lastOpenedAt: DateTime(2026, 1, 3),
+      readingProgress: 0.6,
+    );
+    final unopened = Book(
+      id: 'unopened',
+      title: 'Unopened',
+      filePath: '/unopened.epub',
+      format: BookFormat.epub,
+      addedAt: DateTime(2026, 1, 4),
+    );
+
+    setUp(() => repository = FakeBookRepository());
+
+    Future<LibraryBloc> loadedBloc(List<Book> books) async {
+      repository.seedBooks(books);
+      final bloc = LibraryBloc(bookRepository: repository);
+      addTearDown(bloc.close);
+      bloc.add(const LibraryLoadRequested());
+      await bloc.stream.firstWhere((s) => s.status == LibraryStatus.success);
+      return bloc;
+    }
+
+    test('updates one source without reading storage', () async {
+      final bloc = await loadedBloc([reading, other]);
+      final untouched = bloc.state.sources.singleWhere((s) => s.id == 'other');
+
+      bloc.add(const LibrarySourceProgressSaved('reading', 0.4));
+      await bloc.stream.first;
+
+      expect(repository.getBooksCallCount, 1);
+      expect(
+        bloc.state.sources.singleWhere((s) => s.id == 'reading'),
+        LibrarySource.fromBook(reading.copyWith(readingProgress: 0.4)),
+      );
+      expect(
+        bloc.state.sources.singleWhere((s) => s.id == 'other'),
+        same(untouched),
+      );
+      // Order and Continue reading come from the same projection as a load.
+      expect(bloc.state.visibleItems.map((s) => s.id), ['reading', 'other']);
+      expect(bloc.state.continueReadingSource?.readingProgress, 0.4);
+    });
+
+    test('finishing the source takes it out of Continue reading', () async {
+      final bloc = await loadedBloc([reading, other]);
+      expect(bloc.state.continueReadingSource?.id, 'reading');
+
+      bloc.add(const LibrarySourceProgressSaved('reading', 1));
+      await bloc.stream.first;
+
+      expect(bloc.state.continueReadingSource?.id, 'other');
+    });
+
+    test('emits nothing for an unchanged or unknown source', () async {
+      final bloc = await loadedBloc([reading]);
+      final states = <LibraryState>[];
+      final subscription = bloc.stream.listen(states.add);
+      addTearDown(subscription.cancel);
+
+      bloc
+        ..add(const LibrarySourceProgressSaved('reading', 0.1))
+        ..add(const LibrarySourceProgressSaved('missing', 0.5));
+      await pumpEventQueue();
+
+      expect(states, isEmpty);
+      expect(repository.getBooksCallCount, 1);
+    });
+
+    test(
+      'a first progress leaves New and recounts the selected scope',
+      () async {
+        final bloc = await loadedBloc([reading, unopened]);
+        bloc.add(
+          LibraryCollectionScopeChanged(bloc.state.builtInCollectionScopes[3]),
+        );
+        await bloc.stream.firstWhere((s) => s.hasCollectionScope);
+        expect(bloc.state.visibleItems.map((s) => s.id), ['unopened']);
+
+        bloc.add(const LibrarySourceProgressSaved('unopened', 0.02));
+        await bloc.stream.first;
+
+        expect(bloc.state.builtInCollectionScopes, _builtIns(books: 2));
+        expect(bloc.state.selectedCollectionScope?.sourceCount, 0);
+        expect(bloc.state.visibleItems, isEmpty);
+        expect(
+          bloc.state.collectionScopes.where((scope) => !scope.isBuiltIn),
+          [_favouritesScope],
+        );
+      },
+    );
+
+    test('a load that read storage before the save keeps the saved '
+        'progress', () async {
+      final bloc = await loadedBloc([reading]);
+      repository.getBooksGate = Completer<void>();
+      final done = Completer<void>();
+      bloc.add(LibraryRefreshRequested(completer: done));
+      await pumpEventQueue();
+
+      bloc.add(const LibrarySourceProgressSaved('reading', 0.4));
+      await bloc.stream.first;
+      // The gated read returns the row as it was before the write.
+      repository.getBooksGate!.complete();
+      await done.future;
+
+      expect(bloc.state.sources.single.readingProgress, 0.4);
+    });
+
+    test('a load started after the save reads it from storage', () async {
+      final bloc = await loadedBloc([reading]);
+      bloc.add(const LibrarySourceProgressSaved('reading', 0.4));
+      await bloc.stream.first;
+
+      // Another writer moved it later; storage is the truth for a new load.
+      repository.seedBooks([reading.copyWith(readingProgress: 0.7)]);
+      final done = Completer<void>();
+      bloc.add(LibraryRefreshRequested(completer: done));
+      await done.future;
+
+      expect(bloc.state.sources.single.readingProgress, 0.7);
+    });
+  });
+
   group('LibraryState', () {
     test(
       'visibleItems are sorted by lastOpenedAt descending with addedAt fallback',

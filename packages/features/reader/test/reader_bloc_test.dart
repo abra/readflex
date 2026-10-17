@@ -984,15 +984,15 @@ void main() {
       });
 
       group('onReadingPositionSaved', () {
-        var saved = 0;
-        setUp(() => saved = 0);
+        var saved = <double>[];
+        setUp(() => saved = []);
 
         ReaderBloc buildReportingBloc(Book book) {
           bookRepository.seedBook(book);
           final bloc = ReaderBloc(
             bookRepository: bookRepository,
             highlightRepository: highlightRepository,
-            onReadingPositionSaved: () => saved++,
+            onReadingPositionSaved: saved.add,
           );
           bloc.emit(
             ReaderState(
@@ -1012,17 +1012,21 @@ void main() {
             const ReaderBookPositionUpdated(cfi: 'epubcfi(2)', progress: 0.2),
           );
           await Future<void>.delayed(const Duration(milliseconds: 50));
-          expect(saved, 0, reason: 'nothing is written during the debounce');
+          expect(
+            saved,
+            isEmpty,
+            reason: 'nothing is written during the debounce',
+          );
 
           await Future<void>.delayed(const Duration(milliseconds: 650));
           expect(bookRepository.updateCallCount, 1);
-          expect(saved, 1);
+          expect(saved, [0.2], reason: 'the saved progress');
 
           bloc.add(
             const ReaderBookPositionUpdated(cfi: 'epubcfi(3)', progress: 0.3),
           );
           await Future<void>.delayed(const Duration(milliseconds: 700));
-          expect(saved, 2);
+          expect(saved, [0.2, 0.3]);
         });
 
         test('reports the first progress at once', () async {
@@ -1036,7 +1040,7 @@ void main() {
           );
           await Future<void>.delayed(const Duration(milliseconds: 50));
 
-          expect(saved, 1);
+          expect(saved, [0.01]);
         });
 
         test('reports the write flushed on close', () async {
@@ -1046,11 +1050,11 @@ void main() {
             const ReaderBookPositionUpdated(cfi: 'epubcfi(9)', progress: 0.9),
           );
           await Future<void>.delayed(const Duration(milliseconds: 50));
-          expect(saved, 0);
+          expect(saved, isEmpty);
 
           await bloc.close();
           expect(bookRepository.updatedBook!.readingProgress, 0.9);
-          expect(saved, 1);
+          expect(saved, [0.9]);
         });
 
         test('does not report a failed write', () async {
@@ -1063,7 +1067,7 @@ void main() {
           );
           await Future<void>.delayed(const Duration(milliseconds: 700));
 
-          expect(saved, 0);
+          expect(saved, isEmpty);
         });
       });
 

@@ -2,7 +2,7 @@ part of 'reader_screen.dart';
 
 /// Collects TOC/bookmark state from [ReaderBloc] and feeds the drawer UI.
 @visibleForTesting
-class ReaderTocDrawerDriver extends StatelessWidget {
+class ReaderTocDrawerDriver extends StatefulWidget {
   const ReaderTocDrawerDriver({
     required this.loadThumbnail,
     required this.visible,
@@ -33,7 +33,35 @@ class ReaderTocDrawerDriver extends StatelessWidget {
   final ValueChanged<SourceBookmark> onBookmarkDeleted;
 
   @override
+  State<ReaderTocDrawerDriver> createState() => _ReaderTocDrawerDriverState();
+}
+
+typedef _ReaderTocPosition = ({
+  double? progress,
+  String? chapterTitle,
+  int? pageIndex,
+});
+
+class _ReaderTocDrawerDriverState extends State<ReaderTocDrawerDriver> {
+  /// Where the reader was when the sheet was last visible. A hidden sheet
+  /// keeps it, so page turns do not rebuild it and a closing sheet keeps its
+  /// active row.
+  _ReaderTocPosition? _position;
+
+  @override
   Widget build(BuildContext context) {
+    final visible = widget.visible;
+    final position = context.select<ReaderBloc, _ReaderTocPosition?>(
+      (b) => visible
+          ? (
+              progress: b.state.document?.readingProgress,
+              chapterTitle: b.state.chapterTitle,
+              // Fixed layouts report the zero-based page as the chapter page.
+              pageIndex: b.state.chapterCurrentPage,
+            )
+          : null,
+    );
+    if (position != null) _position = position;
     final tocItems = context.select<ReaderBloc, List<ReaderTocItem>>(
       (b) => b.state.tocItems,
     );
@@ -43,39 +71,29 @@ class ReaderTocDrawerDriver extends StatelessWidget {
     final highlights = context.select<ReaderBloc, List<Highlight>>(
       (b) => b.state.highlights,
     );
-    final currentProgress = context.select<ReaderBloc, double?>(
-      (b) => b.state.document?.readingProgress,
-    );
-    final currentChapterTitle = context.select<ReaderBloc, String?>(
-      (b) => b.state.chapterTitle,
-    );
     final pageCount = context.select<ReaderBloc, int?>(
       (b) => b.state.documentFeatures?.pageCount,
     );
-    // Fixed layouts report the zero-based page as the chapter page.
-    final currentPageIndex = context.select<ReaderBloc, int?>(
-      (b) => b.state.chapterCurrentPage,
-    );
 
     return _ReaderTocDrawer(
-      loadThumbnail: loadThumbnail,
+      loadThumbnail: widget.loadThumbnail,
       pageCount: pageCount,
-      currentPageIndex: currentPageIndex,
-      onPageSelected: onPageSelected,
+      currentPageIndex: _position?.pageIndex,
+      onPageSelected: widget.onPageSelected,
       visible: visible,
-      format: format,
-      pageProgressionRtl: pageProgressionRtl,
-      readerTheme: readerTheme,
+      format: widget.format,
+      pageProgressionRtl: widget.pageProgressionRtl,
+      readerTheme: widget.readerTheme,
       tocItems: tocItems,
       bookmarks: bookmarks,
       highlights: highlights,
-      currentProgress: currentProgress,
-      currentChapterTitle: currentChapterTitle,
-      onClose: onClose,
-      onItemSelected: onItemSelected,
-      onBookmarkSelected: onBookmarkSelected,
-      onHighlightSelected: onHighlightSelected,
-      onBookmarkDeleted: onBookmarkDeleted,
+      currentProgress: _position?.progress,
+      currentChapterTitle: _position?.chapterTitle,
+      onClose: widget.onClose,
+      onItemSelected: widget.onItemSelected,
+      onBookmarkSelected: widget.onBookmarkSelected,
+      onHighlightSelected: widget.onHighlightSelected,
+      onBookmarkDeleted: widget.onBookmarkDeleted,
     );
   }
 }
@@ -230,8 +248,8 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
     );
     // Comic pages are their table of contents; PDF pages are separate.
     final pageCount = comic ? widget.tocItems.length : widget.pageCount ?? 0;
-    // A hidden sheet still rebuilds on every page turn; skip the comic scan
-    // of every TOC entry until the grid can be seen.
+    // A hidden sheet still rebuilds when highlights or bookmarks change; skip
+    // the comic scan of every TOC entry until the grid can be seen.
     final currentPage = !widget.visible
         ? 0
         : comic

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -1657,6 +1658,66 @@ void main() {
       expect(script, contains('return null;'));
     });
 
+    test('one command keeps the single-command script', () {
+      expect(
+        buildReaderCommandsScript(
+          label: 'renderAnnotations',
+          expressions: const ['addAnnotation({"id":"h1"})'],
+        ),
+        buildReaderCommandScript(
+          label: 'renderAnnotations',
+          expression: 'addAnnotation({"id":"h1"})',
+        ),
+      );
+    });
+
+    test('several commands run in order in one script, past a failure', () {
+      final nodeVersion = Process.runSync('node', const ['--version']);
+      if (nodeVersion.exitCode != 0) return;
+
+      final script = buildReaderCommandsScript(
+        label: 'syncAnnotations',
+        expressions: const [
+          'removeAnnotation("epubcfi(/6/4!/4/2,/1:0,/1:5)")',
+          'addAnnotation({"id":"broken"})',
+          'addAnnotation({"id":"h2","value":"epubcfi(/6/4!/4/4,/1:0,/1:3)"})',
+          'refreshBookmarkState()',
+        ],
+      );
+      final dir = Directory.systemTemp.createTempSync('reader_commands_test_');
+      try {
+        final file = File('${dir.path}/commands.js');
+        file.writeAsStringSync('''
+const calls = []
+globalThis.removeAnnotation = cfi => calls.push(['remove', cfi])
+globalThis.addAnnotation = annotation => {
+  if (annotation.id === 'broken') throw new Error('bad annotation')
+  calls.push(['add', annotation.id])
+}
+globalThis.refreshBookmarkState = () => calls.push(['refresh'])
+const errors = []
+console.error = (...args) => errors.push(args.join(' '))
+const result = $script
+console.log(JSON.stringify({ result, calls, errors }))
+''');
+        final run = Process.runSync('node', [file.path]);
+        expect(run.exitCode, 0, reason: '${run.stdout}\n${run.stderr}');
+        final output =
+            jsonDecode((run.stdout as String).trim()) as Map<String, Object?>;
+        expect(output['result'], isNull);
+        expect(output['calls'], [
+          ['remove', 'epubcfi(/6/4!/4/2,/1:0,/1:5)'],
+          ['add', 'h2'],
+          ['refresh'],
+        ]);
+        expect(output['errors'], [
+          contains('[readflex-eval:syncAnnotations] Error: bad annotation'),
+        ]);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
     test('article RTL patch keeps pagination RTL and maps start to right', () {
       final script = buildArticleTextDirectionPatchScript(
         textAlign: 'start',
@@ -1812,7 +1873,7 @@ void main() {
     });
 
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_169');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_170');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

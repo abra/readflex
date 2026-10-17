@@ -319,7 +319,7 @@ class ReaderRouteArguments {
 
   final Book? initialSource;
   final VoidCallback? onSourceOpened;
-  final VoidCallback? onReadingPositionSaved;
+  final ValueChanged<double>? onReadingPositionSaved;
 }
 
 /// Adapts the import sheet contract to article extraction and storage services.

@@ -31,8 +31,6 @@ class ArticlesTable extends Table {
 
   TextColumn get contentPath => text()();
 
-  TextColumn get plainText => text().withDefault(const Constant(''))();
-
   IntColumn get textLength => integer().withDefault(const Constant(0))();
 
   IntColumn get estimatedWordCount =>
@@ -47,6 +45,11 @@ class ArticlesTable extends Table {
   TextColumn get lastOpenedAt => text().nullable()();
 
   BoolColumn get isFinished => boolean().withDefault(const Constant(false))();
+
+  /// Last on purpose: SQLite reads a row's columns in order, so any column
+  /// after a long text walks its overflow pages. The Library's metadata
+  /// query then never touches the article text.
+  TextColumn get plainText => text().withDefault(const Constant(''))();
 
   @override
   Set<Column> get primaryKey => {id};

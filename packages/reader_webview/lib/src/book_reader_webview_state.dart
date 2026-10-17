@@ -131,17 +131,18 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   ) {
     final oldById = {for (final h in oldList) h.id: h};
     final newById = {for (final h in newList) h.id: h};
+    final commands = <String?>[];
 
     for (final h in oldList) {
       final next = newById[h.id];
       if (next == null) {
-        _evalRemoveReaderHighlight(h);
+        commands.add(_removeHighlightCommand(h));
       }
     }
     for (final h in newList) {
       final prev = oldById[h.id];
       if (prev == null) {
-        _evalAddAnnotation(h);
+        commands.add(_addHighlightCommand(h));
       } else if (prev.cfiRange != h.cfiRange ||
           prev.imagePageIndex != h.imagePageIndex ||
           prev.imageArea != h.imageArea ||
@@ -149,24 +150,36 @@ class BookReaderWebViewState extends State<BookReaderWebView>
           prev.opacity != h.opacity ||
           prev.mixBlendMode != h.mixBlendMode ||
           prev.verticalOffset != h.verticalOffset) {
-        _evalRemoveReaderHighlight(prev);
-        _evalAddAnnotation(h);
+        commands
+          ..add(_removeHighlightCommand(prev))
+          ..add(_addHighlightCommand(h));
       }
     }
+    _evaluateReaderCommands(label: 'syncAnnotations', commands: commands);
   }
 
   void _evaluateReaderCommand({
     required String label,
     required String expression,
   }) {
+    _evaluateReaderCommands(label: label, commands: [expression]);
+  }
+
+  /// One evaluation for [commands], in order: a theme change restyles every
+  /// highlight, and a round trip each kept the WebView busy for as many.
+  void _evaluateReaderCommands({
+    required String label,
+    required List<String?> commands,
+  }) {
     final controller = _controller;
-    if (controller == null) return;
+    final expressions = commands.nonNulls.toList(growable: false);
+    if (controller == null || expressions.isEmpty) return;
     unawaited(
       controller
           .evaluateJavascript(
-            source: buildReaderCommandScript(
+            source: buildReaderCommandsScript(
               label: label,
-              expression: expression,
+              expressions: expressions,
             ),
           )
           .catchError((Object error) {
@@ -175,7 +188,8 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     );
   }
 
-  void _evalAddAnnotation(ReaderHighlight h) {
+  String? _addHighlightCommand(ReaderHighlight h) {
+    if (!h.isImageArea && h.cfiRange == null) return null;
     final annotation = h.isImageArea
         ? jsonEncode({
             'id': h.id,
@@ -195,37 +209,17 @@ class BookReaderWebViewState extends State<BookReaderWebView>
             if (h.mixBlendMode != null) 'mixBlendMode': h.mixBlendMode,
             if (h.verticalOffset != null) 'verticalOffset': h.verticalOffset,
           });
-    if (!h.isImageArea && h.cfiRange == null) return;
-    _evaluateReaderCommand(
-      label: 'addAnnotation',
-      expression: 'addAnnotation($annotation)',
-    );
+    return 'addAnnotation($annotation)';
   }
 
-  void _evalRemoveReaderHighlight(ReaderHighlight highlight) {
-    if (highlight.cfiRange != null) {
-      _evalRemoveAnnotation(highlight.cfiRange!);
-      return;
+  String? _removeHighlightCommand(ReaderHighlight highlight) {
+    if (highlight.cfiRange case final cfiRange?) {
+      return 'removeAnnotation(${jsonEncode(cfiRange)})';
     }
     if (highlight.isImageArea) {
-      _evalRemoveAnnotationById(highlight.id);
+      return 'removeAnnotation(null, false, ${jsonEncode(highlight.id)})';
     }
-  }
-
-  void _evalRemoveAnnotation(String cfiRange) {
-    final escaped = jsonEncode(cfiRange);
-    _evaluateReaderCommand(
-      label: 'removeAnnotation',
-      expression: 'removeAnnotation($escaped)',
-    );
-  }
-
-  void _evalRemoveAnnotationById(String id) {
-    final escapedId = jsonEncode(id);
-    _evaluateReaderCommand(
-      label: 'removeAnnotationById',
-      expression: 'removeAnnotation(null, false, $escapedId)',
-    );
+    return null;
   }
 
   void _syncBookmarkAnnotations(
@@ -234,36 +228,38 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   ) {
     final oldById = {for (final h in oldList) h.id: h};
     final newById = {for (final h in newList) h.id: h};
-    var changed = false;
+    final commands = <String?>[];
 
     for (final bookmark in oldList) {
       final next = newById[bookmark.id];
       if (next == null) {
-        _evalRemoveBookmarkAnnotation(bookmark.cfi, id: bookmark.id);
-        changed = true;
+        commands.add(_removeBookmarkCommand(bookmark.cfi, id: bookmark.id));
       }
     }
     for (final bookmark in newList) {
       final prev = oldById[bookmark.id];
       if (prev == null) {
-        _evalAddBookmarkAnnotation(bookmark);
-        changed = true;
+        commands.add(_addBookmarkCommand(bookmark));
       } else if (prev.cfi != bookmark.cfi ||
           prev.anchorExact != bookmark.anchorExact ||
           prev.anchorPrefix != bookmark.anchorPrefix ||
           prev.anchorSuffix != bookmark.anchorSuffix ||
           prev.anchorSectionIndex != bookmark.anchorSectionIndex ||
           prev.anchorSectionPage != bookmark.anchorSectionPage) {
-        _evalRemoveBookmarkAnnotation(prev.cfi, id: prev.id);
-        _evalAddBookmarkAnnotation(bookmark);
-        changed = true;
+        commands
+          ..add(_removeBookmarkCommand(prev.cfi, id: prev.id))
+          ..add(_addBookmarkCommand(bookmark));
       }
     }
-    if (changed) _refreshBookmarkState();
+    if (commands.isEmpty) return;
+    _evaluateReaderCommands(
+      label: 'syncBookmarks',
+      commands: [...commands, _refreshBookmarkStateCommand],
+    );
   }
 
-  void _evalAddBookmarkAnnotation(ReaderBookmark bookmark) {
-    if (bookmark.cfi.isEmpty) return;
+  String? _addBookmarkCommand(ReaderBookmark bookmark) {
+    if (bookmark.cfi.isEmpty) return null;
     final annotation = jsonEncode({
       'id': bookmark.id,
       'type': 'bookmark',
@@ -276,19 +272,13 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'anchorSectionIndex': bookmark.anchorSectionIndex,
       'anchorSectionPage': bookmark.anchorSectionPage,
     });
-    _evaluateReaderCommand(
-      label: 'addAnnotation',
-      expression: 'addAnnotation($annotation)',
-    );
+    return 'addAnnotation($annotation)';
   }
 
-  void _evalRemoveBookmarkAnnotation(String cfiRange, {String? id}) {
+  String _removeBookmarkCommand(String cfiRange, {String? id}) {
     final escaped = jsonEncode(cfiRange);
     final escapedId = jsonEncode(id);
-    _evaluateReaderCommand(
-      label: 'removeBookmarkAnnotation',
-      expression: 'removeAnnotation($escaped, false, $escapedId)',
-    );
+    return 'removeAnnotation($escaped, false, $escapedId)';
   }
 
   String get _bookUrl {
@@ -647,22 +637,18 @@ class BookReaderWebViewState extends State<BookReaderWebView>
   }
 
   void _renderAnnotations() {
-    for (final h in widget.highlights) {
-      _evalAddAnnotation(h);
-    }
-    for (final bookmark in widget.bookmarks) {
-      _evalAddBookmarkAnnotation(bookmark);
-    }
-    _refreshBookmarkState();
-  }
-
-  void _refreshBookmarkState() {
-    _evaluateReaderCommand(
-      label: 'refreshBookmarkState',
-      expression:
-          "typeof window.refreshBookmarkState === 'function' ? window.refreshBookmarkState() : null",
+    _evaluateReaderCommands(
+      label: 'renderAnnotations',
+      commands: [
+        for (final h in widget.highlights) _addHighlightCommand(h),
+        for (final bookmark in widget.bookmarks) _addBookmarkCommand(bookmark),
+        _refreshBookmarkStateCommand,
+      ],
     );
   }
+
+  static const _refreshBookmarkStateCommand =
+      "typeof window.refreshBookmarkState === 'function' ? window.refreshBookmarkState() : null";
 
   /// Navigate to a specific CFI position.
   void goToCfi(String cfi) {

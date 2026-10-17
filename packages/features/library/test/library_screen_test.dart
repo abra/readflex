@@ -1877,8 +1877,8 @@ void main() {
     );
   });
 
-  testWidgets('each saved reading position refreshes before the reader '
-      'returns, so the book is already in Continue reading', (tester) async {
+  testWidgets('each saved reading position updates the source before the '
+      'reader returns, without re-reading storage', (tester) async {
     final target = Book(
       id: 'b-target',
       title: 'Target',
@@ -1888,7 +1888,8 @@ void main() {
       addedAt: DateTime(2026, 1),
     );
     final routeCompleter = Completer<void>();
-    VoidCallback? notifyPositionSaved;
+    VoidCallback? notifyOpened;
+    ValueChanged<double>? notifyPositionSaved;
     final card = find.byKey(const ValueKey('libraryContinueReadingCard'));
 
     bookRepository.seedBooks([target]);
@@ -1902,6 +1903,7 @@ void main() {
           preferencesService: preferencesService,
           onSourcePressed:
               (source, {onSourceOpened, onReadingPositionSaved}) async {
+                notifyOpened = onSourceOpened;
                 notifyPositionSaved = onReadingPositionSaved;
                 await routeCompleter.future;
               },
@@ -1918,41 +1920,41 @@ void main() {
     expect(notifyPositionSaved, isNotNull);
     expect(bookRepository.getBooksCallCount, 1);
 
-    bookRepository.seedBooks([
-      target.copyWith(
-        lastOpenedAt: DateTime(2026, 1, 5),
-        readingProgress: 0.3,
-      ),
-    ]);
-    notifyPositionSaved!();
+    // The reader marks the book opened, then the Library re-reads storage.
+    final opened = target.copyWith(lastOpenedAt: DateTime(2026, 1, 5));
+    bookRepository.seedBooks([opened]);
+    notifyOpened!();
     await tester.pump();
     await tester.pump();
     expect(bookRepository.getBooksCallCount, 2);
+
+    notifyPositionSaved!(0.3);
+    await tester.pump();
     expect(card, findsOneWidget);
     expect(
       find.descendant(of: card, matching: find.text('30%')),
       findsOneWidget,
     );
 
-    bookRepository.seedBooks([
-      target.copyWith(
-        lastOpenedAt: DateTime(2026, 1, 5),
-        readingProgress: 0.4,
-      ),
-    ]);
-    notifyPositionSaved!();
+    notifyPositionSaved!(0.4);
     await tester.pump();
-    await tester.pump();
-    expect(bookRepository.getBooksCallCount, 3, reason: 'every save refreshes');
     expect(
       find.descendant(of: card, matching: find.text('40%')),
       findsOneWidget,
     );
+    expect(
+      bookRepository.getBooksCallCount,
+      2,
+      reason: 'a save changes only the progress it reports',
+    );
 
+    // Storage holds the last write when the reader returns.
+    bookRepository.seedBooks([opened.copyWith(readingProgress: 0.4)]);
     routeCompleter.complete();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 325));
     await tester.pump();
+    expect(bookRepository.getBooksCallCount, 3);
     expect(
       find.descendant(of: card, matching: find.text('40%')),
       findsOneWidget,

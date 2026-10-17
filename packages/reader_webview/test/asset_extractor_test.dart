@@ -60,6 +60,21 @@ void main() {
         isEmpty,
         reason: 'Unchanged assets reuse the disk copy',
       );
+
+      // A missing file comes back on its own; a new version rewrites all.
+      await font.delete();
+      await extractor.extractAll(version: 'test');
+      expect(requested, [bundleKey]);
+      expect(await font.readAsBytes(), bytes);
+
+      requested.clear();
+      await extractor.extractAll(version: 'next');
+      expect(requested, hasLength(greaterThan(50)));
+      expect(requested.toSet(), hasLength(requested.length));
+      expect(
+        await File('${directory.path}/.asset_version').readAsString(),
+        AssetExtractor.extractionVersionFor('next'),
+      );
     },
   );
 }

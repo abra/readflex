@@ -1649,6 +1649,9 @@ const getView = async file => {
   }
   if (!book) throw new Error('File type not supported')
   markReaderStartup('format-ready')
+  // Readflex: import reads the metadata and cover the book already holds;
+  // direction sampling, navigation and the renderer only serve reading.
+  if (importing) return { book }
   preloadReaderFont(book)
   const view = document.createElement('foliate-view')
   document.body.append(view)
@@ -2002,6 +2005,13 @@ const rendererWritingMode = () => {
 
 const isVerticalWritingMode = value =>
   typeof value === 'string' && value.startsWith('vertical')
+
+// Readflex: whether readingFeaturesDocHandler rewrites text nodes, which
+// Chinese conversion and vertical quotes do.
+const rewritesDocumentText = () =>
+  readingRules.convertChineseMode !== 'none' ||
+  isVerticalWritingMode(style.writingMode) ||
+  isVerticalWritingMode(rendererWritingMode())
 
 const readingFeaturesDocHandler = (doc) => {
   if (readingRules.convertChineseMode !== 'none') {
@@ -2456,7 +2466,20 @@ class Reader {
 
   }
 
+  #hasBookmarks() {
+    for (const list of this.annotations.values()) {
+      if (list.some(annotation => annotation.type === 'bookmark')) return true
+    }
+    return false
+  }
+
   #checkCurrentPageBookmark() {
+    // Readflex: the page anchor costs a CFI and a word probe on every turn;
+    // a book without bookmarks has nothing to match it against.
+    if (!this.#hasBookmarks()) {
+      this.#bookmarkInfo = { exists: false, cfi: null, id: null }
+      return
+    }
     const currentLocation = this.view.lastLocation
     const currentAnchor = this.#bookmarkAnchorFromLocation(currentLocation)
     const spineCode = this.#isBookmarkAnchorInteger(currentAnchor?.anchorSectionIndex)
@@ -3051,10 +3074,12 @@ class Reader {
       this.view.addAnnotation(annotation, true)
     }
 
-    const currentAnchor = this.#bookmarkAnchorFromLocation(this.view.lastLocation)
     if (
       annotation.type === 'bookmark' &&
-      this.#checkBookmark(annotation, currentAnchor)
+      this.#checkBookmark(
+        annotation,
+        this.#bookmarkAnchorFromLocation(this.view.lastLocation),
+      )
     ) {
       if (notify) this.handleBookmark(true)
       this.#bookmarkInfo = {
@@ -3083,15 +3108,9 @@ class Reader {
     readflexAttachGestures(doc)
     normalizeLoadedDocument(doc)
 
-    // if (!this.#originalContent) {
-    // console.log('Saving original content', doc);
-    // this.#originalContent = doc.cloneNode(true)
-    // console.log('Original content saved', this.#originalContent);
-    // }
-
-    this.#saveOriginalContent()
-
-    this.readingFeatures(readingRules)
+    // A new document: none of its text is saved yet.
+    this.#originalContent = null
+    this.readingFeatures()
   }
 
   #onRelocate({ detail }) {
@@ -3199,7 +3218,11 @@ class Reader {
   }
 
   readingFeatures = () => {
-    this.#restoreOriginalContent()
+    // Switching a text rewrite needs the original text back first. A document
+    // nothing rewrites keeps its text nodes untouched: writing every one of
+    // them again invalidates the whole chapter layout.
+    if (this.#originalContent) this.#restoreOriginalContent()
+    else if (rewritesDocumentText()) this.#saveOriginalContent()
     readingFeaturesDocHandler(this.#doc)
     this.applyTextContrastGuard()
   }
@@ -3580,6 +3603,25 @@ const shouldUpdateReaderCSS = (oldStyle, nextStyle, flow) => {
   return readerCSSKeys.some(key => oldStyle?.[key] !== nextStyle?.[key])
 }
 
+// Readflex: the contrast guard compares computed text and background colors,
+// a pass over every text element; text size, spacing or font cannot change
+// its result.
+const contrastGuardCSSKeys = [
+  'fontColor',
+  'backgroundColor',
+  'backgroundImage',
+  'customCSS',
+  'customCSSEnabled',
+  'overrideColor',
+  'useBookLayout',
+]
+
+const shouldRerunContrastGuard = (oldStyle, nextStyle, flow) => {
+  if (!oldStyle) return true
+  if ((oldStyle.pageTurnStyle === 'scroll') !== flow) return true
+  return contrastGuardCSSKeys.some(key => oldStyle?.[key] !== nextStyle?.[key])
+}
+
 // Readflex: the reader's measure in CSS pixels, from ems of the body text
 // (`getReaderStylePrelude` sizes it 16px × fontSize × textScale), so a line
 // keeps its length in characters at every text size. `null` without one.
@@ -3688,7 +3730,9 @@ const setStyle = (oldStyle) => {
   }
   if (shouldUpdateReaderCSS(oldStyle, newStyle, turn.scroll)) {
     reader.view.renderer.setStyles?.(getCSS(newStyle))
-    requestAnimationFrame(() => reader.applyTextContrastGuard?.())
+    if (shouldRerunContrastGuard(oldStyle, newStyle, turn.scroll)) {
+      requestAnimationFrame(() => reader.applyTextContrastGuard?.())
+    }
   }
 
   if (shouldRefreshLayoutForStyle(oldStyle, style)) refreshLayout()

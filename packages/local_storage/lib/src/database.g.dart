@@ -144,18 +144,6 @@ class $ArticlesTableTable extends ArticlesTable
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _plainTextMeta = const VerificationMeta(
-    'plainText',
-  );
-  @override
-  late final GeneratedColumn<String> plainText = GeneratedColumn<String>(
-    'plain_text',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(''),
-  );
   static const VerificationMeta _textLengthMeta = const VerificationMeta(
     'textLength',
   );
@@ -239,6 +227,18 @@ class $ArticlesTableTable extends ArticlesTable
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _plainTextMeta = const VerificationMeta(
+    'plainText',
+  );
+  @override
+  late final GeneratedColumn<String> plainText = GeneratedColumn<String>(
+    'plain_text',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -254,7 +254,6 @@ class $ArticlesTableTable extends ArticlesTable
     coverImagePath,
     language,
     contentPath,
-    plainText,
     textLength,
     estimatedWordCount,
     currentCfi,
@@ -262,6 +261,7 @@ class $ArticlesTableTable extends ArticlesTable
     addedAt,
     lastOpenedAt,
     isFinished,
+    plainText,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -373,12 +373,6 @@ class $ArticlesTableTable extends ArticlesTable
     } else if (isInserting) {
       context.missing(_contentPathMeta);
     }
-    if (data.containsKey('plain_text')) {
-      context.handle(
-        _plainTextMeta,
-        plainText.isAcceptableOrUnknown(data['plain_text']!, _plainTextMeta),
-      );
-    }
     if (data.containsKey('text_length')) {
       context.handle(
         _textLengthMeta,
@@ -430,6 +424,12 @@ class $ArticlesTableTable extends ArticlesTable
       context.handle(
         _isFinishedMeta,
         isFinished.isAcceptableOrUnknown(data['is_finished']!, _isFinishedMeta),
+      );
+    }
+    if (data.containsKey('plain_text')) {
+      context.handle(
+        _plainTextMeta,
+        plainText.isAcceptableOrUnknown(data['plain_text']!, _plainTextMeta),
       );
     }
     return context;
@@ -493,10 +493,6 @@ class $ArticlesTableTable extends ArticlesTable
         DriftSqlType.string,
         data['${effectivePrefix}content_path'],
       )!,
-      plainText: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}plain_text'],
-      )!,
       textLength: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}text_length'],
@@ -525,6 +521,10 @@ class $ArticlesTableTable extends ArticlesTable
         DriftSqlType.bool,
         data['${effectivePrefix}is_finished'],
       )!,
+      plainText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}plain_text'],
+      )!,
     );
   }
 
@@ -549,7 +549,6 @@ class ArticlesTableData extends DataClass
   final String? coverImagePath;
   final String? language;
   final String contentPath;
-  final String plainText;
   final int textLength;
   final int estimatedWordCount;
   final String? currentCfi;
@@ -557,6 +556,11 @@ class ArticlesTableData extends DataClass
   final String addedAt;
   final String? lastOpenedAt;
   final bool isFinished;
+
+  /// Last on purpose: SQLite reads a row's columns in order, so any column
+  /// after a long text walks its overflow pages. The Library's metadata
+  /// query then never touches the article text.
+  final String plainText;
   const ArticlesTableData({
     required this.id,
     required this.title,
@@ -571,7 +575,6 @@ class ArticlesTableData extends DataClass
     this.coverImagePath,
     this.language,
     required this.contentPath,
-    required this.plainText,
     required this.textLength,
     required this.estimatedWordCount,
     this.currentCfi,
@@ -579,6 +582,7 @@ class ArticlesTableData extends DataClass
     required this.addedAt,
     this.lastOpenedAt,
     required this.isFinished,
+    required this.plainText,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -614,7 +618,6 @@ class ArticlesTableData extends DataClass
       map['language'] = Variable<String>(language);
     }
     map['content_path'] = Variable<String>(contentPath);
-    map['plain_text'] = Variable<String>(plainText);
     map['text_length'] = Variable<int>(textLength);
     map['estimated_word_count'] = Variable<int>(estimatedWordCount);
     if (!nullToAbsent || currentCfi != null) {
@@ -626,6 +629,7 @@ class ArticlesTableData extends DataClass
       map['last_opened_at'] = Variable<String>(lastOpenedAt);
     }
     map['is_finished'] = Variable<bool>(isFinished);
+    map['plain_text'] = Variable<String>(plainText);
     return map;
   }
 
@@ -662,7 +666,6 @@ class ArticlesTableData extends DataClass
           ? const Value.absent()
           : Value(language),
       contentPath: Value(contentPath),
-      plainText: Value(plainText),
       textLength: Value(textLength),
       estimatedWordCount: Value(estimatedWordCount),
       currentCfi: currentCfi == null && nullToAbsent
@@ -674,6 +677,7 @@ class ArticlesTableData extends DataClass
           ? const Value.absent()
           : Value(lastOpenedAt),
       isFinished: Value(isFinished),
+      plainText: Value(plainText),
     );
   }
 
@@ -696,7 +700,6 @@ class ArticlesTableData extends DataClass
       coverImagePath: serializer.fromJson<String?>(json['coverImagePath']),
       language: serializer.fromJson<String?>(json['language']),
       contentPath: serializer.fromJson<String>(json['contentPath']),
-      plainText: serializer.fromJson<String>(json['plainText']),
       textLength: serializer.fromJson<int>(json['textLength']),
       estimatedWordCount: serializer.fromJson<int>(json['estimatedWordCount']),
       currentCfi: serializer.fromJson<String?>(json['currentCfi']),
@@ -704,6 +707,7 @@ class ArticlesTableData extends DataClass
       addedAt: serializer.fromJson<String>(json['addedAt']),
       lastOpenedAt: serializer.fromJson<String?>(json['lastOpenedAt']),
       isFinished: serializer.fromJson<bool>(json['isFinished']),
+      plainText: serializer.fromJson<String>(json['plainText']),
     );
   }
   @override
@@ -723,7 +727,6 @@ class ArticlesTableData extends DataClass
       'coverImagePath': serializer.toJson<String?>(coverImagePath),
       'language': serializer.toJson<String?>(language),
       'contentPath': serializer.toJson<String>(contentPath),
-      'plainText': serializer.toJson<String>(plainText),
       'textLength': serializer.toJson<int>(textLength),
       'estimatedWordCount': serializer.toJson<int>(estimatedWordCount),
       'currentCfi': serializer.toJson<String?>(currentCfi),
@@ -731,6 +734,7 @@ class ArticlesTableData extends DataClass
       'addedAt': serializer.toJson<String>(addedAt),
       'lastOpenedAt': serializer.toJson<String?>(lastOpenedAt),
       'isFinished': serializer.toJson<bool>(isFinished),
+      'plainText': serializer.toJson<String>(plainText),
     };
   }
 
@@ -748,7 +752,6 @@ class ArticlesTableData extends DataClass
     Value<String?> coverImagePath = const Value.absent(),
     Value<String?> language = const Value.absent(),
     String? contentPath,
-    String? plainText,
     int? textLength,
     int? estimatedWordCount,
     Value<String?> currentCfi = const Value.absent(),
@@ -756,6 +759,7 @@ class ArticlesTableData extends DataClass
     String? addedAt,
     Value<String?> lastOpenedAt = const Value.absent(),
     bool? isFinished,
+    String? plainText,
   }) => ArticlesTableData(
     id: id ?? this.id,
     title: title ?? this.title,
@@ -772,7 +776,6 @@ class ArticlesTableData extends DataClass
         : this.coverImagePath,
     language: language.present ? language.value : this.language,
     contentPath: contentPath ?? this.contentPath,
-    plainText: plainText ?? this.plainText,
     textLength: textLength ?? this.textLength,
     estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
     currentCfi: currentCfi.present ? currentCfi.value : this.currentCfi,
@@ -780,6 +783,7 @@ class ArticlesTableData extends DataClass
     addedAt: addedAt ?? this.addedAt,
     lastOpenedAt: lastOpenedAt.present ? lastOpenedAt.value : this.lastOpenedAt,
     isFinished: isFinished ?? this.isFinished,
+    plainText: plainText ?? this.plainText,
   );
   ArticlesTableData copyWithCompanion(ArticlesTableCompanion data) {
     return ArticlesTableData(
@@ -806,7 +810,6 @@ class ArticlesTableData extends DataClass
       contentPath: data.contentPath.present
           ? data.contentPath.value
           : this.contentPath,
-      plainText: data.plainText.present ? data.plainText.value : this.plainText,
       textLength: data.textLength.present
           ? data.textLength.value
           : this.textLength,
@@ -826,6 +829,7 @@ class ArticlesTableData extends DataClass
       isFinished: data.isFinished.present
           ? data.isFinished.value
           : this.isFinished,
+      plainText: data.plainText.present ? data.plainText.value : this.plainText,
     );
   }
 
@@ -845,14 +849,14 @@ class ArticlesTableData extends DataClass
           ..write('coverImagePath: $coverImagePath, ')
           ..write('language: $language, ')
           ..write('contentPath: $contentPath, ')
-          ..write('plainText: $plainText, ')
           ..write('textLength: $textLength, ')
           ..write('estimatedWordCount: $estimatedWordCount, ')
           ..write('currentCfi: $currentCfi, ')
           ..write('readingProgress: $readingProgress, ')
           ..write('addedAt: $addedAt, ')
           ..write('lastOpenedAt: $lastOpenedAt, ')
-          ..write('isFinished: $isFinished')
+          ..write('isFinished: $isFinished, ')
+          ..write('plainText: $plainText')
           ..write(')'))
         .toString();
   }
@@ -872,7 +876,6 @@ class ArticlesTableData extends DataClass
     coverImagePath,
     language,
     contentPath,
-    plainText,
     textLength,
     estimatedWordCount,
     currentCfi,
@@ -880,6 +883,7 @@ class ArticlesTableData extends DataClass
     addedAt,
     lastOpenedAt,
     isFinished,
+    plainText,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -898,14 +902,14 @@ class ArticlesTableData extends DataClass
           other.coverImagePath == this.coverImagePath &&
           other.language == this.language &&
           other.contentPath == this.contentPath &&
-          other.plainText == this.plainText &&
           other.textLength == this.textLength &&
           other.estimatedWordCount == this.estimatedWordCount &&
           other.currentCfi == this.currentCfi &&
           other.readingProgress == this.readingProgress &&
           other.addedAt == this.addedAt &&
           other.lastOpenedAt == this.lastOpenedAt &&
-          other.isFinished == this.isFinished);
+          other.isFinished == this.isFinished &&
+          other.plainText == this.plainText);
 }
 
 class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
@@ -922,7 +926,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
   final Value<String?> coverImagePath;
   final Value<String?> language;
   final Value<String> contentPath;
-  final Value<String> plainText;
   final Value<int> textLength;
   final Value<int> estimatedWordCount;
   final Value<String?> currentCfi;
@@ -930,6 +933,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
   final Value<String> addedAt;
   final Value<String?> lastOpenedAt;
   final Value<bool> isFinished;
+  final Value<String> plainText;
   final Value<int> rowid;
   const ArticlesTableCompanion({
     this.id = const Value.absent(),
@@ -945,7 +949,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     this.coverImagePath = const Value.absent(),
     this.language = const Value.absent(),
     this.contentPath = const Value.absent(),
-    this.plainText = const Value.absent(),
     this.textLength = const Value.absent(),
     this.estimatedWordCount = const Value.absent(),
     this.currentCfi = const Value.absent(),
@@ -953,6 +956,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     this.addedAt = const Value.absent(),
     this.lastOpenedAt = const Value.absent(),
     this.isFinished = const Value.absent(),
+    this.plainText = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ArticlesTableCompanion.insert({
@@ -969,7 +973,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     this.coverImagePath = const Value.absent(),
     this.language = const Value.absent(),
     required String contentPath,
-    this.plainText = const Value.absent(),
     this.textLength = const Value.absent(),
     this.estimatedWordCount = const Value.absent(),
     this.currentCfi = const Value.absent(),
@@ -977,6 +980,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     required String addedAt,
     this.lastOpenedAt = const Value.absent(),
     this.isFinished = const Value.absent(),
+    this.plainText = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        title = Value(title),
@@ -997,7 +1001,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     Expression<String>? coverImagePath,
     Expression<String>? language,
     Expression<String>? contentPath,
-    Expression<String>? plainText,
     Expression<int>? textLength,
     Expression<int>? estimatedWordCount,
     Expression<String>? currentCfi,
@@ -1005,6 +1008,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     Expression<String>? addedAt,
     Expression<String>? lastOpenedAt,
     Expression<bool>? isFinished,
+    Expression<String>? plainText,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1021,7 +1025,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
       if (coverImagePath != null) 'cover_image_path': coverImagePath,
       if (language != null) 'language': language,
       if (contentPath != null) 'content_path': contentPath,
-      if (plainText != null) 'plain_text': plainText,
       if (textLength != null) 'text_length': textLength,
       if (estimatedWordCount != null)
         'estimated_word_count': estimatedWordCount,
@@ -1030,6 +1033,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
       if (addedAt != null) 'added_at': addedAt,
       if (lastOpenedAt != null) 'last_opened_at': lastOpenedAt,
       if (isFinished != null) 'is_finished': isFinished,
+      if (plainText != null) 'plain_text': plainText,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1048,7 +1052,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     Value<String?>? coverImagePath,
     Value<String?>? language,
     Value<String>? contentPath,
-    Value<String>? plainText,
     Value<int>? textLength,
     Value<int>? estimatedWordCount,
     Value<String?>? currentCfi,
@@ -1056,6 +1059,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     Value<String>? addedAt,
     Value<String?>? lastOpenedAt,
     Value<bool>? isFinished,
+    Value<String>? plainText,
     Value<int>? rowid,
   }) {
     return ArticlesTableCompanion(
@@ -1072,7 +1076,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
       coverImagePath: coverImagePath ?? this.coverImagePath,
       language: language ?? this.language,
       contentPath: contentPath ?? this.contentPath,
-      plainText: plainText ?? this.plainText,
       textLength: textLength ?? this.textLength,
       estimatedWordCount: estimatedWordCount ?? this.estimatedWordCount,
       currentCfi: currentCfi ?? this.currentCfi,
@@ -1080,6 +1083,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
       addedAt: addedAt ?? this.addedAt,
       lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
       isFinished: isFinished ?? this.isFinished,
+      plainText: plainText ?? this.plainText,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1126,9 +1130,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     if (contentPath.present) {
       map['content_path'] = Variable<String>(contentPath.value);
     }
-    if (plainText.present) {
-      map['plain_text'] = Variable<String>(plainText.value);
-    }
     if (textLength.present) {
       map['text_length'] = Variable<int>(textLength.value);
     }
@@ -1149,6 +1150,9 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
     }
     if (isFinished.present) {
       map['is_finished'] = Variable<bool>(isFinished.value);
+    }
+    if (plainText.present) {
+      map['plain_text'] = Variable<String>(plainText.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -1172,7 +1176,6 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
           ..write('coverImagePath: $coverImagePath, ')
           ..write('language: $language, ')
           ..write('contentPath: $contentPath, ')
-          ..write('plainText: $plainText, ')
           ..write('textLength: $textLength, ')
           ..write('estimatedWordCount: $estimatedWordCount, ')
           ..write('currentCfi: $currentCfi, ')
@@ -1180,6 +1183,7 @@ class ArticlesTableCompanion extends UpdateCompanion<ArticlesTableData> {
           ..write('addedAt: $addedAt, ')
           ..write('lastOpenedAt: $lastOpenedAt, ')
           ..write('isFinished: $isFinished, ')
+          ..write('plainText: $plainText, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -6979,7 +6983,6 @@ typedef $$ArticlesTableTableCreateCompanionBuilder =
       Value<String?> coverImagePath,
       Value<String?> language,
       required String contentPath,
-      Value<String> plainText,
       Value<int> textLength,
       Value<int> estimatedWordCount,
       Value<String?> currentCfi,
@@ -6987,6 +6990,7 @@ typedef $$ArticlesTableTableCreateCompanionBuilder =
       required String addedAt,
       Value<String?> lastOpenedAt,
       Value<bool> isFinished,
+      Value<String> plainText,
       Value<int> rowid,
     });
 typedef $$ArticlesTableTableUpdateCompanionBuilder =
@@ -7004,7 +7008,6 @@ typedef $$ArticlesTableTableUpdateCompanionBuilder =
       Value<String?> coverImagePath,
       Value<String?> language,
       Value<String> contentPath,
-      Value<String> plainText,
       Value<int> textLength,
       Value<int> estimatedWordCount,
       Value<String?> currentCfi,
@@ -7012,6 +7015,7 @@ typedef $$ArticlesTableTableUpdateCompanionBuilder =
       Value<String> addedAt,
       Value<String?> lastOpenedAt,
       Value<bool> isFinished,
+      Value<String> plainText,
       Value<int> rowid,
     });
 
@@ -7089,11 +7093,6 @@ class $$ArticlesTableTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get plainText => $composableBuilder(
-    column: $table.plainText,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<int> get textLength => $composableBuilder(
     column: $table.textLength,
     builder: (column) => ColumnFilters(column),
@@ -7126,6 +7125,11 @@ class $$ArticlesTableTableFilterComposer
 
   ColumnFilters<bool> get isFinished => $composableBuilder(
     column: $table.isFinished,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get plainText => $composableBuilder(
+    column: $table.plainText,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -7204,11 +7208,6 @@ class $$ArticlesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get plainText => $composableBuilder(
-    column: $table.plainText,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<int> get textLength => $composableBuilder(
     column: $table.textLength,
     builder: (column) => ColumnOrderings(column),
@@ -7241,6 +7240,11 @@ class $$ArticlesTableTableOrderingComposer
 
   ColumnOrderings<bool> get isFinished => $composableBuilder(
     column: $table.isFinished,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get plainText => $composableBuilder(
+    column: $table.plainText,
     builder: (column) => ColumnOrderings(column),
   );
 }
@@ -7303,9 +7307,6 @@ class $$ArticlesTableTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get plainText =>
-      $composableBuilder(column: $table.plainText, builder: (column) => column);
-
   GeneratedColumn<int> get textLength => $composableBuilder(
     column: $table.textLength,
     builder: (column) => column,
@@ -7338,6 +7339,9 @@ class $$ArticlesTableTableAnnotationComposer
     column: $table.isFinished,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get plainText =>
+      $composableBuilder(column: $table.plainText, builder: (column) => column);
 }
 
 class $$ArticlesTableTableTableManager
@@ -7388,7 +7392,6 @@ class $$ArticlesTableTableTableManager
                 Value<String?> coverImagePath = const Value.absent(),
                 Value<String?> language = const Value.absent(),
                 Value<String> contentPath = const Value.absent(),
-                Value<String> plainText = const Value.absent(),
                 Value<int> textLength = const Value.absent(),
                 Value<int> estimatedWordCount = const Value.absent(),
                 Value<String?> currentCfi = const Value.absent(),
@@ -7396,6 +7399,7 @@ class $$ArticlesTableTableTableManager
                 Value<String> addedAt = const Value.absent(),
                 Value<String?> lastOpenedAt = const Value.absent(),
                 Value<bool> isFinished = const Value.absent(),
+                Value<String> plainText = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ArticlesTableCompanion(
                 id: id,
@@ -7411,7 +7415,6 @@ class $$ArticlesTableTableTableManager
                 coverImagePath: coverImagePath,
                 language: language,
                 contentPath: contentPath,
-                plainText: plainText,
                 textLength: textLength,
                 estimatedWordCount: estimatedWordCount,
                 currentCfi: currentCfi,
@@ -7419,6 +7422,7 @@ class $$ArticlesTableTableTableManager
                 addedAt: addedAt,
                 lastOpenedAt: lastOpenedAt,
                 isFinished: isFinished,
+                plainText: plainText,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -7436,7 +7440,6 @@ class $$ArticlesTableTableTableManager
                 Value<String?> coverImagePath = const Value.absent(),
                 Value<String?> language = const Value.absent(),
                 required String contentPath,
-                Value<String> plainText = const Value.absent(),
                 Value<int> textLength = const Value.absent(),
                 Value<int> estimatedWordCount = const Value.absent(),
                 Value<String?> currentCfi = const Value.absent(),
@@ -7444,6 +7447,7 @@ class $$ArticlesTableTableTableManager
                 required String addedAt,
                 Value<String?> lastOpenedAt = const Value.absent(),
                 Value<bool> isFinished = const Value.absent(),
+                Value<String> plainText = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ArticlesTableCompanion.insert(
                 id: id,
@@ -7459,7 +7463,6 @@ class $$ArticlesTableTableTableManager
                 coverImagePath: coverImagePath,
                 language: language,
                 contentPath: contentPath,
-                plainText: plainText,
                 textLength: textLength,
                 estimatedWordCount: estimatedWordCount,
                 currentCfi: currentCfi,
@@ -7467,6 +7470,7 @@ class $$ArticlesTableTableTableManager
                 addedAt: addedAt,
                 lastOpenedAt: lastOpenedAt,
                 isFinished: isFinished,
+                plainText: plainText,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

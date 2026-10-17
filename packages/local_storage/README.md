@@ -4,7 +4,12 @@ Single Drift database for the whole app. All tables, DAOs, schema, and
 migrations live here. Repositories receive one `AppDatabase` instance
 from the DI container and extract the DAO they need.
 
-File on disk: `readflex.db` in the application documents directory.
+File on disk: `readflex.db` in the application documents directory, opened in
+a background isolate with write-ahead logging and `synchronous = NORMAL`
+(`configureAppDatabaseConnection`): a commit, such as a reading position
+save, appends to `readflex.db-wal` without an fsync. A power loss can drop the
+last commits but cannot corrupt the file. Anything that ever copies the
+database must checkpoint first or copy the `-wal` file too.
 
 ---
 
@@ -30,6 +35,13 @@ and companions are also reachable through the DAO exports.
 current app surface. They remain exported so existing databases keep migrating
 cleanly and the frozen learning features can be restored from history without a
 destructive schema reset.
+
+Schema v24 rebuilds `articles_table` with `plain_text` as its last column.
+SQLite reads a row's columns in order, so with the article text in the middle
+the Library's metadata query walked every article's overflow pages to reach
+`added_at` or `is_finished` (5.9ms instead of 1.4ms for 1000 articles of 16KB
+on a warm cache, and the whole text from disk on a cold one). Keep long
+columns last when adding new ones.
 
 Schema v23 adds `books_table.comic_page_order_version` with a legacy default of
 0. Only new CBZ imports use version 1; migration leaves saved page anchors and

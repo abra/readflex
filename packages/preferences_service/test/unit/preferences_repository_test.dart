@@ -17,6 +17,65 @@ void main() {
   });
 
   group('PreferencesRepository', () {
+    group('writes', () {
+      test('a save of what was loaded writes nothing', () async {
+        final storage = _CountingStorage();
+        final first = PreferencesRepository(storage);
+        await first.save(await first.load(_supportedCodes));
+        expect(storage.writes, 1, reason: 'nothing stored yet');
+
+        final next = PreferencesRepository(storage);
+        await next.save(await next.load(_supportedCodes));
+        expect(storage.writes, 1);
+      });
+
+      test('a change is written once', () async {
+        final storage = _CountingStorage();
+        final repo = PreferencesRepository(storage);
+        final loaded = await repo.load(_supportedCodes);
+        await repo.save(loaded);
+        final changed = loaded.copyWith(themeMode: ThemeMode.dark);
+
+        await repo.save(changed);
+        await repo.save(changed);
+
+        expect(storage.writes, 2);
+        expect(
+          (await PreferencesRepository(
+            storage,
+          ).load(_supportedCodes)).themeMode,
+          ThemeMode.dark,
+        );
+      });
+
+      test('an older schema is rewritten on its first save', () async {
+        final storage = _CountingStorage();
+        await storage.setString(_key, jsonEncode({'readerFontId': 'sans'}));
+        final repo = PreferencesRepository(storage);
+
+        await repo.save(await repo.load(_supportedCodes));
+
+        expect(storage.writes, 2);
+        final stored = jsonDecode((await storage.getString(_key))!) as Map;
+        expect(stored['_schemaVersion'], greaterThan(1));
+      });
+
+      test('a failed write is tried again', () async {
+        final storage = _CountingStorage();
+        final repo = PreferencesRepository(storage);
+        final changed = (await repo.load(
+          _supportedCodes,
+        )).copyWith(themeMode: ThemeMode.dark);
+
+        storage.failNext = true;
+        await expectLater(repo.save(changed), throwsA(isA<StateError>()));
+        await repo.save(changed);
+
+        expect(storage.writes, 2);
+        expect(await storage.getString(_key), isNotNull);
+      });
+    });
+
     test('load() returns defaults when storage is empty', () async {
       final repo = PreferencesRepository(PreferencesStorage());
       final prefs = await repo.load(_supportedCodes);
@@ -551,4 +610,19 @@ void main() {
       },
     );
   });
+}
+
+class _CountingStorage extends PreferencesStorage {
+  int writes = 0;
+  bool failNext = false;
+
+  @override
+  Future<void> setString(String key, String value) {
+    writes++;
+    if (failNext) {
+      failNext = false;
+      throw StateError('write failed');
+    }
+    return super.setString(key, value);
+  }
 }

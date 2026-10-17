@@ -22,7 +22,7 @@ class ReaderScreen extends StatelessWidget {
     Book? initialSource,
     ValueChanged<List<String>>? onSearchHistoryChanged,
     VoidCallback? onSourceOpened,
-    VoidCallback? onReadingPositionSaved,
+    ValueChanged<double>? onReadingPositionSaved,     // saved progress
     void Function(String url, String title)? onArticleTitlePressed,
     ValueChanged<String>? onOpenExternalLink,
   });
@@ -391,7 +391,9 @@ list past its top, the scrim, Close and System Back step it down or close it.
 Landscape phones and large text open it at full. Hidden, it stays mounted
 offstage, so each tab's search text and scroll offset survive; opening reveals
 the active chapter in the list only (`ScrollPosition.ensureVisible`), never by
-scrolling the sheet itself.
+scrolling the sheet itself. While hidden it keeps the position it last showed
+(and keeps it through the closing slide), so page turns do not rebuild it; the
+CBZ page pill likewise reads page numbers only for image pages.
 
 Deleting a bookmark persists immediately and atomically replaces its row with
 an Undo state. Undo restores the original ID, date and complete anchor. It is
@@ -641,9 +643,10 @@ at once because it is what puts the source in Library's Continue reading.
 Repository partial updates avoid overwriting metadata from an old snapshot.
 Source loading preserves live position/document features; `close()` waits for
 an already-running write as well as the latest pending position.
-`onReadingPositionSaved` fires after each write reaches the repository,
-including the flush on `close()`, never after a failed one. The Library uses
-it to re-read storage while the reader still covers it.
+`onReadingPositionSaved` fires with the saved progress after each write
+reaches the repository, including the flush on `close()`, never after a failed
+one. The Library uses it to update that source while the reader still covers
+it, without reading storage.
 
 Highlight refresh/delete/color/note events share a separate sequential bucket.
 This preserves user edit order without serializing position events behind

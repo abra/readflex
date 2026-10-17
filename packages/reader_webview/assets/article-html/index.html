@@ -349,6 +349,7 @@
       let lastEmittedProgress = -1
       let lastEmittedAtEnd = false
       let lastEmitAt = 0
+      let trailingPositionTimer = 0
       let articleTextLength = 0
       let sentenceTextOffsets = new WeakMap()
       let scheduled = false
@@ -1254,16 +1255,19 @@
         const now = performance.now()
         const progressMoved = Math.abs(nextProgress - lastEmittedProgress) >= progressEmitStep
         const sentenceChanged = nextSentenceKey !== lastEmittedSentenceKey
-        if (
-          !force &&
-          !sentenceChanged &&
-          !progressMoved &&
-          atEnd === lastEmittedAtEnd &&
-          now - lastEmitAt < minEmitIntervalMs
-        ) {
+        const sinceLastEmit = now - lastEmitAt
+        if (!force && atEnd === lastEmittedAtEnd && sinceLastEmit < minEmitIntervalMs) {
+          // One update per interval while scrolling, as each one crosses the
+          // bridge into a reader state; the place it settles on follows, and
+          // reaching the end goes at once.
+          if (sentenceChanged || progressMoved) {
+            schedulePositionAfter(minEmitIntervalMs - sinceLastEmit)
+          }
           return
         }
 
+        clearTimeout(trailingPositionTimer)
+        trailingPositionTimer = 0
         lastEmittedSentenceKey = nextSentenceKey
         lastEmittedProgress = nextProgress
         lastEmittedAtEnd = atEnd
@@ -1287,6 +1291,14 @@
           scheduled = false
           emitPosition(reason, force)
         })
+      }
+
+      function schedulePositionAfter(delay) {
+        if (trailingPositionTimer) return
+        trailingPositionTimer = setTimeout(() => {
+          trailingPositionTimer = 0
+          schedulePosition('scroll')
+        }, delay)
       }
 
       function observeSentences() {

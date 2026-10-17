@@ -351,15 +351,17 @@ class AppCoverArt extends StatelessWidget {
 }
 
 /// Paints 45° stripes across the canvas, matched to `readwell_demo`:
-/// stroke width 2, spacing 4 px along the top edge, color white @ 5%
-/// (effective alpha ≈ 0.005 once the wrapping `Opacity(0.1)` applies).
+/// stroke width 2, spacing 4 px along the top edge, color white @ 5% under
+/// an opacity of 0.1, folded into the paint here (alpha ≈ 0.005): the
+/// stripes do not overlap, and an `Opacity` would draw every cover through
+/// an offscreen layer on each scroll frame.
 class _DiagonalStripesPainter extends CustomPainter {
   const _DiagonalStripesPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
+      ..color = Colors.white.withValues(alpha: 0.05 * 0.1)
       ..strokeWidth = 2;
 
     for (double i = -size.height; i < size.width + size.height; i += 4) {
@@ -375,8 +377,7 @@ class _DiagonalStripesPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Diagonal-stripe texture layer for [AppCoverArt]. `Opacity(0.1)` on
-/// top of a stroke painted at alpha 0.05 gives an effective alpha
+/// Diagonal-stripe texture layer for [AppCoverArt], at an effective alpha
 /// ≈ 0.005 — "texture, not decoration".
 class _StripeTexture extends StatelessWidget {
   const _StripeTexture();
@@ -384,10 +385,7 @@ class _StripeTexture extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Positioned.fill(
-      child: Opacity(
-        opacity: 0.1,
-        child: CustomPaint(painter: _DiagonalStripesPainter()),
-      ),
+      child: CustomPaint(painter: _DiagonalStripesPainter()),
     );
   }
 }

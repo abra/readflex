@@ -58,6 +58,83 @@ void main() {
     },
   );
 
+  test('v23 articles move their text after every other column', () async {
+    final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
+    await current.customSelect('SELECT 1').getSingle();
+    await current.customStatement('DROP TABLE articles_table');
+    await current.customStatement('''
+      CREATE TABLE articles_table (
+        id TEXT NOT NULL PRIMARY KEY,
+        title TEXT NOT NULL,
+        url TEXT NOT NULL,
+        resolved_url TEXT,
+        canonical_url TEXT,
+        author TEXT,
+        site_name TEXT,
+        hostname TEXT,
+        description TEXT,
+        image_url TEXT,
+        cover_image_path TEXT,
+        language TEXT,
+        content_path TEXT NOT NULL,
+        plain_text TEXT NOT NULL DEFAULT '',
+        text_length INTEGER NOT NULL DEFAULT 0,
+        estimated_word_count INTEGER NOT NULL DEFAULT 0,
+        current_cfi TEXT,
+        reading_progress REAL NOT NULL DEFAULT 0.0,
+        added_at TEXT NOT NULL,
+        last_opened_at TEXT,
+        is_finished INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+    await current.customStatement(
+      'CREATE INDEX idx_articles_last_opened '
+      'ON articles_table (last_opened_at, added_at)',
+    );
+    final text = 'word ' * 10000;
+    await current.customStatement(
+      '''
+      INSERT INTO articles_table (
+        id, title, url, author, site_name, hostname, language, content_path,
+        plain_text, text_length, estimated_word_count, current_cfi,
+        reading_progress, added_at, last_opened_at, is_finished
+      ) VALUES ('a', 'Title', 'https://example.com/a', 'Author', 'Example',
+        'example.com', 'en', 'content.html', ?, 50000, 10000, 'cfi', 0.25,
+        '2026-01-01', '2026-01-02', 1)
+    ''',
+      [text],
+    );
+    await current.customStatement('PRAGMA user_version = 23');
+    await current.close();
+
+    final migrated = await openMigratedDatabase();
+    final columns = await migrated
+        .customSelect('PRAGMA table_info(articles_table)')
+        .map((row) => row.read<String>('name'))
+        .get();
+    expect(columns.last, 'plain_text');
+    expect(columns, hasLength(21));
+
+    final article = (await migrated.articlesDao.articleById('a'))!;
+    expect(article.plainText, text);
+    expect(article.textLength, 50000);
+    expect(article.estimatedWordCount, 10000);
+    expect(article.currentCfi, 'cfi');
+    expect(article.readingProgress, 0.25);
+    expect(article.lastOpenedAt, '2026-01-02');
+    expect(article.isFinished, isTrue);
+    expect(article.language, 'en');
+
+    final plan = await migrated
+        .customSelect(
+          'EXPLAIN QUERY PLAN SELECT id FROM articles_table '
+          'ORDER BY last_opened_at DESC, added_at DESC',
+        )
+        .map((row) => row.read<String>('detail'))
+        .get();
+    expect(plan.single, contains('idx_articles_last_opened'));
+  });
+
   test(
     'migrates v5 inline article HTML without deleting the article',
     () async {

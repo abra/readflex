@@ -68,12 +68,15 @@ Late callbacks after Library disposal are ignored.
 Books and articles are requested together. Loads carry a generation token so
 an older response/error cannot replace newer data. A superseded delete refresh
 still emits its completion effect without restoring stale list contents.
-While the reader is open, Library refreshes on its `onSourceOpened` and on
-every `onReadingPositionSaved`, so a source read for the first time is already
-in Continue reading, with its current progress, when the reader closes instead
-of moving there in view. The delayed refresh on reader-route return remains as
-a fallback and avoids moving list tiles during a reverse route/Hero
-transition.
+While the reader is open, Library refreshes on its `onSourceOpened` (which
+brings the new opened time) and applies every `onReadingPositionSaved`
+progress to that one source without reading storage
+(`LibrarySourceProgressSaved`): a save changes nothing else Library shows, and
+it fires about once per page. A source read for the first time is therefore
+already in Continue reading, with its current progress, when the reader closes
+instead of moving there in view. A load that read a row before a save keeps
+the saved progress. The delayed refresh on reader-route return remains as a
+fallback and avoids moving list tiles during a reverse route/Hero transition.
 
 Article metadata comes from a SQL projection via `getLibrarySources`, not a
 full-text article read. Search and scope changes reuse the same source list.

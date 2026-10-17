@@ -527,6 +527,57 @@ void main() {
       expect(label(tester, 'Chapter two', '46%').semanticsLabel, isNull);
     });
 
+    testWidgets('a hidden sheet ignores page turns and opens on the current '
+        'chapter', (tester) async {
+      ListTile hiddenRow(String title) => tester.widget<ListTile>(
+        find.ancestor(
+          of: find.text(title, skipOffstage: false),
+          matching: find.byType(ListTile, skipOffstage: false),
+        ),
+      );
+      Future<void> turnTo(String chapter, double progress) async {
+        bloc.add(
+          ReaderBookPositionUpdated(
+            cfi: 'epubcfi(/6/${(progress * 100).round()})',
+            progress: progress,
+            chapterTitle: chapter,
+            chapterCurrentPage: 3,
+          ),
+        );
+        await bloc.stream
+            .firstWhere((s) => s.chapterTitle == chapter)
+            .timeout(const Duration(seconds: 3));
+        await tester.pump();
+      }
+
+      await loadChapters(tester);
+      await pump(tester);
+      await pump(tester, visible: false);
+      final before = hiddenRow('Chapter two');
+      expect(before.selected, isTrue);
+
+      await turnTo('Chapter three', .85);
+      expect(
+        hiddenRow('Chapter two'),
+        same(before),
+        reason: 'a page turn rebuilds nothing in the hidden sheet',
+      );
+
+      await pump(tester);
+      expect(tester.widget<ListTile>(row('Chapter three')).selected, isTrue);
+      expect(tester.widget<ListTile>(row('Chapter two')).selected, isFalse);
+
+      // Closed again, it keeps the row it showed while the reader moves on.
+      await pump(tester, visible: false);
+      await turnTo('Chapter one', .2);
+      expect(hiddenRow('Chapter three').selected, isTrue);
+      expect(hiddenRow('Chapter one').selected, isFalse);
+
+      await pump(tester);
+      expect(tester.widget<ListTile>(row('Chapter one')).selected, isTrue);
+      await tester.pump(const Duration(seconds: 1));
+    });
+
     testWidgets('read rows are muted with a check, the active row has a dot', (
       tester,
     ) async {

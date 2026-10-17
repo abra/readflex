@@ -70,7 +70,7 @@ class LibraryScreen extends StatelessWidget {
   final Future<void> Function(
     LibrarySource source, {
     VoidCallback? onSourceOpened,
-    VoidCallback? onReadingPositionSaved,
+    ValueChanged<double>? onReadingPositionSaved,
   })
   onSourcePressed;
   final LibraryImportLauncher onAddPressed;
@@ -149,7 +149,7 @@ class _LibraryView extends StatefulWidget {
   final Future<void> Function(
     LibrarySource source, {
     VoidCallback? onSourceOpened,
-    VoidCallback? onReadingPositionSaved,
+    ValueChanged<double>? onReadingPositionSaved,
   })
   onSourcePressed;
   final LibraryImportLauncher onAddPressed;
@@ -240,12 +240,15 @@ class _LibraryViewState extends State<_LibraryView> {
       }
     }
 
-    // Each saved position re-reads storage while the reader still covers the
-    // Library, so the source is already in Continue reading (with its current
-    // progress) when the reader closes, instead of moving there in view.
-    void handleReadingPositionSaved() {
+    // Each saved position updates the source while the reader still covers
+    // the Library, so it is already in Continue reading (with its current
+    // progress) when the reader closes, instead of moving there in view. The
+    // refresh on open has already brought its new opened time.
+    void handleReadingPositionSaved(double progress) {
       if (!mounted) return;
-      context.read<LibraryBloc>().add(const LibraryRefreshRequested());
+      context.read<LibraryBloc>().add(
+        LibrarySourceProgressSaved(source.id, progress),
+      );
     }
 
     try {

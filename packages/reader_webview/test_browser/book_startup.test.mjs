@@ -202,6 +202,19 @@ for (const importing of [false, true]) {
     }
 }
 
+for (const [name, bytes] of [['startup.epub', epub], ['startup.cbz', comic], ['startup.fb2', fb2]]) {
+    test(`${name} metadata skips the reader's direction sampling and renderer`, async t => {
+        const { page, requests, timings } = await openBook(t, { bytes, name, importing: true, traceStartup: true })
+        const stages = timings[0].stages.map(({ stage }) => stage)
+        assert.deepEqual(stages.filter(stage => ['direction-ready', 'navigation-ready'].includes(stage)), [])
+        assert.equal(await page.locator('foliate-view').count(), 0)
+        assert.ok(!requests.includes('/foliate-js/src/paginator.js'))
+        assert.ok(!requests.includes('/foliate-js/src/fixed-layout.js'))
+        const metadata = await page.evaluate(() => window.bridgeCalls.find(([n]) => n === 'onMetadata')[1])
+        assert.match(metadata.title, /startup/i)
+    })
+}
+
 for (const [fontName, fontFile] of [
     ['Literata', 'Literata-Variable.ttf'], ['PT Serif', 'PTSerif-Regular.ttf'],
     ['Open Sans', 'OpenSans-Variable.ttf'], ['Geist', 'Geist-Variable.ttf'],

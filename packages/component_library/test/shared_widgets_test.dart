@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:component_library/component_library.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -175,6 +176,41 @@ void main() {
     expect(find.text('Saved Article'), findsOneWidget);
     expect(find.text('EXAMPLE'), findsOneWidget);
     expect(find.text('ARTICLE AUTHOR'), findsNothing);
+  });
+
+  testWidgets('AppCoverArt draws its texture without an offscreen layer', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: AppCoverArt(
+            title: 'Generated cover',
+            seed: 'cover-1',
+            height: 180,
+            width: 120,
+          ),
+        ),
+      ),
+    );
+
+    // Grids repaint dozens of these per scroll frame.
+    final cover = find.byType(AppCoverArt);
+    expect(
+      find.descendant(of: cover, matching: find.byType(Opacity)),
+      findsNothing,
+    );
+    expect(
+      tester.layers.whereType<OpacityLayer>().where(
+        (layer) => (layer.alpha ?? 255) < 255,
+      ),
+      isEmpty,
+      reason: 'the stripes carry their alpha in the paint',
+    );
+    expect(
+      find.descendant(of: cover, matching: find.byType(CustomPaint)),
+      findsWidgets,
+    );
   });
 
   testWidgets('AppCoverArt applies RTL direction to fallback cover text', (

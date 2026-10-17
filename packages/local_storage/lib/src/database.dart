@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqlite3/sqlite3.dart' show Database;
 
 import 'daos/articles_dao.dart';
 import 'daos/books_dao.dart';
@@ -71,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   final Future<Directory> Function() _documentsDirectoryProvider;
 
   @override
-  int get schemaVersion => 23;
+  int get schemaVersion => 24;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -357,6 +358,11 @@ class AppDatabase extends _$AppDatabase {
       if (from < 23) {
         await migrator.addColumn(booksTable, booksTable.comicPageOrderVersion);
       }
+      if (from < 24) {
+        // Rebuilds the table with plain_text last (see ArticlesTable) and
+        // re-creates its index.
+        await migrator.alterTable(TableMigration(articlesTable));
+      }
     },
   );
 
@@ -376,14 +382,14 @@ class AppDatabase extends _$AppDatabase {
         cover_image_path TEXT,
         language TEXT,
         content_path TEXT NOT NULL,
-        plain_text TEXT NOT NULL DEFAULT '',
         text_length INTEGER NOT NULL DEFAULT 0,
         estimated_word_count INTEGER NOT NULL DEFAULT 0,
         current_cfi TEXT,
         reading_progress REAL NOT NULL DEFAULT 0.0,
         added_at TEXT NOT NULL,
         last_opened_at TEXT,
-        is_finished INTEGER NOT NULL DEFAULT 0
+        is_finished INTEGER NOT NULL DEFAULT 0,
+        plain_text TEXT NOT NULL DEFAULT ''
       )
     ''');
     await _createArticlesIndexes();
@@ -804,5 +810,18 @@ class _LegacyArticleMigration {
 LazyDatabase _openConnection() => LazyDatabase(() async {
   final dir = await getApplicationDocumentsDirectory();
   final file = File(p.join(dir.path, 'readflex.db'));
-  return NativeDatabase.createInBackground(file);
+  return NativeDatabase.createInBackground(
+    file,
+    setup: configureAppDatabaseConnection,
+  );
 });
+
+/// Write-ahead logging: a commit appends to the log instead of copying pages
+/// to a rollback journal, and NORMAL needs no fsync per commit in that mode.
+/// A power loss can drop the last commits but never corrupts the file.
+@visibleForTesting
+void configureAppDatabaseConnection(Database database) {
+  database
+    ..execute('PRAGMA journal_mode = WAL')
+    ..execute('PRAGMA synchronous = NORMAL');
+}

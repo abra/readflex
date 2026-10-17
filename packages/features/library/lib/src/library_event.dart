@@ -16,6 +16,16 @@ final class LibraryRefreshRequested extends LibraryEvent {
   final Completer<void>? completer;
 }
 
+/// The reader saved [progress] for [sourceId]. A save changes nothing else
+/// the Library shows, so the bloc updates that source without reading
+/// storage.
+final class LibrarySourceProgressSaved extends LibraryEvent {
+  const LibrarySourceProgressSaved(this.sourceId, this.progress);
+
+  final String sourceId;
+  final double progress;
+}
+
 final class LibrarySourceDeleted extends LibraryEvent {
   const LibrarySourceDeleted(this.sourceId, {required this.scope});
 

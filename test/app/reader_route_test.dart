@@ -30,8 +30,8 @@ void main() {
         (tester) async {
           var opened = 0;
           void onOpened() => opened++;
-          var saved = 0;
-          void onSaved() => saved++;
+          final saved = <double>[];
+          void onSaved(double progress) => saved.add(progress);
           final hasBook = ['book', 'both', 'mismatched'].contains(scenario);
           final hasCallback = [
             'callback',
@@ -102,8 +102,8 @@ void main() {
             reader.onReadingPositionSaved,
             hasCallback ? same(onSaved) : isNull,
           );
-          reader.onReadingPositionSaved?.call();
-          expect(saved, hasCallback ? 1 : 0);
+          reader.onReadingPositionSaved?.call(0.4);
+          expect(saved, hasCallback ? [0.4] : isEmpty);
           expect(reader.textActions, hasLength(4));
           // A word already in the target language opens the definition from
           // the very dictionary action the menu offers.

@@ -66,7 +66,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     required HighlightRepository highlightRepository,
     ArticleRepository? articleRepository,
     Book? initialSource,
-    VoidCallback? onReadingPositionSaved,
+    ValueChanged<double>? onReadingPositionSaved,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
        _highlightRepository = highlightRepository,
@@ -109,10 +109,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   final ArticleRepository? _articleRepository;
   final HighlightRepository _highlightRepository;
 
-  /// Called after each position write reaches the repository, including the
-  /// flush on [close], so the screen below can re-read storage while the
-  /// reader still covers it.
-  final VoidCallback? _onReadingPositionSaved;
+  /// Called with the saved progress after each position write reaches the
+  /// repository, including the flush on [close], so the screen below can
+  /// update while the reader still covers it.
+  final ValueChanged<double>? _onReadingPositionSaved;
 
   /// Pending document to persist to the repository. foliate-js can emit frequent
   /// `ReaderBookPositionUpdated` events during navigation, so the actual
@@ -524,7 +524,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         progress: document.readingProgress,
       );
     }
-    _onReadingPositionSaved?.call();
+    _onReadingPositionSaved?.call(document.readingProgress);
   }
 
   /// Routes an external error through BLoC's error pipeline (e.g. from a

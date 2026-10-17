@@ -24,6 +24,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     on<LibrarySourceDeleted>(_onSourceDeleted);
     on<LibrarySourcesDeleted>(_onSourcesDeleted);
     on<LibraryRefreshRequested>(_onRefreshRequested);
+    on<LibrarySourceProgressSaved>(_onSourceProgressSaved);
     on<LibrarySearchQueryChanged>(
       _onSearchQueryChanged,
       // switchMap drops a pending debounced query once a newer one arrives,
@@ -60,6 +61,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   final CollectionRepository? _collectionRepository;
   int _loadGeneration = 0;
 
+  /// Progress saved since the latest load started. That load may have read a
+  /// row before the write, so its result takes these values.
+  final Map<String, double> _savedProgress = {};
+
   Future<void> _onLoadRequested(
     LibraryLoadRequested event,
     Emitter<LibraryState> emit,
@@ -77,6 +82,44 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     } finally {
       event.completer?.complete();
     }
+  }
+
+  void _onSourceProgressSaved(
+    LibrarySourceProgressSaved event,
+    Emitter<LibraryState> emit,
+  ) {
+    _savedProgress[event.sourceId] = event.progress;
+    final sources = _withSavedProgress(state.sources);
+    if (identical(sources, state.sources)) return;
+    final scopes = [
+      // Progress can only move a source out of New (or back into it).
+      ..._buildBuiltInScopes(sources),
+      ...state.collectionScopes.where((scope) => !scope.isBuiltIn),
+    ];
+    emit(
+      state.copyWith(
+        sources: sources,
+        collectionScopes: scopes,
+        selectedCollectionScope: _resolveSelectedCollectionScope(
+          state.selectedCollectionScope,
+          scopes,
+        ),
+      ),
+    );
+  }
+
+  /// [sources] with [_savedProgress] applied; the same list when nothing
+  /// differs.
+  List<LibrarySource> _withSavedProgress(List<LibrarySource> sources) {
+    if (_savedProgress.isEmpty) return sources;
+    List<LibrarySource>? updated;
+    for (var i = 0; i < sources.length; i++) {
+      final source = sources[i];
+      final progress = _savedProgress[source.id];
+      if (progress == null || progress == source.readingProgress) continue;
+      (updated ??= [...sources])[i] = _withReadingProgress(source, progress);
+    }
+    return updated ?? sources;
   }
 
   Future<void> _onSourceDeleted(
@@ -131,6 +174,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     bool deletionSuccess = true,
   }) async {
     final generation = ++_loadGeneration;
+    _savedProgress.clear();
     try {
       final snapshot = await _loadLibrarySnapshot();
       if (emit.isDone) return;
@@ -149,18 +193,19 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         }
         return;
       }
+      final sources = _withSavedProgress(snapshot.sources);
       final scopes = [
-        ..._buildBuiltInScopes(snapshot.sources),
+        ..._buildBuiltInScopes(sources),
         // A failed read is not an empty collection. Keep the last valid data.
         ...snapshot.collectionScopes ??
             state.collectionScopes.where((scope) => scope.canManage),
-        ..._buildSiteScopes(snapshot.sources),
-        ..._buildAuthorScopes(snapshot.sources),
+        ..._buildSiteScopes(sources),
+        ..._buildAuthorScopes(sources),
       ];
       emit(
         state.copyWith(
           status: LibraryStatus.success,
-          sources: snapshot.sources,
+          sources: sources,
           collectionScopes: scopes,
           collectionsLoadFailed: snapshot.collectionScopes == null,
           selectedCollectionScope: _resolveSelectedCollectionScope(
@@ -421,3 +466,24 @@ class _SmartCollectionGroup {
   final String label;
   final Set<String> sourceIds = {};
 }
+
+LibrarySource _withReadingProgress(LibrarySource source, double progress) =>
+    LibrarySource(
+      id: source.id,
+      sourceType: source.sourceType,
+      title: source.title,
+      typeLabel: source.typeLabel,
+      addedAt: source.addedAt,
+      author: source.author,
+      sourceName: source.sourceName,
+      originalUrl: source.originalUrl,
+      language: source.language,
+      coverImagePath: source.coverImagePath,
+      readingProgress: progress,
+      estimatedWordCount: source.estimatedWordCount,
+      estimatedCharacterCount: source.estimatedCharacterCount,
+      lastOpenedAt: source.lastOpenedAt,
+      isFinished: source.isFinished,
+      isComic: source.isComic,
+      supportsReview: source.supportsReview,
+    );

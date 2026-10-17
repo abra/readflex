@@ -258,6 +258,11 @@ class View {
   #column = true
   #size
   #layout = {}
+  // Readflex patch: until the chapter loads the iframe holds about:blank,
+  // whose empty body would size it to 0px; a render reaching the view then
+  // (the paginator's rAF ResizeObserver during a chapter swap) made the
+  // chapter's first layout run at that width, several times slower.
+  #loaded = false
   constructor({ container, onExpand }) {
     this.container = container
     this.onExpand = onExpand
@@ -375,6 +380,7 @@ class View {
         this.#contentRange.selectNodeContents(doc.body)
         const layout = beforeRender?.({ vertical, rtl })
         this.#iframe.style.display = 'block'
+        this.#loaded = true
         this.render(layout)
         this.#observer.observe(doc.body)
         markReaderStartup('chapter-layout-ready')
@@ -393,7 +399,7 @@ class View {
     // Readflex patch (ported from readest/foliate-js): also guard for
     // an unloaded iframe document — render() can be called from the
     // rAF-coalesced ResizeObserver one frame after a chapter swap.
-    if (!layout || !this.document?.documentElement) return
+    if (!layout || !this.#loaded || !this.document?.documentElement) return
     this.#column = layout.flow !== 'scrolled'
     this.#layout = layout
     if (this.#column) this.columnize(layout)
@@ -495,7 +501,7 @@ class View {
   expand() {
     // Readflex: ResizeObserver can fire while the iframe document is replacing.
     const { documentElement, body } = this.document ?? {}
-    if (!documentElement || !body || body.nodeType !== 1) return
+    if (!this.#loaded || !documentElement || !body || body.nodeType !== 1) return
     if (this.#column) {
       const side = this.#vertical ? 'height' : 'width'
       const otherSide = this.#vertical ? 'width' : 'height'

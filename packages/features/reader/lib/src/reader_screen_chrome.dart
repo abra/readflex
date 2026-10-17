@@ -1560,11 +1560,13 @@ class _ReaderImagePageProgressOverlayDriver extends StatelessWidget {
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
       (c) => c.state.hasSelection,
     );
+    // Text pages change these on every turn, for a pill they never show.
+    final imagePages = isImagePageFormat(format);
     final current = context.select<ReaderBloc, int?>(
-      (b) => b.state.chapterCurrentPage,
+      (b) => imagePages ? b.state.chapterCurrentPage : null,
     );
     final total = context.select<ReaderBloc, int?>(
-      (b) => b.state.chapterTotalPages,
+      (b) => imagePages ? b.state.chapterTotalPages : null,
     );
 
     return ReaderImagePageProgressOverlay(

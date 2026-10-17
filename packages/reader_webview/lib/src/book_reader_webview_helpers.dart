@@ -121,6 +121,37 @@ String buildReaderCommandScript({
 ''';
 }
 
+/// [buildReaderCommandScript] for several commands in one evaluation. They
+/// run in order, and one that fails does not stop the rest.
+@visibleForTesting
+String buildReaderCommandsScript({
+  required String label,
+  required List<String> expressions,
+}) {
+  if (expressions.length == 1) {
+    return buildReaderCommandScript(
+      label: label,
+      expression: expressions.single,
+    );
+  }
+  final commands = expressions.map((expression) => '() => $expression');
+  return buildReaderCommandScript(
+    label: label,
+    expression:
+        """
+[
+    ${commands.join(',\n    ')},
+  ].forEach(command => {
+    try {
+      const value = command();
+      if (value && typeof value.then === 'function') value.catch(reportError);
+    } catch (error) {
+      reportError(error);
+    }
+  })""",
+  );
+}
+
 @visibleForTesting
 String buildArticleTextDirectionPatchScript({
   required String textAlign,

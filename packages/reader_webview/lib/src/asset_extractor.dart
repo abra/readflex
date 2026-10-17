@@ -24,7 +24,7 @@ class AssetExtractor {
 
   // Bump when bundled reader HTML/JS assets must be re-extracted even if the
   // app version/build number did not change, e.g. release-mode device testing.
-  static const assetRevision = 'reader_webview_assets_169';
+  static const assetRevision = 'reader_webview_assets_170';
 
   @visibleForTesting
   static String extractionVersionFor(String version) =>
@@ -123,21 +123,22 @@ class AssetExtractor {
     final shouldForce =
         force || !await _versionMatches(versionFile, extractionVersion);
 
-    for (final assetPath in _assetPaths) {
-      await _extractOne(
-        bundleKey: 'packages/reader_webview/$assetPath',
-        relativeTargetPath: assetPath.replaceFirst('assets/', ''),
-        force: shouldForce,
-      );
-    }
-
-    for (final bundleKey in _fontBundleKeys) {
-      await _extractOne(
-        bundleKey: bundleKey,
-        relativeTargetPath: p.join('fonts', p.basename(bundleKey)),
-        force: shouldForce,
-      );
-    }
+    // App start waits for this; the files are independent, so their checks
+    // and writes overlap instead of taking a round trip each in turn.
+    await Future.wait([
+      for (final assetPath in _assetPaths)
+        _extractOne(
+          bundleKey: 'packages/reader_webview/$assetPath',
+          relativeTargetPath: assetPath.replaceFirst('assets/', ''),
+          force: shouldForce,
+        ),
+      for (final bundleKey in _fontBundleKeys)
+        _extractOne(
+          bundleKey: bundleKey,
+          relativeTargetPath: p.join('fonts', p.basename(bundleKey)),
+          force: shouldForce,
+        ),
+    ]);
 
     if (shouldForce) {
       await versionFile.parent.create(recursive: true);

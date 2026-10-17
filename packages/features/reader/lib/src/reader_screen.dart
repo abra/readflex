@@ -195,9 +195,10 @@ class ReaderScreen extends StatelessWidget {
   final ValueChanged<List<String>>? onSearchHistoryChanged;
   final VoidCallback? onSourceOpened;
 
-  /// Called after each reading position write reaches storage, so the screen
-  /// below can refresh while the reader still covers it.
-  final VoidCallback? onReadingPositionSaved;
+  /// Called with the saved progress after each reading position write reaches
+  /// storage, so the screen below can update while the reader still covers
+  /// it.
+  final ValueChanged<double>? onReadingPositionSaved;
   final void Function(String url, String title)? onArticleTitlePressed;
 
   /// Opens a link from a book, article or PDF after the reader confirmed it

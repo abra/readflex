@@ -43,8 +43,13 @@ class PreferencesRepository {
 
   final PreferencesStorage _storage;
 
+  /// What storage holds, as last read or written: a save that would write
+  /// the same JSON (app start re-saves what it loaded) skips the write.
+  String? _storedJson;
+
   Future<Preferences> load(List<String> supportedCodes) async {
     final json = await _storage.getString(_key);
+    _storedJson = json;
     if (json == null) {
       final locale = _resolveInitialLocale(supportedCodes);
       return Preferences(
@@ -183,7 +188,10 @@ class PreferencesRepository {
       'readerSelectionTipShowCount': prefs.readerSelectionTipShowCount,
       'readerSelectionTipDismissed': prefs.readerSelectionTipDismissed,
     };
-    await _storage.setString(_key, jsonEncode(map));
+    final json = jsonEncode(map);
+    if (json == _storedJson) return;
+    await _storage.setString(_key, json);
+    _storedJson = json;
   }
 
   static Locale _resolveLocale(String? code, List<String> supportedCodes) {

@@ -257,7 +257,7 @@ When adding or renaming a localized key:
 | Package | Responsibility | Local dependencies |
 |---------|----------------|--------------------|
 | `domain_models` | Pure domain models, enums, value objects, and app/domain exceptions. No Flutter, storage, or service dependencies. | none |
-| `local_storage` | Single Drift database (`readflex.db`), tables, DAOs, migrations, storage rows. | none |
+| `local_storage` | Single Drift database (`readflex.db`, write-ahead log), tables, DAOs, migrations, storage rows. | none |
 | `component_library` | Design tokens, theme extensions, reusable UI components, bottom-sheet shell, shared visual primitives. | none |
 | `readflex_localizations` | Generated Flutter localizations, ARB files, supported locale metadata, and `BuildContext` localization helpers. | none |
 | `shared` | Narrow cross-feature contracts. Currently reader text-action and selection contracts. | `domain_models` |
@@ -531,7 +531,10 @@ physical devices; see `packages/reader_webview/README.md`.
 
 Reader position writes are serialized and retain the 500ms trailing debounce.
 Repositories update only CFI/progress; `markOpened` updates only the opened
-timestamp. A delayed source refresh preserves live position and document
+timestamp. Each saved write reports its progress to the Library, which updates
+that one source in memory instead of reloading storage on every page. SQLite
+runs in write-ahead mode with `synchronous = NORMAL`, so these commits need no
+fsync. A delayed source refresh preserves live position and document
 capabilities, and closing the bloc drains both queued and active writes.
 The book WebView publishes positions only after initial-location completion;
 early content readiness does not authorize a position save. Pending initial
