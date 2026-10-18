@@ -6,6 +6,9 @@ import 'library_bloc.dart';
 import 'library_collection_scope_icon.dart';
 import 'library_collection_scope_label.dart';
 
+part 'select_collection_scope_catalog.dart';
+part 'select_collection_scope_entry.dart';
+
 const double _collectionScopeRowHeight = 48;
 const double _collectionScopeResultsMaxHeight = 420;
 const double _collectionScopeSectionChromeHeight = 36;
@@ -229,11 +232,9 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
   }
 }
 
-/// Filters and renders collection scopes. The first group has no title:
-/// Favourites directly under the search field, then Library and the
-/// built-in scopes. Manual collections, sites and authors follow under
-/// their titles.
-class _CollectionScopeSections extends StatelessWidget {
+/// Filters and renders collection scopes as one lazy list, so only the rows
+/// on screen are built however many sites and authors the library has.
+class _CollectionScopeSections extends StatefulWidget {
   const _CollectionScopeSections({
     required this.state,
     required this.query,
@@ -245,164 +246,146 @@ class _CollectionScopeSections extends StatelessWidget {
   final ValueChanged<LibraryCollectionScope> onManage;
 
   @override
-  Widget build(BuildContext context) {
-    final normalizedQuery = query.trim().toLowerCase();
-    final l10n = context.l10n;
-    final showsLibraryRow =
-        normalizedQuery.isEmpty ||
-        l10n.libraryTitle.toLowerCase().contains(normalizedQuery);
-    final builtInScopes = _filterScopes(
-      state.pickerBuiltInCollectionScopes,
-      normalizedQuery,
-      l10n,
-    );
-    final favouriteScopes = _filterScopes(
-      state.favouriteCollectionScopes,
-      normalizedQuery,
-      l10n,
-    );
-    final manualScopes = _filterScopes(
-      state.manualCollectionScopes,
-      normalizedQuery,
-      l10n,
-    );
-    final siteScopes = _filterScopes(
-      state.siteCollectionScopes,
-      normalizedQuery,
-      l10n,
-    );
-    final authorScopes = _filterScopes(
-      state.authorCollectionScopes,
-      normalizedQuery,
-      l10n,
-    );
-    final hasMatches =
-        showsLibraryRow ||
-        builtInScopes.isNotEmpty ||
-        favouriteScopes.isNotEmpty ||
-        manualScopes.isNotEmpty ||
-        siteScopes.isNotEmpty ||
-        authorScopes.isNotEmpty;
+  State<_CollectionScopeSections> createState() =>
+      _CollectionScopeSectionsState();
+}
 
-    if (!hasMatches) {
+class _CollectionScopeSectionsState extends State<_CollectionScopeSections> {
+  _CollectionScopeCatalog? _catalog;
+  String? _query;
+  _ScopeList _list = (entries: const [], rowCount: 0);
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateEntries();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CollectionScopeSections oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.state, widget.state) ||
+        oldWidget.query != widget.query) {
+      _updateEntries();
+    }
+  }
+
+  void _updateEntries() {
+    final l10n = context.l10n;
+    var catalog = _catalog;
+    if (catalog == null || !catalog.isFor(widget.state, l10n)) {
+      catalog = _catalog = _CollectionScopeCatalog(widget.state, l10n);
+    } else if (_query == widget.query) {
+      return;
+    }
+    _query = widget.query;
+    _list = catalog.listFor(widget.query);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final (:entries, :rowCount) = _list;
+    if (entries.isEmpty) {
       return EmptyState(
-        message: l10n.libraryNoMatchingCollections,
+        message: context.l10n.libraryNoMatchingCollections,
         compact: true,
       );
     }
 
-    final selected = state.selectedCollectionScope;
     return ScrollEdgeFadeStack(
       showBottomFade: false,
-      child: ListView(
+      child: ListView.custom(
         padding: _collectionScopeListPadding,
-        children: [
-          _ScopeSection(
-            rows: [
-              // Favourites stays first, under the search field, however many
-              // built-in scopes the library lists.
-              for (final scope in favouriteScopes)
-                _CollectionScopeRow(
-                  scope: scope,
-                  selected: _isSelected(scope, selected),
-                  onManage: () => onManage(scope),
-                ),
-              if (showsLibraryRow)
-                _ScopeOptionRow(
+        // Screen readers count the rows, each carrying its own index.
+        semanticChildCount: rowCount,
+        childrenDelegate: SliverChildBuilderDelegate(
+          childCount: entries.length,
+          addSemanticIndexes: false,
+          (context, index) => switch (entries[index]) {
+            _ScopeTitleEntry(:final title) => _ScopeSectionTitle(title: title),
+            _LibraryRowEntry(
+              :final count,
+              :final selected,
+              :final semanticIndex,
+              :final endsSection,
+            ) =>
+              _ScopeRowSlot(
+                semanticIndex: semanticIndex,
+                endsSection: endsSection,
+                child: _ScopeOptionRow(
                   keyId: 'library',
                   icon: AppIcons.library,
-                  label: l10n.libraryTitle,
-                  count: state.totalCount,
-                  selected: selected == null,
+                  label: context.l10n.libraryTitle,
+                  count: count,
+                  selected: selected,
                   onTap: () => Navigator.of(
                     context,
                   ).pop(const LibraryCollectionScopeCleared()),
                 ),
-              // Books, Articles, Comics and New sit with Library: they
-              // narrow by what a source is.
-              for (final scope in builtInScopes)
-                _CollectionScopeRow(
+              ),
+            _CollectionScopeRowEntry(
+              :final scope,
+              :final selected,
+              :final semanticIndex,
+              :final endsSection,
+            ) =>
+              _ScopeRowSlot(
+                semanticIndex: semanticIndex,
+                endsSection: endsSection,
+                child: _CollectionScopeRow(
                   scope: scope,
-                  selected: _isSelected(scope, selected),
-                  onManage: () => onManage(scope),
+                  selected: selected,
+                  onManage: () => widget.onManage(scope),
                 ),
-            ],
-          ),
-          for (final (title, scopes) in [
-            (l10n.libraryManualCollections, manualScopes),
-            (l10n.librarySites, siteScopes),
-            (l10n.libraryAuthors, authorScopes),
-          ])
-            _ScopeSection(
-              title: title,
-              rows: [
-                for (final scope in scopes)
-                  _CollectionScopeRow(
-                    scope: scope,
-                    selected: _isSelected(scope, selected),
-                    onManage: () => onManage(scope),
-                  ),
-              ],
-            ),
-        ],
+              ),
+          },
+        ),
       ),
     );
   }
-
-  bool _isSelected(
-    LibraryCollectionScope scope,
-    LibraryCollectionScope? selected,
-  ) => selected?.type == scope.type && selected?.id == scope.id;
-
-  List<LibraryCollectionScope> _filterScopes(
-    List<LibraryCollectionScope> scopes,
-    String normalizedQuery,
-    ReadflexLocalizations l10n,
-  ) {
-    if (normalizedQuery.isEmpty) return scopes;
-    return scopes
-        .where(
-          (scope) => libraryCollectionScopeLabel(
-            l10n,
-            scope,
-          ).toLowerCase().contains(normalizedQuery),
-        )
-        .toList(growable: false);
-  }
 }
 
-/// Optional titled group of picker rows; renders nothing without rows.
-class _ScopeSection extends StatelessWidget {
-  const _ScopeSection({required this.rows, this.title});
+/// A row's place in the list: its index for screen readers and, for the last
+/// row of a section, the 16dp gap below, outside its semantics.
+class _ScopeRowSlot extends StatelessWidget {
+  const _ScopeRowSlot({
+    required this.semanticIndex,
+    required this.endsSection,
+    required this.child,
+  });
 
-  final String? title;
-  final List<Widget> rows;
+  final int semanticIndex;
+  final bool endsSection;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    if (rows.isEmpty) return const SizedBox.shrink();
-
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (title != null)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(
-                start: _collectionScopeRowInset,
-                end: AppSizes.iconActionOutset,
-                bottom: AppSpacing.xs,
-              ),
-              child: Text(
-                title!,
-                style: context.text.labelSmall.copyWith(
-                  color: context.colors.onSurfaceVariant,
-                ),
-              ),
-            ),
-          ...rows,
-        ],
+      padding: EdgeInsets.only(bottom: endsSection ? AppSpacing.lg : 0),
+      child: IndexedSemantics(index: semanticIndex, child: child),
+    );
+  }
+}
+
+/// Title above a group of picker rows.
+class _ScopeSectionTitle extends StatelessWidget {
+  const _ScopeSectionTitle({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(
+        start: _collectionScopeRowInset,
+        end: AppSizes.iconActionOutset,
+        bottom: AppSpacing.xs,
+      ),
+      child: Text(
+        title,
+        style: context.text.labelSmall.copyWith(
+          color: context.colors.onSurfaceVariant,
+        ),
       ),
     );
   }

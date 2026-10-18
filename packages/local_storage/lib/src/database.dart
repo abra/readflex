@@ -72,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   final Future<Directory> Function() _documentsDirectoryProvider;
 
   @override
-  int get schemaVersion => 24;
+  int get schemaVersion => 25;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -363,6 +363,9 @@ class AppDatabase extends _$AppDatabase {
         // re-creates its index.
         await migrator.alterTable(TableMigration(articlesTable));
       }
+      if (from < 25) {
+        await _addBookmarkAnchorVersion();
+      }
     },
   );
 
@@ -581,6 +584,7 @@ class AppDatabase extends _$AppDatabase {
         anchor_suffix TEXT,
         anchor_section_index INTEGER,
         anchor_section_page INTEGER,
+        anchor_version INTEGER,
         created_at TEXT NOT NULL
       )
     ''');
@@ -624,6 +628,14 @@ class AppDatabase extends _$AppDatabase {
     );
     await customStatement(
       'ALTER TABLE bookmarks_table ADD COLUMN anchor_section_page INTEGER',
+    );
+  }
+
+  // Older rows keep NULL: their CFI and quote may come from another page of
+  // the chapter, so readers trust only their visual page anchor.
+  Future<void> _addBookmarkAnchorVersion() async {
+    await customStatement(
+      'ALTER TABLE bookmarks_table ADD COLUMN anchor_version INTEGER',
     );
   }
 

@@ -222,7 +222,7 @@ class BookRepository {
                 SELECT id, source_id, source_type, cfi, content, progress,
                        chapter_title, anchor_exact, anchor_prefix,
                        anchor_suffix, anchor_section_index,
-                       anchor_section_page, created_at
+                       anchor_section_page, anchor_version, created_at
                 FROM bookmarks_table
                 WHERE source_id = ?
                 ORDER BY progress ASC, created_at ASC
@@ -248,6 +248,7 @@ class BookRepository {
     String? anchorSuffix,
     int? anchorSectionIndex,
     int? anchorSectionPage,
+    int? anchorVersion,
   }) async {
     try {
       final existing = await _bookmarkBySourceAndAnchor(
@@ -274,6 +275,7 @@ class BookRepository {
         anchorSuffix: anchorSuffix,
         anchorSectionIndex: anchorSectionIndex,
         anchorSectionPage: anchorSectionPage,
+        anchorVersion: anchorVersion,
         createdAt: DateTime.now(),
       );
       await _insertBookmark(bookmark);
@@ -316,8 +318,8 @@ class BookRepository {
         INSERT INTO bookmarks_table
           (id, source_id, source_type, cfi, content, progress, chapter_title,
            anchor_exact, anchor_prefix, anchor_suffix, anchor_section_index,
-           anchor_section_page, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           anchor_section_page, anchor_version, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''',
       [
         bookmark.id,
@@ -332,6 +334,7 @@ class BookRepository {
         bookmark.anchorSuffix,
         bookmark.anchorSectionIndex,
         bookmark.anchorSectionPage,
+        bookmark.anchorVersion,
         bookmark.createdAt.toIso8601String(),
       ],
     );
@@ -391,7 +394,7 @@ class BookRepository {
               SELECT id, source_id, source_type, cfi, content, progress,
                      chapter_title, anchor_exact, anchor_prefix,
                      anchor_suffix, anchor_section_index,
-                     anchor_section_page, created_at
+                     anchor_section_page, anchor_version, created_at
               FROM bookmarks_table
               WHERE source_id = ?
                 AND cfi = ?
@@ -426,7 +429,7 @@ class BookRepository {
               SELECT id, source_id, source_type, cfi, content, progress,
                      chapter_title, anchor_exact, anchor_prefix,
                      anchor_suffix, anchor_section_index,
-                     anchor_section_page, created_at
+                     anchor_section_page, anchor_version, created_at
               FROM bookmarks_table
               WHERE source_id = ? AND cfi = ?
               LIMIT 1
@@ -447,7 +450,7 @@ class BookRepository {
               SELECT id, source_id, source_type, cfi, content, progress,
                      chapter_title, anchor_exact, anchor_prefix,
                      anchor_suffix, anchor_section_index,
-                     anchor_section_page, created_at
+                     anchor_section_page, anchor_version, created_at
               FROM bookmarks_table
               WHERE source_id = ? AND id = ?
               LIMIT 1
@@ -543,6 +546,7 @@ class BookRepository {
       anchorSuffix: row.readNullable<String>('anchor_suffix'),
       anchorSectionIndex: row.readNullable<int>('anchor_section_index'),
       anchorSectionPage: row.readNullable<int>('anchor_section_page'),
+      anchorVersion: row.readNullable<int>('anchor_version'),
       createdAt: DateTime.parse(row.read<String>('created_at')),
     );
   }

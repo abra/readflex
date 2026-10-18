@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:library_feature/src/library_bloc.dart';
@@ -42,10 +43,13 @@ void main() {
             ),
           ),
         );
-        final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
-        final delegate =
-            grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
-        expect(delegate.crossAxisCount, scale == 1 ? 3 : 2);
+        final grid = tester.renderObject<RenderSliverGrid>(
+          find.byType(SliverGrid),
+        );
+        final layout =
+            grid.gridDelegate.getLayout(grid.constraints)
+                as SliverGridRegularTileLayout;
+        expect(layout.crossAxisCount, scale == 1 ? 3 : 2);
         final tile = tester.getSize(find.byType(BookLibraryGridTile).first);
         expect(tile.width, greaterThanOrEqualTo(scale == 1 ? 88 : 132));
         expect(tile.aspectRatio, closeTo(2 / 3, .001));

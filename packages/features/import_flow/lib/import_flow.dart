@@ -6,3 +6,4 @@ export 'src/import_flow_cubit.dart';
 export 'src/import_flow_entry.dart';
 export 'src/import_flow_result.dart';
 export 'src/import_flow_sheet.dart';
+export 'src/picked_book_file.dart' show deletePickedBookFile;

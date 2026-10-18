@@ -99,7 +99,8 @@ an embedding that reattaches a disposed runtime would need a fresh bootstrap.
 Reader navigation uses `ReaderRouteArguments` for both a preloaded book and the
 post-open callback. The URL source ID is authoritative; a mismatched preloaded
 book is ignored, and deep links need no payload. Route builders wire features;
-the import-sheet adapter retains temporary file access until import finishes.
+the import-sheet adapter retains temporary file access until import finishes,
+then deletes the picker's temporary copy (only inside the app's temp/cache).
 
 `AppBlocObserver` disables event/transition formatting in release, before any
 state `toString()` calls. Error reporting remains enabled. Test-only partial
@@ -406,6 +407,11 @@ Shared clients remain alive. Cancellation never initiates offline fallback.
 Translation cache hits from the remote provider are immediate; cached offline
 results are reused only after a fresh, eligible remote failure. Native work
 already in progress may finish, but abandoned results are discarded.
+Dictionary lookups use a matching in-memory cache (128 answers, 30 minutes,
+keyed without the request ID); failures are never cached. The ML Kit adapter
+keeps one native translator for the current language pair and closes it on a
+pair change, after two idle minutes, after a failure, and on disposal, always
+after the last request using it. The coordinator disposes both providers.
 
 Library state holds `LibrarySource` projections rather than full article bodies.
 `ArticlesDao.libraryEntries` selects only metadata, and `ArticleRepository`
@@ -421,7 +427,7 @@ DictionaryAction
        -> iOS UIReferenceLibraryViewController / Android ACTION_DEFINE
   -> when the platform returns false only:
        DictionarySheet -> DictionaryCubit -> DictionaryLookupService
-       -> POST /v1/dictionary/lookup
+       -> client memory cache, then POST /v1/dictionary/lookup
             -> Readflex Dictionary API -> DeepSeek
             -> validated response cache (memory + PostgreSQL)
 ```
@@ -538,7 +544,13 @@ fsync. A delayed source refresh preserves live position and document
 capabilities, and closing the bloc drains both queued and active writes.
 The book WebView publishes positions only after initial-location completion;
 early content readiness does not authorize a position save. Pending initial
-positions are discarded on failure or renderer replacement. CBZ page ordering
+positions are discarded on failure or renderer replacement. The saved progress
+travels with the saved CFI: when the CFI no longer resolves in its chapter
+(book update, document normalization change), the reader opens at that
+progress, or at the chapter start without one, instead of failing to load.
+Book bookmarks with an anchor version keep the CFI of a word on their own page
+and survive repagination; older ones navigate by their visual page anchor
+(`packages/reader_webview/README.md`, Bookmark anchors). CBZ page ordering
 is versioned in the Book/ReaderDocument contract: existing rows keep legacy
 indices, while new imports use filtered, natural filename order.
 
@@ -581,6 +593,7 @@ ImportFlowSheet
   -> importBookFile helper in import_flow
   -> BookRepository stores file/metadata
   -> reader_webview extracts metadata when needed
+  -> deletePickedBookFile removes the picker's temp/cache copy
 ```
 
 Article import:
@@ -588,7 +601,8 @@ Article import:
 ```text
 ImportFlowSheet
   -> ArticleExtractionService downloads/cleans article
-  -> ArticleRepository stores article, assets, and content.html
+  -> ArticleRepository stores article, body images, and content.html
+     (the og:image stays a remote imageUrl; it is not downloaded)
   -> Reader opens content.html through ArticleHtmlReaderWebView
   -> ReaderBloc persists the same source progress model through repositories
 ```
@@ -678,6 +692,13 @@ tracing is opt-in through `GLITCHTIP_TRACES_SAMPLE_RATE`.
 Contextual translation and dictionary lookup default to the article cleaner
 host. Development requests share the explicit `READFLEX_API_KEY`; the legacy
 `ARTICLE_CLEANER_API_KEY` name remains accepted for local commands only.
+Composition owns one HTTP client for the article cleaner, translation and
+dictionary services, so their requests reuse connections. Its 10 s connect timeout turns an unreachable host into a
+network failure (Translate then falls back offline); the default 15 s idle
+timeout stays because the backend keep-alive is unknown. The client is
+registered for disposal before the services and closes after them, also on
+bootstrap rollback; services close only clients they created. Article page
+downloads never use it: they keep the extraction service's own pinned client.
 
 `ReaderServer` exposes a process-local token-scoped base URI. Its book,
 article, and asset routes resolve symlinks and enforce configured filesystem
@@ -751,8 +772,9 @@ Native Swift/Kotlin and JS execution are not represented as Dart coverage.
 
 Performance regressions have structural tests in the normal suite: Library
 tile count stays bounded at 20,000 items and cached projections are reused;
-bursty reader search bounds emissions and published result entries without
-losing matches. `make test-performance` records workload timing separately in
+the Collections picker builds only on-screen rows with 2,000 authors, and
+keyboard frames rebuild no grid tile; bursty reader search bounds emissions
+and published result entries without losing matches. `make test-performance` records workload timing separately in
 `.local/performance/`. Timings are diagnostic, not machine-independent CI limits.
 
 Browser regressions use pinned Playwright Chromium and WebKit against the real

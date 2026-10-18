@@ -73,6 +73,10 @@ markReaderStartup('modules-ready')
 
 var isPdf = false;
 
+// Bookmarks with this anchor version store the CFI and quote of a word on
+// their own page, so they survive layout changes. Older bookmarks took both
+// from the middle of the chapter; only their visual page anchor is reliable.
+const READFLEX_BOOKMARK_ANCHOR_VERSION = 2;
 const READFLEX_IMAGE_AREA_ROOT_ID = 'readflex-image-area-highlights';
 const READFLEX_IMAGE_AREA_PREVIEW_ID = '__readflex-image-area-preview';
 const READFLEX_IMAGE_AREA_LONG_PRESS_MS = 280;
@@ -1635,7 +1639,7 @@ const getView = async file => {
   else if (await isPDF(file)) {
     isPdf = true;
     const { makePDF } = await import('./pdf.js')
-    book = await makePDF(file)
+    book = await makePDF(file, { byteRanges: importing })
   }
   else {
     const { isMOBI, MOBI } = await import('./mobi.js')
@@ -2219,7 +2223,15 @@ class Reader {
     if (progressRestore == null) {
       // init may return early while the legacy first advance holds the renderer
       // lock. Join that same operation; never start a second page turn.
-      await Promise.all([this.view.init({ lastLocation: cfi }), initialAdvance])
+      try {
+        await Promise.all([this.view.init({ lastLocation: cfi }), initialAdvance])
+      } catch (error) {
+        if (!cfi) throw error
+        // A saved CFI stops resolving when its chapter's DOM changes (book
+        // update, document normalization): open near it instead of failing.
+        console.warn('Saved location no longer resolves', error?.message ?? error)
+        await this.#openNearUnresolvedLocation(cfi, progress)
+      }
     }
     // Progress restore is used by the iOS deep-CFI crash fallback and by
     // generated articles saved at the end. Skip the normal no-CFI boot page
@@ -2234,6 +2246,14 @@ class Reader {
     }
 
     applyShellThemeColors()
+  }
+
+  async #openNearUnresolvedLocation(cfi, progress) {
+    const fraction = readflexInitialProgressRestore(progress)
+    if (fraction != null) return this.view.goToFraction(fraction)
+    const index = this.view.resolveNavigation(cfi)?.index
+    if (Number.isInteger(index) && await this.view.goTo(index)) return
+    return this.view.next()
   }
 
   setView(view) {
@@ -2450,8 +2470,7 @@ class Reader {
     if (annotation.id) this.annotationsById.set(annotation.id, annotation)
 
     if (annotation.type === 'bookmark') {
-      const currentAnchor = this.#bookmarkAnchorFromLocation(this.view.lastLocation)
-      if (this.#checkBookmark(annotation, currentAnchor)) {
+      if (this.#checkBookmark(annotation, this.#currentBookmarkAnchorProbe())) {
         this.#bookmarkInfo = {
           exists: true,
           cfi: annotation.value,
@@ -2480,15 +2499,12 @@ class Reader {
       this.#bookmarkInfo = { exists: false, cfi: null, id: null }
       return
     }
-    const currentLocation = this.view.lastLocation
-    const currentAnchor = this.#bookmarkAnchorFromLocation(currentLocation)
-    const spineCode = this.#isBookmarkAnchorInteger(currentAnchor?.anchorSectionIndex)
-      ? Number(currentAnchor.anchorSectionIndex)
-      : this.#bookmarkSectionIndexFromLocation(currentLocation)
+    const spineCode = this.#bookmarkSectionIndexFromLocation(this.view.lastLocation)
     const list = spineCode == null ? null : this.annotations.get(spineCode)
+    const currentAnchor = this.#currentBookmarkAnchorProbe()
     let found = false
     let bookmark = null
-    if (list && currentAnchor) {
+    if (list) {
       for (const bm of list) {
         if (bm.type === 'bookmark') {
           found = this.#checkBookmark(bm, currentAnchor) ? true : found
@@ -2507,8 +2523,25 @@ class Reader {
     }
   }
 
-  #checkBookmark(bookmark, currentAnchor) {
-    if (!bookmark || !currentAnchor) return false
+  // Only older bookmarks need the current page anchor (a CFI plus a word
+  // probe), so it is computed on first use.
+  #currentBookmarkAnchorProbe() {
+    let anchor
+    return () => {
+      if (anchor === undefined) {
+        anchor = this.#bookmarkAnchorFromLocation(this.view.lastLocation)
+      }
+      return anchor
+    }
+  }
+
+  #checkBookmark(bookmark, currentAnchorProbe) {
+    if (!bookmark) return false
+    if (this.#hasVisiblePageBookmarkAnchor(bookmark)) {
+      return this.#bookmarkStartIsOnScreen(bookmark.value)
+    }
+    const currentAnchor = currentAnchorProbe()
+    if (!currentAnchor) return false
     if (this.#hasBookmarkVisualPageAnchor(bookmark)) {
       return this.#sameBookmarkVisualPageAnchor(bookmark, currentAnchor)
     }
@@ -2517,6 +2550,32 @@ class Reader {
     if (!this.#isPreciseBookmarkCfi(bookmark.value)) return false
     if (!this.#isPreciseBookmarkCfi(currentAnchor.cfi)) return false
     return this.#sameBookmarkCfi(bookmark.value, currentAnchor.cfi)
+  }
+
+  #hasVisiblePageBookmarkAnchor(bookmark) {
+    return Number(bookmark?.anchorVersion) >= READFLEX_BOOKMARK_ANCHOR_VERSION &&
+      this.#isPreciseBookmarkCfi(bookmark.value ?? bookmark.cfi)
+  }
+
+  // Same rule as navigation: the page that shows the first box of the quote.
+  #bookmarkStartIsOnScreen(cfi) {
+    const doc = this.#doc
+    const viewport = this.#visibleDocumentRect(doc)
+    if (!viewport) return false
+    try {
+      const { index, anchor } = this.view.resolveCFI(cfi)
+      if (index !== this.#index) return false
+      const rects = Array.from(anchor(doc)?.getClientRects?.() ?? [])
+      const rect = rects.find(r => r.width > 0 && r.height > 0)
+      if (!rect) return false
+      const tolerance = 1
+      return rect.bottom > viewport.top + tolerance &&
+        rect.top < viewport.bottom - tolerance &&
+        rect.right > viewport.left + tolerance &&
+        rect.left < viewport.right - tolerance
+    } catch (_) {
+      return false
+    }
   }
 
   #isPreciseBookmarkCfi(cfi) {
@@ -2623,23 +2682,23 @@ class Reader {
   #rangeIsVisibleInViewport(range) {
     if (!range || typeof range.getClientRects !== 'function') return null
     if (!this.#rangeLooksLikeBookmarkAnchor(range)) return false
-    const doc = range.startContainer?.ownerDocument ?? this.#doc
-    const win = doc?.defaultView
-    const width = win?.innerWidth ?? doc?.documentElement?.clientWidth
-    const height = win?.innerHeight ?? doc?.documentElement?.clientHeight
-    if (!width || !height) return null
+    const viewport = this.#visibleDocumentRect(
+      range.startContainer?.ownerDocument ?? this.#doc,
+    )
+    if (!viewport) return null
 
     const rects = Array.from(range.getClientRects())
     if (!rects.length) return null
 
     const tolerance = 1
-    const viewportArea = width * height
+    const viewportArea =
+      (viewport.right - viewport.left) * (viewport.bottom - viewport.top)
     let visibleArea = 0
     for (const rect of rects) {
       const visibleWidth =
-        Math.min(rect.right, width) - Math.max(rect.left, 0)
+        Math.min(rect.right, viewport.right) - Math.max(rect.left, viewport.left)
       const visibleHeight =
-        Math.min(rect.bottom, height) - Math.max(rect.top, 0)
+        Math.min(rect.bottom, viewport.bottom) - Math.max(rect.top, viewport.top)
       if (visibleWidth > 0 && visibleHeight > 0) {
         visibleArea += visibleWidth * visibleHeight
       }
@@ -2647,11 +2706,25 @@ class Reader {
     if (visibleArea > viewportArea * 0.2) return false
 
     return rects.some(rect =>
-      rect.bottom > tolerance &&
-      rect.top < height - tolerance &&
-      rect.right > tolerance &&
-      rect.left < width - tolerance
+      rect.bottom > viewport.top + tolerance &&
+      rect.top < viewport.bottom - tolerance &&
+      rect.right > viewport.left + tolerance &&
+      rect.left < viewport.right - tolerance
     )
+  }
+
+  // The paginator expands the section iframe to the whole chapter, so the
+  // document's own viewport is the chapter, not the screen. Renderers without
+  // that geometry (fixed layout) show one page per document.
+  #visibleDocumentRect(doc) {
+    const renderer = this.view?.renderer
+    if (typeof renderer?.getVisibleDocumentRect === 'function') {
+      return doc && doc === this.#doc ? renderer.getVisibleDocumentRect() : null
+    }
+    const win = doc?.defaultView
+    const width = win?.innerWidth ?? doc?.documentElement?.clientWidth
+    const height = win?.innerHeight ?? doc?.documentElement?.clientHeight
+    return width && height ? { left: 0, top: 0, right: width, bottom: height } : null
   }
 
   #rangeLooksLikeBookmarkAnchor(range) {
@@ -2692,8 +2765,15 @@ class Reader {
       // multiple CSS columns, so its midpoint may belong to a later page.
       const anchorRange = this.#visibleViewportBookmarkRange(visibleRange)
       if (!anchorRange) return null
+      let anchorVersion = null
       try {
-        cfi = this.view.getCFI(sectionIndex, anchorRange) ?? cfi
+        const anchorCfi = this.view.getCFI(sectionIndex, anchorRange)
+        if (anchorCfi) cfi = anchorCfi
+        // Only reflowable sections can change layout under a saved page.
+        if (this.#isPreciseBookmarkCfi(anchorCfi) &&
+          typeof this.view.renderer?.getVisibleDocumentRect === 'function') {
+          anchorVersion = READFLEX_BOOKMARK_ANCHOR_VERSION
+        }
       } catch (_) {
         // Some non-EPUB renderers expose a visual range but cannot produce a
         // precise CFI for it. Keep the page CFI for navigation and rely on the
@@ -2705,6 +2785,7 @@ class Reader {
         cfi,
         ...selector,
         ...pageAnchor,
+        ...(anchorVersion ? { anchorVersion } : {}),
         content: this.#bookmarkContentFromVisibleRange(visibleRange),
       }
     } catch (_) {
@@ -2743,25 +2824,33 @@ class Reader {
   }
 
   #visibleViewportWordRange(visibleRange) {
-    const doc = this.#doc
-    const win = doc?.defaultView
-    const width = win?.innerWidth ?? doc?.documentElement?.clientWidth
-    const height = win?.innerHeight ?? doc?.documentElement?.clientHeight
-    if (!doc || !width || !height) return null
+    const viewport = this.#visibleDocumentRect(this.#doc)
+    if (!viewport) return null
+    const { left, top } = viewport
+    const width = viewport.right - left
+    const height = viewport.bottom - top
 
     const yCandidates = [0.5, 0.42, 0.58, 0.33, 0.67, 0.25, 0.75]
     const xCandidates = [0.5, 0.42, 0.58, 0.34, 0.66]
 
     for (const y of yCandidates) {
       for (const x of xCandidates) {
-        const range = this.#wordRangeFromPoint(width * x, height * y, visibleRange)
+        const range = this.#wordRangeFromPoint(
+          left + width * x,
+          top + height * y,
+          visibleRange,
+        )
         if (range && this.#rangeIsVisibleInViewport(range) === true) {
           return range
         }
       }
     }
 
-    return this.#nearestVisibleWordRange(visibleRange, width / 2, height / 2)
+    return this.#nearestVisibleWordRange(
+      visibleRange,
+      left + width / 2,
+      top + height / 2,
+    )
   }
 
   #wordRangeFromPoint(x, y, visibleRange) {
@@ -3006,18 +3095,17 @@ class Reader {
   }
 
   #rangeViewportScore(range, centerX, centerY) {
-    const doc = range.startContainer?.ownerDocument ?? this.#doc
-    const win = doc?.defaultView
-    const width = win?.innerWidth ?? doc?.documentElement?.clientWidth
-    const height = win?.innerHeight ?? doc?.documentElement?.clientHeight
-    if (!width || !height) return null
+    const viewport = this.#visibleDocumentRect(
+      range.startContainer?.ownerDocument ?? this.#doc,
+    )
+    if (!viewport) return null
 
     let best = null
     for (const rect of Array.from(range.getClientRects())) {
-      const left = Math.max(rect.left, 0)
-      const right = Math.min(rect.right, width)
-      const top = Math.max(rect.top, 0)
-      const bottom = Math.min(rect.bottom, height)
+      const left = Math.max(rect.left, viewport.left)
+      const right = Math.min(rect.right, viewport.right)
+      const top = Math.max(rect.top, viewport.top)
+      const bottom = Math.min(rect.bottom, viewport.bottom)
       if (right <= left || bottom <= top) continue
       const x = (left + right) / 2
       const y = (top + bottom) / 2
@@ -3076,10 +3164,7 @@ class Reader {
 
     if (
       annotation.type === 'bookmark' &&
-      this.#checkBookmark(
-        annotation,
-        this.#bookmarkAnchorFromLocation(this.view.lastLocation),
-      )
+      this.#checkBookmark(annotation, this.#currentBookmarkAnchorProbe())
     ) {
       if (notify) this.handleBookmark(true)
       this.#bookmarkInfo = {
@@ -3381,11 +3466,19 @@ class Reader {
         anchorSuffix: anchor?.anchorSuffix,
         anchorSectionIndex: anchor?.anchorSectionIndex,
         anchorSectionPage: anchor?.anchorSectionPage,
+        anchorVersion: anchor?.anchorVersion,
       }
     })
   }
 
   goToBookmark = async target => {
+    // The page number is stale once font, margins or columns change; a
+    // visible-page anchor finds its own word in any layout.
+    if (this.#hasVisiblePageBookmarkAnchor(target) &&
+      await this.view.goTo(target.cfi)) {
+      return
+    }
+
     let sectionIndex = target?.anchorSectionIndex
     let sectionPage = target?.anchorSectionPage
     const cfiSectionIndex = this.#annotationCfiSpineIndex({ value: target?.cfi })

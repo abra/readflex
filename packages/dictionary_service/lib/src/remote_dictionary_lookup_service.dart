@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'dictionary_errors.dart';
+import 'dictionary_lookup_cache.dart';
 import 'dictionary_models.dart';
 import 'dictionary_service.dart';
 
@@ -11,17 +12,20 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
   RemoteDictionaryLookupService({
     required Uri baseUri,
     http.Client? httpClient,
+    DictionaryLookupCache? cache,
     String? apiKey,
     Duration timeout = const Duration(seconds: 40),
   }) : _baseUri = baseUri,
        _httpClient = httpClient ?? http.Client(),
        _ownsClient = httpClient == null,
+       _cache = cache ?? MemoryDictionaryLookupCache(),
        _apiKey = apiKey,
        _timeout = timeout;
 
   final Uri _baseUri;
   final http.Client _httpClient;
   final bool _ownsClient;
+  final DictionaryLookupCache _cache;
   final String? _apiKey;
   final Duration _timeout;
 
@@ -30,6 +34,9 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
     DictionaryLookupRequest request, {
     Future<void>? abortTrigger,
   }) async {
+    final cached = _cache.read(request);
+    if (cached != null) return _resultForRequest(cached, request.requestId);
+
     final uri = _baseUri.resolve('/v1/dictionary/lookup');
     final abort = Completer<void>();
     void cancel() {
@@ -75,6 +82,7 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
           'Dictionary response does not match the request',
         );
       }
+      if (_isCacheable(result)) _cache.write(request, result);
       return result;
     } on DictionaryLookupException {
       rethrow;
@@ -115,6 +123,26 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
   void dispose() {
     if (_ownsClient) _httpClient.close();
   }
+}
+
+// A found term without entries is a degenerate answer; asking again may help.
+bool _isCacheable(DictionaryLookupResult result) {
+  return result.status != DictionaryLookupStatus.found ||
+      result.entries.isNotEmpty;
+}
+
+DictionaryLookupResult _resultForRequest(
+  DictionaryLookupResult result,
+  String requestId,
+) {
+  if (result.requestId == requestId) return result;
+  return DictionaryLookupResult(
+    requestId: requestId,
+    status: result.status,
+    term: result.term,
+    language: result.language,
+    entries: result.entries,
+  );
 }
 
 Map<String, String> _headers(String? apiKey) {

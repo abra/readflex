@@ -245,7 +245,8 @@ class BookReaderWebViewState extends State<BookReaderWebView>
           prev.anchorPrefix != bookmark.anchorPrefix ||
           prev.anchorSuffix != bookmark.anchorSuffix ||
           prev.anchorSectionIndex != bookmark.anchorSectionIndex ||
-          prev.anchorSectionPage != bookmark.anchorSectionPage) {
+          prev.anchorSectionPage != bookmark.anchorSectionPage ||
+          prev.anchorVersion != bookmark.anchorVersion) {
         commands
           ..add(_removeBookmarkCommand(prev.cfi, id: prev.id))
           ..add(_addBookmarkCommand(bookmark));
@@ -271,6 +272,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'anchorSuffix': bookmark.anchorSuffix,
       'anchorSectionIndex': bookmark.anchorSectionIndex,
       'anchorSectionPage': bookmark.anchorSectionPage,
+      'anchorVersion': bookmark.anchorVersion,
     });
     return 'addAnnotation($annotation)';
   }
@@ -689,13 +691,16 @@ class BookReaderWebViewState extends State<BookReaderWebView>
     );
   }
 
-  /// Navigate to a stored bookmark, preferring its visual page anchor when
-  /// available because some formats expose a coarse CFI for the whole section.
+  /// Navigate to a stored bookmark. The reader JS decides from
+  /// [anchorVersion] whether the CFI holds the bookmark's own word (valid in
+  /// any layout) or only the visual page anchor is reliable, which also covers
+  /// formats that expose a coarse CFI for the whole section.
   void goToBookmark({
     required String cfi,
     required double progress,
     int? anchorSectionIndex,
     int? anchorSectionPage,
+    int? anchorVersion,
   }) {
     if (cfi.isEmpty && progress <= 0) return;
     final payload = jsonEncode({
@@ -703,6 +708,7 @@ class BookReaderWebViewState extends State<BookReaderWebView>
       'progress': progress,
       'anchorSectionIndex': anchorSectionIndex,
       'anchorSectionPage': anchorSectionPage,
+      'anchorVersion': anchorVersion,
     });
     _evaluateReaderCommand(
       label: 'goToBookmark',

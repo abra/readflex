@@ -94,6 +94,19 @@ void main() {
     ],
   );
 
+  test('a reopened selection asks the same cacheable question', () async {
+    final requests = <DictionaryLookupRequest>[];
+    for (var open = 0; open < 2; open++) {
+      final cubit = DictionaryCubit(dictionaryService: successService);
+      await cubit.lookup(_selection());
+      requests.add(successService.lastRequest!);
+      await cubit.close();
+    }
+
+    expect(requests.first.requestId, isNot(requests.last.requestId));
+    expect(requests.first.toCacheKey(), requests.last.toCacheKey());
+  });
+
   test('ignores a dictionary result delivered after close', () async {
     final service = _ControlledDictionaryService();
     final cubit = DictionaryCubit(dictionaryService: service);

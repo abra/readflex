@@ -132,9 +132,14 @@ class ContextualTranslationCoordinator implements ContextualTranslationService {
     return result;
   }
 
+  /// Disposes both providers, which this coordinator owns.
   @override
   void dispose() {
-    _remoteService.dispose();
+    try {
+      _remoteService.dispose();
+    } finally {
+      _offlineService.dispose();
+    }
   }
 }
 

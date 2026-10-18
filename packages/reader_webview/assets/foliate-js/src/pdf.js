@@ -1,5 +1,6 @@
 import './vendor/pdfjs/pdf.js'
 import { createPdfPageCache } from './readflex_pdf_page_cache.js'
+import { createFileRangeTransport } from './readflex_pdf_ranges.js'
 import { PAGE_CONTENT_SAMPLE_SIZE, detectContentBox } from './readflex_page_content.js'
 import { applyPageColors, samePageColors } from './readflex_page_colors.js'
 import { SHARPEN_THRESHOLD, tileCovers, tileFor } from './readflex_page_geometry.js'
@@ -669,13 +670,33 @@ const makeTOCItem = item => ({
     subitems: item.items.length ? item.items.map(makeTOCItem) : null,
 })
 
-export const makePDF = async file => {
-    const data = new Uint8Array(await file.arrayBuffer())
+// Import needs only the metadata, outline and first page: pdf.js reads those
+// byte ranges, so a large PDF never sits whole in the headless WebView. The
+// reader keeps one whole-file read so page turns never wait for the server.
+const openPDF = async (file, byteRanges) => {
     // Damaged real-world files make pdf.js warn while it repairs them; only its
     // errors reach the console, which Android WebView also writes to logcat.
-    const pdf = await pdfjsLib.getDocument({
-        data, verbosity: pdfjsLib.VerbosityLevel.ERRORS,
-    }).promise
+    const verbosity = pdfjsLib.VerbosityLevel.ERRORS
+    if (byteRanges && file.size > 0) {
+        const { transport, failed } = createFileRangeTransport(
+            pdfjsLib.PDFDataRangeTransport, file)
+        const task = pdfjsLib.getDocument({
+            range: transport, disableAutoFetch: true, disableStream: true, verbosity,
+        })
+        try {
+            return await Promise.race([task.promise, failed])
+        } catch (error) {
+            task.destroy().catch(() => {})
+            if (error?.name === 'PasswordException') throw error
+            console.warn('PDF byte ranges failed; reading the whole file', error?.message ?? error)
+        }
+    }
+    const data = new Uint8Array(await file.arrayBuffer())
+    return pdfjsLib.getDocument({ data, verbosity }).promise
+}
+
+export const makePDF = async (file, { byteRanges = false } = {}) => {
+    const pdf = await openPDF(file, byteRanges)
 
     // Text pages keep native selection under zoom; see readflex_page_zoom.js.
     // A portrait screen reads one page at a time: spreads would draw the

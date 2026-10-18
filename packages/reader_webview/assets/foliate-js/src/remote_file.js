@@ -147,6 +147,12 @@ export class RemoteFile {
       this.size,
       Math.max(end, chunkStart + MIN_CHUNK_SIZE),
     );
+    // A one-off read too big for the cache belongs to the caller alone: hand
+    // over the fetched buffer instead of a copy, or a whole PDF would sit in
+    // memory twice.
+    if (chunkStart === start && chunkEnd === end && end - start > MAX_CACHE_BYTES) {
+      return this._fetchRange(start, end);
+    }
     const chunkBuffer = await this._fetchChunk(chunkStart, chunkEnd);
 
     return chunkBuffer.slice(start - chunkStart, end - chunkStart);

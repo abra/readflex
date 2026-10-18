@@ -1544,6 +1544,7 @@ void main() {
             anchorSuffix: 'After',
             anchorSectionIndex: 12,
             anchorSectionPage: 3,
+            anchorVersion: 2,
           ),
         ),
         expect: () => [
@@ -1565,6 +1566,7 @@ void main() {
           expect(bookmarks!.single.chapterTitle, 'Chapter 7');
           expect(bookmarks.single.anchorExact, 'Bookmark text anchor');
           expect(bookmarks.single.anchorSectionPage, 3);
+          expect(bookmarks.single.anchorVersion, 2);
         },
       );
 

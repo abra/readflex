@@ -18,6 +18,7 @@ class SourceBookmark extends Equatable {
     this.anchorSuffix,
     this.anchorSectionIndex,
     this.anchorSectionPage,
+    this.anchorVersion,
   });
 
   final String id;
@@ -34,6 +35,10 @@ class SourceBookmark extends Equatable {
   final int? anchorSectionIndex;
   final int? anchorSectionPage;
 
+  /// Reader-defined version of the anchor fields; `null` for bookmarks saved
+  /// before readers versioned them. Storage and blocs pass it through as is.
+  final int? anchorVersion;
+
   @override
   List<Object?> get props => [
     id,
@@ -49,5 +54,6 @@ class SourceBookmark extends Equatable {
     anchorSuffix,
     anchorSectionIndex,
     anchorSectionPage,
+    anchorVersion,
   ];
 }

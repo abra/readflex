@@ -36,6 +36,12 @@ current app surface. They remain exported so existing databases keep migrating
 cleanly and the frozen learning features can be restored from history without a
 destructive schema reset.
 
+Schema v25 adds `bookmarks_table.anchor_version`. The reader sets it when a
+bookmark's CFI and quote come from a word on the bookmarked page, so they stay
+valid after font, margin or column changes repaginate the chapter. Older rows
+keep `NULL`: their CFI and quote may point to the middle of the chapter, and
+readers navigate them by the visual page anchor as before.
+
 Schema v24 rebuilds `articles_table` with `plain_text` as its last column.
 SQLite reads a row's columns in order, so with the article text in the middle
 the Library's metadata query walked every article's overflow pages to reach

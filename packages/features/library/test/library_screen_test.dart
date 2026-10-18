@@ -2189,15 +2189,20 @@ void main() {
     final siteRow = find.byKey(
       const ValueKey('collectionScopeRow-site-tproger'),
     );
+    // The last row starts below the visible list, built in its cache extent.
     final authorRow = find.byKey(
       const ValueKey('collectionScopeRow-author-seiken (tproger.ru)'),
+      skipOffstage: false,
     );
 
     expect(searchField, findsOneWidget);
     expect(manualRow, findsOneWidget);
     expect(siteRow, findsOneWidget);
     expect(authorRow, findsOneWidget);
-    expect(find.text('Seiken (tproger.ru)'), findsOneWidget);
+    expect(
+      find.text('Seiken (tproger.ru)', skipOffstage: false),
+      findsOneWidget,
+    );
 
     await tester.enterText(searchField, 'tpro');
     await tester.pumpAndSettle();
@@ -2462,8 +2467,10 @@ void main() {
     await tester.pumpAndSettle();
     final reads = bookRepository.getBooksCallCount;
     await _openCollections(tester);
+    // Below the visible list, built in its cache extent.
     final action = find.byKey(
       const ValueKey('collectionScopeManage-manual-collection-10'),
+      skipOffstage: false,
     );
     await tester.ensureVisible(action);
     await tester.pumpAndSettle();
@@ -2519,8 +2526,10 @@ void main() {
     final siteRow = find.byKey(
       const ValueKey('collectionScopeRow-site-tproger'),
     );
+    // The last row starts below the visible list, built in its cache extent.
     final authorRow = find.byKey(
       const ValueKey('collectionScopeRow-author-seiken (tproger.ru)'),
+      skipOffstage: false,
     );
 
     expect(manualRow, findsOneWidget);
@@ -3830,6 +3839,62 @@ void main() {
 
     double capsuleGap(WidgetTester tester) =>
         height - tester.getRect(_capsule).bottom;
+
+    testWidgets('keyboard frames past the safe inset rebuild no grid tile '
+        'or Continue reading card', (tester) async {
+      tester.view.physicalSize = const Size(390, height);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewPadding = const FakeViewPadding(bottom: safeInset);
+      tester.view.padding = const FakeViewPadding(bottom: safeInset);
+      addTearDown(tester.view.reset);
+      await preferencesService.update(
+        (prefs) => prefs.copyWith(libraryLayoutMode: LibraryLayoutMode.grid.id),
+      );
+      bookRepository.seedBooks([
+        ..._longList,
+        Book(
+          id: 'reading',
+          title: 'Reading now',
+          filePath: '/books/reading.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026),
+          readingProgress: .4,
+          lastOpenedAt: DateTime(2026, 2),
+        ),
+      ]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await tester.showKeyboard(
+        find.descendant(
+          of: find.byType(LibraryHeader),
+          matching: find.byType(TextField),
+        ),
+      );
+      // Until the keyboard covers the safe inset, the content's bottom
+      // padding follows it.
+      await setKeyboard(tester, 40);
+      final watched = {
+        ...find.byType(BookLibraryGridTile).evaluate(),
+        ...find.byType(LibraryContinueReadingCard).evaluate(),
+      };
+      expect(watched.length, greaterThan(3));
+      final rebuilt = <Element>[];
+      debugOnRebuildDirtyWidget = (element, _) {
+        if (watched.contains(element)) rebuilt.add(element);
+      };
+      try {
+        for (final keyboard in [
+          for (var k = 60.0; k <= 320; k += 20) k,
+          for (var k = 300.0; k >= 40; k -= 20) k,
+        ]) {
+          await setKeyboard(tester, keyboard);
+        }
+      } finally {
+        debugOnRebuildDirtyWidget = null;
+      }
+      expect(rebuilt, isEmpty);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('rides the keyboard down to its place without dipping into '
         'the safe inset and jumping back', (tester) async {

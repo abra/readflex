@@ -17,6 +17,7 @@ void main() {
       anchorSuffix: 'pattern in Flutter',
       anchorSectionIndex: 12,
       anchorSectionPage: 3,
+      anchorVersion: 2,
       createdAt: createdAt,
     );
 
@@ -35,8 +36,25 @@ void main() {
         anchorSuffix: 'pattern in Flutter',
         anchorSectionIndex: 12,
         anchorSectionPage: 3,
+        anchorVersion: 2,
         createdAt: createdAt,
       ),
     );
+  });
+
+  test('SourceBookmark tells anchor versions apart', () {
+    SourceBookmark bookmark({int? anchorVersion}) => SourceBookmark(
+      id: 'bookmark-1',
+      sourceId: 'source-1',
+      sourceType: SourceType.book,
+      cfi: 'epubcfi(/6/4)',
+      content: 'Interesting page',
+      progress: 0.42,
+      anchorVersion: anchorVersion,
+      createdAt: DateTime(2026, 5, 17),
+    );
+
+    expect(bookmark(), isNot(bookmark(anchorVersion: 2)));
+    expect(bookmark().anchorVersion, isNull);
   });
 }

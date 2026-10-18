@@ -3,7 +3,8 @@ part of 'book_reader_webview.dart';
 /// Exact CFI is the preferred restore path. When it is missing — or when the
 /// WebView is retrying after the known iOS deep-CFI crash — fall back to the
 /// persisted progress fraction so the reader reopens near the last spot
-/// instead of at the cover.
+/// instead of at the cover. With a CFI the progress still goes along: the
+/// reader JS uses it only if the CFI no longer resolves in the chapter.
 
 @visibleForTesting
 ReaderInitialLocation resolveInitialReaderLocation({
@@ -31,7 +32,7 @@ ReaderInitialLocation resolveInitialReaderLocation({
     return ReaderInitialLocation(cfi: null, progress: progress);
   }
   if (cfi != null) {
-    return ReaderInitialLocation(cfi: cfi, progress: null);
+    return ReaderInitialLocation(cfi: cfi, progress: progress);
   }
   return ReaderInitialLocation(cfi: null, progress: progress);
 }

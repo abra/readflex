@@ -295,6 +295,9 @@ class View {
   get element() {
     return this.#element
   }
+  get frameRect() {
+    return this.#iframe.getBoundingClientRect()
+  }
   get document() {
     return this.#iframe.contentDocument
   }
@@ -1024,6 +1027,20 @@ export class Paginator extends HTMLElement {
   }
   get pages() {
     return Math.round(this.viewSize / this.size)
+  }
+  // Readflex: the on-screen part of the current section in its document's
+  // client coordinates. The iframe is expanded to the whole section in both
+  // flows, so its own innerWidth/innerHeight describe the section, not the
+  // screen.
+  getVisibleDocumentRect() {
+    const frame = this.#view?.frameRect
+    if (!frame?.width || !frame.height) return null
+    const screen = this.#container.getBoundingClientRect()
+    const left = Math.max(screen.left, frame.left) - frame.left
+    const top = Math.max(screen.top, frame.top) - frame.top
+    const right = Math.min(screen.right, frame.right) - frame.left
+    const bottom = Math.min(screen.bottom, frame.bottom) - frame.top
+    return right > left && bottom > top ? { left, top, right, bottom } : null
   }
   #scrollPageStepBy(dx, dy, state) {
     const prop = this.scrollProp

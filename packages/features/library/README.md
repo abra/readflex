@@ -308,6 +308,11 @@ the same 48dp column as Add to collection's check slot. Insets mirror in RTL.
 Selection includes a check, paired theme colors and selected semantics; the
 menu glyph is `onSurfaceVariant`, or `selectedControlForeground` on the
 selected row. Row press/focus feedback remains enabled.
+The picker is one lazy list of section titles and rows (the last row of a
+section keeps the 16dp gap below it), so only rows on screen are built,
+however many sites and authors there are. Labels are lowercased once per
+state, and a keystroke only filters them. Screen readers count the rows,
+not the titles.
 
 Collections -> Manage is one guarded sheet flow. Back returns to the
 same query and scroll offset; Save/Delete refreshes that list in place. Close
@@ -319,7 +324,10 @@ available with its existing dismissal result. Both entry paths retain the
 route-owned bottom safe area across manage/delete/discard steps.
 The header reserves only the compact offline icon, not a hidden localized word.
 The lazy grid uses up to three columns, reducing the count on narrow viewports
-and with enlarged text. Covers sit directly on the 16dp gutter with no tile
+and with enlarged text. Its delegate takes the count from the width in layout,
+so the keyboard resizing the body relayouts the grid without rebuilding its
+tiles or the Continue reading card.
+Covers sit directly on the 16dp gutter with no tile
 inset, and both layouts start their first cover `kLibraryContentTopPadding`
 (12dp) below the header's band, 24dp under the search field: the list row's
 own padding supplies it, the grid adds it as top padding. Content bottom

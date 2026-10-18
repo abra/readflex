@@ -29,7 +29,6 @@ articles/<article-id>/
   article.json
   content.html
   images/*
-  cover.*
 ```
 
 Remote article images referenced by extracted blocks are downloaded when
@@ -39,10 +38,14 @@ still succeed without a later unguarded WebView retry. Downloads are keyed by
 the exact structured block source; HTML is serialized once after download.
 Query variants and shared URL prefixes cannot overwrite each other's paths.
 Two workers download distinct resolved URLs within the shared deadline/byte
-budget; aliases reuse the same local file. A cover already attempted as a body
-image is not requested again. Otherwise the cover retains its separate bounded
-download and `cover.*` filename. Response-header timeouts abort the HTTP request
-without closing the shared client; late non-abortable responses are canceled.
+budget; aliases reuse the same local file. Response-header timeouts abort the
+HTTP request without closing the shared client; late non-abortable responses are
+canceled.
+
+The article cover (`og:image`) is not downloaded: no surface draws one, so
+import keeps only its remote `imageUrl` for a later lazy fetch. New rows leave
+`cover_image_path` empty. The column stays, without a migration: rows imported
+earlier keep their path and `cover.*` file until the article is deleted.
 
 Remote assets are untrusted input. The repository validates the initial URL and
 every redirect target, rejects private/local or ambiguously resolved hosts,
@@ -83,7 +86,7 @@ deleted row. The reader serializes these writes and drains them on close.
 - `local_storage` - Drift database and DAOs
 - `monitoring` - optional cleanup/download logging
 - `remote_content_policy` - URL, DNS, and redirect safety policy
-- `http` - best-effort image and cover downloads
+- `http` - best-effort article image downloads
 - `path`
 - `uuid`
 

@@ -127,27 +127,14 @@ class ArticleRepository {
         extracted.blocks,
         extracted.title,
       );
-      final images = await _downloadArticleImages(
+      final localImages = await _downloadArticleImages(
         blocks: blocks,
         articleDir: articleDir,
         baseUri: baseUri,
       );
       await File(
         p.join(articleDir.path, 'content.html'),
-      ).writeAsString(_htmlForBlocks(blocks, images.replacements), flush: true);
-
-      String? coverFilename;
-      if (extracted.imageUrl case final url? when url.isNotEmpty) {
-        final uri = _resolveRemoteUri(url, baseUri);
-        if (uri != null) {
-          if (images.byUri.containsKey(uri.toString())) {
-            final image = images.byUri[uri.toString()];
-            if (image != null) coverFilename = 'images/${image.filename}';
-          } else {
-            coverFilename = await _tryDownloadCover(articleDir, uri);
-          }
-        }
-      }
+      ).writeAsString(_htmlForBlocks(blocks, localImages), flush: true);
 
       final language = normalizeArticleLanguage(extracted.language);
 
@@ -161,10 +148,9 @@ class ArticleRepository {
         siteName: extracted.site,
         hostname: extracted.hostname,
         description: extracted.description,
+        // No surface draws an article cover, so the og:image stays a remote
+        // URL until one does; it is not downloaded on import.
         imageUrl: extracted.imageUrl,
-        coverImagePath: coverFilename == null
-            ? null
-            : p.join(articleDir.path, coverFilename),
         language: language,
         contentPath: contentFile.path,
         plainText: extracted.plainText,
@@ -254,7 +240,9 @@ class ArticleRepository {
     }
   }
 
-  Future<_DownloadedArticleImages> _downloadArticleImages({
+  /// Maps each block image source to its local `images/` path; sources
+  /// that were not downloaded are absent.
+  Future<Map<String, String>> _downloadArticleImages({
     required List<ArticleBlock> blocks,
     required Directory articleDir,
     required Uri? baseUri,
@@ -275,10 +263,10 @@ class ArticleRepository {
       uniqueUris.add(uriKey);
       sources[source] = uri;
     }
-    if (sources.isEmpty) return const _DownloadedArticleImages({}, {});
+    if (sources.isEmpty) return const {};
 
     final replacements = <String, String>{};
-    final downloadedByUri = <String, _DownloadedArticleImage?>{};
+    final filenamesByUri = <String, String?>{};
     final imagesDir = Directory(p.join(articleDir.path, 'images'));
     final totalDeadline = DateTime.now().add(_totalImageDownloadTimeout);
     final downloadBudget = _ImageDownloadBudget(_maxTotalImageBytes);
@@ -295,7 +283,7 @@ class ArticleRepository {
           totalDeadline,
           now.add(_imageDownloadTimeout),
         );
-        downloadedByUri[uriKey] = await _tryDownloadImage(
+        filenamesByUri[uriKey] = await _tryDownloadImage(
           directory: imagesDir,
           uri: Uri.parse(uriKey),
           maxBytes: math.min(_maxImageBytes, remainingBytes),
@@ -310,20 +298,20 @@ class ArticleRepository {
       List.generate(math.min(2, queue.length), (_) => downloadNext()),
     );
     for (final entry in sources.entries) {
-      final image = downloadedByUri[entry.value.toString()];
-      if (image == null) continue;
-      replacements[entry.key] = 'images/${image.filename}';
+      final filename = filenamesByUri[entry.value.toString()];
+      if (filename == null) continue;
+      replacements[entry.key] = 'images/$filename';
     }
-    return _DownloadedArticleImages(replacements, downloadedByUri);
+    return replacements;
   }
 
-  Future<_DownloadedArticleImage?> _tryDownloadImage({
+  /// Returns the stored filename, or `null` when the image was rejected.
+  Future<String?> _tryDownloadImage({
     required Directory directory,
     required Uri uri,
     required int maxBytes,
     required DateTime deadline,
-    _ImageDownloadBudget? downloadBudget,
-    String Function(Uri uri, String extension)? filenameFor,
+    required _ImageDownloadBudget downloadBudget,
   }) async {
     try {
       final remote = await _openImageResponse(uri, deadline);
@@ -358,8 +346,7 @@ class ArticleRepository {
             _remainingUntil(deadline),
           )) {
             final chunk = chunks.current;
-            if (downloadBudget != null &&
-                !downloadBudget.consume(chunk.length)) {
+            if (!downloadBudget.consume(chunk.length)) {
               throw const _ImageDownloadLimitReached();
             }
             byteCount += chunk.length;
@@ -388,10 +375,9 @@ class ArticleRepository {
         if (extension == null) return null;
 
         final filename =
-            filenameFor?.call(remote.uri, extension) ??
             '${sha256.convert(utf8.encode(remote.uri.toString()))}$extension';
         await temporaryFile.rename(p.join(directory.path, filename));
-        return _DownloadedArticleImage(filename: filename);
+        return filename;
       } finally {
         if (output != null) {
           try {
@@ -410,17 +396,6 @@ class ArticleRepository {
       );
       return null;
     }
-  }
-
-  Future<String?> _tryDownloadCover(Directory articleDir, Uri uri) async {
-    final image = await _tryDownloadImage(
-      directory: articleDir,
-      uri: uri,
-      maxBytes: _maxImageBytes,
-      deadline: DateTime.now().add(_imageDownloadTimeout),
-      filenameFor: (_, extension) => 'cover$extension',
-    );
-    return image?.filename;
   }
 
   Future<_ValidatedImageResponse?> _openImageResponse(
@@ -483,19 +458,6 @@ class ArticleRepository {
       return _ValidatedImageResponse(uri: currentUri, response: response);
     }
   }
-}
-
-class _DownloadedArticleImages {
-  const _DownloadedArticleImages(this.replacements, this.byUri);
-
-  final Map<String, String> replacements;
-  final Map<String, _DownloadedArticleImage?> byUri;
-}
-
-class _DownloadedArticleImage {
-  const _DownloadedArticleImage({required this.filename});
-
-  final String filename;
 }
 
 class _ValidatedImageResponse {

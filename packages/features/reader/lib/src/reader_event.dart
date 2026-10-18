@@ -266,6 +266,7 @@ final class ReaderBookmarkChanged extends ReaderBookmarkEvent {
     this.anchorSuffix,
     this.anchorSectionIndex,
     this.anchorSectionPage,
+    this.anchorVersion,
   });
 
   final bool remove;
@@ -278,6 +279,7 @@ final class ReaderBookmarkChanged extends ReaderBookmarkEvent {
   final String? anchorSuffix;
   final int? anchorSectionIndex;
   final int? anchorSectionPage;
+  final int? anchorVersion;
 
   @override
   List<Object?> get props => [
@@ -291,5 +293,6 @@ final class ReaderBookmarkChanged extends ReaderBookmarkEvent {
     anchorSuffix,
     anchorSectionIndex,
     anchorSectionPage,
+    anchorVersion,
   ];
 }

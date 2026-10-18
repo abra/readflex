@@ -66,6 +66,7 @@ void main() {
           'anchorSuffix': 'After text',
           'anchorSectionIndex': 12,
           'anchorSectionPage': 3,
+          'anchorVersion': 2,
         },
         'source': 'pull-down',
       });
@@ -80,6 +81,23 @@ void main() {
       expect(change.anchorPrefix, 'Before text');
       expect(change.anchorSuffix, 'After text');
       expect(change.anchorSectionIndex, 12);
+      expect(change.anchorSectionPage, 3);
+      expect(change.anchorVersion, 2);
+    });
+
+    test('fromMap leaves the anchor version empty for older anchors', () {
+      final change = ReaderBookmarkChange.fromMap({
+        'remove': false,
+        'detail': {
+          'cfi': 'epubcfi(/6/34!/4/2)',
+          'anchorSectionIndex': 12,
+          'anchorSectionPage': 3,
+          'anchorVersion': 'not a number',
+        },
+        'source': 'chrome',
+      });
+
+      expect(change.anchorVersion, isNull);
       expect(change.anchorSectionPage, 3);
     });
 

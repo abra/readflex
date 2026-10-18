@@ -709,6 +709,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         anchorSuffix: event.anchorSuffix,
         anchorSectionIndex: event.anchorSectionIndex,
         anchorSectionPage: event.anchorSectionPage,
+        anchorVersion: event.anchorVersion,
       );
       if (emit.isDone || state.sourceId != document.id) return;
       _bookmarkRevision++;

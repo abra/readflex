@@ -59,12 +59,24 @@ because ML Kit does not auto-detect inside the translation API.
 
 Fallback is limited to typed network/unavailable failures and HTTP 408, 429,
 or 5xx responses. Authentication/validation failures and malformed backend
-responses do not trigger it. A concrete source may come from an explicit
+responses do not trigger it. A connection that cannot be opened is a network
+failure: the app's shared client has a 10 s connect timeout, so an unreachable
+host falls back offline without waiting out the 45 s request timeout. A concrete source may come from an explicit
 language or the request's language hint; an unknown source requires user input.
 Both language models must already be downloaded, or the caller must explicitly
 allow a download. Downloading requires connectivity, so offline translation is
 not guaranteed on a fresh installation. The adapter currently exposes the ten
 app languages, not every language supported by ML Kit.
+
+`MlKitOfflineTranslationService` keeps one native translator for the current
+language pair instead of loading its models for every request. It is closed
+when the pair changes, after two minutes without requests (the loaded models
+hold native memory), after a failed translation, and on `dispose`; each close
+waits until no running request still uses that translator, and a closed
+translator is never used again. The coordinator owns both providers: its
+`dispose` disposes the remote and the offline service. The remote service
+closes only an HTTP client it created; the app injects the client shared with
+dictionary lookup and article extraction.
 
 The default in-memory LRU holds up to 128 results for 30 minutes from each
 write. Remote cache hits return immediately. An offline hit retries the remote

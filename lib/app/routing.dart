@@ -232,19 +232,24 @@ Future<void> _showImportSheet(
     isOfflineStream: _isOfflineStream(deps),
     onPickBookFile: pickBookFile,
     onImportBook: (file, {onProgress}) async {
-      final grant = await deps.readerServer.grantTemporaryBookAccess(file);
       try {
-        final book = await importBookFile(
-          sourceFile: file,
-          bookRepository: deps.bookRepository,
-          readerServerBaseUri: deps.readerServer.baseUri,
-          logger: deps.logger,
-          onProgress: onProgress,
-        );
-        if (book != null) onImported();
-        return book;
+        final grant = await deps.readerServer.grantTemporaryBookAccess(file);
+        try {
+          final book = await importBookFile(
+            sourceFile: file,
+            bookRepository: deps.bookRepository,
+            readerServerBaseUri: deps.readerServer.baseUri,
+            logger: deps.logger,
+            onProgress: onProgress,
+          );
+          if (book != null) onImported();
+          return book;
+        } finally {
+          grant.revoke();
+        }
       } finally {
-        grant.revoke();
+        // Success or failure, the library no longer needs the picker's copy.
+        await deletePickedBookFile(file, logger: deps.logger);
       }
     },
     onImportArticle: (url, {onStage}) async {

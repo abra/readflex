@@ -1,6 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_grid_view.dart';
 import 'package:library_feature/src/library_layout.dart';
@@ -202,10 +203,13 @@ void main() {
           width: width,
         ),
       );
-      final grid = tester.widget<SliverGrid>(find.byType(SliverGrid));
-      final delegate =
-          grid.gridDelegate as SliverGridDelegateWithFixedCrossAxisCount;
-      return delegate.crossAxisCount;
+      final grid = tester.renderObject<RenderSliverGrid>(
+        find.byType(SliverGrid),
+      );
+      final layout =
+          grid.gridDelegate.getLayout(grid.constraints)
+              as SliverGridRegularTileLayout;
+      return layout.crossAxisCount;
     }
 
     tester.view.physicalSize = const Size(1400, 900);

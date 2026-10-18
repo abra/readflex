@@ -45,6 +45,7 @@ void main() {
         'foliate-js/src/readflex_page_geometry.js',
         'foliate-js/src/readflex_page_colors.js',
         'foliate-js/src/readflex_pdf_page_cache.js',
+        'foliate-js/src/readflex_pdf_ranges.js',
         'foliate-js/src/readflex_page_content.js',
         'foliate-js/src/vendor/panzoom.js',
         'foliate-js/src/vendor/Panzoom-LICENSE',

@@ -81,6 +81,7 @@ class FakeBookRepository implements BookRepository {
     String? anchorSuffix,
     int? anchorSectionIndex,
     int? anchorSectionPage,
+    int? anchorVersion,
   }) async {
     if (shouldThrow) throw Exception('addBookmark failed');
     final existing = (bookmarksBySourceId[sourceId] ?? []).where((bookmark) {
@@ -113,6 +114,7 @@ class FakeBookRepository implements BookRepository {
       anchorSuffix: anchorSuffix,
       anchorSectionIndex: anchorSectionIndex,
       anchorSectionPage: anchorSectionPage,
+      anchorVersion: anchorVersion,
       createdAt: DateTime(2026, 5, 17, bookmarksBySourceId.length),
     );
     bookmarksBySourceId.update(

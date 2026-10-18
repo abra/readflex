@@ -47,6 +47,9 @@ void main() {
         'ALTER TABLE books_table DROP COLUMN comic_page_order_version',
       );
       await current.customStatement(
+        'ALTER TABLE bookmarks_table DROP COLUMN anchor_version',
+      );
+      await current.customStatement(
         "INSERT INTO books_table (id, title, format, file_path, added_at, current_cfi) VALUES ('comic', 'Comic', 'cbz', 'book.cbz', '2026-01-01', 'epubcfi(/6/4)')",
       );
       await current.customStatement('PRAGMA user_version = 22');
@@ -58,9 +61,50 @@ void main() {
     },
   );
 
+  test('v24 bookmarks gain an empty anchor version', () async {
+    final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
+    await current.customSelect('SELECT 1').getSingle();
+    await current.customStatement(
+      'ALTER TABLE bookmarks_table DROP COLUMN anchor_version',
+    );
+    await current.customStatement('''
+      INSERT INTO bookmarks_table (
+        id, source_id, source_type, cfi, content, progress, chapter_title,
+        anchor_exact, anchor_prefix, anchor_suffix, anchor_section_index,
+        anchor_section_page, created_at
+      ) VALUES ('b', 'book', 'book', 'epubcfi(/6/2!/4/2,/1:0,/1:9)',
+        'Page text', 0.25, 'One', 'quote', 'before', 'after', 0, 3,
+        '2026-01-01T00:00:00.000')
+    ''');
+    await current.customStatement('PRAGMA user_version = 24');
+    await current.close();
+
+    final migrated = await openMigratedDatabase();
+    final row = await migrated
+        .customSelect("SELECT * FROM bookmarks_table WHERE id = 'b'")
+        .getSingle();
+    expect(row.readNullable<int>('anchor_version'), isNull);
+    expect(row.read<String>('cfi'), 'epubcfi(/6/2!/4/2,/1:0,/1:9)');
+    expect(row.read<String>('anchor_exact'), 'quote');
+    expect(row.read<int>('anchor_section_index'), 0);
+    expect(row.read<int>('anchor_section_page'), 3);
+    expect(row.read<double>('progress'), 0.25);
+
+    await migrated.customStatement(
+      "UPDATE bookmarks_table SET anchor_version = 2 WHERE id = 'b'",
+    );
+    final updated = await migrated
+        .customSelect("SELECT anchor_version FROM bookmarks_table")
+        .getSingle();
+    expect(updated.read<int>('anchor_version'), 2);
+  });
+
   test('v23 articles move their text after every other column', () async {
     final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
     await current.customSelect('SELECT 1').getSingle();
+    await current.customStatement(
+      'ALTER TABLE bookmarks_table DROP COLUMN anchor_version',
+    );
     await current.customStatement('DROP TABLE articles_table');
     await current.customStatement('''
       CREATE TABLE articles_table (

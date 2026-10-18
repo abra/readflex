@@ -22,16 +22,16 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
   }) : _baseUri = baseUri,
        _httpClient = httpClient ?? http.Client(),
        _ownsClient = httpClient == null,
+       // Untrusted pages never go through [httpClient]: only this client
+       // pins each connection to a policy-validated public address.
        _remoteContentHttpClient =
            remoteContentHttpClient ??
-           httpClient ??
            IOClient(
              createPublicRemoteHttpClient(
                uriPolicy: remoteUriPolicy ?? RemoteUriPolicy(),
              ),
            ),
-       _ownsRemoteContentClient =
-           remoteContentHttpClient == null && httpClient == null,
+       _ownsRemoteContentClient = remoteContentHttpClient == null,
        _apiKey = apiKey,
        _timeout = timeout,
        _maxDownloadBytes = maxDownloadBytes,

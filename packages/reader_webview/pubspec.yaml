@@ -68,6 +68,7 @@ flutter:
     - assets/foliate-js/src/vendor/DOMPurify-LICENSE
     - assets/foliate-js/src/pdf.js
     - assets/foliate-js/src/readflex_pdf_page_cache.js
+    - assets/foliate-js/src/readflex_pdf_ranges.js
     - assets/foliate-js/src/readflex_page_content.js
     - assets/foliate-js/src/fb2.js
     - assets/foliate-js/src/mobi.js

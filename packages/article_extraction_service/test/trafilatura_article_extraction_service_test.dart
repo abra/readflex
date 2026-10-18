@@ -12,7 +12,7 @@ import 'package:test/test.dart';
 void main() {
   test('posts URL to cleaner API before downloading client HTML', () async {
     late Map<String, Object?> requestBody;
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       apiKey: 'secret',
       httpClient: MockClient((request) async {
@@ -55,7 +55,7 @@ void main() {
   test('falls back to client HTML when server cannot fetch article', () async {
     final events = <String>[];
     late Map<String, Object?> htmlRequestBody;
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       remoteUriPolicy: _publicRemoteUriPolicy,
       httpClient: MockClient((request) async {
@@ -107,7 +107,7 @@ void main() {
     'recovers language and RTL direction from downloaded HTML metadata',
     () async {
       late Map<String, Object?> htmlRequestBody;
-      final service = TrafilaturaArticleExtractionService(
+      final service = _sharedMockService(
         baseUri: Uri.parse('http://127.0.0.1:9090'),
         remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
@@ -165,7 +165,7 @@ void main() {
             '[Image: Maximum Pleasure Guaranteed. $secondImage]\n'
             'End',
       });
-      final service = TrafilaturaArticleExtractionService(
+      final service = _sharedMockService(
         baseUri: Uri.parse('http://127.0.0.1:9090'),
         remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
@@ -237,7 +237,7 @@ void main() {
   );
 
   test('maps article download failures from client fallback', () async {
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       remoteUriPolicy: _publicRemoteUriPolicy,
       httpClient: MockClient((request) async {
@@ -267,7 +267,7 @@ void main() {
   });
 
   test('stops downloading when fallback HTML exceeds the size limit', () async {
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       maxDownloadBytes: 4,
       remoteUriPolicy: _publicRemoteUriPolicy,
@@ -304,7 +304,7 @@ void main() {
         if (!streamCancelled.isCompleted) streamCancelled.complete();
       },
     );
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       timeout: const Duration(milliseconds: 20),
       remoteUriPolicy: _publicRemoteUriPolicy,
@@ -344,7 +344,7 @@ void main() {
 
   test('maps backend error payloads without client fallback', () async {
     final paths = <String>[];
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       httpClient: MockClient((request) async {
         if (request.method == 'GET') {
@@ -367,7 +367,7 @@ void main() {
   });
 
   test('maps cleaner connection failures without client fallback', () async {
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       httpClient: MockClient((request) async {
         if (request.method == 'GET') {
@@ -393,7 +393,7 @@ void main() {
     'retries server extraction with recall when precision extracts nothing',
     () async {
       final requestBodies = <Map<String, Object?>>[];
-      final service = TrafilaturaArticleExtractionService(
+      final service = _sharedMockService(
         baseUri: Uri.parse('http://127.0.0.1:9090'),
         remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
@@ -433,7 +433,7 @@ void main() {
       final events = <String>[];
       final serverBodies = <Map<String, Object?>>[];
       late Map<String, Object?> htmlRequestBody;
-      final service = TrafilaturaArticleExtractionService(
+      final service = _sharedMockService(
         baseUri: Uri.parse('http://127.0.0.1:9090'),
         remoteUriPolicy: _publicRemoteUriPolicy,
         httpClient: MockClient((request) async {
@@ -485,7 +485,7 @@ void main() {
     'does not fall back to client HTML on cleaner authentication failure',
     () async {
       final paths = <String>[];
-      final service = TrafilaturaArticleExtractionService(
+      final service = _sharedMockService(
         baseUri: Uri.parse('http://127.0.0.1:9090'),
         httpClient: MockClient((request) async {
           if (request.method == 'GET') {
@@ -514,7 +514,7 @@ void main() {
 
   test('does not bypass a server unsafe redirect rejection', () async {
     final paths = <String>[];
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       httpClient: MockClient((request) async {
         if (request.method == 'GET') {
@@ -548,7 +548,7 @@ void main() {
 
   test('blocks a client fallback redirect to a private address', () async {
     final downloadedUrls = <Uri>[];
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       remoteUriPolicy: _publicRemoteUriPolicy,
       httpClient: MockClient((request) async {
@@ -588,7 +588,7 @@ void main() {
 
   test('follows validated public redirects during client fallback', () async {
     late Map<String, Object?> htmlRequestBody;
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       remoteUriPolicy: _publicRemoteUriPolicy,
       httpClient: MockClient((request) async {
@@ -622,7 +622,7 @@ void main() {
   });
 
   test('formats FastAPI validation errors without client fallback', () async {
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       httpClient: MockClient((request) async {
         if (request.method == 'GET') {
@@ -655,8 +655,100 @@ void main() {
     );
   });
 
+  group('client ownership', () {
+    test('downloads untrusted pages only through the content client', () async {
+      final events = <String>[];
+      final service = TrafilaturaArticleExtractionService(
+        baseUri: Uri.parse('http://127.0.0.1:9090'),
+        remoteUriPolicy: _publicRemoteUriPolicy,
+        httpClient: MockClient((request) async {
+          events.add('backend ${request.method} ${request.url.path}');
+          if (request.method == 'GET') return http.Response('', 500);
+          if (request.url.path == '/v1/extract') {
+            return _errorResponse('Fetch failed', 502, code: 'fetch_failed');
+          }
+          return _articleResponse(text: 'Hello world');
+        }),
+        remoteContentHttpClient: MockClient((request) async {
+          events.add('content ${request.method} ${request.url}');
+          return http.Response(
+            '<html><body><article>Hello world</article></body></html>',
+            200,
+            request: request,
+          );
+        }),
+      );
+
+      final article = await service.extract('https://example.com/a');
+
+      expect(events, [
+        'backend POST /v1/extract',
+        'content GET https://example.com/a',
+        'backend POST /v1/extract-html',
+      ]);
+      expect(article.plainText, 'Hello world');
+    });
+
+    test(
+      'by default downloads untrusted pages through a pinned client, '
+      'never the backend client',
+      () async {
+        final backendRequests = <String>[];
+        final resolvedHosts = <String>[];
+        final service = TrafilaturaArticleExtractionService(
+          baseUri: Uri.parse('http://127.0.0.1:9090'),
+          // The second answer comes from the pinned client's own resolution
+          // at connect time; a rebound private address stops it there.
+          remoteUriPolicy: RemoteUriPolicy(
+            resolveHost: (host) async {
+              resolvedHosts.add(host);
+              return [
+                InternetAddress(
+                  resolvedHosts.length == 1 ? '93.184.216.34' : '127.0.0.1',
+                ),
+              ];
+            },
+          ),
+          httpClient: MockClient((request) async {
+            backendRequests.add('${request.method} ${request.url}');
+            if (request.method == 'GET') {
+              return http.Response('<html>leaked</html>', 200);
+            }
+            return _errorResponse('Fetch failed', 502, code: 'fetch_failed');
+          }),
+        );
+        addTearDown(service.dispose);
+
+        await expectLater(
+          service.extract('https://example.com/a'),
+          throwsA(isA<RemoteUriPolicyException>()),
+        );
+        expect(backendRequests, ['POST http://127.0.0.1:9090/v1/extract']);
+        expect(resolvedHosts, ['example.com', 'example.com']);
+      },
+    );
+
+    test('dispose closes no injected client', () {
+      final backend = _CloseTrackingClient();
+      final content = _CloseTrackingClient();
+
+      TrafilaturaArticleExtractionService(
+        baseUri: Uri.parse('http://127.0.0.1:9090'),
+        httpClient: backend,
+        remoteContentHttpClient: content,
+      ).dispose();
+      TrafilaturaArticleExtractionService(
+        baseUri: Uri.parse('http://127.0.0.1:9090'),
+        httpClient: backend,
+      ).dispose();
+
+      expect(backend.closed, isFalse);
+      expect(content.closed, isFalse);
+    });
+  });
+
   test('rejects invalid URLs before backend or client requests', () async {
-    final service = TrafilaturaArticleExtractionService(
+    final service = _sharedMockService(
       baseUri: Uri.parse('http://127.0.0.1:9090'),
       httpClient: MockClient((request) async {
         fail('Invalid URLs must not reach HTTP clients.');
@@ -674,6 +766,40 @@ void main() {
       ),
     );
   });
+}
+
+// One mock answers the cleaner and the page downloads; the split between the
+// two clients is covered by the client ownership tests.
+TrafilaturaArticleExtractionService _sharedMockService({
+  required Uri baseUri,
+  required http.Client httpClient,
+  String? apiKey,
+  Duration timeout = const Duration(seconds: 45),
+  int maxDownloadBytes =
+      TrafilaturaArticleExtractionService.defaultMaxDownloadBytes,
+  RemoteUriPolicy? remoteUriPolicy,
+}) {
+  return TrafilaturaArticleExtractionService(
+    baseUri: baseUri,
+    httpClient: httpClient,
+    remoteContentHttpClient: httpClient,
+    apiKey: apiKey,
+    timeout: timeout,
+    maxDownloadBytes: maxDownloadBytes,
+    remoteUriPolicy: remoteUriPolicy,
+  );
+}
+
+class _CloseTrackingClient extends http.BaseClient {
+  var closed = false;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    throw UnimplementedError();
+  }
+
+  @override
+  void close() => closed = true;
 }
 
 final _publicRemoteUriPolicy = RemoteUriPolicy(

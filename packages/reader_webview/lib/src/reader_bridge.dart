@@ -162,6 +162,7 @@ class ReaderBookmarkChange {
     this.anchorSuffix,
     this.anchorSectionIndex,
     this.anchorSectionPage,
+    this.anchorVersion,
   });
 
   final bool remove;
@@ -175,6 +176,7 @@ class ReaderBookmarkChange {
   final String? anchorSuffix;
   final int? anchorSectionIndex;
   final int? anchorSectionPage;
+  final int? anchorVersion;
 
   factory ReaderBookmarkChange.fromMap(Map<String, dynamic> map) {
     final detail = readerBridgeMap(map['detail']) ?? const {};
@@ -190,6 +192,7 @@ class ReaderBookmarkChange {
       anchorSuffix: _nonEmptyString(detail['anchorSuffix']),
       anchorSectionIndex: _int(detail['anchorSectionIndex']),
       anchorSectionPage: _int(detail['anchorSectionPage']),
+      anchorVersion: _int(detail['anchorVersion']),
     );
   }
 }
@@ -1133,6 +1136,7 @@ class ReaderBookmark {
     this.anchorSuffix,
     this.anchorSectionIndex,
     this.anchorSectionPage,
+    this.anchorVersion,
   });
 
   final String id;
@@ -1144,4 +1148,5 @@ class ReaderBookmark {
   final String? anchorSuffix;
   final int? anchorSectionIndex;
   final int? anchorSectionPage;
+  final int? anchorVersion;
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:equatable/equatable.dart';
 import 'package:uuid/uuid.dart';
 
@@ -38,6 +40,12 @@ class DictionaryLookupRequest extends Equatable {
     'source_language': ?_normalizedOptional(sourceLanguage),
     'context_text': ?_normalizedOptional(contextText),
   };
+
+  /// The wire payload without its request ID: equal keys ask the same question.
+  String toCacheKey() {
+    final json = toJson()..remove('request_id');
+    return jsonEncode(json);
+  }
 
   @override
   List<Object?> get props => [requestId, term, sourceLanguage, contextText];

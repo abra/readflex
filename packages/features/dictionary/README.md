@@ -27,7 +27,9 @@ result without entries reads as not found.
 - `DictionarySheet` creates `DictionaryCubit` from the injected service.
 - The private sheet View reads only Cubit state and invokes UI callbacks.
 - `DictionaryCubit` maps backend statuses and typed failures to explicit UI
-  states; it does not depend on platform or HTTP implementations.
+  states; it does not depend on platform or HTTP implementations. Reopening
+  the same selection builds the same question with a fresh request ID, so the
+  service's memory cache answers it without another request.
 
 Each lexical entry has one Copy command beside its lemma. It copies that lemma
 and its numbered definitions, without another lookup. `DictionarySheet`

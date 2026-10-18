@@ -185,7 +185,10 @@ void main() {
           anchorSuffix: 'after',
           anchorSectionIndex: 2,
           anchorSectionPage: 4,
+          anchorVersion: 2,
         );
+        expect(original.anchorVersion, 2);
+        expect(await repo.getBookmarksBySource(book.id), [original]);
         await repo.deleteBookmarkById(book.id, original.id);
         expect(await repo.restoreBookmark(original), original);
         expect(await repo.getBookmarksBySource(book.id), [original]);
@@ -203,11 +206,35 @@ void main() {
           anchorSuffix: original.anchorSuffix,
           anchorSectionIndex: original.anchorSectionIndex,
           anchorSectionPage: original.anchorSectionPage,
+          anchorVersion: original.anchorVersion,
         );
         expect(await repo.restoreBookmark(original), replacement);
         expect(await repo.getBookmarksBySource(book.id), [replacement]);
       },
     );
+
+    test('bookmarks without an anchor version read back as null', () async {
+      final book = await repo.addBook(
+        sourceFile: await createTempBookFile(),
+        title: 'Legacy bookmark',
+        format: BookFormat.epub,
+      );
+      final bookmark = await repo.addBookmark(
+        sourceId: book.id,
+        sourceType: SourceType.book,
+        cfi: 'epubcfi(/6/4)',
+        content: 'Older page',
+        progress: .2,
+        anchorSectionIndex: 1,
+        anchorSectionPage: 2,
+      );
+
+      expect(bookmark.anchorVersion, isNull);
+      expect(
+        (await repo.getBookmarksBySource(book.id)).single.anchorVersion,
+        isNull,
+      );
+    });
 
     test('addBookmark is idempotent per source and cfi', () async {
       final book = await repo.addBook(

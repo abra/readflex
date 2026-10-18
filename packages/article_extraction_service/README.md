@@ -33,8 +33,12 @@ non-HTTP(S) schemes, private/local IP addresses, and hosts with unsafe or mixed
 DNS results. Redirects are followed manually and every hop is revalidated.
 The fallback uses a content-only client that connects to the exact validated
 address, so a DNS change between validation and connection cannot redirect the
-request to a private network. The cleaner backend keeps its own client and is
-not subject to this user-content policy. Downloads are capped at
+request to a private network. Page downloads never fall back to the backend
+`httpClient`: without an explicit `remoteContentHttpClient` the service creates
+and closes its own pinned client. Cleaner requests use the injected backend
+client, which the app shares with translation and dictionary lookup; it is not
+subject to this user-content policy, and the service closes only clients it
+created. Downloads are capped at
 `defaultMaxDownloadBytes`; one absolute deadline covers DNS, redirects,
 connection, and body streaming, and an expired or oversized stream is
 cancelled.

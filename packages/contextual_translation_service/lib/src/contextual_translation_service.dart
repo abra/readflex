@@ -31,4 +31,6 @@ abstract class OfflineContextualTranslationService {
     ContextualTranslationRequest request, {
     required String sourceLanguage,
   });
+
+  void dispose() {}
 }

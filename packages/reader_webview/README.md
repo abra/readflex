@@ -70,6 +70,11 @@ main-frame load error, JS document-load failure, or 60-second bootstrap timeout
 calls `onLoadFailed(ReaderLoadFailure)`. `onLoading` clears feature readiness
 during recovery; `onReady` completes it. The existing iOS deep-CFI startup
 workaround still restores by progress after an initial pagination crash.
+`resolveInitialReaderLocation` sends the saved progress along with the saved
+CFI; the reader JS ignores it unless the CFI no longer resolves in its chapter
+(a DOM change since it was saved throws `IndexSizeError`). Then the book opens
+at that progress, or at the CFI's chapter start, instead of reporting a
+document load failure.
 Metadata extraction treats renderer termination as an import error and disposes
 the headless WebView.
 
@@ -129,6 +134,14 @@ section CSP. Decisions from a replaced native WebView are ignored.
 ### PDF Pages
 
 `pdf.js` draws each page straight into a canvas; no PNG is encoded or decoded.
+
+- **Loading.** Import (`importing`) hands pdf.js the file by byte ranges
+  (`readflex_pdf_ranges.js`, no auto-fetch), so metadata, outline and the
+  cover read only the parts they need and a large PDF never sits whole in the
+  headless WebView. If a range read fails, import reads the whole file once
+  instead. The reader keeps one whole-file read: pdf.js takes each requested
+  range as a single chunk, so background filling would be one file-sized
+  request anyway, and page turns must not wait for the reader server.
 
 - **Coordinates.** Page documents use PDF points times 2 whatever the bitmap
   resolution, so the text layer stays above Android WebView's minimum font
@@ -329,8 +342,8 @@ Other per-chapter and per-page work is kept to what a book needs:
   conversion, vertical-writing quotes); rewriting every node of an ordinary
   chapter again invalidated its whole layout on each load.
 - The current page's bookmark anchor (a CFI and a word probe) is computed only
-  while the book has bookmarks, and removing a highlight does not compute it
-  (`test_browser/book_bookmark_state.test.mjs`).
+  while the book has bookmarks and one of them is an older bookmark; removing
+  a highlight does not compute it (`test_browser/book_bookmark_state.test.mjs`).
 - Metadata extraction (`importing`) returns the parsed book before
   `foliate-view` opens it, so import samples no chapters for direction and
   loads no renderer.
@@ -517,8 +530,9 @@ Saved highlights are not removed by selection-preview cleanup.
 
 `RemoteFile` bounds its LRU by 128 entries and 8 MiB of retained bytes, including
 larger ZIP chunks. An oversized read bypasses cache admission without flushing
-recent chunks. Neighbour probes and identical in-flight ranges still share
-bytes/requests. The limit excludes returned slice copies, in-flight buffers,
+recent chunks; when it starts and ends on its own chunk (a whole-file read), the
+caller gets the fetched buffer itself, not a copy, and nothing else shares it.
+Neighbour probes and identical in-flight ranges still share bytes/requests. The limit excludes returned slice copies, in-flight buffers,
 decompressed content and decoded images; it is not a total reader memory limit.
 
 `ArticleHtmlReaderWebView.restoreReadingProgress` restores a search session's
@@ -604,6 +618,24 @@ highlights while Translate and Define use the normalized lexical fields.
 `onImageAreaSelected` is the image-page counterpart used by comics/fixed-layout
 pages. It carries a zero-based page index, a normalized rectangle relative to
 the visible page image, and a viewport position for the floating highlight menu.
+
+## Bookmark anchors
+
+A book bookmark stores the CFI and quote of a word near the middle of its own
+page, plus its visual page anchor (section index and page in that section).
+The paginator expands each section's iframe to the whole chapter, so the word
+probe works in `getVisibleDocumentRect()`, the on-screen part of the section in
+the document's coordinates, not in the iframe's `innerWidth`/`innerHeight`.
+This holds for paginated and scrolled flow, spreads and right-to-left books.
+
+Such bookmarks carry `anchorVersion` 2 (`READFLEX_BOOKMARK_ANCHOR_VERSION`).
+They open at their CFI, and a page counts as bookmarked when the first box of
+the quote is on screen, so they keep their text when font size, margins or
+columns repaginate the chapter. Bookmarks saved before the version (`null`)
+took the CFI and quote from the middle of the chapter; they keep navigating and
+matching by the visual page anchor, which is right only in the layout they were
+saved in. Fixed-layout formats never get a version: their page anchor is
+already exact. Dart stores and passes the version through unchanged.
 
 ## Reader document normalization
 

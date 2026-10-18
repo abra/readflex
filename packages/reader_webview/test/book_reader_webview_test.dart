@@ -37,7 +37,8 @@ void main() {
       );
 
       expect(location.cfi, 'epubcfi(/6/14!/4/2)');
-      expect(location.progress, isNull);
+      // Only used by the reader JS if the CFI no longer resolves.
+      expect(location.progress, 0.73);
     });
 
     test('falls back to progress when CFI is missing', () {
@@ -85,7 +86,7 @@ void main() {
       );
 
       expect(location.cfi, 'epubcfi(/6/14!/4/2)');
-      expect(location.progress, isNull);
+      expect(location.progress, 1);
     });
 
     test('uses progress for generated articles restored at the end', () {
@@ -109,6 +110,18 @@ void main() {
       );
 
       expect(location.cfi, 'epubcfi(/6/2!/4/2,/32,/40/1:272)');
+      expect(location.progress, 0.8);
+    });
+
+    test('a CFI without saved progress goes alone', () {
+      final location = resolveInitialReaderLocation(
+        initialCfi: 'epubcfi(/6/14!/4/2)',
+        initialProgress: null,
+        recoveringFromCrash: false,
+        isArticle: false,
+      );
+
+      expect(location.cfi, 'epubcfi(/6/14!/4/2)');
       expect(location.progress, isNull);
     });
   });
@@ -357,6 +370,9 @@ void main() {
     test('bookmark state is refreshed after stored annotations render', () {
       final bookJs = _readPackageSource('assets/foliate-js/src/book.js');
       final viewJs = _readPackageSource('assets/foliate-js/src/view.js');
+      final paginatorJs = _readPackageSource(
+        'assets/foliate-js/src/paginator.js',
+      );
       final webViewDart = readBookReaderWebViewLibrarySource();
 
       expect(bookJs, contains('window.refreshBookmarkState'));
@@ -403,10 +419,19 @@ void main() {
       expect(bookJs, contains('cfi = this.view.getCFI(sectionIndex)'));
       expect(bookJs, contains('anchorExact: anchor?.anchorExact'));
       expect(bookJs, contains('anchorSectionPage: anchor?.anchorSectionPage'));
+      expect(bookJs, contains('anchorVersion: anchor?.anchorVersion'));
       expect(webViewDart, contains("'anchorExact': bookmark.anchorExact"));
       expect(
         webViewDart,
         contains("'anchorSectionPage': bookmark.anchorSectionPage"),
+      );
+      // Without the version the reader treats a bookmark as legacy and
+      // navigates by its page number only.
+      expect(webViewDart, contains("'anchorVersion': bookmark.anchorVersion"));
+      expect(webViewDart, contains("'anchorVersion': anchorVersion"));
+      expect(
+        webViewDart,
+        contains('prev.anchorVersion != bookmark.anchorVersion'),
       );
       expect(
         webViewDart,
@@ -428,7 +453,17 @@ void main() {
       expect(bookJs, contains('caretRangeFromPoint'));
       expect(bookJs, contains('caretPositionFromPoint'));
       expect(bookJs, contains('this.view.getCFI(sectionIndex, anchorRange)'));
-      expect(bookJs, contains('currentAnchor?.anchorSectionIndex'));
+      expect(
+        bookJs,
+        contains(
+          'this.#bookmarkSectionIndexFromLocation(this.view.lastLocation)',
+        ),
+      );
+      // The expanded section iframe is the whole chapter; probes use the
+      // paginator's on-screen rect instead of its innerWidth/innerHeight.
+      expect(paginatorJs, contains('getVisibleDocumentRect()'));
+      expect(bookJs, contains('renderer.getVisibleDocumentRect()'));
+      expect(bookJs, contains('READFLEX_BOOKMARK_ANCHOR_VERSION = 2'));
       expect(viewJs, isNot(contains("if (cfi && (!this.#lastCfi")));
       expect(viewJs, contains('#lastRelocateKey'));
       expect(viewJs, contains('async goToSectionPage(index, page)'));
@@ -1873,7 +1908,7 @@ console.log(JSON.stringify({ result, calls, errors }))
     });
 
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_170');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_171');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

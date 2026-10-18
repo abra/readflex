@@ -42,7 +42,7 @@ filenames before being written to the DB.
 | `updateReadingPosition(id, {cfi, progress})` | Update only CFI/progress without replacing metadata |
 | `markOpened(id, openedAt)`          | Update only the last-opened timestamp |
 | `getBookmarksBySource(sourceId)`    | List saved positions for a source in reading order |
-| `addBookmark({sourceId, cfi, content, progress, anchorExact, anchorSectionPage, ...})` | Save a source position, idempotent by visual/text anchor when present |
+| `addBookmark({sourceId, cfi, content, progress, anchorExact, anchorSectionPage, anchorVersion, ...})` | Save a source position, idempotent by visual/text anchor when present; `anchorVersion` is stored as the reader sent it |
 | `deleteBookmarkById(sourceId, bookmarkId)` | Remove one saved bookmark precisely |
 | `restoreBookmark(bookmark)` | Restore the original identity/date/full anchor, or return an existing bookmark at that anchor |
 | `deleteBookmarkBySourceAndCfi(sourceId, cfi)` | Legacy fallback removal by CFI |

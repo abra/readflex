@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/io_client.dart';
 
 void main() {
   _languageOutcomeTests();
@@ -174,6 +176,64 @@ void main() {
     expect(result.reliability, ContextualTranslationReliability.offline);
     expect(result.translation.contextualTranslation, 'offline');
     expect(offline.calls, 1);
+  });
+
+  test(
+    'a connect timeout falls back offline before the request deadline',
+    () async {
+      final connectionCancelled = Completer<void>();
+      final httpClient = HttpClient()
+        ..connectionTimeout = const Duration(milliseconds: 100)
+        ..findProxy = ((_) => 'DIRECT')
+        // An unreachable host: the TCP connection never completes.
+        ..connectionFactory = (uri, proxyHost, proxyPort) async {
+          return ConnectionTask.fromSocket(
+            Completer<Socket>().future,
+            connectionCancelled.complete,
+          );
+        };
+      final offline = _FakeOfflineService(downloaded: true);
+      final coordinator = ContextualTranslationCoordinator(
+        remoteService: RemoteContextualTranslationService(
+          baseUri: Uri.parse('https://api.readflex.app'),
+          httpClient: IOClient(httpClient),
+        ),
+        offlineService: offline,
+      );
+      addTearDown(httpClient.close);
+      final stopwatch = Stopwatch()..start();
+
+      final result = await coordinator.translate(_request());
+
+      expect(result.reliability, ContextualTranslationReliability.offline);
+      expect(offline.calls, 1);
+      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 5)));
+      expect(connectionCancelled.isCompleted, isTrue);
+    },
+  );
+
+  test('dispose disposes both owned providers', () {
+    final remote = _FakeRemoteService();
+    final offline = _FakeOfflineService();
+    ContextualTranslationCoordinator(
+      remoteService: remote,
+      offlineService: offline,
+    ).dispose();
+
+    expect(remote.disposals, 1);
+    expect(offline.disposals, 1);
+  });
+
+  test('dispose releases the offline provider when remote throws', () {
+    final remote = _FakeRemoteService()..disposeError = StateError('closed');
+    final offline = _FakeOfflineService();
+    final coordinator = ContextualTranslationCoordinator(
+      remoteService: remote,
+      offlineService: offline,
+    );
+
+    expect(coordinator.dispose, throwsStateError);
+    expect(offline.disposals, 1);
   });
 
   test('falls back offline when remote has a transient HTTP failure', () async {
@@ -454,6 +514,8 @@ class _FakeRemoteService implements ContextualTranslationService {
   final String? detectedSourceLanguage;
   final String? answeredTargetLanguage;
   var calls = 0;
+  var disposals = 0;
+  Object? disposeError;
 
   @override
   Future<ContextualTranslationResult> translate(
@@ -481,7 +543,11 @@ class _FakeRemoteService implements ContextualTranslationService {
   }
 
   @override
-  void dispose() {}
+  void dispose() {
+    disposals++;
+    final error = disposeError;
+    if (error != null) throw error;
+  }
 }
 
 class _FakeOfflineService implements OfflineContextualTranslationService {
@@ -491,6 +557,7 @@ class _FakeOfflineService implements OfflineContextualTranslationService {
   final bool completesDownload;
   var calls = 0;
   var downloads = 0;
+  var disposals = 0;
   final modelCheckStarted = Completer<void>();
   Completer<void>? modelCheckGate;
 
@@ -533,4 +600,7 @@ class _FakeOfflineService implements OfflineContextualTranslationService {
       selectedTranslation: 'offline',
     );
   }
+
+  @override
+  void dispose() => disposals++;
 }

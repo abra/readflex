@@ -33,7 +33,9 @@ const fb2 = strToU8(`<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/
     <body><section><title><p>Startup FB2</p></title><p>Readable FB2 content.</p></section></body>
     </FictionBook>`)
 
-function createPdf() {
+// [padding] adds an unreferenced stream of that many bytes after the page,
+// standing in for the rest of a large book.
+function createPdf({ padding = 0 } = {}) {
     const drawing = '0.2 0.5 0.7 rg 0 0 300 400 re f\n'
     const objects = [
         '<< /Type /Catalog /Pages 2 0 R >>',
@@ -41,6 +43,7 @@ function createPdf() {
         '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 400] /Resources << >> /Contents 4 0 R >>',
         `<< /Length ${drawing.length} >>\nstream\n${drawing}endstream`,
     ]
+    if (padding) objects.push(`<< /Length ${padding} >>\nstream\n${'x'.repeat(padding)}\nendstream`)
     let document = '%PDF-1.4\n'
     const offsets = objects.map((object, index) => {
         const offset = document.length
@@ -48,15 +51,19 @@ function createPdf() {
         return offset
     })
     const xref = document.length
-    document += `xref\n0 5\n0000000000 65535 f \n`
+    document += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
     for (const offset of offsets) document += `${String(offset).padStart(10, '0')} 00000 n \n`
-    document += `trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`
+    document += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`
     return Buffer.from(document)
 }
 
+// [recordReads] logs every byte range read from the book in
+// `window.__fileReads`; [failRangesAfter] makes reads starting past that
+// offset fail, as a broken transport would.
 async function openBook(t, { bytes, name, importing = false, traceStartup = false,
     assetPrefix = '', fontName = 'system', fontFile, overrideFont = true,
-    fontStatus = 200, initialCfi, initialProgress } = {}) {
+    fontStatus = 200, initialCfi, initialProgress, recordReads = false,
+    failRangesAfter = null } = {}) {
     const harness = await createHarness(t, { assetPrefix })
     const { page, origin } = harness
     const errors = []
@@ -79,14 +86,34 @@ async function openBook(t, { bytes, name, importing = false, traceStartup = fals
     page.on('pageerror', error => errors.push(error.message))
     t.after(() => assert.deepEqual(errors, []))
     // Replace transport only; exercise the production bootstrap, format sniffing and rendering.
+    const reads = recordReads || failRangesAfter != null ? `
+        window.__fileReads = [];
+        const slice = file.slice.bind(file);
+        file.slice = (start = 0, end = file.size, type) => {
+            window.__fileReads.push([start, Math.min(end, file.size)]);
+            if (${failRangesAfter ?? 'Infinity'} < start) {
+                return { size: end - start, arrayBuffer: () => Promise.reject(new Error('range failed')) };
+            }
+            return slice(start, end, type);
+        };
+        const arrayBuffer = file.arrayBuffer.bind(file);
+        file.arrayBuffer = () => {
+            window.__fileReads.push([0, file.size]);
+            return arrayBuffer();
+        };` : ''
     await page.route('**/foliate-js/src/remote_file.js', route => route.fulfill({
         contentType: 'text/javascript',
         body: `export class RemoteFile {
             async open() {
-                return new File([Uint8Array.from(${JSON.stringify([...bytes])})], ${JSON.stringify(name)});
+                const bytes = Uint8Array.from(atob('${Buffer.from(bytes).toString('base64')}'), c => c.charCodeAt(0));
+                const file = new File([bytes], ${JSON.stringify(name)});
+                ${reads}
+                return file;
             }
         }`,
     }))
+    const consoleMessages = []
+    page.on('console', message => consoleMessages.push(message.text()))
     const params = new URLSearchParams({
         url: JSON.stringify(origin + '/' + name),
         importing: JSON.stringify(importing),
@@ -130,8 +157,11 @@ async function openBook(t, { bytes, name, importing = false, traceStartup = fals
             previous = elapsedMs
         }
     } else assert.deepEqual(timings, [])
-    return { ...harness, timings, fontRequests }
+    return { ...harness, timings, fontRequests, consoleMessages }
 }
+
+const readBytes = page => page.evaluate(() => window.__fileReads
+    .reduce((total, [start, end]) => total + end - start, 0))
 
 for (const importing of [false, true]) {
     for (const { format, bytes, name } of [
@@ -183,6 +213,64 @@ for (const importing of [false, true]) {
         }
     })
 }
+
+// The text node in chapter one is shorter than offset 999, as when a saved
+// CFI outlives a change to its chapter's DOM.
+const staleCfi = 'epubcfi(/6/2!/4/2/1:999)'
+
+test('a saved CFI that no longer resolves opens at the saved progress', async t => {
+    const { page, consoleMessages } = await openBook(t, {
+        bytes: epub, name: 'startup.epub', initialCfi: staleCfi, initialProgress: 0.75,
+    })
+    assert.ok(consoleMessages.some(text => text.startsWith('Saved location no longer resolves')))
+    assert.equal(await page.evaluate(() => reader.view.lastLocation.section.current), 1)
+})
+
+test('a saved CFI that no longer resolves opens its chapter without progress', async t => {
+    const { page } = await openBook(t, { bytes: epub, name: 'startup.epub', initialCfi: staleCfi })
+    assert.equal(await page.evaluate(() => reader.view.lastLocation.section.current), 0)
+    assert.match(await page.evaluate(() => reader.view.lastLocation.range.toString()),
+        /Readable EPUB content/)
+})
+
+test('a resolvable CFI ignores the saved progress', async t => {
+    const { page, consoleMessages } = await openBook(t, {
+        bytes: epub, name: 'startup.epub', initialCfi: 'epubcfi(/6/2!/4/2/1:3)', initialProgress: 0.75,
+    })
+    assert.ok(!consoleMessages.some(text => text.startsWith('Saved location no longer resolves')))
+    assert.equal(await page.evaluate(() => reader.view.lastLocation.section.current), 0)
+})
+
+test('PDF metadata reads only the byte ranges it needs', async t => {
+    const bytes = createPdf({ padding: 2 * 1024 * 1024 })
+    const { page } = await openBook(t, { bytes, name: 'large.pdf', importing: true, recordReads: true })
+    const read = await readBytes(page)
+    assert.ok(read < bytes.length / 4, `read ${read} of ${bytes.length} bytes`)
+    assert.ok(!(await page.evaluate(size => window.__fileReads
+        .some(([start, end]) => start === 0 && end === size), bytes.length)), 'no whole-file read')
+    const metadata = await page.evaluate(() => window.bridgeCalls.find(([name]) => name === 'onMetadata')[1])
+    assert.ok(metadata.cover, 'the first page still renders as the cover')
+})
+
+test('a PDF opened for reading is read once, whole', async t => {
+    const bytes = createPdf({ padding: 2 * 1024 * 1024 })
+    const { page } = await openBook(t, { bytes, name: 'large.pdf', recordReads: true })
+    const wholeReads = await page.evaluate(size => window.__fileReads
+        .filter(([start, end]) => start === 0 && end === size).length, bytes.length)
+    assert.equal(wholeReads, 1)
+})
+
+test('PDF metadata falls back to one whole-file read when byte ranges fail', async t => {
+    const bytes = createPdf({ padding: 2 * 1024 * 1024 })
+    const { page, consoleMessages } = await openBook(t, {
+        bytes, name: 'large.pdf', importing: true, failRangesAfter: 64 * 1024,
+    })
+    assert.ok(consoleMessages.some(text => text.startsWith('PDF byte ranges failed')))
+    assert.ok(await page.evaluate(size => window.__fileReads
+        .some(([start, end]) => start === 0 && end === size), bytes.length))
+    const metadata = await page.evaluate(() => window.bridgeCalls.find(([name]) => name === 'onMetadata')[1])
+    assert.ok(metadata.cover)
+})
 
 for (const importing of [false, true]) {
     for (const [name, bytes] of [['startup.epub', epub], ['startup.cbz', comic]]) {

@@ -102,7 +102,8 @@ void main() {
   });
 
   test(
-    'image queue overlaps two requests and reuses a body image as cover',
+    'image queue overlaps two requests; an og:image that is also a body '
+    'image is downloaded once, as a body image',
     () async {
       var active = 0;
       var peak = 0;
@@ -141,13 +142,105 @@ void main() {
       );
       expect(peak, 2);
       expect(requests, unorderedEquals(['/one.png', '/two.png', '/three.png']));
-      expect(await File(article.coverImagePath!).readAsBytes(), _pngBytes);
+      expect(article.coverImagePath, isNull);
+      final html = File(article.contentHtmlPath).readAsStringSync();
+      expect(RegExp('src="images/').allMatches(html), hasLength(4));
+    },
+  );
+
+  test(
+    'og:image is saved as a URL and never requested on import',
+    () async {
+      final requests = <String>[];
+      repository.dispose();
+      repository = ArticleRepository(
+        database: db,
+        articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+        remoteUriPolicy: _publicRemoteUriPolicy,
+        httpClient: MockClient((request) async {
+          requests.add(request.url.toString());
+          return http.Response.bytes(
+            _pngBytes,
+            200,
+            headers: {'content-type': 'image/png'},
+          );
+        }),
+      );
+      const coverUrl = 'https://example.com/og-cover.png';
+
+      final article = await repository.addExtractedArticle(
+        _extractedArticle(
+          imageUrl: coverUrl,
+          blocks: const [ArticleImageBlock(src: '/body.png')],
+        ),
+      );
+
+      expect(requests, ['https://example.com/body.png']);
+      final stored = (await repository.getArticleById(article.id))!;
+      expect(stored.imageUrl, coverUrl);
+      expect(stored.coverImagePath, isNull);
+      final articleDir = Directory(p.dirname(article.contentPath));
       expect(
-        File(article.contentHtmlPath).readAsStringSync(),
-        contains(p.basename(article.coverImagePath!)),
+        articleDir.listSync().map((entry) => p.basename(entry.path)),
+        unorderedEquals(['article.json', 'content.html', 'images']),
       );
     },
   );
+
+  test('og:image without body images makes no request at all', () async {
+    final requests = <Uri>[];
+    repository.dispose();
+    repository = ArticleRepository(
+      database: db,
+      articlesDirectory: Directory(p.join(tempDir.path, 'articles')),
+      remoteUriPolicy: _publicRemoteUriPolicy,
+      // Records instead of failing: download errors are swallowed.
+      httpClient: MockClient((request) async {
+        requests.add(request.url);
+        return http.Response.bytes(
+          _pngBytes,
+          200,
+          headers: {'content-type': 'image/png'},
+        );
+      }),
+    );
+
+    final article = await repository.addExtractedArticle(
+      _extractedArticle(imageUrl: 'https://example.com/og-cover.png'),
+    );
+
+    expect(requests, isEmpty);
+    final stored = (await repository.getArticleById(article.id))!;
+    expect(stored.imageUrl, 'https://example.com/og-cover.png');
+    expect(stored.coverImagePath, isNull);
+    expect(
+      Directory(p.dirname(article.contentPath)).listSync().map(
+        (entry) => p.basename(entry.path),
+      ),
+      unorderedEquals(['article.json', 'content.html']),
+    );
+  });
+
+  test('a legacy cover path keeps resolving and survives updates', () async {
+    final article = await repository.addExtractedArticle(_extractedArticle());
+    await db.articlesDao.updateArticle(
+      ArticlesTableCompanion(
+        id: Value(article.id),
+        coverImagePath: const Value('cover.jpg'),
+      ),
+    );
+
+    final legacy = (await repository.getArticleById(article.id))!;
+    expect(
+      legacy.coverImagePath,
+      p.join(p.dirname(article.contentPath), 'cover.jpg'),
+    );
+    await repository.updateArticle(legacy.copyWith(isFinished: true));
+    expect(
+      (await repository.getArticleById(article.id))!.coverImagePath,
+      legacy.coverImagePath,
+    );
+  });
 
   test(
     'a response deadline aborts the request, not the shared client',

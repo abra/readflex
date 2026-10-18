@@ -509,6 +509,7 @@ class _DelayedBookmarkRepository extends FakeBookRepository {
     String? anchorSuffix,
     int? anchorSectionIndex,
     int? anchorSectionPage,
+    int? anchorVersion,
   }) async {
     if (!writing.isCompleted) writing.complete();
     await gate.future;
@@ -524,6 +525,7 @@ class _DelayedBookmarkRepository extends FakeBookRepository {
       anchorSuffix: anchorSuffix,
       anchorSectionIndex: anchorSectionIndex,
       anchorSectionPage: anchorSectionPage,
+      anchorVersion: anchorVersion,
     );
   }
 }

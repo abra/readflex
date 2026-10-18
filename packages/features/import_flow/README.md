@@ -33,7 +33,9 @@ Future<ImportFlowResult?> showImportFlowSheet(
 - `onImportBook` — called after a file is picked; returns the persisted
   `Book?`. The default helper is `importBookFile(...)`, which extracts
   metadata with `BookMetadataExtractor` from `reader_webview` (foliate-js via
-  local HTTP server) and persists via `BookRepository`.
+  local HTTP server) and persists via `BookRepository`. The routing adapter
+  then calls `deletePickedBookFile(...)` in a `finally`, after success and
+  failure alike (dismissing the sheet does not cancel the import).
 - `onImportArticle` — imports a cleaned article from a URL.
 - `isOffline` / `isOfflineStream` — disable and live-update the article URL
   path when the app shell knows there is no network. Book uploads stay
@@ -68,6 +70,17 @@ Helpers exported from `import_flow.dart`:
 | `bookExtensions`      | File-picker allowed extensions           |
 | `ImportFlowResult`    | What got imported                        |
 | `ImportFlowEntry`     | Starting step: menu, file or article     |
+| `deletePickedBookFile` | Deletes the picker's temporary copy     |
+
+The picker hands back a copy: file_picker copies an Android pick into
+`<cache>/file_picker/<timestamp>/` and moves an iOS pick into the app's
+`tmp/`. `BookRepository` keeps its own copy, so `deletePickedBookFile` removes
+the picked file (and an emptied `file_picker/<timestamp>` folder) once the
+import ends. It deletes only on Android and iOS, and only when the
+symlink-resolved path lies inside `Directory.systemTemp` (iOS `tmp/`) or
+`getTemporaryDirectory()` (Android cache); originals elsewhere are never
+touched. It does not use `FilePicker.clearTemporaryFiles`, which empties all of
+iOS `tmp/`. Failures are logged as warnings and never fail the import.
 
 ## Architecture
 
@@ -186,6 +199,11 @@ disabled semantics, RTL/large-text
 header access, validation, clipboard races/failures, retry state, picker
 cancellation, progress layout, and keyboard access with enlarged text. Regression
 tests distinguish header/system Back from Close/scrim/drag and check draft retention.
+`picked_book_file_test.dart` covers picked-copy cleanup on real files: Android
+pick folders, iOS `tmp/`, originals outside temp, desktop platforms, linked
+temp roots and paths, links in and out of temp, climbing paths, and logged
+delete/lookup failures. The routing `finally` and the real iOS `TMPDIR` need
+a device check.
 Real-font goldens check spacing after the reserved validation area and before
 the footer. Validation geometry and error semantics are checked
 in all supported languages at normal and 200% text scale.
@@ -214,3 +232,4 @@ and live extraction require separate device checks.
   `AppSheetActions`, `AppIcons`, `AppSpacing`, `AppMotion`
 - `monitoring` — non-fatal logging
 - `file_picker` — file picker integration
+- `path_provider` — the platform cache directory for picked-copy cleanup

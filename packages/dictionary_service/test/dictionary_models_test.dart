@@ -18,6 +18,49 @@ void main() {
     });
   });
 
+  test('cache key is the wire payload without the request ID', () {
+    final request = DictionaryLookupRequest(
+      requestId: 'request-1',
+      term: 'power',
+      sourceLanguage: ' en ',
+      contextText: ' The [[power]] bank. ',
+    );
+
+    expect(request.toCacheKey(), isNot(contains('request-1')));
+    expect(
+      request.toCacheKey(),
+      DictionaryLookupRequest(
+        requestId: 'request-2',
+        term: 'power',
+        sourceLanguage: 'en',
+        contextText: 'The [[power]] bank.',
+      ).toCacheKey(),
+      reason: 'the same normalized wire payload asks the same question',
+    );
+    const context = 'The [[power]] bank.';
+    for (final other in [
+      DictionaryLookupRequest(
+        term: 'powers',
+        sourceLanguage: 'en',
+        contextText: context,
+      ),
+      DictionaryLookupRequest(
+        term: 'power',
+        sourceLanguage: 'de',
+        contextText: context,
+      ),
+      DictionaryLookupRequest(term: 'power', contextText: context),
+      DictionaryLookupRequest(
+        term: 'power',
+        sourceLanguage: 'en',
+        contextText: 'Another [[power]].',
+      ),
+      DictionaryLookupRequest(term: 'power', sourceLanguage: 'en'),
+    ]) {
+      expect(request.toCacheKey(), isNot(other.toCacheKey()));
+    }
+  });
+
   test('result parses lexical entries and definitions', () {
     final result = DictionaryLookupResult.fromJson({
       'request_id': 'request-1',

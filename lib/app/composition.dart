@@ -13,7 +13,10 @@ import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:dictionary_service/dictionary_service.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:highlight_repository/highlight_repository.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -50,6 +53,75 @@ Future<ErrorReportingService> createErrorReporter(
   }
 
   return const NoopErrorReporter();
+}
+
+/// Creates the `dart:io` client behind every Readflex API service.
+///
+/// The connect timeout lets an unreachable host fail as a network error, so
+/// Translate reaches its offline fallback without waiting out the 45 s request
+/// timeout. The default 15 s idle timeout stays: the backend's keep-alive is
+/// unknown, and a longer one risks reusing a socket the server already closed.
+@visibleForTesting
+HttpClient createBackendHttpClient() =>
+    HttpClient()..connectionTimeout = const Duration(seconds: 10);
+
+/// Wires the Readflex API services to one [backendHttpClient], so they reuse
+/// its connections to the shared API host.
+///
+/// [resources] takes ownership of the client and of the services. The client
+/// is registered first, so it closes after every service that uses it.
+@visibleForTesting
+({
+  ArticleExtractionService articleExtractionService,
+  ContextualTranslationService contextualTranslationService,
+  DictionaryLookupService dictionaryLookupService,
+})
+createBackendServices({
+  required ApplicationConfig config,
+  required ResourceDisposer resources,
+  required http.Client backendHttpClient,
+  required OfflineContextualTranslationService offlineTranslationService,
+}) {
+  resources.add('backendHttpClient.close', backendHttpClient.close);
+  final developmentApiKey = config.developmentApiKey;
+  final apiKey = developmentApiKey.isEmpty ? null : developmentApiKey;
+
+  // Untrusted article pages use the extraction service's own pinned client.
+  final articleExtractionService = TrafilaturaArticleExtractionService(
+    baseUri: Uri.parse(config.articleCleanerBaseUrl),
+    httpClient: backendHttpClient,
+    apiKey: apiKey,
+  );
+  resources.add(
+    'articleExtractionService.dispose',
+    articleExtractionService.dispose,
+  );
+  final contextualTranslationService = ContextualTranslationCoordinator(
+    remoteService: RemoteContextualTranslationService(
+      baseUri: Uri.parse(config.contextualTranslationBaseUrl),
+      httpClient: backendHttpClient,
+      apiKey: apiKey,
+    ),
+    offlineService: offlineTranslationService,
+  );
+  resources.add(
+    'contextualTranslationService.dispose',
+    contextualTranslationService.dispose,
+  );
+  final dictionaryLookupService = RemoteDictionaryLookupService(
+    baseUri: Uri.parse(config.dictionaryBaseUrl),
+    httpClient: backendHttpClient,
+    apiKey: apiKey,
+  );
+  resources.add(
+    'dictionaryLookupService.dispose',
+    dictionaryLookupService.dispose,
+  );
+  return (
+    articleExtractionService: articleExtractionService,
+    contextualTranslationService: contextualTranslationService,
+    dictionaryLookupService: dictionaryLookupService,
+  );
 }
 
 /// Creates dependencies, rolling back partial construction on failure.
@@ -139,35 +211,13 @@ Future<DependenciesContainer> _createDependenciesContainer(
     final connectivityService = await ConnectivityPlusService.create();
     resources.add('connectivityService.dispose', connectivityService.dispose);
     final screenControlService = WakelockScreenControlService();
-    final developmentApiKey = config.developmentApiKey;
-    final articleExtractionService = TrafilaturaArticleExtractionService(
-      baseUri: Uri.parse(config.articleCleanerBaseUrl),
-      apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
-    );
-    resources.add(
-      'articleExtractionService.dispose',
-      articleExtractionService.dispose,
-    );
-    final contextualTranslationService = ContextualTranslationCoordinator(
-      remoteService: RemoteContextualTranslationService(
-        baseUri: Uri.parse(config.contextualTranslationBaseUrl),
-        apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
-      ),
-      offlineService: MlKitOfflineTranslationService(),
-    );
-    resources.add(
-      'contextualTranslationService.dispose',
-      contextualTranslationService.dispose,
+    final backendServices = createBackendServices(
+      config: config,
+      resources: resources,
+      backendHttpClient: IOClient(createBackendHttpClient()),
+      offlineTranslationService: MlKitOfflineTranslationService(),
     );
     final systemDictionaryService = PlatformSystemDictionaryService();
-    final dictionaryLookupService = RemoteDictionaryLookupService(
-      baseUri: Uri.parse(config.dictionaryBaseUrl),
-      apiKey: developmentApiKey.isEmpty ? null : developmentApiKey,
-    );
-    resources.add(
-      'dictionaryLookupService.dispose',
-      dictionaryLookupService.dispose,
-    );
 
     return DependenciesContainer(
       logger: logger,
@@ -175,15 +225,16 @@ Future<DependenciesContainer> _createDependenciesContainer(
       errorReporter: errorReporter,
       packageInfo: packageInfo,
       preferencesService: preferencesService,
-      articleExtractionService: articleExtractionService,
+      articleExtractionService: backendServices.articleExtractionService,
       articleRepository: articleRepository,
       bookRepository: bookRepository,
       collectionRepository: collectionRepository,
       highlightRepository: highlightRepository,
       connectivityService: connectivityService,
-      contextualTranslationService: contextualTranslationService,
+      contextualTranslationService:
+          backendServices.contextualTranslationService,
       systemDictionaryService: systemDictionaryService,
-      dictionaryLookupService: dictionaryLookupService,
+      dictionaryLookupService: backendServices.dictionaryLookupService,
       screenControlService: screenControlService,
       readerServer: readerServer,
       database: database,

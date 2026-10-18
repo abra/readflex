@@ -46,7 +46,18 @@ backend bodies. The default request timeout is 40 seconds and aborts transport,
 including response-body reads. Completing the optional `abortTrigger` future
 cancels only that lookup, not the shared client. DictionaryCubit triggers it on
 sheet closure; stale results never reach the closed sheet. This does not
-guarantee cancellation of work already started by the backend. There is no mobile
-dictionary cache or ML Kit definition fallback in this package: when native
-lookup is unavailable and the API fails, the sheet offers retry. Backend
-generation/caching is a separate service contract, not implemented in this repo.
+guarantee cancellation of work already started by the backend. The app injects
+the HTTP client shared with translation and article extraction; the service
+closes only a client it created itself.
+
+`MemoryDictionaryLookupCache` (`DictionaryLookupCache`) mirrors the translation
+cache: an in-memory LRU of 128 answers for 30 minutes from each write, keyed by
+the request's wire payload without `request_id` (term, source language and
+context). A repeated Define of the same selection is answered without a
+request, rebound to the current request ID. Only validated answers are cached:
+`found` with entries, `not_found` and `unsupported_language`. Failures,
+timeouts, cancellations, mismatched or malformed responses, and a `found`
+answer without entries are not. Nothing is persisted to disk. There is no ML
+Kit definition fallback in this package: when native lookup is unavailable and
+the API fails, the sheet offers retry. Backend generation/caching is a separate
+service contract, not implemented in this repo.

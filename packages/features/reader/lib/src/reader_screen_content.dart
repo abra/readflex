@@ -391,6 +391,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       progress: bookmark.progress,
       anchorSectionIndex: bookmark.anchorSectionIndex,
       anchorSectionPage: bookmark.anchorSectionPage,
+      anchorVersion: bookmark.anchorVersion,
     );
     _closeTocDrawer(restoreChrome: false);
   }
@@ -1164,6 +1165,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
           anchorSuffix: bookmark.anchorSuffix,
           anchorSectionIndex: bookmark.anchorSectionIndex,
           anchorSectionPage: bookmark.anchorSectionPage,
+          anchorVersion: bookmark.anchorVersion,
         ),
     ];
   }
@@ -1336,6 +1338,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             anchorSuffix: change.anchorSuffix,
             anchorSectionIndex: change.anchorSectionIndex,
             anchorSectionPage: change.anchorSectionPage,
+            anchorVersion: change.anchorVersion,
           ),
         );
       },

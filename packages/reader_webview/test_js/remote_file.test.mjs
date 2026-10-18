@@ -36,6 +36,30 @@ test('oversized reads return all bytes without evicting the working set', async 
     assert.equal(requests.length, 2)
 })
 
+test('a whole-file read hands over the fetched buffer without a copy', async () => {
+    const { file, requests } = fixture()
+    file.size = 40 * MiB
+    const fetched = []
+    const fetchRange = file._fetchRange
+    file._fetchRange = async (start, end) => {
+        const buffer = await fetchRange(start, end)
+        fetched.push(buffer)
+        return buffer
+    }
+    const whole = await file.arrayBuffer()
+    assert.equal(whole, fetched[0], 'the caller owns the fetched buffer')
+    assert.equal(whole.byteLength, 40 * MiB)
+    assert.equal(retainedBytes(file), 0)
+    await file.arrayBuffer()
+    assert.equal(requests.length, 2, 'not cached, so nobody else shares it')
+})
+
+test('large reads off chunk boundaries return exactly their bytes', async () => {
+    const { file } = fixture()
+    const large = await file.slice(MiB + 10, 17 * MiB).arrayBuffer()
+    assert.equal(large.byteLength, 16 * MiB - 10)
+})
+
 test('adjacent and concurrent probes reuse one range request', async () => {
     const { file, requests } = fixture()
     await Promise.all([file.slice(0, 4).arrayBuffer(), file.slice(0, 4).arrayBuffer()])
