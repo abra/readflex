@@ -142,69 +142,121 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
         header: _ReaderSearchHeader(onClose: widget.onClose),
         // The list's bottom padding carries the system inset, like the
         // Contents sheet; the sheet itself sits on the keyboard.
-        body: _content(),
+        body: BlocBuilder<ReaderSearchCubit, ReaderSearchState>(
+          builder: (context, state) {
+            final l10n = context.l10n;
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: SearchField(
+                    controller: _field,
+                    focusNode: _focus,
+                    hintText: l10n.readerSearchInBook,
+                    clearButtonSemanticsLabel: l10n.commonClearSearch,
+                    textInputAction: TextInputAction.search,
+                    onChanged: _onQueryChanged,
+                  ),
+                ),
+                if (state.results.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                    ),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        l10n.readerSearchMatches(state.results.length),
+                        style: context.text.bodySmall.copyWith(
+                          color: context.colors.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+                SizedBox(
+                  height: 2,
+                  child: state.isLoading
+                      ? LinearProgressIndicator(
+                          value: state.progress > 0 ? state.progress : null,
+                        )
+                      : null,
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ClipRect(
+                    child: ScrollEdgeFadeStack(
+                      child: _ReaderSearchResults(
+                        state: state,
+                        format: widget.format,
+                        pageProgressionRtl: widget.pageProgressionRtl,
+                        scroll: _scroll,
+                        activeTileKey: _activeTileKey,
+                        onResultSelected: widget.onResultSelected,
+                        onRecentQuerySelected: _selectRecentQuery,
+                        onRecentQueryRemoved: _removeRecentQuery,
+                        onRetry: _retry,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _content() => BlocBuilder<ReaderSearchCubit, ReaderSearchState>(
-    builder: (context, state) {
-      final l10n = context.l10n;
-      return Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: SearchField(
-              controller: _field,
-              focusNode: _focus,
-              hintText: l10n.readerSearchInBook,
-              clearButtonSemanticsLabel: l10n.commonClearSearch,
-              textInputAction: TextInputAction.search,
-              onChanged: (value) => context
-                  .read<ReaderSearchCubit>()
-                  .queryChanged(value, searchBook: widget.onSearch),
-            ),
-          ),
-          if (state.results.isNotEmpty)
-            Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.lg,
-                0,
-                AppSpacing.lg,
-                AppSpacing.sm,
-              ),
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  l10n.readerSearchMatches(state.results.length),
-                  style: context.text.bodySmall.copyWith(
-                    color: context.colors.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-          SizedBox(
-            height: 2,
-            child: state.isLoading
-                ? LinearProgressIndicator(
-                    value: state.progress > 0 ? state.progress : null,
-                  )
-                : null,
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: ClipRect(
-              child: ScrollEdgeFadeStack(child: _results(context, state)),
-            ),
-          ),
-        ],
-      );
-    },
-  );
+  void _onQueryChanged(String value) => context
+      .read<ReaderSearchCubit>()
+      .queryChanged(value, searchBook: widget.onSearch);
 
-  /// [context] is the builder's, inside the sheet: its MediaQuery has the
-  /// keyboard inset removed, which the list padding must see.
-  Widget _results(BuildContext context, ReaderSearchState state) {
+  void _selectRecentQuery(String query) {
+    _focus.unfocus();
+    context.read<ReaderSearchCubit>().recentQuerySelected(
+      query,
+      searchBook: widget.onSearch,
+    );
+  }
+
+  void _removeRecentQuery(String query) =>
+      context.read<ReaderSearchCubit>().recentQueryRemoved(query);
+
+  void _retry() =>
+      context.read<ReaderSearchCubit>().retry(searchBook: widget.onSearch);
+}
+
+/// Results, recent queries or a placeholder below the search field. It is
+/// built inside the sheet, whose MediaQuery has the keyboard inset removed;
+/// the list padding must see that.
+class _ReaderSearchResults extends StatelessWidget {
+  const _ReaderSearchResults({
+    required this.state,
+    required this.format,
+    required this.pageProgressionRtl,
+    required this.scroll,
+    required this.activeTileKey,
+    required this.onResultSelected,
+    required this.onRecentQuerySelected,
+    required this.onRecentQueryRemoved,
+    required this.onRetry,
+  });
+
+  final ReaderSearchState state;
+  final BookFormat? format;
+  final bool pageProgressionRtl;
+  final ScrollController scroll;
+  final GlobalKey activeTileKey;
+  final ValueChanged<int> onResultSelected;
+  final ValueChanged<String> onRecentQuerySelected;
+  final ValueChanged<String> onRecentQueryRemoved;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = context.l10n;
     final bottom = EdgeInsets.only(
       bottom: readerDrawerListBottomPadding(context),
@@ -212,19 +264,19 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
     if (state.results.isNotEmpty) {
       return ListView.builder(
         key: PageStorageKey('reader-search-${state.query}'),
-        controller: _scroll,
+        controller: scroll,
         padding: bottom,
         itemCount: state.results.length,
         itemBuilder: (_, index) {
           final selected = state.activeResultIndex == index;
           return KeyedSubtree(
-            key: selected ? _activeTileKey : null,
+            key: selected ? activeTileKey : null,
             child: ReaderSearchResultTile(
               key: ValueKey('reader-search-result-$index'),
               result: state.results[index],
               selected: selected,
-              pageProgressionRtl: widget.pageProgressionRtl,
-              onTap: () => widget.onResultSelected(index),
+              pageProgressionRtl: pageProgressionRtl,
+              onTap: () => onResultSelected(index),
             ),
           );
         },
@@ -232,7 +284,7 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
     }
     if (state.query.isEmpty && state.recentQueries.isNotEmpty) {
       return ListView.builder(
-        controller: _scroll,
+        controller: scroll,
         padding: bottom,
         itemCount: state.recentQueries.length + 1,
         itemBuilder: (_, index) {
@@ -253,18 +305,11 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
             id: query,
             label: l10n.readerRemoveFromHistory,
             collapse: true,
-            onDelete: () =>
-                context.read<ReaderSearchCubit>().recentQueryRemoved(query),
+            onDelete: () => onRecentQueryRemoved(query),
             child: _ReaderRecentSearchTile(
               query: query,
-              pageProgressionRtl: widget.pageProgressionRtl,
-              onTap: () {
-                _focus.unfocus();
-                context.read<ReaderSearchCubit>().recentQuerySelected(
-                  query,
-                  searchBook: widget.onSearch,
-                );
-              },
+              pageProgressionRtl: pageProgressionRtl,
+              onTap: () => onRecentQuerySelected(query),
             ),
           );
         },
@@ -276,14 +321,12 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
         message: state.errorMessage ?? l10n.readerSearchFailed,
         retryLabel: l10n.commonRetry,
         busy: state.isLoading,
-        onRetry: () => context.read<ReaderSearchCubit>().retry(
-          searchBook: widget.onSearch,
-        ),
+        onRetry: onRetry,
       );
     } else if (state.query.trim().length < ReaderSearchCubit.minQueryLength) {
       placeholder = EmptyState(
         compact: true,
-        message: readerSearchPromptMessage(l10n, widget.format),
+        message: readerSearchPromptMessage(l10n, format),
       );
     } else if (state.isLoading) {
       return const SizedBox.shrink();
@@ -298,7 +341,7 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
     // less room than the placeholder needs.
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
-        controller: _scroll,
+        controller: scroll,
         padding: bottom,
         child: ConstrainedBox(
           constraints: BoxConstraints(

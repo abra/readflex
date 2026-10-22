@@ -42,102 +42,127 @@ class ReaderTapEdgeIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!visible) return const SizedBox.shrink();
     final color = readerTheme.primaryTextColor.withValues(alpha: 0.35);
-    // Side lines stay clear of a display cutout beside a landscape page.
-    final safeArea = MediaQuery.maybePaddingOf(context) ?? EdgeInsets.zero;
     return Positioned.fill(
       child: IgnorePointer(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            final height = constraints.maxHeight;
             final metrics = _ReaderTapEdgeMetrics(
-              width: width,
-              height: height,
+              width: constraints.maxWidth,
+              height: constraints.maxHeight,
               topMargin: contentTopMargin,
               bottomMargin: contentBottomMargin,
               sideMarginPercent: contentSideMargin,
             );
-            return Stack(
-              children: axis == ReaderTapAxis.vertical
-                  ? _verticalLines(metrics, color)
-                  : _sideLines(
-                      metrics,
-                      color,
-                      safeArea: safeArea,
-                      respectRtlProgression: true,
-                    ),
+            if (axis == ReaderTapAxis.vertical) {
+              return _ReaderTapVerticalEdges(
+                metrics: metrics,
+                color: color,
+                showTop: canGoPrevious,
+                showBottom: canGoNext,
+              );
+            }
+            return _ReaderTapSideEdges(
+              metrics: metrics,
+              color: color,
+              showLeft: pageProgressionRtl ? canGoNext : canGoPrevious,
+              showRight: pageProgressionRtl ? canGoPrevious : canGoNext,
             );
           },
         ),
       ),
     );
   }
+}
 
-  List<Widget> _verticalLines(_ReaderTapEdgeMetrics metrics, Color color) {
+class _ReaderTapVerticalEdges extends StatelessWidget {
+  const _ReaderTapVerticalEdges({
+    required this.metrics,
+    required this.color,
+    required this.showTop,
+    required this.showBottom,
+  });
+
+  final _ReaderTapEdgeMetrics metrics;
+  final Color color;
+  final bool showTop;
+  final bool showBottom;
+
+  @override
+  Widget build(BuildContext context) {
     final lineWidth = (metrics.contentWidth * 0.07)
         .clamp(_kReaderTapEdgeMinLength, _kReaderTapEdgeMaxLength)
         .toDouble();
     final lineLeft =
         metrics.contentLeft + (metrics.contentWidth - lineWidth) / 2;
-    return [
-      if (canGoPrevious)
-        Positioned(
-          key: const Key('readerTapEdgeTop'),
-          left: lineLeft,
-          top: metrics.topLineInset,
-          width: lineWidth,
-          height: _kReaderTapEdgeThickness,
-          child: _ReaderTapEdgeLine(color: color),
-        ),
-      if (canGoNext)
-        Positioned(
-          key: const Key('readerTapEdgeBottom'),
-          left: lineLeft,
-          bottom: metrics.bottomLineInset,
-          width: lineWidth,
-          height: _kReaderTapEdgeThickness,
-          child: _ReaderTapEdgeLine(color: color),
-        ),
-    ];
+    return Stack(
+      children: [
+        if (showTop)
+          Positioned(
+            key: const Key('readerTapEdgeTop'),
+            left: lineLeft,
+            top: metrics.topLineInset,
+            width: lineWidth,
+            height: _kReaderTapEdgeThickness,
+            child: _ReaderTapEdgeLine(color: color),
+          ),
+        if (showBottom)
+          Positioned(
+            key: const Key('readerTapEdgeBottom'),
+            left: lineLeft,
+            bottom: metrics.bottomLineInset,
+            width: lineWidth,
+            height: _kReaderTapEdgeThickness,
+            child: _ReaderTapEdgeLine(color: color),
+          ),
+      ],
+    );
   }
+}
 
-  List<Widget> _sideLines(
-    _ReaderTapEdgeMetrics metrics,
-    Color color, {
-    required EdgeInsets safeArea,
-    required bool respectRtlProgression,
-  }) {
-    final canGoLeft = respectRtlProgression && pageProgressionRtl
-        ? canGoNext
-        : canGoPrevious;
-    final canGoRight = respectRtlProgression && pageProgressionRtl
-        ? canGoPrevious
-        : canGoNext;
+class _ReaderTapSideEdges extends StatelessWidget {
+  const _ReaderTapSideEdges({
+    required this.metrics,
+    required this.color,
+    required this.showLeft,
+    required this.showRight,
+  });
+
+  final _ReaderTapEdgeMetrics metrics;
+  final Color color;
+  final bool showLeft;
+  final bool showRight;
+
+  @override
+  Widget build(BuildContext context) {
+    // Side lines stay clear of a display cutout beside a landscape page.
+    final safeArea = MediaQuery.maybePaddingOf(context) ?? EdgeInsets.zero;
     final lineHeight = (metrics.contentHeight * 0.05)
         .clamp(_kReaderTapEdgeMinLength, _kReaderTapEdgeMaxLength)
         .toDouble();
     final lineTop =
         metrics.contentTop + (metrics.contentHeight - lineHeight) / 2;
-    return [
-      if (canGoLeft)
-        Positioned(
-          key: const Key('readerTapEdgeLeft'),
-          left: safeArea.left + _kReaderTapEdgeInset,
-          top: lineTop,
-          width: _kReaderTapEdgeThickness,
-          height: lineHeight,
-          child: _ReaderTapEdgeLine(color: color),
-        ),
-      if (canGoRight)
-        Positioned(
-          key: const Key('readerTapEdgeRight'),
-          right: safeArea.right + _kReaderTapEdgeInset,
-          top: lineTop,
-          width: _kReaderTapEdgeThickness,
-          height: lineHeight,
-          child: _ReaderTapEdgeLine(color: color),
-        ),
-    ];
+    return Stack(
+      children: [
+        if (showLeft)
+          Positioned(
+            key: const Key('readerTapEdgeLeft'),
+            left: safeArea.left + _kReaderTapEdgeInset,
+            top: lineTop,
+            width: _kReaderTapEdgeThickness,
+            height: lineHeight,
+            child: _ReaderTapEdgeLine(color: color),
+          ),
+        if (showRight)
+          Positioned(
+            key: const Key('readerTapEdgeRight'),
+            right: safeArea.right + _kReaderTapEdgeInset,
+            top: lineTop,
+            width: _kReaderTapEdgeThickness,
+            height: lineHeight,
+            child: _ReaderTapEdgeLine(color: color),
+          ),
+      ],
+    );
   }
 }
 

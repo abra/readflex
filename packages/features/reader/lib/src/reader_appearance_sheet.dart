@@ -121,41 +121,6 @@ class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
     super.dispose();
   }
 
-  Widget _step({
-    required bool active,
-    required Animation<Offset> position,
-    required Widget child,
-    bool maintainSize = false,
-  }) {
-    final content = TickerMode(
-      enabled: active,
-      child: ExcludeSemantics(
-        excluding: !active,
-        child: ExcludeFocus(
-          excluding: !active,
-          child: IgnorePointer(
-            ignoring: !active,
-            child: SlideTransition(
-              position: position,
-              textDirection: _transitionDirection,
-              child: child,
-            ),
-          ),
-        ),
-      ),
-    );
-    final visible = active || _controller.isAnimating;
-    return maintainSize
-        ? Visibility(
-            visible: visible,
-            maintainState: true,
-            maintainAnimation: true,
-            maintainSize: true,
-            child: content,
-          )
-        : Offstage(offstage: !visible, child: content);
-  }
-
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: !_fontVisible,
@@ -166,9 +131,11 @@ class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
       child: Stack(
         children: [
           // Appearance alone sizes the flow; font samples cannot enlarge it.
-          _step(
+          AppSheetStep(
             active: !_fontVisible,
+            visible: !_fontVisible || _controller.isAnimating,
             position: _appearanceOffset,
+            textDirection: _transitionDirection,
             maintainSize: true,
             child: _AppearanceSettings(
               showPageTurnControls: widget.showPageTurnControls,
@@ -180,9 +147,11 @@ class _ReaderAppearanceSheetState extends State<_ReaderAppearanceSheet>
           // PDF pages have no font; skip building the font samples.
           if (!widget.pdfControls)
             Positioned.fill(
-              child: _step(
+              child: AppSheetStep(
                 active: _fontVisible,
+                visible: _fontVisible || _controller.isAnimating,
                 position: _fontOffset,
+                textDirection: _transitionDirection,
                 child: ReaderFontSheet(
                   onBack: () => _showFont(false),
                   onClose: () => Navigator.of(context).pop(),

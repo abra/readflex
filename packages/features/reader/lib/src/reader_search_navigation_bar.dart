@@ -128,18 +128,18 @@ class ReaderSearchNavigationBar extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),
-                  _action(
-                    label: l10n.readerPreviousMatch,
+                  AppPlainIconButton(
+                    tooltip: l10n.readerPreviousMatch,
                     icon: AppIcons.chevronUp,
                     onPressed: state.canGoPrevious ? onPrevious : null,
                   ),
-                  _action(
-                    label: l10n.readerNextMatch,
+                  AppPlainIconButton(
+                    tooltip: l10n.readerNextMatch,
                     icon: AppIcons.chevronDown,
                     onPressed: state.canGoNext ? onNext : null,
                   ),
-                  _action(
-                    label: l10n.readerEndSearch,
+                  AppPlainIconButton(
+                    tooltip: l10n.readerEndSearch,
                     icon: AppIcons.close,
                     onPressed: onEndSearch,
                   ),
@@ -191,10 +191,4 @@ class ReaderSearchNavigationBar extends StatelessWidget {
       ),
     );
   }
-
-  Widget _action({
-    required String label,
-    required IconData icon,
-    required VoidCallback? onPressed,
-  }) => AppPlainIconButton(tooltip: label, onPressed: onPressed, icon: icon);
 }

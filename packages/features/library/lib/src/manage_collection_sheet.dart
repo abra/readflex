@@ -399,132 +399,137 @@ class _ManageCollectionSheetState extends State<ManageCollectionSheet> {
         if (!didPop) _goBack();
       },
       child: BlocBuilder<ManageCollectionCubit, ManageCollectionState>(
-        builder: (context, state) => AppSheetDismissGuard(
-          // Edits, a pending confirmation or a write in flight: a stray tap
-          // on the scrim must ask (or wait), never discard.
-          enabled:
-              state.isBusy ||
-              _hasChanges ||
-              _step != _ManageCollectionStep.manage,
-          onDismissAttempt: () => _requestClose(closeFlow: true),
-          child: _buildSheet(context, state),
-        ),
-      ),
-    );
-  }
+        builder: (context, state) {
+          final visibleSources = _displayedSources;
+          final canRename = widget.scope.canRename;
+          final name = canRename ? _nameController.text.trim() : _currentName;
+          final canSave =
+              !state.isBusy &&
+              (!canRename || name.isNotEmpty) &&
+              ((canRename && name != _currentName) ||
+                  _removedSourceIds.isNotEmpty);
 
-  Widget _buildSheet(BuildContext context, ManageCollectionState state) {
-    final visibleSources = _displayedSources;
-    final canRename = widget.scope.canRename;
-    final name = canRename ? _nameController.text.trim() : _currentName;
-    final canSave =
-        !state.isBusy &&
-        (!canRename || name.isNotEmpty) &&
-        ((canRename && name != _currentName) || _removedSourceIds.isNotEmpty);
+          final sizeDuration = _animateNextSizeChange
+              ? context.motion(AppMotion.medium)
+              : Duration.zero;
+          if (_animateNextSizeChange) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _animateNextSizeChange = false;
+            });
+          }
 
-    final sizeDuration = _animateNextSizeChange
-        ? context.motion(AppMotion.medium)
-        : Duration.zero;
-    if (_animateNextSizeChange) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _animateNextSizeChange = false;
-      });
-    }
+          final child = switch (_step) {
+            _ManageCollectionStep.manage => _ManageCollectionStepView(
+              key: const ValueKey('manageCollectionContent'),
+              title: context.l10n.libraryManageCollectionTitle,
+              hasPreviousStep: widget.onFinished != null,
+              onBack: state.isBusy || widget.onFinished == null
+                  ? null
+                  : _goBack,
+              onClose: state.isBusy
+                  ? null
+                  : () => _requestClose(closeFlow: true),
+              child: _ManageCollectionContent(
+                state: state,
+                nameController: _nameController,
+                visibleSources: visibleSources,
+                removedSourceIds: _removedSourceIds,
+                bookCount: _bookCount,
+                articleCount: _articleCount,
+                canRename: widget.scope.canRename,
+                canDelete: widget.scope.canDelete,
+                canSave: canSave,
+                onSave: _saveChanges,
+                onToggleSource: _toggleSourceRemoval,
+                onDeletePressed: _showDeleteConfirmation,
+              ),
+            ),
+            _ManageCollectionStep.confirmDelete => _ManageCollectionStepView(
+              key: const ValueKey('deleteCollectionContent'),
+              title: context.l10n.libraryDeleteCollectionTitle,
+              hasPreviousStep: true,
+              onBack: state.isBusy ? null : _goBack,
+              onClose: state.isBusy
+                  ? null
+                  : () => _requestClose(closeFlow: true),
+              child: _DeleteCollectionConfirmationContent(
+                state: state,
+                collectionName: _currentName,
+                onKeep: _returnToEditing,
+                onDelete: _deleteCollection,
+              ),
+            ),
+            _ManageCollectionStep.confirmDiscard => _ManageCollectionStepView(
+              key: const ValueKey('discardCollectionContent'),
+              title: context.l10n.libraryDiscardChangesTitle,
+              hasPreviousStep: true,
+              onBack: _goBack,
+              onClose: () => _requestClose(closeFlow: true),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: _sheetBodyPadding,
+                      child: Text(
+                        context.l10n.libraryDiscardChangesBody,
+                        style: context.text.bodyMedium,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: _sheetFooterPadding,
+                    child: AppSheetActions(
+                      primaryLabel: context.l10n.commonKeepEditing,
+                      onPrimary: _returnToEditing,
+                      secondaryLabel: context.l10n.commonDiscardChanges,
+                      onSecondary: _discard,
+                      destructiveSecondary: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          };
 
-    final child = switch (_step) {
-      _ManageCollectionStep.manage => _ManageCollectionStepView(
-        key: const ValueKey('manageCollectionContent'),
-        title: context.l10n.libraryManageCollectionTitle,
-        hasPreviousStep: widget.onFinished != null,
-        onBack: state.isBusy || widget.onFinished == null ? null : _goBack,
-        onClose: state.isBusy ? null : () => _requestClose(closeFlow: true),
-        child: _ManageCollectionContent(
-          state: state,
-          nameController: _nameController,
-          visibleSources: visibleSources,
-          removedSourceIds: _removedSourceIds,
-          bookCount: _bookCount,
-          articleCount: _articleCount,
-          canRename: widget.scope.canRename,
-          canDelete: widget.scope.canDelete,
-          canSave: canSave,
-          onSave: _saveChanges,
-          onToggleSource: _toggleSourceRemoval,
-          onDeletePressed: _showDeleteConfirmation,
-        ),
-      ),
-      _ManageCollectionStep.confirmDelete => _ManageCollectionStepView(
-        key: const ValueKey('deleteCollectionContent'),
-        title: context.l10n.libraryDeleteCollectionTitle,
-        hasPreviousStep: true,
-        onBack: state.isBusy ? null : _goBack,
-        onClose: state.isBusy ? null : () => _requestClose(closeFlow: true),
-        child: _DeleteCollectionConfirmationContent(
-          state: state,
-          collectionName: _currentName,
-          onKeep: _returnToEditing,
-          onDelete: _deleteCollection,
-        ),
-      ),
-      _ManageCollectionStep.confirmDiscard => _ManageCollectionStepView(
-        key: const ValueKey('discardCollectionContent'),
-        title: context.l10n.libraryDiscardChangesTitle,
-        hasPreviousStep: true,
-        onBack: _goBack,
-        onClose: () => _requestClose(closeFlow: true),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: _sheetBodyPadding,
-                child: Text(
-                  context.l10n.libraryDiscardChangesBody,
-                  style: context.text.bodyMedium,
+          final stepHeight = _stepHeight(context, _step, visibleSources.length);
+          return AppSheetDismissGuard(
+            // Edits, a pending confirmation or a write in flight: a stray tap
+            // on the scrim must ask (or wait), never discard.
+            enabled:
+                state.isBusy ||
+                _hasChanges ||
+                _step != _ManageCollectionStep.manage,
+            onDismissAttempt: () => _requestClose(closeFlow: true),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(end: stepHeight),
+              duration: sizeDuration,
+              curve: Curves.easeInOutCubic,
+              builder: (context, animatedHeight, child) {
+                return SizedBox(
+                  key: const ValueKey('manageCollectionStepFrame'),
+                  height: animatedHeight,
+                  child: ClipRect(
+                    child: OverflowBox(
+                      alignment: Alignment.bottomCenter,
+                      minHeight: stepHeight,
+                      maxHeight: stepHeight,
+                      child: SizedBox(height: stepHeight, child: child),
+                    ),
+                  ),
+                );
+              },
+              child: SizedBox(
+                height: stepHeight,
+                child: _ManageCollectionStepSwitcher(
+                  step: _step,
+                  height: stepHeight,
+                  child: child,
                 ),
               ),
             ),
-            Padding(
-              padding: _sheetFooterPadding,
-              child: AppSheetActions(
-                primaryLabel: context.l10n.commonKeepEditing,
-                onPrimary: _returnToEditing,
-                secondaryLabel: context.l10n.commonDiscardChanges,
-                onSecondary: _discard,
-                destructiveSecondary: true,
-              ),
-            ),
-          ],
-        ),
-      ),
-    };
-
-    final stepHeight = _stepHeight(context, _step, visibleSources.length);
-    return TweenAnimationBuilder<double>(
-      tween: Tween<double>(end: stepHeight),
-      duration: sizeDuration,
-      curve: Curves.easeInOutCubic,
-      builder: (context, animatedHeight, child) {
-        return SizedBox(
-          key: const ValueKey('manageCollectionStepFrame'),
-          height: animatedHeight,
-          child: ClipRect(
-            child: OverflowBox(
-              alignment: Alignment.bottomCenter,
-              minHeight: stepHeight,
-              maxHeight: stepHeight,
-              child: SizedBox(height: stepHeight, child: child),
-            ),
-          ),
-        );
-      },
-      child: SizedBox(
-        height: stepHeight,
-        child: _ManageCollectionStepSwitcher(
-          step: _step,
-          height: stepHeight,
-          child: child,
-        ),
+          );
+        },
       ),
     );
   }

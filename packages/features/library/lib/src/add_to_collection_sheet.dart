@@ -121,25 +121,6 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
     }
   }
 
-  Widget _step({
-    required bool active,
-    required Animation<Offset> offset,
-    required Widget child,
-  }) => ExcludeSemantics(
-    excluding: !active,
-    child: ExcludeFocus(
-      excluding: !active,
-      child: IgnorePointer(
-        ignoring: !active,
-        child: SlideTransition(
-          position: offset,
-          textDirection: Directionality.of(context),
-          child: child,
-        ),
-      ),
-    ),
-  );
-
   @override
   void dispose() {
     _curve.dispose();
@@ -199,85 +180,80 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
             children: [
               // Keep the complete destination step's size, including a wrapping
               // header. The form fills it without changing the sheet's top edge.
-              Visibility(
+              AppSheetStep(
+                active: !_creating,
                 visible: !_creating || _transition.isAnimating,
-                maintainState: true,
-                maintainAnimation: true,
+                position: _listOffset,
                 maintainSize: true,
-                child: _step(
-                  active: !_creating,
-                  offset: _listOffset,
-                  // Scrim and drag-down wait for the write like Close and
-                  // system Back do; there is no decision to show.
-                  child: AppSheetDismissGuard(
-                    enabled: state.isBusy,
-                    onDismissAttempt: _ignoreDismissAttempt,
-                    child: ActionBottomSheetLayout(
-                      title: context.l10n.libraryAddToCollectionTitle,
-                      closeLabel: context.l10n.commonClose,
-                      onClose: state.isBusy ? null : _requestClose,
-                      constrainBody: true,
-                      bodyPadding: const EdgeInsets.only(
-                        bottom: AppSpacing.lg,
+                // Scrim and drag-down wait for the write like Close and
+                // system Back do; there is no decision to show.
+                child: AppSheetDismissGuard(
+                  enabled: state.isBusy,
+                  onDismissAttempt: _ignoreDismissAttempt,
+                  child: ActionBottomSheetLayout(
+                    title: context.l10n.libraryAddToCollectionTitle,
+                    closeLabel: context.l10n.commonClose,
+                    onClose: state.isBusy ? null : _requestClose,
+                    constrainBody: true,
+                    bodyPadding: const EdgeInsets.only(
+                      bottom: AppSpacing.lg,
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.sizeOf(context).height * 0.7,
                       ),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
-                        ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final content = switch (state.status) {
-                              AddToCollectionStatus.initial ||
-                              AddToCollectionStatus.loading => const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSpacing.xl,
-                                ),
-                                child: CenteredCircularProgressIndicator(),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final content = switch (state.status) {
+                            AddToCollectionStatus.initial ||
+                            AddToCollectionStatus.loading => const Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: AppSpacing.xl,
                               ),
-                              AddToCollectionStatus.failure
-                                  when state.errorCode ==
-                                      AddToCollectionErrorCode
-                                          .loadCollectionsFailed =>
-                                SingleChildScrollView(
-                                  child: ErrorState(
-                                    message: context
-                                        .l10n
-                                        .libraryLoadCollectionsFailed,
-                                    retryLabel: context.l10n.commonRetry,
-                                    onRetry: context
-                                        .read<AddToCollectionCubit>()
-                                        .load,
-                                  ),
-                                ),
-                              _ => ConstrainedBox(
-                                constraints: BoxConstraints(
-                                  minHeight: math.min(
-                                    constraints.maxHeight,
-                                    2 * 48 +
-                                        2 * AppSpacing.lg +
-                                        2 * AppSpacing.md +
-                                        MediaQuery.textScalerOf(
-                                          context,
-                                        ).scale(32),
-                                  ),
-                                ),
-                                child: _CollectionContent(
-                                  state: state,
-                                  sourceCount: widget.sourceIds.length,
-                                  onCollectionPressed: _addToCollection,
-                                  onFavouritesPressed: state.isBusy
-                                      ? null
-                                      : _addToFavourites,
-                                  onCreatePressed: state.isBusy
-                                      ? null
-                                      : () => _showCreation(true),
+                              child: CenteredCircularProgressIndicator(),
+                            ),
+                            AddToCollectionStatus.failure
+                                when state.errorCode ==
+                                    AddToCollectionErrorCode
+                                        .loadCollectionsFailed =>
+                              SingleChildScrollView(
+                                child: ErrorState(
+                                  message:
+                                      context.l10n.libraryLoadCollectionsFailed,
+                                  retryLabel: context.l10n.commonRetry,
+                                  onRetry: context
+                                      .read<AddToCollectionCubit>()
+                                      .load,
                                 ),
                               ),
-                            };
+                            _ => ConstrainedBox(
+                              constraints: BoxConstraints(
+                                minHeight: math.min(
+                                  constraints.maxHeight,
+                                  2 * 48 +
+                                      2 * AppSpacing.lg +
+                                      2 * AppSpacing.md +
+                                      MediaQuery.textScalerOf(
+                                        context,
+                                      ).scale(32),
+                                ),
+                              ),
+                              child: _CollectionContent(
+                                state: state,
+                                sourceCount: widget.sourceIds.length,
+                                onCollectionPressed: _addToCollection,
+                                onFavouritesPressed: state.isBusy
+                                    ? null
+                                    : _addToFavourites,
+                                onCreatePressed: state.isBusy
+                                    ? null
+                                    : () => _showCreation(true),
+                              ),
+                            ),
+                          };
 
-                            return content;
-                          },
-                        ),
+                          return content;
+                        },
                       ),
                     ),
                   ),
@@ -285,18 +261,23 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
               ),
               if (_creating || _transition.isAnimating)
                 Positioned.fill(
-                  child: _step(
+                  child: AppSheetStep(
                     active: _creating,
-                    offset: _formOffset,
+                    visible: true,
+                    position: _formOffset,
                     child: AppSheetDismissGuard(
                       enabled: _creating && _hasDraft,
                       onDismissAttempt: _requestClose,
                       child: AnimatedSwitcher(
                         duration: context.motion(AppMotion.short),
                         // The default switcher layout centres the shorter
-                        // form inside the destination step's frame; the step
-                        // must fill it so its command sits on the footer line.
-                        layoutBuilder: _fillStepLayout,
+                        // form inside the destination step's frame; every
+                        // step fills it so its command sits on the footer line.
+                        layoutBuilder: (currentChild, previousChildren) =>
+                            Stack(
+                              fit: StackFit.expand,
+                              children: [...previousChildren, ?currentChild],
+                            ),
                         child: _confirmingDiscard
                             ? _DiscardDraftStep(
                                 key: const ValueKey(
@@ -606,14 +587,6 @@ class _DestinationDivider extends StatelessWidget {
 
 // Guarded only while a write is in flight: the attempt is simply ignored.
 void _ignoreDismissAttempt() {}
-
-// AnimatedSwitcher layout that stretches every step to the switcher's bounds
-// instead of centring it (see AnimatedSwitcher.defaultLayoutBuilder).
-Widget _fillStepLayout(Widget? currentChild, List<Widget> previousChildren) =>
-    Stack(
-      fit: StackFit.expand,
-      children: [...previousChildren, ?currentChild],
-    );
 
 String _addToCollectionErrorMessage(
   ReadflexLocalizations l10n,

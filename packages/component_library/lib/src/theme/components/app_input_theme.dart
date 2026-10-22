@@ -8,7 +8,7 @@ import '../tokens/app_spacing.dart';
 class AppInputThemes {
   AppInputThemes._();
 
-  static InputDecorationTheme theme(
+  static InputDecorationThemeData theme(
     AppColorPalette palette,
     TextTheme textTheme,
     ColorScheme colors,
@@ -17,7 +17,7 @@ class AppInputThemes {
     // control family.
     final inputRadius = BorderRadius.circular(AppRadius.md);
 
-    return InputDecorationTheme(
+    return InputDecorationThemeData(
       filled: true,
       fillColor: palette.secondary,
       hintStyle: textTheme.bodyMedium!.copyWith(

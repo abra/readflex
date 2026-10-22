@@ -6,14 +6,13 @@ import 'package:connectivity_service/connectivity_service.dart'
 import 'package:library_feature/library_feature.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:dictionary/dictionary.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:onboarding/onboarding.dart';
 import 'package:reader/reader.dart';
-import 'package:readflex/app/app_system_ui_mode.dart';
+import 'package:readflex/app/reader_system_navigation_bar_mode.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/reader_link_opener.dart';
 import 'package:translate/translate.dart';
@@ -142,7 +141,7 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
       transitionDuration: Duration.zero,
       reverseTransitionDuration: Duration.zero,
       transitionsBuilder: (_, _, _, child) => child,
-      child: _withReaderSystemNavigationBarMode(
+      child: ReaderSystemNavigationBarMode(
         child: ReaderScreen(
           sourceId: sourceId,
           initialSource: matchingSource,
@@ -281,15 +280,6 @@ Stream<bool> _isOfflineStream(DependenciesContainer deps) {
   return deps.connectivityService.statusStream
       .map((status) => status == ConnectivityStatus.offline)
       .distinct();
-}
-
-/// Reader uses the full screen for content. On Android devices configured with
-/// three-button navigation, hiding only the bottom system overlay keeps those
-/// buttons from covering the reading area while leaving the app status bar
-/// policy unchanged.
-Widget _withReaderSystemNavigationBarMode({required Widget child}) {
-  if (defaultTargetPlatform != TargetPlatform.android) return child;
-  return AppBottomSystemOverlayVisibility(visible: false, child: child);
 }
 
 /// Opens an external HTTP(S) URL without letting launcher failures affect app

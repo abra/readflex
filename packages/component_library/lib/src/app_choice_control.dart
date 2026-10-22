@@ -86,12 +86,6 @@ class AppChoiceControl<T> extends StatelessWidget {
         painter.dispose();
       }
 
-      Widget label(AppChoiceOption<T> option) => Text(
-        option.label,
-        key: option.labelKey,
-        style: option.labelStyle,
-      );
-
       if (widest * options.length <= constraints.maxWidth) {
         // SegmentedButton reserves a separate tap-target strip by default.
         // The outer constraint supplies the full 48dp surface and hit target.
@@ -115,7 +109,7 @@ class AppChoiceControl<T> extends StatelessWidget {
                           child: Center(
                             widthFactor: 1,
                             heightFactor: 1,
-                            child: label(option),
+                            child: _AppChoiceLabel(option: option),
                           ),
                         ),
                   icon: option.hasIcon
@@ -192,7 +186,7 @@ class AppChoiceControl<T> extends StatelessWidget {
                           ),
                           const SizedBox(width: AppSpacing.sm),
                         ],
-                        Flexible(child: label(option)),
+                        Flexible(child: _AppChoiceLabel(option: option)),
                       ],
                     ),
                   ),
@@ -207,6 +201,17 @@ class AppChoiceControl<T> extends StatelessWidget {
 
 extension on AppChoiceOption<Object?> {
   bool get hasIcon => icon != null || glyph != null;
+}
+
+/// The option's label in its own style, e.g. a font preview's typeface.
+class _AppChoiceLabel extends StatelessWidget {
+  const _AppChoiceLabel({required this.option});
+
+  final AppChoiceOption<Object?> option;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(option.label, key: option.labelKey, style: option.labelStyle);
 }
 
 /// The option's font icon or glyph, centered in the icon box.

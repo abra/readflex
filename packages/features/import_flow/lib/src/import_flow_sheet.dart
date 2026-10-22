@@ -1279,14 +1279,14 @@ String _articleUploadingTitle(
   ImportFlowArticleStage.saving => context.l10n.importSavingArticle,
 };
 
+void _ignoreDismissAttempt() {}
+
 /// Shared vertical layout for upload/progress states, under the flow's
 /// header so Close stays where the menu put it.
 ///
 /// [reserveActionSpace] keeps the sheet height stable before a retry/done action
 /// appears. [closable] is false while storage work is in flight; the step
 /// then swallows scrim and drag dismissal as well.
-void _ignoreDismissAttempt() {}
-
 class _StatusLayout extends StatelessWidget {
   const _StatusLayout({
     required this.content,
@@ -1302,16 +1302,6 @@ class _StatusLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final layout = _buildLayout(context);
-    if (closable) return layout;
-    return AppSheetDismissGuard(
-      enabled: true,
-      onDismissAttempt: _ignoreDismissAttempt,
-      child: layout,
-    );
-  }
-
-  Widget _buildLayout(BuildContext context) {
     final l10n = context.l10n;
     final onClose = closable ? () => Navigator.of(context).pop() : null;
     final actionSlot =
@@ -1319,7 +1309,7 @@ class _StatusLayout extends StatelessWidget {
         (reserveActionSpace
             ? const SizedBox(height: _kStatusActionHeight)
             : null);
-    return LayoutBuilder(
+    final layout = LayoutBuilder(
       builder: (context, constraints) {
         final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
         // Keyboard or large text can leave less than the header and action
@@ -1372,6 +1362,12 @@ class _StatusLayout extends StatelessWidget {
           ),
         );
       },
+    );
+    if (closable) return layout;
+    return AppSheetDismissGuard(
+      enabled: true,
+      onDismissAttempt: _ignoreDismissAttempt,
+      child: layout,
     );
   }
 }

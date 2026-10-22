@@ -11,6 +11,7 @@ export 'src/app_settings_section.dart';
 export 'src/app_sheet_action_row.dart';
 export 'src/app_sheet_section.dart';
 export 'src/app_sheet_dismiss_guard.dart';
+export 'src/app_sheet_step.dart';
 export 'src/app_source_quote.dart';
 export 'src/app_lexical_metadata_row.dart';
 export 'src/app_color_swatch_button.dart';

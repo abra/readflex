@@ -195,6 +195,7 @@ Reusable presentation-only widgets used across features:
 | `AppButtonLabel`                    | Bounded label for localized button text        |
 | `AppBusyButtonLabel`                | Button child that swaps the label for a live-region spinner without changing the button size |
 | `AppSheetDismissGuard`              | Per-step scrim/drag guard inside `showAppBottomSheet` flows |
+| `AppSheetStep`                      | One step of a sheet flow that slides in place (Display/Language, Appearance/Font, Add to collection/New collection): an inactive step stops tickers and drops semantics, focus and input; hidden steps stay offstage or keep their size (`maintainSize`) |
 | `AppSheetActions`                   | Primary/secondary sheet commands with adaptive stacking and stable busy geometry; `destructiveSecondary` for confirmations; `stacks`/`stackedExtent` let a fixed-height step reserve the second row ahead of layout |
 | `AppSourceQuote`                    | Quoted source phrase with a leading rule that follows the quote's own direction |
 | `AppLexicalMetadataRow`             | Muted reading / IPA pronunciation / part-of-speech line under a headword; starts on the headword's edge (`textDirection`), IPA stays LTR in the phonetic font, wraps when narrow |

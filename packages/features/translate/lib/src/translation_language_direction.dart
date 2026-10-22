@@ -199,24 +199,7 @@ class _LanguageMenu extends StatelessWidget {
         widest + 2 * AppSpacing.sm + AppIconSize.sm + AppSpacing.xs <=
         cellWidth;
 
-    Widget item(String code, String name) => MenuItemButton(
-      onPressed: enabled ? () => onChanged(code) : null,
-      style: MenuItemButton.styleFrom(
-        minimumSize: const Size(0, AppSizes.buttonHeight),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.md,
-        ),
-        textStyle: context.text.bodyMedium,
-      ),
-      trailingIcon: SizedBox.square(
-        dimension: AppIconSize.sm,
-        child: code == selectedCode
-            ? const Icon(AppIcons.check, size: AppIconSize.sm)
-            : null,
-      ),
-      child: Semantics(selected: code == selectedCode, child: Text(name)),
-    );
+    final onSelected = enabled ? onChanged : null;
     return MenuAnchor(
       controller: controller,
       style: MenuStyle(
@@ -226,7 +209,12 @@ class _LanguageMenu extends StatelessWidget {
       ),
       menuChildren: [
         if (includeAuto) ...[
-          item(autoSourceLanguageCode, context.l10n.translationAutoSource),
+          _LanguageMenuItem(
+            code: autoSourceLanguageCode,
+            name: context.l10n.translationAutoSource,
+            selected: selectedCode == autoSourceLanguageCode,
+            onSelected: onSelected,
+          ),
           const Divider(height: 1),
         ],
         // A fixed small option set uses natural row heights. MenuAnchor owns
@@ -235,17 +223,35 @@ class _LanguageMenu extends StatelessWidget {
           for (var i = 0; i < options.length; i += 2)
             Row(
               children: [
-                Expanded(child: item(options[i].code, options[i].name)),
+                Expanded(
+                  child: _LanguageMenuItem(
+                    code: options[i].code,
+                    name: options[i].name,
+                    selected: selectedCode == options[i].code,
+                    onSelected: onSelected,
+                  ),
+                ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: i + 1 < options.length
-                      ? item(options[i + 1].code, options[i + 1].name)
+                      ? _LanguageMenuItem(
+                          code: options[i + 1].code,
+                          name: options[i + 1].name,
+                          selected: selectedCode == options[i + 1].code,
+                          onSelected: onSelected,
+                        )
                       : const SizedBox.shrink(),
                 ),
               ],
             )
         else
-          for (final option in options) item(option.code, option.name),
+          for (final option in options)
+            _LanguageMenuItem(
+              code: option.code,
+              name: option.name,
+              selected: selectedCode == option.code,
+              onSelected: onSelected,
+            ),
       ],
       builder: (context, menu, child) {
         void toggle() => menu.isOpen ? menu.close() : menu.open();
@@ -285,6 +291,44 @@ class _LanguageMenu extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// One language in the picker menu; disabled without [onSelected].
+class _LanguageMenuItem extends StatelessWidget {
+  const _LanguageMenuItem({
+    required this.code,
+    required this.name,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final String code;
+  final String name;
+  final bool selected;
+  final ValueChanged<String>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final onSelected = this.onSelected;
+    return MenuItemButton(
+      onPressed: onSelected == null ? null : () => onSelected(code),
+      style: MenuItemButton.styleFrom(
+        minimumSize: const Size(0, AppSizes.buttonHeight),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.md,
+        ),
+        textStyle: context.text.bodyMedium,
+      ),
+      trailingIcon: SizedBox.square(
+        dimension: AppIconSize.sm,
+        child: selected
+            ? const Icon(AppIcons.check, size: AppIconSize.sm)
+            : null,
+      ),
+      child: Semantics(selected: selected, child: Text(name)),
     );
   }
 }

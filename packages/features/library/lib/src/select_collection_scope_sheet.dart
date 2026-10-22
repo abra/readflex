@@ -167,7 +167,15 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
         // Preserve the query, focus node and scroll offset while editing.
         Offstage(
           offstage: managedScope != null,
-          child: _buildSelector(context),
+          child: _CollectionScopeSelector(
+            state: widget.state,
+            query: _query,
+            resultsHeight: _resultsHeight,
+            searchController: _searchController,
+            onSearchChanged: _onSearchChanged,
+            onManage: _manage,
+            onRetry: widget.onRetry,
+          ),
         ),
         if (managedScope != null)
           widget.manageBuilder!(
@@ -179,9 +187,31 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
       ],
     );
   }
+}
 
-  Widget _buildSelector(BuildContext context) {
-    final hasScopes = widget.state.collectionScopes.isNotEmpty;
+/// The searchable scope list; kept offstage while a scope is managed.
+class _CollectionScopeSelector extends StatelessWidget {
+  const _CollectionScopeSelector({
+    required this.state,
+    required this.query,
+    required this.resultsHeight,
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.onManage,
+    this.onRetry,
+  });
+
+  final LibraryState state;
+  final String query;
+  final double resultsHeight;
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
+  final ValueChanged<LibraryCollectionScope> onManage;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasScopes = state.collectionScopes.isNotEmpty;
     final l10n = context.l10n;
 
     return ActionBottomSheetLayout(
@@ -190,16 +220,16 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
       onClose: () => Navigator.of(context).pop(),
       constrainBody: true,
       bodyPadding: EdgeInsets.zero,
-      child: hasScopes || widget.state.collectionsLoadFailed
+      child: hasScopes || state.collectionsLoadFailed
           ? Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (widget.state.collectionsLoadFailed)
+                if (state.collectionsLoadFailed)
                   ErrorState(
                     message: l10n.libraryLoadCollectionsFailed,
                     retryLabel: l10n.commonRetry,
-                    onRetry: () => widget.onRetry?.call(),
+                    onRetry: () => onRetry?.call(),
                   ),
                 if (hasScopes) ...[
                   Padding(
@@ -209,18 +239,18 @@ class _CollectionScopeSheetState extends State<_CollectionScopeSheet> {
                     child: SearchField(
                       hintText: l10n.librarySearchCollectionsHint,
                       clearButtonSemanticsLabel: l10n.commonClearSearch,
-                      controller: _searchController,
-                      onChanged: _onSearchChanged,
+                      controller: searchController,
+                      onChanged: onSearchChanged,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   Flexible(
                     child: SizedBox(
-                      height: _resultsHeight,
+                      height: resultsHeight,
                       child: _CollectionScopeSections(
-                        state: widget.state,
-                        query: _query,
-                        onManage: _manage,
+                        state: state,
+                        query: query,
+                        onManage: onManage,
                       ),
                     ),
                   ),

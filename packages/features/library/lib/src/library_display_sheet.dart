@@ -89,41 +89,6 @@ class _LibraryDisplaySheetState extends State<_LibraryDisplaySheet>
     super.dispose();
   }
 
-  Widget _step({
-    required bool active,
-    required Animation<Offset> position,
-    required Widget child,
-    bool maintainSize = false,
-  }) {
-    final content = TickerMode(
-      enabled: active,
-      child: ExcludeSemantics(
-        excluding: !active,
-        child: ExcludeFocus(
-          excluding: !active,
-          child: IgnorePointer(
-            ignoring: !active,
-            child: SlideTransition(
-              position: position,
-              textDirection: _transitionDirection,
-              child: child,
-            ),
-          ),
-        ),
-      ),
-    );
-    final visible = active || _controller.isAnimating;
-    return maintainSize
-        ? Visibility(
-            visible: visible,
-            maintainState: true,
-            maintainAnimation: true,
-            maintainSize: true,
-            child: content,
-          )
-        : Offstage(offstage: !visible, child: content);
-  }
-
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: !_languageVisible,
@@ -135,18 +100,22 @@ class _LibraryDisplaySheetState extends State<_LibraryDisplaySheet>
         children: [
           // Only Display determines the height, even while hidden. Language
           // fills that space and scrolls without enlarging the parent sheet.
-          _step(
+          AppSheetStep(
             active: !_languageVisible,
+            visible: !_languageVisible || _controller.isAnimating,
             position: _displayOffset,
+            textDirection: _transitionDirection,
             maintainSize: true,
             child: _DisplaySettings(
               onLanguage: () => _showLanguage(true),
             ),
           ),
           Positioned.fill(
-            child: _step(
+            child: AppSheetStep(
               active: _languageVisible,
+              visible: _languageVisible || _controller.isAnimating,
               position: _languageOffset,
+              textDirection: _transitionDirection,
               child: BlocBuilder<LibraryLocaleCubit, Locale>(
                 builder: (context, locale) => LibraryLanguageSheet(
                   selectedLocale: locale,

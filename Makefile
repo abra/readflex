@@ -33,7 +33,7 @@ PACKAGES = \
 	packages/features/reader \
 	packages/features/onboarding
 
-ROOT_ANALYZE_PATHS = lib test integration_test test_driver benchmarks
+ROOT_ANALYZE_PATHS = lib test integration_test test_driver benchmarks scripts
 
 ## Install dependencies for root and all packages
 get:
@@ -51,13 +51,15 @@ format:
 format-check:
 	$(DART) format --output=none --set-exit-if-changed $(ROOT_ANALYZE_PATHS) packages
 
-## Analyze all Dart code
+## Analyze all Dart code, then reject widget-returning helpers in lib/
 analyze:
 	$(FLUTTER) analyze $(ROOT_ANALYZE_PATHS)
 	@set -e; for pkg in $(PACKAGES); do \
 		echo "▶ analyze $$pkg"; \
 		(cd $$pkg && $(FLUTTER) analyze); \
 	done
+	@echo "▶ widget helpers"
+	$(DART) run scripts/check_widget_helpers.dart . $(filter packages/%,$(PACKAGES))
 
 ## Run all tests across packages
 test:
