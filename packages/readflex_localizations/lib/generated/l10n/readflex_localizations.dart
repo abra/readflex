@@ -2653,6 +2653,36 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Use dark appearance'**
   String get libraryThemeDarkDescription;
+
+  /// Developer sheet: title of the reader engine choice
+  ///
+  /// In en, this message translates to:
+  /// **'Reader engine'**
+  String get developerReaderEngineTitle;
+
+  /// Developer sheet: when the engine choice applies
+  ///
+  /// In en, this message translates to:
+  /// **'Which engine opens each format. Applies to the next book opened or imported.'**
+  String get developerReaderEngineHint;
+
+  /// Developer sheet: the WebView (foliate-js) engine option
+  ///
+  /// In en, this message translates to:
+  /// **'WebView'**
+  String get developerReaderEngineWebView;
+
+  /// Developer sheet: the native (vellum) engine option
+  ///
+  /// In en, this message translates to:
+  /// **'Native'**
+  String get developerReaderEngineNative;
+
+  /// Developer sheet: button that drops the override and follows the build's READFLEX_NATIVE_FORMATS
+  ///
+  /// In en, this message translates to:
+  /// **'Use build settings'**
+  String get developerReaderEngineReset;
 }
 
 class _ReadflexLocalizationsDelegate

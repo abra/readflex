@@ -1483,4 +1483,20 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
 
   @override
   String get libraryThemeDarkDescription => 'Utiliser l\'apparence sombre';
+
+  @override
+  String get developerReaderEngineTitle => 'Moteur du lecteur';
+
+  @override
+  String get developerReaderEngineHint =>
+      'Quel moteur ouvre chaque format. S\'applique au prochain livre ouvert ou importé.';
+
+  @override
+  String get developerReaderEngineWebView => 'WebView';
+
+  @override
+  String get developerReaderEngineNative => 'Natif';
+
+  @override
+  String get developerReaderEngineReset => 'Réglages de la compilation';
 }

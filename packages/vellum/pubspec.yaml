@@ -1,0 +1,23 @@
+name: vellum
+description: Vellum, the native reader engine for Flutter — containers, formats, CFI, document model, layout, pagination and the reader view.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  ffi: ^2.2.0
+  flutter:
+    sdk: flutter
+  image: ^4.3.0
+  meta: ^1.16.0
+  pdfium_dart: ^0.2.5
+  pdfrx: ^2.4.8
+  pdfrx_engine: ^0.4.7
+
+dev_dependencies:
+  archive: ^4.5.0
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0

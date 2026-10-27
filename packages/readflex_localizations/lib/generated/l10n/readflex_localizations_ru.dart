@@ -1494,4 +1494,20 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
 
   @override
   String get libraryThemeDarkDescription => 'Использовать темное оформление';
+
+  @override
+  String get developerReaderEngineTitle => 'Движок ридера';
+
+  @override
+  String get developerReaderEngineHint =>
+      'Какой движок открывает каждый формат. Действует для следующей открытой или импортированной книги.';
+
+  @override
+  String get developerReaderEngineWebView => 'WebView';
+
+  @override
+  String get developerReaderEngineNative => 'Нативный';
+
+  @override
+  String get developerReaderEngineReset => 'Как в сборке';
 }

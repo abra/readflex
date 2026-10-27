@@ -37,6 +37,8 @@ dependencies:
     path: ../../screen_control_service
   toast_service:
     path: ../../toast_service
+  vellum:
+    path: ../../vellum
 
 dev_dependencies:
   flutter_test:

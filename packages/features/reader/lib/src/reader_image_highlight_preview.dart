@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:component_library/component_library.dart';
@@ -49,17 +48,17 @@ class _ReaderImageHighlightPreviewState
   Widget build(BuildContext context) =>
       BlocSelector<
         ReaderPageThumbnailCubit,
-        Map<int, Uint8List?>,
-        ({bool loaded, Uint8List? bytes})
+        Map<int, ImageProvider?>,
+        ({bool loaded, ImageProvider? image})
       >(
         selector: (state) => (
           loaded: state.containsKey(widget.area.pageIndex),
-          bytes: state[widget.area.pageIndex],
+          image: state[widget.area.pageIndex],
         ),
         builder: (context, preview) => ColoredBox(
           color: context.colors.surfaceContainerLow,
-          child: preview.bytes != null
-              ? _CroppedThumbnail(bytes: preview.bytes!, area: widget.area)
+          child: preview.image != null
+              ? _CroppedThumbnail(image: preview.image!, area: widget.area)
               : Center(
                   child: preview.loaded
                       ? Semantics(
@@ -89,9 +88,11 @@ class _PreviewPlaceholder extends StatelessWidget {
 }
 
 class _CroppedThumbnail extends StatefulWidget {
-  const _CroppedThumbnail({required this.bytes, required this.area});
+  const _CroppedThumbnail({required this.image, required this.area});
 
-  final Uint8List bytes;
+  /// The page's shared preview; several areas on one page resolve the same
+  /// provider and share its image-cache entry.
+  final ImageProvider image;
   final HighlightImageArea area;
 
   @override
@@ -115,14 +116,11 @@ class _CroppedThumbnailState extends State<_CroppedThumbnail> {
   @override
   void didUpdateWidget(covariant _CroppedThumbnail oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.bytes, widget.bytes)) _resolve();
+    if (oldWidget.image != widget.image) _resolve();
   }
 
   void _resolve() {
-    // MemoryImage uses the page's shared byte identity as its ImageCache key.
-    final stream = MemoryImage(
-      widget.bytes,
-    ).resolve(createLocalImageConfiguration(context));
+    final stream = widget.image.resolve(createLocalImageConfiguration(context));
     if (stream.key == _stream?.key) return;
     _stream?.removeListener(_listener);
     _replaceImage(null);

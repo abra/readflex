@@ -143,6 +143,11 @@ class PreferencesService {
     });
   }
 
+  /// Sets the developer override of the native reader formats, or clears
+  /// it with null so the build's setting applies again.
+  Future<void> setNativeReaderFormats(List<String>? formats) =>
+      update((prefs) => prefs.copyWith(nativeReaderFormats: formats));
+
   /// Applies [transform] to [current] immediately, then queues save and stream
   /// emission in update order. Persistence failures are logged, not thrown;
   /// transform failures and updates after disposal still fail the future.

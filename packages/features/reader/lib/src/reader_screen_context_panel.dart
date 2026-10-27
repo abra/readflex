@@ -59,12 +59,12 @@ TextSelectionContext _withLiveReaderSelection(
 class _ContextPanelDriver extends StatelessWidget {
   const _ContextPanelDriver({
     required this.textActions,
-    required this.webViewKey,
+    required this.surface,
     required this.articleWebViewKey,
   });
 
   final List<TextAction> textActions;
-  final GlobalKey<BookReaderWebViewState> webViewKey;
+  final ReaderSurface surface;
   final GlobalKey<ArticleHtmlReaderWebViewState> articleWebViewKey;
 
   @override
@@ -125,23 +125,23 @@ class _ContextPanelDriver extends StatelessWidget {
       } else {
         imageSelectionCubit.releaseClearProtection();
       }
-      webViewKey.currentState?.setImageAreaSelectionPreviewRetained(retained);
+      surface.setImageAreaSelectionPreviewRetained(retained);
     }
 
     void dismissImageSelection() {
       setImageHighlightDraftRetained(false);
       imageSelectionCubit.deselect();
-      webViewKey.currentState?.clearImageAreaSelectionPreview(
+      surface.clearImageAreaSelectionPreview(
         allowNextTap: true,
       );
-      webViewKey.currentState?.clearImageAreaSelectionControlsBounds();
+      surface.clearImageAreaSelectionControlsBounds();
     }
 
     void showImageHighlightPreview(HighlightColor color) {
       final pageIndex = imageSel.pageIndex;
       final rect = imageSel.rect;
       if (pageIndex == null || rect == null) return;
-      webViewKey.currentState?.showImageAreaSelectionPreview(
+      surface.showImageAreaSelectionPreview(
         pageIndex: pageIndex,
         rect: rect,
         color: readerHighlightCssColor(color, readerTheme),
@@ -150,8 +150,8 @@ class _ContextPanelDriver extends StatelessWidget {
     }
 
     void clearImageHighlightPreview() {
-      webViewKey.currentState?.clearImageAreaSelectionPreview();
-      webViewKey.currentState?.clearImageAreaSelectionControlsBounds();
+      surface.clearImageAreaSelectionPreview();
+      surface.clearImageAreaSelectionControlsBounds();
     }
 
     if (!_selectionActionsVisible(sel.hasSelection)) {
@@ -175,7 +175,7 @@ class _ContextPanelDriver extends StatelessWidget {
             onPopupInteractionStarted: imageSelectionCubit.protectNextClear,
             onDraftRetentionChanged: setImageHighlightDraftRetained,
             onControlsBoundsChanged:
-                webViewKey.currentState?.setImageAreaSelectionControlsBounds,
+                surface.setImageAreaSelectionControlsBounds,
             onPreviewColorChanged: showImageHighlightPreview,
             onPreviewCleared: clearImageHighlightPreview,
             onActionCompleted: () {
@@ -280,7 +280,7 @@ class _ContextPanelDriver extends StatelessWidget {
     Future<TextSelectionContext> resolveCurrentSelection() async {
       final live = sourceType == SourceType.article
           ? await articleWebViewKey.currentState?.currentTextSelection()
-          : await webViewKey.currentState?.currentTextSelection();
+          : await surface.currentTextSelection();
       return _withLiveReaderSelection(selection, live);
     }
 
@@ -302,7 +302,7 @@ class _ContextPanelDriver extends StatelessWidget {
           verticalOffset: verticalOffset,
         );
       } else {
-        webViewKey.currentState?.showSelectionHighlightPreview(
+        surface.showSelectionHighlightPreview(
           cfiRange: cfiRange,
           color: cssColor,
           opacity: opacity,
@@ -316,7 +316,7 @@ class _ContextPanelDriver extends StatelessWidget {
       if (sourceType == SourceType.article) {
         articleWebViewKey.currentState?.clearSelectionHighlightPreview();
       } else {
-        webViewKey.currentState?.clearSelectionHighlightPreview();
+        surface.clearSelectionHighlightPreview();
       }
     }
 
@@ -326,7 +326,7 @@ class _ContextPanelDriver extends StatelessWidget {
       if (sourceType == SourceType.article) {
         articleWebViewKey.currentState?.clearSelectionAfterTextAction();
       } else {
-        webViewKey.currentState?.clearSelectionAfterTextAction();
+        surface.clearSelectionAfterTextAction();
       }
     }
 

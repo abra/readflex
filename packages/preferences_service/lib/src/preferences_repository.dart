@@ -115,6 +115,9 @@ class PreferencesRepository {
         ),
         readerColumns: ReaderColumns.fromId(map['readerColumns'] as String?),
         readerSearchHistory: _readStringList(map['readerSearchHistory']),
+        nativeReaderFormats: map['nativeReaderFormats'] == null
+            ? null
+            : _readStringList(map['nativeReaderFormats']),
         readerBrightness: _readReaderBrightness(map['readerBrightness']),
         readerLastCustomBrightness:
             _readReaderBrightness(map['readerLastCustomBrightness']) ?? 0.7,
@@ -206,6 +209,7 @@ class PreferencesRepository {
       'practiceNewCardsPerDay': prefs.practiceNewCardsPerDay,
       'practiceReviewHighlights': prefs.practiceReviewHighlights,
       'practiceDesiredRetention': prefs.practiceDesiredRetention,
+      'nativeReaderFormats': ?prefs.nativeReaderFormats,
     };
     final json = jsonEncode(map);
     if (json == _storedJson) return;

@@ -25,6 +25,7 @@ and UI preference cubits internally.
 | `onSourcePressed`     | `Future<void> Function(...)`        | Open reader, then refresh                    |
 | `onAddPressed`        | `LibraryImportLauncher`             | Open import UI at a `LibraryImportEntry`; notify successful persistence |
 | `onPracticePressed`   | `Future<void> Function()?`          | Open Practice; the Library reloads its counts when it closes. `null` shows no entry |
+| `onDeveloperPressed`  | `VoidCallback?`                     | Long press on the title opens developer tools; `null` (release) keeps the title a plain heading |
 | `openImportOnStart`   | `bool` (default `false`)            | Open file import once after the first frame  |
 
 `LibraryImportEntry` (exported) names the import step to open: `menu` from

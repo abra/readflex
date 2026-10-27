@@ -1,3 +1,4 @@
+import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/config/environment.dart';
@@ -12,6 +13,24 @@ void main() {
 
     test('rejects an invalid explicit value', () {
       expect(() => Environment.from('PRODUCTIONN'), throwsArgumentError);
+    });
+  });
+
+  group('ApplicationConfig.parseNativeReaderFormats', () {
+    test('reads a comma-separated list of formats, any case, any spacing', () {
+      expect(ApplicationConfig.parseNativeReaderFormats('cbz'), {
+        BookFormat.cbz,
+      });
+      expect(
+        ApplicationConfig.parseNativeReaderFormats(' CBZ , pdf,epub '),
+        {BookFormat.cbz, BookFormat.pdf, BookFormat.epub},
+      );
+    });
+
+    test('is empty by default and ignores unknown names', () {
+      expect(ApplicationConfig.parseNativeReaderFormats(''), isEmpty);
+      expect(ApplicationConfig.parseNativeReaderFormats('docx, ,'), isEmpty);
+      expect(const ApplicationConfig().nativeReaderFormats, isEmpty);
     });
   });
 

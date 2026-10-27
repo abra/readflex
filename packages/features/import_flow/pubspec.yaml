@@ -26,6 +26,8 @@ dependencies:
     path: ../../book_repository
   reader_webview:
     path: ../../reader_webview
+  vellum:
+    path: ../../vellum
   monitoring:
     path: ../../monitoring
 

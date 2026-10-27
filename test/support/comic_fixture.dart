@@ -15,7 +15,7 @@ Future<Book> addComicFixture(UiTestApp app) async {
     archive.addFile(ArchiveFile('page-$index.png', bytes.length, bytes));
   }
   final file = File('${app.directory.path}/comic.cbz');
-  await file.writeAsBytes(ZipEncoder().encode(archive)!);
+  await file.writeAsBytes(ZipEncoder().encodeBytes(archive));
   return app.bookRepository.addBook(
     sourceFile: file,
     title: 'Comic Zoom Fixture',

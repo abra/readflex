@@ -1456,4 +1456,20 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get libraryThemeDarkDescription => 'डार्क रूप का उपयोग करें';
+
+  @override
+  String get developerReaderEngineTitle => 'रीडर इंजन';
+
+  @override
+  String get developerReaderEngineHint =>
+      'हर फ़ॉर्मैट को कौन सा इंजन खोलेगा। अगली खोली या आयात की गई किताब पर लागू होगा।';
+
+  @override
+  String get developerReaderEngineWebView => 'WebView';
+
+  @override
+  String get developerReaderEngineNative => 'नेटिव';
+
+  @override
+  String get developerReaderEngineReset => 'बिल्ड सेटिंग उपयोग करें';
 }

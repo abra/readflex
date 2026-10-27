@@ -421,5 +421,10 @@
   "libraryThemeLight": "Hell",
   "libraryThemeLightDescription": "Helle Darstellung verwenden",
   "libraryThemeDark": "Dunkel",
-  "libraryThemeDarkDescription": "Dunkle Darstellung verwenden"
+  "libraryThemeDarkDescription": "Dunkle Darstellung verwenden",
+  "developerReaderEngineTitle": "Reader-Engine",
+  "developerReaderEngineHint": "Welche Engine welches Format öffnet. Gilt für das nächste geöffnete oder importierte Buch.",
+  "developerReaderEngineWebView": "WebView",
+  "developerReaderEngineNative": "Nativ",
+  "developerReaderEngineReset": "Build-Einstellung verwenden"
 }

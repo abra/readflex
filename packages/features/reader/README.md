@@ -170,6 +170,86 @@ abstract class TextAction {
 }
 ```
 
+## Reader surface contract
+
+`ReaderSurface` (`reader_surface.dart`) is the set of commands the screen
+sends to whatever draws a book: navigation (`goToCfi`, `goToFraction`,
+`goToHref`, `goToSectionIndex`, `goToSearchResult`, `goToBookmark`, page
+turns, `toggleBookmark`), search (`searchBookStream`, `clearSearch`), text
+selection (`clearSelection`, `currentTextSelection`, highlight previews),
+image areas (previews, retention, control bounds) and `pageThumbnail`. It
+was extracted from what the screen asked of `BookReaderWebViewState`;
+`ReaderWebViewSurface` forwards to the WebView under the screen's key and
+is a no-op before it mounts, exactly as the key-based calls were. Events
+from the surface (positions, selections, taps, annotations, load state)
+remain the callbacks of the surface widget, wired to the blocs where it is
+built (`_ReaderWebViewBody`). A native engine (`package:vellum`) takes the
+WebView's place behind this contract one format at a time; articles keep
+their own WebView outside it for now.
+
+### Native comics (`_ReaderComicBody`, `ReaderComicSurface`)
+
+`ReaderScreen.nativeFormats` (from `READFLEX_NATIVE_FORMATS`, empty by
+default) names the formats drawn natively. For a CBZ in that set the
+content body mounts `_ReaderComicBody` instead of the WebView body: it
+opens the archive with `ComicBook` (the stored `comicPageOrderVersion`
+keeps the page order of saved positions), restores the page from the
+saved fake CFI or the fraction, and shows `FixedPagesView`. The
+Appearance sheet's page turn sets the view's `axis` (vertical turns pages
+up and down; taps keep their left and right zones as previous and next,
+as the WebView's `page-turn-axis` did). Its events feed
+the same blocs and cubits: positions become `ReaderBookPositionUpdated`
+with the WebView's numbers (`fraction = (page + 1) / pageCount`, chapter
+counter = page counter, `relocationReason` `page` for turns), the page
+list becomes `ReaderTocUpdated`, taps go through the shared tap-zone
+dispatcher, long presses create image-area drafts in a
+`ComicImageAreaDraft` that `ReaderImageSelectionCubit` mirrors, saved
+image-area highlights are drawn by `ComicImageAreaLayer`, and a bookmark
+toggle emits `ReaderBookmarkChanged` with the page as CFI, page anchor and
+`Page N / M` content, matching the rows the WebView writes. Readiness is
+the first visible page image (`onPageShown`), which releases the loading
+scrim. `ReaderComicSurface` implements the commands over the controller
+and the draft; comics have no text, so search and text-selection commands
+are inert, and previews are `ComicPageImage` providers. A document that
+fails to open reports `ReaderWebViewFailed` as the WebView would.
+`_ReadyContentBody` picks the surface and body per format, so the chrome,
+drawers and context panel never know which engine is drawing.
+
+### Native PDF (`_ReaderPdfBody`, `ReaderPdfSurface`)
+
+For a PDF in `nativeFormats` the body mounts `_ReaderPdfBody`: it opens
+the file with `PdfBook` (a password-protected or damaged file reports
+`ReaderWebViewFailed` with the document kind), restores the page from
+the saved CFI or fraction, and shows `FixedPagesView` over `PdfPages`,
+with the Appearance sheet's page turn as its `axis`, margin trimming as
+`visibleRectOf` and page colours as `pageColors` (vellum's
+`pageColorsFor`: a colour matrix, so the same pixels under Impeller and
+Skia).
+The outline becomes `ReaderTocUpdated` with page CFIs as hrefs and the
+entries' depth as `level` (an entry without a page keeps an empty href);
+the chrome's chapter line is the first outline entry that opens the
+current page, as the WebView matched TOC hrefs. `ReaderDocumentFeatures`
+reports `pdf`, the page count and the outline, and `hasSearchableText`
+once a loaded page has text. Positions and bookmarks follow the comic
+body's numbers. Text layers come from a `PdfTextLayerCache` (the pages on
+screen and their neighbours are loaded ahead); `PdfTextOverlay` draws
+saved text highlights resolved on the page (`resolvePdfTextAnchor`: the
+WebView's DOM CFIs resolve by the highlight's text, vellum's by range),
+the search hit and the selection. A long press selects a word and feeds
+`ReaderSelectionCubit` what the WebView's bridge sent: the exact text,
+the sentence as `contextText`/`markedContextText`, vellum's range CFI and
+the selection rect as viewport fractions; a tap on a saved highlight
+focuses `ReaderHighlightFocusCubit` with the sentence as context. Margin
+crops (`trimPageMargins`) are measured per page with
+`detectPdfPageContent` for the box a page is fitted into and passed as
+`visibleRectOf`; `pageColors: theme` maps the reader theme's background
+and text colour through `pageColorsFor`. `ReaderPdfSurface` implements
+the commands: navigation over the controller, `searchBookStream` through
+`searchPdfBook` with the WebView's excerpt shape, `goToSearchResult`
+opening the hit's page and marking its range, selection preview colour
+and retention on the `PdfTextSelection`, previews as `PdfPageImage`
+providers; image-area commands are inert.
+
 ## Architecture — independent units of state
 
 | Unit                          | Responsibility                                                             |
@@ -455,14 +535,16 @@ does not fit its share; four tabs in Arabic or German scroll from the gutter.
 page. The grid keeps the 16dp drawer gutter on every side (plus the bottom
 system inset) with 12dp between tiles. Page order follows the book's
 progression direction independently of the app locale. Captions and controls still use the app locale. Only the visible
-Pages or Highlights tab owns `ReaderPageThumbnailCubit`; its callback is supplied by the reader
-host (`BookReaderWebViewState.pageThumbnail`, which PDF.js or the open archive
-answers), and the View receives no repository or WebView controller. One preview is
-decoded at a time. Offscreen queued requests are discarded; a 24-entry LRU retains
-at most 96 KiB encoded bytes per preview. Per-tile selectors avoid rebuilding the
-grid/list for each response. Multiple highlights on one page share the encoded
-bytes and Flutter image-cache key; their normalized crops are painted without
-allocating separate cropped bitmaps or decoding the archive again. Per-page
+Pages or Highlights tab owns `ReaderPageThumbnailCubit`; its callback is
+`ReaderSurface.pageThumbnail`, which answers an `ImageProvider` (the WebView
+wraps an encoded preview of at most 96 KiB in a `MemoryImage`; the native
+engine returns its own provider decoded at preview width), and the View
+receives no repository or engine controller. One preview is loaded at a time.
+Offscreen queued requests are discarded; a 24-entry LRU evicts providers from
+the Flutter image cache. Per-tile selectors avoid rebuilding the grid/list for
+each response. Multiple highlights on one page share one provider and
+image-cache entry; their normalized crops are painted without allocating
+separate cropped bitmaps or decoding the archive again. Per-page
 consumer counts prevent a disappearing row from cancelling another visible
 area's request. Visible comic lists/grids use zero cache extent, so offscreen
 rows do not start preview work; text lists keep their normal prefetch.

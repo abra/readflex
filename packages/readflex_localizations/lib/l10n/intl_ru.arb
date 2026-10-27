@@ -421,5 +421,10 @@
   "libraryThemeLight": "Светлая",
   "libraryThemeLightDescription": "Использовать светлое оформление",
   "libraryThemeDark": "Темная",
-  "libraryThemeDarkDescription": "Использовать темное оформление"
+  "libraryThemeDarkDescription": "Использовать темное оформление",
+  "developerReaderEngineTitle": "Движок ридера",
+  "developerReaderEngineHint": "Какой движок открывает каждый формат. Действует для следующей открытой или импортированной книги.",
+  "developerReaderEngineWebView": "WebView",
+  "developerReaderEngineNative": "Нативный",
+  "developerReaderEngineReset": "Как в сборке"
 }

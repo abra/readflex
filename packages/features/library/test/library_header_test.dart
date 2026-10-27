@@ -43,6 +43,7 @@ void main() {
     Locale locale = const Locale('en'),
     ThemeData? theme,
     bool isOffline = false,
+    VoidCallback? onTitleLongPress,
   }) async {
     tester.view.physicalSize = Size(width, 844);
     tester.view.devicePixelRatio = 1;
@@ -67,6 +68,7 @@ void main() {
             searchController: controller,
             searchFocusNode: focus,
             onSearchChanged: (_) {},
+            onTitleLongPress: onTitleLongPress,
           ),
         ),
       ),
@@ -76,6 +78,31 @@ void main() {
 
   Finder titleText(String title) =>
       find.descendant(of: _title, matching: find.text(title));
+
+  group('title long press', () {
+    testWidgets('opens developer tools only when offered', (tester) async {
+      var opened = 0;
+      final l10n = await pumpHeader(tester, onTitleLongPress: () => opened++);
+      await tester.longPress(titleText(l10n.libraryTitle));
+      expect(opened, 1);
+      // A tap is not a long press.
+      await tester.tap(titleText(l10n.libraryTitle));
+      expect(opened, 1);
+    });
+
+    testWidgets('a release build keeps the title a plain heading', (
+      tester,
+    ) async {
+      final l10n = await pumpHeader(tester);
+      expect(
+        find.ancestor(
+          of: titleText(l10n.libraryTitle),
+          matching: find.byType(GestureDetector),
+        ),
+        findsNothing,
+      );
+    });
+  });
 
   group('header geometry', () {
     testWidgets('no count pill, collection pill or filter chips: the '

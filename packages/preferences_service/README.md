@@ -59,12 +59,19 @@ repository loading resolves the device locale to a supported language.
 | `onboardingCompleted`      | `bool`      | `false`     |
 | `readerSelectionTipShowCount` | `int`  | `0`         |
 | `readerSelectionTipDismissed` | `bool` | `false`     |
+| `nativeReaderFormats`      | `List<String>?` | `null`  |
 
 `readerTrimPageMargins` and `readerPageColors` apply to PDF pages only. They
 are on by default because a phone shows a printed page about a third smaller
 with its margins, and a white page breaks dark and tinted themes. Readers
 change them per book from the reader's Appearance sheet, which stores a
 `ReaderAppearanceOverride`.
+
+`nativeReaderFormats` is a developer override of the build's
+`READFLEX_NATIVE_FORMATS`: the extensions (`cbz`, `pdf`) the native engine
+draws and imports. `null` follows the build; an empty list keeps every format
+in the WebView. `setNativeReaderFormats` saves or clears it. It is set only
+from the DEV-build Reader engine sheet while formats move over.
 
 `readerColumns` (Auto / One / Two) applies to reflowable books in a wide
 window only; the reader keeps one column across a narrow window whatever it

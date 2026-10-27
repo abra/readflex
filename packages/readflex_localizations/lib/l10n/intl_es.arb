@@ -421,5 +421,10 @@
   "libraryThemeLight": "Claro",
   "libraryThemeLightDescription": "Usar apariencia clara",
   "libraryThemeDark": "Oscuro",
-  "libraryThemeDarkDescription": "Usar apariencia oscura"
+  "libraryThemeDarkDescription": "Usar apariencia oscura",
+  "developerReaderEngineTitle": "Motor del lector",
+  "developerReaderEngineHint": "Qué motor abre cada formato. Se aplica al próximo libro abierto o importado.",
+  "developerReaderEngineWebView": "WebView",
+  "developerReaderEngineNative": "Nativo",
+  "developerReaderEngineReset": "Usar ajustes de compilación"
 }

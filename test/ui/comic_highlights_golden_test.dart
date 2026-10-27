@@ -29,11 +29,12 @@ void main() {
     final previews = find.byType(ReaderImageHighlightPreview);
     final context = tester.element(previews.first);
     final cache = context.read<ReaderPageThumbnailCubit>().state;
-    // The bridge decodes base64 into new byte identities. Precache those actual
-    // ImageCache keys, not the fixture bytes, before capturing painted crops.
+    // The bridge decodes base64 into new byte identities. Precache the
+    // providers the cubit holds, not the fixture bytes, before capturing
+    // painted crops.
     await tester.runAsync(() async {
-      for (final bytes in cache.values) {
-        if (bytes != null) await precacheImage(MemoryImage(bytes), context);
+      for (final image in cache.values) {
+        if (image != null) await precacheImage(image, context);
       }
     });
     await tester.pumpAndSettle();

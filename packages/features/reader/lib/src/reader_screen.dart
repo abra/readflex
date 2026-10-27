@@ -17,6 +17,7 @@ import 'package:reader_webview/reader_webview.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';
 import 'package:toast_service/toast_service.dart';
+import 'package:vellum/vellum.dart';
 
 import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';
@@ -54,7 +55,11 @@ import 'reader_image_selection_cubit.dart';
 import 'reader_keep_awake_cubit.dart';
 import 'reader_progress_label.dart';
 import 'reader_route_mount_gate.dart';
+import 'reader_comic_surface.dart';
+import 'reader_pdf_surface.dart';
 import 'reader_search_cubit.dart';
+import 'reader_surface.dart';
+import 'reader_webview_surface.dart';
 import 'reader_search_navigation_bar.dart';
 import 'reader_search_panel.dart';
 import 'reader_selection_cubit.dart';
@@ -72,6 +77,8 @@ import 'reader_ui_cubit.dart';
 
 part 'reader_screen_lifecycle.dart';
 part 'reader_screen_content.dart';
+part 'reader_screen_comic_body.dart';
+part 'reader_screen_pdf_body.dart';
 part 'reader_screen_chrome.dart';
 part 'reader_screen_drawers.dart';
 part 'reader_screen_context_panel.dart';
@@ -154,6 +161,10 @@ ReaderTapAxis _readerTapAxisForPageTurnStyle(ReaderPageTurnStyle style) {
       : ReaderTapAxis.horizontal;
 }
 
+/// The axis native fixed-layout pages turn along for [style].
+Axis _nativePageAxis(ReaderPageTurnStyle style) =>
+    style == ReaderPageTurnStyle.vertical ? Axis.vertical : Axis.horizontal;
+
 /// Full-screen reader for a library source (route `/reader/:sourceId`).
 ///
 /// Composition only: wires [ReaderBloc] (source + highlights + position
@@ -180,6 +191,7 @@ class ReaderScreen extends StatelessWidget {
     this.onArticleTitlePressed,
     this.onOpenExternalLink,
     this.initialCfi,
+    this.nativeFormats = const {},
     super.key,
   });
 
@@ -209,6 +221,10 @@ class ReaderScreen extends StatelessWidget {
   /// Where to open instead of the saved position: a highlight or a saved
   /// word's anchor. Applied once the document is ready.
   final String? initialCfi;
+
+  /// Formats drawn by the native engine (`package:vellum`) instead of the
+  /// WebView. Empty keeps every format on the WebView.
+  final Set<BookFormat> nativeFormats;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +291,7 @@ class ReaderScreen extends StatelessWidget {
                   serverBaseUri: serverBaseUri,
                   textActions: textActions,
                   initialCfi: initialCfi,
+                  nativeFormats: nativeFormats,
                   onRetry: () => context.read<ReaderBloc>().add(
                     ReaderSourceLoadRequested(sourceId: sourceId),
                   ),

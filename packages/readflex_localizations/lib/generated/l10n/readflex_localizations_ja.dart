@@ -1426,4 +1426,19 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get libraryThemeDarkDescription => 'ダーク表示を使用';
+
+  @override
+  String get developerReaderEngineTitle => 'リーダーエンジン';
+
+  @override
+  String get developerReaderEngineHint => '各形式を開くエンジン。次に開くか取り込む本から適用されます。';
+
+  @override
+  String get developerReaderEngineWebView => 'WebView';
+
+  @override
+  String get developerReaderEngineNative => 'ネイティブ';
+
+  @override
+  String get developerReaderEngineReset => 'ビルド設定を使う';
 }

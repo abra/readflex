@@ -1484,4 +1484,20 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
 
   @override
   String get libraryThemeDarkDescription => 'Dunkle Darstellung verwenden';
+
+  @override
+  String get developerReaderEngineTitle => 'Reader-Engine';
+
+  @override
+  String get developerReaderEngineHint =>
+      'Welche Engine welches Format öffnet. Gilt für das nächste geöffnete oder importierte Buch.';
+
+  @override
+  String get developerReaderEngineWebView => 'WebView';
+
+  @override
+  String get developerReaderEngineNative => 'Nativ';
+
+  @override
+  String get developerReaderEngineReset => 'Build-Einstellung verwenden';
 }

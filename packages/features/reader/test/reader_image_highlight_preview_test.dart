@@ -117,7 +117,7 @@ void main() {
       var calls = 0;
       final cubit = ReaderPageThumbnailCubit((_) async {
         calls++;
-        return bytes;
+        return MemoryImage(bytes);
       });
       addTearDown(cubit.close);
       await pump(tester, cubit, left);
@@ -137,7 +137,7 @@ void main() {
   testWidgets('preserves aspect ratio and clamps legacy areas to the image', (
     tester,
   ) async {
-    final cubit = ReaderPageThumbnailCubit((_) async => bytes);
+    final cubit = ReaderPageThumbnailCubit((_) async => MemoryImage(bytes));
     addTearDown(cubit.close);
     await pump(
       tester,
@@ -168,7 +168,7 @@ void main() {
   testWidgets(
     'loading and failure keep geometry; retry is local and late completion is discarded',
     (tester) async {
-      final pending = Completer<Uint8List?>();
+      final pending = Completer<ImageProvider?>();
       var calls = 0;
       final cubit = ReaderPageThumbnailCubit(
         (_) async => ++calls == 1 ? null : pending.future,
@@ -183,7 +183,7 @@ void main() {
       expect(tester.getSize(find.byKey(boundaryKey)), size);
       expect(find.byType(CircularProgressIndicator), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
-      pending.complete(bytes);
+      pending.complete(MemoryImage(bytes));
       await tester.pump();
       expect(cubit.state.containsKey(0), isFalse);
       expect(tester.takeException(), isNull);
@@ -194,10 +194,10 @@ void main() {
     'changing pages releases the old request; malformed crops stay local',
     (tester) async {
       final calls = <int>[];
-      final pending = Completer<Uint8List?>();
+      final pending = Completer<ImageProvider?>();
       final cubit = ReaderPageThumbnailCubit((page) async {
         calls.add(page);
-        return page == 0 ? pending.future : bytes;
+        return page == 0 ? pending.future : MemoryImage(bytes);
       });
       addTearDown(cubit.close);
       await pump(tester, cubit, left);
@@ -212,7 +212,7 @@ void main() {
           height: 1,
         ),
       );
-      pending.complete(bytes);
+      pending.complete(MemoryImage(bytes));
       await pixels(tester);
       expect(calls, [0, 2]);
       expect(cubit.state.containsKey(0), isFalse);

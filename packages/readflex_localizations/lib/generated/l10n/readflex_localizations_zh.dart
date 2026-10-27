@@ -1425,4 +1425,19 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get libraryThemeDarkDescription => '使用深色外观';
+
+  @override
+  String get developerReaderEngineTitle => '阅读引擎';
+
+  @override
+  String get developerReaderEngineHint => '各格式由哪个引擎打开。对下一本打开或导入的书生效。';
+
+  @override
+  String get developerReaderEngineWebView => 'WebView';
+
+  @override
+  String get developerReaderEngineNative => '原生';
+
+  @override
+  String get developerReaderEngineReset => '使用构建设置';
 }

@@ -117,14 +117,15 @@ void main() {
           .read<ReaderPageThumbnailCubit>();
       await waitForUi(
         tester,
-        () => cubit.state.values.whereType<List<int>>().isNotEmpty,
+        () => cubit.state.values.whereType<ImageProvider>().isNotEmpty,
         description: 'thumbnails',
       );
-      // The bridge decodes base64 into new byte identities; precache those.
+      // The bridge decodes base64 into new byte identities; precache the
+      // providers the cubit holds.
       await tester.runAsync(() async {
-        for (final bytes in cubit.state.values) {
-          if (bytes != null) {
-            await precacheImage(MemoryImage(bytes), tester.element(grid));
+        for (final image in cubit.state.values) {
+          if (image != null) {
+            await precacheImage(image, tester.element(grid));
           }
         }
       });

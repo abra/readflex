@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:typed_data';
 
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
@@ -173,12 +172,12 @@ class _PageGridTileState extends State<_PageGridTile> {
   Widget build(BuildContext context) =>
       BlocSelector<
         ReaderPageThumbnailCubit,
-        Map<int, Uint8List?>,
-        ({bool loaded, Uint8List? bytes})
+        Map<int, ImageProvider?>,
+        ({bool loaded, ImageProvider? image})
       >(
         selector: (state) => (
           loaded: state.containsKey(widget.index),
-          bytes: state[widget.index],
+          image: state[widget.index],
         ),
         builder: (context, preview) {
           final colors = context.colors;
@@ -202,9 +201,9 @@ class _PageGridTileState extends State<_PageGridTile> {
                   children: [
                     Expanded(
                       child: SizedBox.expand(
-                        child: preview.bytes != null
-                            ? Image.memory(
-                                preview.bytes!,
+                        child: preview.image != null
+                            ? Image(
+                                image: preview.image!,
                                 fit: BoxFit.contain,
                                 excludeFromSemantics: true,
                                 errorBuilder: (_, _, _) => Icon(

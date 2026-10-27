@@ -421,5 +421,10 @@
   "libraryThemeLight": "浅色",
   "libraryThemeLightDescription": "使用浅色外观",
   "libraryThemeDark": "深色",
-  "libraryThemeDarkDescription": "使用深色外观"
+  "libraryThemeDarkDescription": "使用深色外观",
+  "developerReaderEngineTitle": "阅读引擎",
+  "developerReaderEngineHint": "各格式由哪个引擎打开。对下一本打开或导入的书生效。",
+  "developerReaderEngineWebView": "WebView",
+  "developerReaderEngineNative": "原生",
+  "developerReaderEngineReset": "使用构建设置"
 }

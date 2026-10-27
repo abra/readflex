@@ -421,5 +421,10 @@
   "libraryThemeLight": "ライト",
   "libraryThemeLightDescription": "ライト表示を使用",
   "libraryThemeDark": "ダーク",
-  "libraryThemeDarkDescription": "ダーク表示を使用"
+  "libraryThemeDarkDescription": "ダーク表示を使用",
+  "developerReaderEngineTitle": "リーダーエンジン",
+  "developerReaderEngineHint": "各形式を開くエンジン。次に開くか取り込む本から適用されます。",
+  "developerReaderEngineWebView": "WebView",
+  "developerReaderEngineNative": "ネイティブ",
+  "developerReaderEngineReset": "ビルド設定を使う"
 }

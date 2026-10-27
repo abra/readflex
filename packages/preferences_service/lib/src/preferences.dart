@@ -576,6 +576,7 @@ class Preferences {
     this.practiceNewCardsPerDay = defaultPracticeNewCardsPerDay,
     this.practiceReviewHighlights = true,
     this.practiceDesiredRetention = defaultPracticeDesiredRetention,
+    this.nativeReaderFormats,
   });
 
   static const defaultPracticeNewCardsPerDay = 20;
@@ -634,6 +635,11 @@ class Preferences {
   /// desired retention, within [minPracticeDesiredRetention] and
   /// [maxPracticeDesiredRetention]. Lower means fewer reviews.
   final double practiceDesiredRetention;
+
+  /// Book formats the native reader engine draws, as the extensions the
+  /// build's `READFLEX_NATIVE_FORMATS` takes (`cbz`, `pdf`); null follows
+  /// the build. A developer setting while formats move over.
+  final List<String>? nativeReaderFormats;
 
   ReaderAppearancePreferences get readerAppearance =>
       ReaderAppearancePreferences(
@@ -702,6 +708,7 @@ class Preferences {
     int? practiceNewCardsPerDay,
     bool? practiceReviewHighlights,
     double? practiceDesiredRetention,
+    Object? nativeReaderFormats = _unset,
   }) => Preferences(
     themeMode: themeMode ?? this.themeMode,
     locale: locale ?? this.locale,
@@ -746,6 +753,9 @@ class Preferences {
         practiceReviewHighlights ?? this.practiceReviewHighlights,
     practiceDesiredRetention:
         practiceDesiredRetention ?? this.practiceDesiredRetention,
+    nativeReaderFormats: identical(nativeReaderFormats, _unset)
+        ? this.nativeReaderFormats
+        : nativeReaderFormats as List<String>?,
   );
 
   @override
@@ -786,7 +796,8 @@ class Preferences {
           readerSelectionTipDismissed == other.readerSelectionTipDismissed &&
           practiceNewCardsPerDay == other.practiceNewCardsPerDay &&
           practiceReviewHighlights == other.practiceReviewHighlights &&
-          practiceDesiredRetention == other.practiceDesiredRetention;
+          practiceDesiredRetention == other.practiceDesiredRetention &&
+          _listEquals(nativeReaderFormats, other.nativeReaderFormats);
 
   @override
   int get hashCode => Object.hashAll([
@@ -820,6 +831,7 @@ class Preferences {
     practiceNewCardsPerDay,
     practiceReviewHighlights,
     practiceDesiredRetention,
+    nativeReaderFormats == null ? null : Object.hashAll(nativeReaderFormats!),
   ]);
 }
 
@@ -844,4 +856,13 @@ double? _copyReaderBrightness(Object? value) {
 
 double _clampReaderBrightness(double value) {
   return value.clamp(0.05, 1.0).toDouble();
+}
+
+bool _listEquals(List<String>? a, List<String>? b) {
+  if (identical(a, b)) return true;
+  if (a == null || b == null || a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }

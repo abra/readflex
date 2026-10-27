@@ -3,6 +3,7 @@
 // Owns backend/environment validation and monitoring settings. Opt-in tracing
 // flags remain local to the code that consumes them.
 
+import 'package:domain_models/domain_models.dart';
 import 'package:readflex/app/config/environment.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -111,6 +112,20 @@ class ApplicationConfig {
     if (value.isNotEmpty) return value;
     return articleCleanerBaseUrl;
   }
+
+  /// Book formats the native reader engine (`package:vellum`) draws instead
+  /// of the WebView, and whose metadata it reads at import where it can,
+  /// from `READFLEX_NATIVE_FORMATS` (comma-separated, e.g. `cbz,pdf`).
+  /// Empty by default while formats are being moved over.
+  Set<BookFormat> get nativeReaderFormats => parseNativeReaderFormats(
+    const String.fromEnvironment('READFLEX_NATIVE_FORMATS'),
+  );
+
+  /// Pure parser behind [nativeReaderFormats]: names are case-insensitive,
+  /// unknown ones are ignored.
+  static Set<BookFormat> parseNativeReaderFormats(String value) => {
+    for (final name in value.split(',')) ?BookFormat.fromExtension(name.trim()),
+  };
 
   /// Validates configuration before any repositories or HTTP clients are
   /// created. Throws [ApplicationConfigurationException] on invalid values.

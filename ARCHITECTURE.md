@@ -72,6 +72,8 @@ The root package (`readflex`) is the composition and integration layer.
 | `lib/app/readflex_app.dart` | Material app, theme/locale and a router retained across preference changes. |
 | `lib/app/app_lifecycle.dart` | Restores a stopped reader server on iOS resume; best-effort resource disposal on detach, not pause or widget unmount. |
 | `lib/app/routing.dart` | GoRouter route table, route guards, navigation callbacks, feature wiring. |
+| `lib/app/native_reader_formats.dart` | The formats the native engine handles: the developer override in preferences when set, otherwise the build's `READFLEX_NATIVE_FORMATS`. |
+| `lib/app/developer/reader_engine_sheet.dart` | Development-only sheet (long press on the Library title) that picks WebView or native per format and saves the override in preferences. |
 | `lib/app/screens` | Recovery screen for a failed bootstrap, shown before dependencies and the router exist. |
 
 There is no global service locator. App-wide objects are created once in
@@ -302,6 +304,7 @@ remain for migration compatibility only (last revision `189e2cc1`).
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
 | `reader_server` | Localhost HTTP server for reader assets and book/article files. | Supports range requests for books and local article HTML/assets for WebView readers. |
 | `reader_webview` | Foliate book WebView wrapper, vertical article HTML wrapper, JS bridges, asset extraction, metadata extraction. | Used by Reader and Import Flow. |
+| `vellum` | Native reader engine replacing foliate-js one format at a time: ZIP container, CBZ pages in the WebView's order, fake CFIs, `FixedPagesView`/`FixedPagesController` for comics and PDFs, image areas, thumbnails, import metadata with JPEG covers, `PdfBook` over pdfium (`pdfrx_engine` + `pdfium_flutter`, the only third-party engine) with page rendering, zoom tiles, text layers, selection, search, anchors, margin crops and page colours; `package:vellum/testing.dart` builds fixtures. | Used by Reader behind `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. Plan: `.local/reports/native-reader-steps-2026-10-27.md`. |
 | `screen_control_service` | Keep-awake and brightness coordination for active reading sessions. | Wraps low-level brightness plugin. |
 | `toast_service` | Thin toastification wrapper: bottom-anchored toasts that float above controls marked with `ToastAvoidArea`; `ToastNavigatorObserver` on the root navigator clears them when a sheet or dialog opens. | Feature packages do not import toastification directly. |
 
@@ -328,7 +331,7 @@ they keep their upstream license, structure and style, and each one's
 |---------|------------|---------------------------|
 | `library_feature` (`packages/features/library`) | Main Library screen, source search/filter/list/grid, collection management, the entry into Practice (row leading the content once something is saved, capsule button with the due badge). | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `fsrs_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
 | `practice` | Practice section pushed above the Library: hub (today, Vocabulary, Highlights, by book), Vocabulary and Highlights lists, full-screen review session. | `article_repository`, `book_repository`, `component_library`, `dictionary_repository`, `domain_models`, `fsrs_repository`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
-| `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `reader_webview`, `readflex_localizations` |
+| `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `reader_webview`, `readflex_localizations`, `vellum` |
 | `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `reader_webview`, `readflex_localizations`, `screen_control_service`, `shared` |
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `readflex_localizations`, `shared` |
 | `translate` | Reader text action and contextual translation bottom sheet; Save in the word header keeps the word for review. | `component_library`, `contextual_translation_service`, `dictionary_repository`, `preferences_service`, `readflex_localizations`, `shared`, `toast_service` |
@@ -376,7 +379,8 @@ The reader is intentionally split across several packages:
 |---------|----------------|
 | `reader_server` | Serves root-confined reader assets, book bytes, article HTML, and article-local assets through a token-scoped localhost URI. |
 | `reader_webview` | Hosts foliate-js for books/comics, the vertical HTML shell for articles, JS bridge DTOs, asset extraction, metadata extraction. |
-| `features/reader` | Reader screen, reader bloc/cubits, chrome, Contents and Search sheets, appearance, search, selection, brightness, keep-awake. |
+| `vellum` | The native engine: `ComicBook` over its own ZIP reader, `FixedPagesView` (PageView spreads, pinch and double-tap zoom, tap arbitration), `ComicImageAreaLayer`, `ComicPageImage`/`ComicPageThumbnail`. Later: PDF, FB2, EPUB, MOBI, articles. |
+| `features/reader` | Reader screen, reader bloc/cubits, chrome, Contents and Search sheets, appearance, search, selection, brightness, keep-awake. Commands to the page go through `ReaderSurface`: `ReaderWebViewSurface` over the WebView key, `ReaderComicSurface` and `ReaderPdfSurface` over the native bodies; `ReaderScreen.nativeFormats` picks the body and surface per format. |
 | `shared` | `TextAction` plugin contract used by reader context-panel actions. |
 | `features/highlight` | Implements `HighlightAction`. |
 | `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
@@ -598,8 +602,10 @@ Book import:
 ImportFlowSheet
   -> pickBookFile callback from routing.dart
   -> importBookFile helper in import_flow
+  -> vellum reads title and cover for formats in READFLEX_NATIVE_FORMATS
+     that the engine supports (CBZ); reader_webview's headless WebView
+     for the rest
   -> BookRepository stores file/metadata
-  -> reader_webview extracts metadata when needed
   -> deletePickedBookFile removes the picker's temp/cache copy
 ```
 
@@ -719,6 +725,19 @@ timeout stays because the backend keep-alive is unknown. The client is
 registered for disposal before the services and closes after them, also on
 bootstrap rollback; services close only clients they created. Article page
 downloads never use it: they keep the extraction service's own pinned client.
+
+`READFLEX_NATIVE_FORMATS` (comma-separated book formats, empty by default)
+names the formats `ReaderScreen` draws with the native `vellum` engine
+instead of the WebView, and whose metadata `importBookFile` reads with the
+engine where it can (CBZ: title and a JPEG cover, no headless WebView);
+routing passes `effectiveNativeReaderFormats` into the screen and the import
+callback: `Preferences.nativeReaderFormats` when a developer saved an override
+from the Reader engine sheet (DEV builds only, long press on the Library
+title; "Use build settings" clears it), otherwise
+`ApplicationConfig.nativeReaderFormats`. The set is read as each book is
+opened or imported, so a change applies to the next one. A format joins the
+build default only after its parity run and device checks (see the native
+reader plan).
 
 `ReaderServer` exposes a process-local token-scoped base URI. Its book,
 article, and asset routes resolve symlinks and enforce configured filesystem

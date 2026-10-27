@@ -421,5 +421,10 @@
   "libraryThemeLight": "लाइट",
   "libraryThemeLightDescription": "लाइट रूप का उपयोग करें",
   "libraryThemeDark": "डार्क",
-  "libraryThemeDarkDescription": "डार्क रूप का उपयोग करें"
+  "libraryThemeDarkDescription": "डार्क रूप का उपयोग करें",
+  "developerReaderEngineTitle": "रीडर इंजन",
+  "developerReaderEngineHint": "हर फ़ॉर्मैट को कौन सा इंजन खोलेगा। अगली खोली या आयात की गई किताब पर लागू होगा।",
+  "developerReaderEngineWebView": "WebView",
+  "developerReaderEngineNative": "नेटिव",
+  "developerReaderEngineReset": "बिल्ड सेटिंग उपयोग करें"
 }

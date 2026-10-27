@@ -12,6 +12,7 @@ void main() {
     );
 
     expect(contentSource, contains('webViewKey: _webViewKey'));
+    expect(contentSource, contains('surface: _surface'));
     expect(contentSource, contains('articleWebViewKey: _articleWebViewKey'));
     expect(contentSource, contains('highlights: highlights'));
     expect(contentSource, contains('cfiRange: selection.cfiRange'));
@@ -19,7 +20,7 @@ void main() {
     expect(contextPanelSource, contains('selectionCubit.deselect();'));
     expect(
       contextPanelSource,
-      contains('webViewKey.currentState?.clearSelectionAfterTextAction();'),
+      contains('surface.clearSelectionAfterTextAction();'),
     );
     expect(
       contextPanelSource,

@@ -36,6 +36,7 @@ class LibraryHeader extends StatelessWidget {
     required this.searchController,
     required this.searchFocusNode,
     required this.onSearchChanged,
+    this.onTitleLongPress,
     super.key,
   });
 
@@ -44,6 +45,10 @@ class LibraryHeader extends StatelessWidget {
   final TextEditingController searchController;
   final FocusNode searchFocusNode;
   final ValueChanged<String> onSearchChanged;
+
+  /// A long press on the title; development builds open their tools
+  /// here, release builds pass nothing and the title stays a heading.
+  final VoidCallback? onTitleLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +64,11 @@ class LibraryHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _LibraryTitleBar(title: title, isOffline: isOffline),
+          _LibraryTitleBar(
+            title: title,
+            isOffline: isOffline,
+            onTitleLongPress: onTitleLongPress,
+          ),
           // An empty library says so in its body; "0 items" would repeat it.
           if (!state.isEmpty)
             Padding(
@@ -93,10 +102,15 @@ class LibraryHeader extends StatelessWidget {
 /// Title and the Display action on one row, or the action above a
 /// full-width title when they do not fit at the current text scale.
 class _LibraryTitleBar extends StatelessWidget {
-  const _LibraryTitleBar({required this.title, required this.isOffline});
+  const _LibraryTitleBar({
+    required this.title,
+    required this.isOffline,
+    this.onTitleLongPress,
+  });
 
   final String title;
   final bool isOffline;
+  final VoidCallback? onTitleLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +148,7 @@ class _LibraryTitleBar extends StatelessWidget {
           );
           final titleLine = _LibraryTitleLine(
             title: title,
+            onLongPress: onTitleLongPress,
             style: libraryTitleStyle(style, layout.fontScale),
             maxLines: layout.maxLines,
             isOffline: isOffline,
@@ -173,12 +188,14 @@ class _LibraryTitleLine extends StatelessWidget {
     required this.style,
     required this.maxLines,
     required this.isOffline,
+    this.onLongPress,
   });
 
   final String title;
   final TextStyle style;
   final int? maxLines;
   final bool isOffline;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -188,7 +205,13 @@ class _LibraryTitleLine extends StatelessWidget {
           child: Semantics(
             key: const ValueKey('libraryHeaderTitle'),
             header: true,
-            child: Text(title, maxLines: maxLines, style: style),
+            child: onLongPress == null
+                ? Text(title, maxLines: maxLines, style: style)
+                : GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onLongPress: onLongPress,
+                    child: Text(title, maxLines: maxLines, style: style),
+                  ),
           ),
         ),
         const SizedBox(width: _offlineGap),

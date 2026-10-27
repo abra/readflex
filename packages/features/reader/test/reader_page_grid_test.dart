@@ -41,7 +41,7 @@ void main() {
                 pageProgressionRtl: locale.languageCode == 'en',
                 loadThumbnail: (index) async {
                   requests.add(index);
-                  return bytes;
+                  return MemoryImage(bytes);
                 },
                 onSelected: (item) => selected = item,
               ),
@@ -149,7 +149,7 @@ void main() {
               onSelected: (_) {},
               loadThumbnail: (index) async {
                 requests.add(index);
-                return bytes;
+                return MemoryImage(bytes);
               },
             ),
           ),

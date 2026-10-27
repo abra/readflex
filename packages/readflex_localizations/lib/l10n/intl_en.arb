@@ -964,5 +964,25 @@
   "libraryThemeLight": "Light",
   "libraryThemeLightDescription": "Use light appearance",
   "libraryThemeDark": "Dark",
-  "libraryThemeDarkDescription": "Use dark appearance"
+  "libraryThemeDarkDescription": "Use dark appearance",
+  "developerReaderEngineTitle": "Reader engine",
+  "@developerReaderEngineTitle": {
+    "description": "Developer sheet: title of the reader engine choice"
+  },
+  "developerReaderEngineHint": "Which engine opens each format. Applies to the next book opened or imported.",
+  "@developerReaderEngineHint": {
+    "description": "Developer sheet: when the engine choice applies"
+  },
+  "developerReaderEngineWebView": "WebView",
+  "@developerReaderEngineWebView": {
+    "description": "Developer sheet: the WebView (foliate-js) engine option"
+  },
+  "developerReaderEngineNative": "Native",
+  "@developerReaderEngineNative": {
+    "description": "Developer sheet: the native (vellum) engine option"
+  },
+  "developerReaderEngineReset": "Use build settings",
+  "@developerReaderEngineReset": {
+    "description": "Developer sheet: button that drops the override and follows the build's READFLEX_NATIVE_FORMATS"
+  }
 }

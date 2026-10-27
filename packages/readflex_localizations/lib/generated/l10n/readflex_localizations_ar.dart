@@ -1489,4 +1489,20 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get libraryThemeDarkDescription => 'استخدام المظهر الداكن';
+
+  @override
+  String get developerReaderEngineTitle => 'محرّك القارئ';
+
+  @override
+  String get developerReaderEngineHint =>
+      'أي محرّك يفتح كل صيغة. يسري على الكتاب التالي الذي يُفتح أو يُستورد.';
+
+  @override
+  String get developerReaderEngineWebView => 'WebView';
+
+  @override
+  String get developerReaderEngineNative => 'أصلي';
+
+  @override
+  String get developerReaderEngineReset => 'استخدام إعدادات البناء';
 }

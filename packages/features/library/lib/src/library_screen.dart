@@ -62,6 +62,7 @@ class LibraryScreen extends StatelessWidget {
     this.articleRepository,
     this.fsrsRepository,
     this.onPracticePressed,
+    this.onDeveloperPressed,
     this.isOffline = false,
     this.openImportOnStart = false,
     super.key,
@@ -85,6 +86,9 @@ class LibraryScreen extends StatelessWidget {
 
   /// Opens Practice and completes when it closes, so the counts refresh.
   final Future<void> Function()? onPracticePressed;
+
+  /// Opens developer tools from a long press on the title; null hides it.
+  final VoidCallback? onDeveloperPressed;
 
   /// Opens file import once after the first frame (onboarding's "Add a
   /// book"). Rebuilding the same screen does not reopen it.
@@ -138,6 +142,7 @@ class LibraryScreen extends StatelessWidget {
         onSourcePressed: onSourcePressed,
         onAddPressed: onAddPressed,
         onPracticePressed: onPracticePressed,
+        onDeveloperPressed: onDeveloperPressed,
       ),
     );
   }
@@ -157,6 +162,7 @@ class _LibraryView extends StatefulWidget {
     required this.onSourcePressed,
     required this.onAddPressed,
     required this.onPracticePressed,
+    required this.onDeveloperPressed,
   });
 
   final bool isOffline;
@@ -169,6 +175,7 @@ class _LibraryView extends StatefulWidget {
   onSourcePressed;
   final LibraryImportLauncher onAddPressed;
   final Future<void> Function()? onPracticePressed;
+  final VoidCallback? onDeveloperPressed;
 
   @override
   State<_LibraryView> createState() => _LibraryViewState();
@@ -599,6 +606,7 @@ class _LibraryViewState extends State<_LibraryView> {
                                 searchFocusNode: _searchFocusNode,
                                 onSearchChanged: (query) =>
                                     bloc.add(LibrarySearchQueryChanged(query)),
+                                onTitleLongPress: widget.onDeveloperPressed,
                               ),
                               Expanded(
                                 child: ScrollEdgeFadeStack(

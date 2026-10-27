@@ -28,6 +28,7 @@ PACKAGES = \
 	packages/screen_control_service \
 	packages/reader_server \
 	packages/reader_webview \
+	packages/vellum \
 	packages/toast_service \
 	packages/features/library \
 	packages/features/import_flow \

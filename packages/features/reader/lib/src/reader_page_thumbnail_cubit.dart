@@ -1,19 +1,23 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/painting.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-typedef PageThumbnailLoader = Future<Uint8List?> Function(int page);
+/// Answers a page's preview image, or null when none can be made.
+///
+/// The WebView reader answers with a `MemoryImage` of a small encoded
+/// preview; the native engine answers with its own provider decoded at
+/// preview width. Either way the framework's image cache holds the pixels.
+typedef PageThumbnailLoader = Future<ImageProvider?> Function(int page);
 
 /// Drawer-local cache. Only mounted tiles request work; closing it releases both
-/// encoded previews and their decoded Flutter image-cache entries.
-class ReaderPageThumbnailCubit extends Cubit<Map<int, Uint8List?>> {
+/// the providers and their decoded Flutter image-cache entries.
+class ReaderPageThumbnailCubit extends Cubit<Map<int, ImageProvider?>> {
   ReaderPageThumbnailCubit(this._load) : super(const {});
 
   static const cacheCapacity = 24;
   final PageThumbnailLoader _load;
-  final _cache = <int, Uint8List?>{};
+  final _cache = <int, ImageProvider?>{};
   // Several saved areas can share a page; each mounted preview owns one lease.
   final _wanted = <int, int>{};
   final _pending = <int>{};
@@ -62,10 +66,9 @@ class ReaderPageThumbnailCubit extends Cubit<Map<int, Uint8List?>> {
       while (!isClosed && _pending.isNotEmpty) {
         final page = _pending.first;
         _pending.remove(page);
-        Uint8List? bytes;
+        ImageProvider? image;
         try {
-          bytes = await _load(page);
-          if (bytes != null && bytes.length > 96 * 1024) bytes = null;
+          image = await _load(page);
         } catch (_) {
           // Preview errors have a local retry; they are not reader failures.
         }
@@ -73,10 +76,10 @@ class ReaderPageThumbnailCubit extends Cubit<Map<int, Uint8List?>> {
         // A repeated request while decoding must not enqueue the same page.
         _pending.remove(page);
         if (!_wanted.containsKey(page)) continue;
-        _cache[page] = bytes;
+        _cache[page] = image;
         while (_cache.length > cacheCapacity) {
           final evicted = _cache.remove(_cache.keys.first);
-          if (evicted != null) unawaited(MemoryImage(evicted).evict());
+          if (evicted != null) unawaited(evicted.evict());
         }
         emit(Map.unmodifiable(_cache));
       }
@@ -89,8 +92,8 @@ class ReaderPageThumbnailCubit extends Cubit<Map<int, Uint8List?>> {
   Future<void> close() {
     _wanted.clear();
     _pending.clear();
-    for (final bytes in _cache.values) {
-      if (bytes != null) unawaited(MemoryImage(bytes).evict());
+    for (final image in _cache.values) {
+      if (image != null) unawaited(image.evict());
     }
     _cache.clear();
     return super.close();

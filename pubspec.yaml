@@ -92,7 +92,7 @@ dependency_overrides:
 
 dev_dependencies:
   analyzer: ^10.0.1
-  archive: ^3.6.1
+  archive: ^4.5.0
   flutter_test:
     sdk: flutter
   integration_test:

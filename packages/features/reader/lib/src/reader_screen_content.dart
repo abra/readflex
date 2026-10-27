@@ -7,6 +7,7 @@ class _ReaderView extends StatelessWidget {
     required this.textActions,
     required this.onRetry,
     this.initialCfi,
+    this.nativeFormats = const {},
     this.onArticleTitlePressed,
     this.onOpenExternalLink,
   });
@@ -14,6 +15,7 @@ class _ReaderView extends StatelessWidget {
   final Uri serverBaseUri;
   final List<TextAction> textActions;
   final String? initialCfi;
+  final Set<BookFormat> nativeFormats;
   final VoidCallback onRetry;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onOpenExternalLink;
@@ -27,6 +29,7 @@ class _ReaderView extends StatelessWidget {
         serverBaseUri: serverBaseUri,
         textActions: textActions,
         initialCfi: initialCfi,
+        nativeFormats: nativeFormats,
         onRetry: onRetry,
         onArticleTitlePressed: onArticleTitlePressed,
         onExternalLink: onExternalLink,
@@ -45,11 +48,13 @@ class _ReaderScaffold extends StatelessWidget {
     required this.onArticleTitlePressed,
     required this.onExternalLink,
     this.initialCfi,
+    this.nativeFormats = const {},
   });
 
   final Uri serverBaseUri;
   final List<TextAction> textActions;
   final String? initialCfi;
+  final Set<BookFormat> nativeFormats;
   final VoidCallback onRetry;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
@@ -74,6 +79,7 @@ class _ReaderScaffold extends StatelessWidget {
                     serverBaseUri: serverBaseUri,
                     textActions: textActions,
                     initialCfi: initialCfi,
+                    nativeFormats: nativeFormats,
                     onRetry: onRetry,
                     onArticleTitlePressed: onArticleTitlePressed,
                     onExternalLink: onExternalLink,
@@ -97,6 +103,7 @@ class _ReaderBody extends StatefulWidget {
     required this.textActions,
     required this.onRetry,
     this.initialCfi,
+    this.nativeFormats = const {},
     this.onArticleTitlePressed,
     this.onExternalLink,
   });
@@ -106,6 +113,7 @@ class _ReaderBody extends StatefulWidget {
   final Uri serverBaseUri;
   final List<TextAction> textActions;
   final String? initialCfi;
+  final Set<BookFormat> nativeFormats;
   final VoidCallback onRetry;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
@@ -160,6 +168,7 @@ class _ReaderBodyState extends State<_ReaderBody> {
               serverBaseUri: widget.serverBaseUri,
               textActions: widget.textActions,
               initialCfi: widget.initialCfi,
+              nativeFormats: widget.nativeFormats,
               onArticleTitlePressed: widget.onArticleTitlePressed,
               onExternalLink: widget.onExternalLink,
               onWebViewReady: _handleWebViewReady,
@@ -190,6 +199,7 @@ class _ReadyContent extends StatelessWidget {
     required this.textActions,
     required this.onWebViewReady,
     this.initialCfi,
+    this.nativeFormats = const {},
     this.onArticleTitlePressed,
     this.onExternalLink,
   });
@@ -197,6 +207,7 @@ class _ReadyContent extends StatelessWidget {
   final Uri serverBaseUri;
   final List<TextAction> textActions;
   final String? initialCfi;
+  final Set<BookFormat> nativeFormats;
   final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
@@ -207,6 +218,7 @@ class _ReadyContent extends StatelessWidget {
       serverBaseUri: serverBaseUri,
       textActions: textActions,
       initialCfi: initialCfi,
+      nativeFormats: nativeFormats,
       onArticleTitlePressed: onArticleTitlePressed,
       onExternalLink: onExternalLink,
       onWebViewReady: onWebViewReady,
@@ -221,6 +233,7 @@ class _ReadyContentBody extends StatefulWidget {
     required this.textActions,
     required this.onWebViewReady,
     this.initialCfi,
+    this.nativeFormats = const {},
     this.onArticleTitlePressed,
     this.onExternalLink,
   });
@@ -230,6 +243,7 @@ class _ReadyContentBody extends StatefulWidget {
 
   /// Opened instead of the saved position, once the document is ready.
   final String? initialCfi;
+  final Set<BookFormat> nativeFormats;
   final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
@@ -247,6 +261,21 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       GlobalKey<BookReaderWebViewState>();
   final GlobalKey<ArticleHtmlReaderWebViewState> _articleWebViewKey =
       GlobalKey<ArticleHtmlReaderWebViewState>();
+
+  late final ReaderSurface _webViewSurface = ReaderWebViewSurface(_webViewKey);
+  final ReaderComicSurface _comicSurface = ReaderComicSurface();
+  final ReaderPdfSurface _pdfSurface = ReaderPdfSurface();
+
+  /// Set in build from the format and the native-format flags.
+  bool _nativeComic = false;
+  bool _nativePdf = false;
+
+  /// Commands to the book surface go through the contract, never a key.
+  ReaderSurface get _surface => _nativeComic
+      ? _comicSurface
+      : _nativePdf
+      ? _pdfSurface
+      : _webViewSurface;
   String? _webViewReadySourceId;
   bool _initialCfiApplied = false;
   ReaderSearchLocation? _latestLocation;
@@ -261,8 +290,27 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     if (article) {
       _articleWebViewKey.currentState?.goToCfi(cfi);
     } else {
-      _webViewKey.currentState?.goToCfi(cfi);
+      _surface.goToCfi(cfi);
     }
+  }
+
+  /// A book surface (WebView or native) starts loading its document.
+  void _onBookSurfaceLoading() {
+    if (!mounted) return;
+    _latestLocation = null;
+    _endSearch();
+    setState(() => _webViewReadySourceId = null);
+    widget.onWebViewReady(null);
+  }
+
+  /// A book surface has its first page on screen.
+  void _onBookSurfaceReady() {
+    if (!mounted) return;
+    final sourceId = context.read<ReaderBloc>().state.sourceId;
+    if (_webViewReadySourceId == sourceId) return;
+    setState(() => _webViewReadySourceId = sourceId);
+    widget.onWebViewReady(sourceId);
+    _applyInitialCfi(article: false);
   }
 
   void _seekFraction(double fraction) {
@@ -273,7 +321,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       _articleWebViewKey.currentState?.goToFraction(fraction);
       return;
     }
-    _webViewKey.currentState?.goToFraction(fraction);
+    _surface.goToFraction(fraction);
   }
 
   void _openTocDrawer() {
@@ -299,7 +347,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       _articleWebViewKey.currentState?.toggleBookmark();
       return;
     }
-    _webViewKey.currentState?.toggleBookmark();
+    _surface.toggleBookmark();
   }
 
   Future<void> _openAppearanceSheet() async {
@@ -394,14 +442,14 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     if (context.read<ReaderBloc>().state.sourceType == SourceType.article) {
       _articleWebViewKey.currentState?.goToHref(item.href);
     } else {
-      _webViewKey.currentState?.goToHref(item.href);
+      _surface.goToHref(item.href);
     }
     _closeTocDrawer(restoreChrome: false);
   }
 
   /// Opens a PDF page picked in the Contents page grid.
   void _goToPage(int index) {
-    _webViewKey.currentState?.goToSectionIndex(index);
+    _surface.goToSectionIndex(index);
     _closeTocDrawer(restoreChrome: false);
   }
 
@@ -415,7 +463,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       _closeTocDrawer(restoreChrome: false);
       return;
     }
-    _webViewKey.currentState?.goToBookmark(
+    _surface.goToBookmark(
       cfi: bookmark.cfi,
       progress: bookmark.progress,
       anchorSectionIndex: bookmark.anchorSectionIndex,
@@ -428,7 +476,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   void _goToHighlight(Highlight highlight) {
     final imageArea = highlight.imageArea;
     if (imageArea != null) {
-      _webViewKey.currentState?.goToSectionIndex(imageArea.pageIndex);
+      _surface.goToSectionIndex(imageArea.pageIndex);
       _closeTocDrawer(restoreChrome: false);
       return;
     }
@@ -439,7 +487,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       _closeTocDrawer(restoreChrome: false);
       return;
     }
-    _webViewKey.currentState?.goToCfi(cfiRange);
+    _surface.goToCfi(cfiRange);
     _closeTocDrawer(restoreChrome: false);
   }
 
@@ -475,7 +523,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       _articleWebViewKey.currentState?.goToSearchResult(result.cfi);
       return;
     }
-    _webViewKey.currentState?.goToSearchResult(result.cfi);
+    _surface.goToSearchResult(result.cfi);
   }
 
   void _endSearch() {
@@ -496,7 +544,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       // The same scroll document is still mounted; restore its exact progress.
       _articleWebViewKey.currentState?.restoreReadingProgress(origin.fraction);
     } else {
-      _webViewKey.currentState?.goToBookmark(
+      _surface.goToBookmark(
         cfi: origin.cfi,
         progress: origin.fraction,
       );
@@ -531,8 +579,8 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
       return webView.searchBookStream(query);
     }
 
-    final webView = _webViewKey.currentState;
-    if (webView == null) {
+    final stream = _surface.searchBookStream(query);
+    if (stream == null) {
       return Stream.value(
         ReaderSearchError(
           requestId: -1,
@@ -540,7 +588,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
         ),
       );
     }
-    return webView.searchBookStream(query);
+    return stream;
   }
 
   @override
@@ -577,6 +625,14 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
     final sourceId = context.select<ReaderBloc, String?>(
       (b) => b.state.sourceId,
     );
+    _nativeComic =
+        sourceType == SourceType.book &&
+        format == BookFormat.cbz &&
+        widget.nativeFormats.contains(BookFormat.cbz);
+    _nativePdf =
+        sourceType == SourceType.book &&
+        format == BookFormat.pdf &&
+        widget.nativeFormats.contains(BookFormat.pdf);
     final webViewReady = sourceId != null && _webViewReadySourceId == sourceId;
     // Reader theme drives the book *page* — WebView background and
     // foliate-js customCSS — and chrome text drawn straight on the page.
@@ -610,7 +666,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
               listenWhen: (previous, current) =>
                   previous.clearSearchToken != current.clearSearchToken,
               listener: (_, _) {
-                _webViewKey.currentState?.clearSearch();
+                _surface.clearSearch();
                 _articleWebViewKey.currentState?.clearSearch();
               },
             ),
@@ -670,6 +726,38 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                                     _applyInitialCfi(article: true);
                                   },
                                 )
+                              : _nativePdf
+                              ? _ReaderPdfBody(
+                                  key: ValueKey('pdf:$sourceId'),
+                                  document: context
+                                      .read<ReaderBloc>()
+                                      .state
+                                      .document!,
+                                  readerTheme: readerTheme,
+                                  surface: _pdfSurface,
+                                  trimPageMargins: appearance.trimPageMargins,
+                                  pageColors: appearance.pageColors,
+                                  pageTurnStyle: appearance.pageTurnStyle,
+                                  onLoading: _onBookSurfaceLoading,
+                                  onPositionChanged:
+                                      _handleReaderPositionChanged,
+                                  onReady: _onBookSurfaceReady,
+                                )
+                              : _nativeComic
+                              ? _ReaderComicBody(
+                                  key: ValueKey('comic:$sourceId'),
+                                  document: context
+                                      .read<ReaderBloc>()
+                                      .state
+                                      .document!,
+                                  readerTheme: readerTheme,
+                                  surface: _comicSurface,
+                                  pageTurnStyle: appearance.pageTurnStyle,
+                                  onLoading: _onBookSurfaceLoading,
+                                  onPositionChanged:
+                                      _handleReaderPositionChanged,
+                                  onReady: _onBookSurfaceReady,
+                                )
                               : _ReaderWebViewBody(
                                   searchOverlayBottomFraction:
                                       searchOverlayBottomFraction,
@@ -677,33 +765,12 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                                   serverBaseUri: widget.serverBaseUri,
                                   readerTheme: readerTheme,
                                   webViewKey: _webViewKey,
-                                  onLoading: () {
-                                    if (!mounted) return;
-                                    _latestLocation = null;
-                                    _endSearch();
-                                    setState(
-                                      () => _webViewReadySourceId = null,
-                                    );
-                                    widget.onWebViewReady(null);
-                                  },
+                                  surface: _surface,
+                                  onLoading: _onBookSurfaceLoading,
                                   onExternalLink: widget.onExternalLink,
                                   onPositionChanged:
                                       _handleReaderPositionChanged,
-                                  onReady: () {
-                                    if (!mounted) return;
-                                    final sourceId = context
-                                        .read<ReaderBloc>()
-                                        .state
-                                        .sourceId;
-                                    if (_webViewReadySourceId == sourceId) {
-                                      return;
-                                    }
-                                    setState(
-                                      () => _webViewReadySourceId = sourceId,
-                                    );
-                                    widget.onWebViewReady(sourceId);
-                                    _applyInitialCfi(article: false);
-                                  },
+                                  onReady: _onBookSurfaceReady,
                                 ),
                         ),
                         const _ReaderBrightnessDimmingOverlayDriver(),
@@ -735,7 +802,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                         ReaderSelectionTipDriver(webViewReady: webViewReady),
                         _ContextPanelDriver(
                           textActions: widget.textActions,
-                          webViewKey: _webViewKey,
+                          surface: _surface,
                           articleWebViewKey: _articleWebViewKey,
                         ),
                       ],
@@ -767,8 +834,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                 ),
               _ReaderTocDrawerVisibilityDriver(
                 format: format,
-                loadThumbnail: (index) async =>
-                    _webViewKey.currentState?.pageThumbnail(index),
+                loadThumbnail: (index) async => _surface.pageThumbnail(index),
                 pageProgressionRtl: pageProgressionRtl,
                 readerTheme: readerTheme,
                 onClose: _closeTocDrawer,
@@ -1065,6 +1131,7 @@ class _ReaderWebViewBody extends StatefulWidget {
     required this.sourceId,
     required this.serverBaseUri,
     required this.readerTheme,
+    required this.surface,
     this.webViewKey,
     this.onPositionChanged,
     this.onReady,
@@ -1077,9 +1144,13 @@ class _ReaderWebViewBody extends StatefulWidget {
   final ReaderThemeData readerTheme;
   final double searchOverlayBottomFraction;
 
-  /// Optional GlobalKey — the parent state holds it so progress chrome can
-  /// reach into [BookReaderWebViewState] for `goToFraction`.
+  /// Optional GlobalKey the parent state holds; it identifies the WebView
+  /// behind [surface] and keeps it mounted across rebuilds.
   final GlobalKey<BookReaderWebViewState>? webViewKey;
+
+  /// Where this body's own commands (tap-zone turns, clearing a selection)
+  /// go; the parent sends the rest through the same contract.
+  final ReaderSurface surface;
 
   /// Side-effect hook for UI-only reader chrome state. Bloc persistence stays
   /// inside this widget; parent uses this to clear transient search overlays.
@@ -1262,29 +1333,14 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
 
     final tapAxis = _readerTapAxisForPageTurnStyle(appearance.pageTurnStyle);
 
-    void onTapped(double x, double y) {
-      highlightFocusCubit.clear();
-      final command = readerTapCommandFor(
-        x: x,
-        y: y,
-        chromeVisible: uiCubit.state.chromeVisible,
-        isComic: state.document?.format == BookFormat.cbz,
-        axis: tapAxis,
-      );
-      if (command != ReaderTapCommand.toggleChrome) uiCubit.hideChrome();
-      switch (command) {
-        case ReaderTapCommand.physicalLeftPage:
-          widget.webViewKey?.currentState?.pageLeft();
-        case ReaderTapCommand.physicalRightPage:
-          widget.webViewKey?.currentState?.pageRight();
-        case ReaderTapCommand.previousPage:
-          widget.webViewKey?.currentState?.prevPage();
-        case ReaderTapCommand.nextPage:
-          widget.webViewKey?.currentState?.nextPage();
-        case ReaderTapCommand.toggleChrome:
-          uiCubit.toggleChrome();
-      }
-    }
+    void onTapped(double x, double y) => _dispatchReaderTap(
+      context,
+      x: x,
+      y: y,
+      surface: widget.surface,
+      isComic: state.document?.format == BookFormat.cbz,
+      axis: tapAxis,
+    );
 
     final customCSS = _customCSSFor(widget.readerTheme);
     final foliateStyle = _readerWebViewStyle(
@@ -1393,7 +1449,7 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
             debugPrint('[reader-selection-ui] rejected: image-page format');
           }
           selectionCubit.deselect();
-          widget.webViewKey?.currentState?.clearSelection();
+          widget.surface.clearSelection();
           return;
         }
         uiCubit.hideChrome();
@@ -1445,13 +1501,47 @@ class _ReaderWebViewBodyState extends State<_ReaderWebViewBody> {
         uiCubit.hideChrome();
         selectionCubit.deselect();
         imageSelectionCubit.deselect();
-        widget.webViewKey?.currentState?.clearSelection();
+        widget.surface.clearSelection();
         highlightFocusCubit.focus(tap);
       },
       onTapped: onTapped,
     );
 
     return readerSurface;
+  }
+}
+
+/// Turns a tap at ([x], [y]), as fractions of the page surface, into a page
+/// turn or a chrome toggle, for any book surface.
+void _dispatchReaderTap(
+  BuildContext context, {
+  required double x,
+  required double y,
+  required ReaderSurface surface,
+  required bool isComic,
+  required ReaderTapAxis axis,
+}) {
+  final uiCubit = context.read<ReaderUiCubit>();
+  context.read<ReaderHighlightFocusCubit>().clear();
+  final command = readerTapCommandFor(
+    x: x,
+    y: y,
+    chromeVisible: uiCubit.state.chromeVisible,
+    isComic: isComic,
+    axis: axis,
+  );
+  if (command != ReaderTapCommand.toggleChrome) uiCubit.hideChrome();
+  switch (command) {
+    case ReaderTapCommand.physicalLeftPage:
+      surface.pageLeft();
+    case ReaderTapCommand.physicalRightPage:
+      surface.pageRight();
+    case ReaderTapCommand.previousPage:
+      surface.prevPage();
+    case ReaderTapCommand.nextPage:
+      surface.nextPage();
+    case ReaderTapCommand.toggleChrome:
+      uiCubit.toggleChrome();
   }
 }
 
