@@ -22,7 +22,7 @@ export const makeComicBook = ({ entries, loadBlob, getSize }, file, { pageOrderV
                 const src = URL.createObjectURL(blob)
                 entry.urls.push(src)
                 const page = URL.createObjectURL(
-                    new Blob([`<img src="${src}">`], { type: 'text/html' }))
+                    new Blob([`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin: 0"><img src="${src}"></body></html>`], { type: 'text/html' }))
                 entry.urls.push(page)
                 return page
             } catch (error) {

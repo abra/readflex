@@ -167,7 +167,7 @@ export const compare = (a, b) => {
         || compare(collapse(a, true), collapse(b, true))
 
     for (let i = 0; i < Math.max(a.length, b.length); i++) {
-        const p = a[i], q = b[i]
+        const p = a[i] ?? [], q = b[i] ?? []
         const maxIndex = Math.max(p.length, q.length) - 1
         for (let i = 0; i <= maxIndex; i++) {
             const x = p[i], y = q[i]
@@ -206,9 +206,14 @@ const getChildNodes = (node, filter) => {
     }).flat().filter(x => x)
 }
 
-const logicalParentNode = node => {
+// The nearest ancestor a CFI step can name: `cfi-skip` wrappers and parents
+// the filter skips are transparent (foliate-js#100), as in getChildNodes.
+const logicalParentNode = (node, filter) => {
     let parentNode = node.parentNode
-    while (parentNode && isCfiSkipNode(parentNode)) parentNode = parentNode.parentNode
+    while (parentNode && parentNode !== node.ownerDocument?.documentElement
+        && (isCfiSkipNode(parentNode)
+            || (filter && filter(parentNode) === NodeFilter.FILTER_SKIP)))
+        parentNode = parentNode.parentNode
     return parentNode
 }
 
@@ -271,7 +276,7 @@ const partsToNode = (node, parts, filter) => {
 
 const nodeToParts = (node, offset, filter) => {
     const { id } = node
-    const parentNode = logicalParentNode(node)
+    const parentNode = logicalParentNode(node, filter)
     const indexed = indexChildNodes(parentNode, filter)
     const index = indexed.findIndex(x =>
         Array.isArray(x) ? x.some(x => x === node) : x === node)

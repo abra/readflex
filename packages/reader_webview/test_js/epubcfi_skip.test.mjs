@@ -156,3 +156,45 @@ test('cfi-skip wrappers are transparent when creating and resolving CFIs', () =>
   assert.equal(resolved.endContainer, wrapped.cellText)
   assert.equal(resolved.endOffset, 4)
 })
+
+test('parents the filter skips are transparent too, and offsets survive them', () => {
+  // foliate-js#100: a selection starting inside a skipped wrapper must
+  // count its characters among the parent's merged text, not the wrapper's.
+  const html = element('html')
+  const body = element('body')
+  const paragraph = element('p', { id: 'p' })
+  const skipA = element('span')
+  skipA.setAttribute('skip')
+  skipA.append(text('H'))
+  const skipB = element('span')
+  skipB.setAttribute('skip')
+  skipB.append(text('ll'))
+  const tail = text('o, World')
+  paragraph.append(skipA, text('e'), skipB, tail)
+  body.append(paragraph)
+  html.append(body)
+  const doc = new FakeDocument(html)
+  const filter = node => node.nodeType === 1 && node.hasAttribute('skip')
+    ? NodeFilter.FILTER_SKIP
+    : NodeFilter.FILTER_ACCEPT
+
+  const range = new FakeRange()
+  range.setStart(skipB.firstChild, 1)
+  range.setEnd(tail, 4)
+  const cfi = CFI.fromRange(range, filter)
+  assert.equal(cfi, 'epubcfi(/2/2[p],/1:3,/1:8)')
+
+  const resolved = CFI.toRange(doc, CFI.parse('/2/2[p],/1:3,/1:8'), filter)
+  assert.equal(resolved.startContainer, skipB.firstChild)
+  assert.equal(resolved.startOffset, 1)
+  assert.equal(resolved.endContainer, tail)
+  assert.equal(resolved.endOffset, 4)
+})
+
+test('comparing CFIs with different numbers of indirections', () => {
+  const order = (a, b) => CFI.compare(CFI.parse(a), CFI.parse(b))
+  assert.equal(order('/6/4', '/6/4!/2'), -1)
+  assert.equal(order('/6/4!/2', '/6/4!/2!/2'), -1)
+  assert.equal(order('/6/4!/2!/2', '/6/4!/2'), 1)
+  assert.equal(order('/6/4!/2', '/6/4!/2'), 0)
+})

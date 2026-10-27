@@ -682,6 +682,8 @@ const openPDF = async (file, byteRanges) => {
             pdfjsLib.PDFDataRangeTransport, file)
         const task = pdfjsLib.getDocument({
             range: transport, disableAutoFetch: true, disableStream: true, verbosity,
+            // Never let a PDF's PostScript functions run through `new Function`.
+            isEvalSupported: false,
         })
         try {
             return await Promise.race([task.promise, failed])
@@ -692,7 +694,7 @@ const openPDF = async (file, byteRanges) => {
         }
     }
     const data = new Uint8Array(await file.arrayBuffer())
-    return pdfjsLib.getDocument({ data, verbosity }).promise
+    return pdfjsLib.getDocument({ data, verbosity, isEvalSupported: false }).promise
 }
 
 export const makePDF = async (file, { byteRanges = false } = {}) => {

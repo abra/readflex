@@ -1908,7 +1908,7 @@ console.log(JSON.stringify({ result, calls, errors }))
     });
 
     test('versions bundled reader assets independently of app version', () {
-      expect(AssetExtractor.assetRevision, 'reader_webview_assets_171');
+      expect(AssetExtractor.assetRevision, 'reader_webview_assets_172');
       expect(
         AssetExtractor.extractionVersionFor('1.0.0+1'),
         '1.0.0+1|${AssetExtractor.assetRevision}',

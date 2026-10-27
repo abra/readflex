@@ -10,17 +10,26 @@ const easeInOutSine = x => -(Math.cos(Math.PI * x) - 1) / 2
 const animate = (a, b, duration, ease, render, { initialProgress = 0, isCancelled } = {}) => new Promise(resolve => {
   let start
   const clampedInitial = Math.max(0, Math.min(initialProgress, 0.95))
+  // In the background no frame is ever delivered, so the animation would
+  // never finish and the page turn would hang until the app returns: land
+  // at the end at once instead (foliate-js#80).
+  const finish = () => {
+    render(lerp(a, b, 1))
+    resolve()
+  }
   const step = now => {
     if (isCancelled?.()) {
       resolve()
       return
     }
+    if (document.hidden) return finish()
     start ??= now - clampedInitial * duration
     const fraction = Math.min(1, (now - start) / duration)
     render(lerp(a, b, ease(fraction)))
     if (fraction < 1) requestAnimationFrame(step)
     else resolve()
   }
+  if (document.hidden) return finish()
   requestAnimationFrame(step)
 })
 

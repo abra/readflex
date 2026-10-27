@@ -9,6 +9,24 @@ The vertical article reader shell lives under `assets/article-html/`. At runtime
 both asset families are extracted to a writable directory where `reader_server`
 can serve them over localhost.
 
+### Upstream foliate-js
+
+`src/` is a patched copy of johnfactotum/foliate-js, not a dependency:
+`paginator.js` and `view.js` are rewrites, `mobi.js`, `fb2.js`, `footnotes.js`,
+`progress.js` and `dict.js` track upstream, the rest carry local patches.
+The last audit against upstream (`78914ae`, 2026-05-01) ported, with tests
+in `test_js/epubcfi_skip.test.mjs` and `test_browser/upstream_fixes.test.mjs`:
+CFI comparison across indirection depth and selections inside filter-skipped
+wrappers; `mobi.js` re-synced (empty fragments, multibyte anchors, anchors
+built before documents, faster sectioning) keeping `sanitizePublisherDocument`;
+`fb2.js` and `footnotes.js` re-synced (tables, images without a reference,
+external links, `<sup>` footnotes); EPUB manifest lookup by id and `srcset`
+rewriting; comic pages as full documents without body margin; page turns
+finishing while the document is hidden; PDF.js with `isEvalSupported: false`.
+Left for their own work: upstream's EPUB metadata rewrite, PDF.js 5.x, the
+fixed-layout fixes; the page-break-to-column rewrite stays off on purpose.
+Any change under `assets/` bumps `AssetExtractor.assetRevision`.
+
 ## What's included
 
 | Symbol                   | Kind      | Purpose                                                              |
