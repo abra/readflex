@@ -591,7 +591,7 @@ void main() {
       final raw = await storage.getString(_key);
       final map = jsonDecode(raw!) as Map<String, Object?>;
 
-      expect(map['_schemaVersion'], 14);
+      expect(map['_schemaVersion'], 15);
     });
 
     test(

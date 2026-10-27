@@ -3,6 +3,8 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:practice/practice.dart';
+import 'package:practice/src/practice_settings_presets.dart';
+import 'package:practice/src/practice_settings_sheet.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'helpers/practice_harness.dart';
@@ -205,6 +207,111 @@ void main() {
           find.byKey(const ValueKey('practiceStartReview')),
           findsOneWidget,
         );
+      });
+    }
+  });
+
+  group('settings', () {
+    final settingsButton = find.byKey(const ValueKey('practiceSettingsButton'));
+
+    testWidgets('the app bar opens the sheet; a choice applies and the hub '
+        'reloads when it closes', (tester) async {
+      await seed();
+      await tester.pumpWidget(hub());
+      await settle(tester);
+      expect(find.text('2 due'), findsWidgets);
+      expect(find.byTooltip('Practice settings'), findsOneWidget);
+
+      await tester.tap(settingsButton);
+      await tester.pumpAndSettle();
+      expect(find.text('Practice settings'), findsOneWidget);
+      expect(find.byKey(const ValueKey('practiceSettingsNewCards')), findsOne);
+      expect(find.byKey(const ValueKey('practiceSettingsReview')), findsOne);
+      expect(find.byKey(const ValueKey('practiceSettingsMemory')), findsOne);
+
+      await tester.tap(find.text('Vocabulary only'));
+      await tester.pumpAndSettle();
+      expect(h.preferences.current.practiceReviewHighlights, isFalse);
+      await tester.tap(find.text('40'));
+      await tester.tap(find.text('Stronger'));
+      await tester.pumpAndSettle();
+      expect(h.preferences.current.practiceNewCardsPerDay, 40);
+      expect(h.preferences.current.practiceDesiredRetention, 0.95);
+
+      await tester.tap(find.byTooltip('Close'));
+      await settle(tester);
+      // The highlight no longer counts as due.
+      expect(find.text('Practice settings'), findsNothing);
+      expect(find.text('1 due'), findsWidgets);
+    });
+
+    testWidgets('reopening shows the stored choices', (tester) async {
+      await h.preferences.update(
+        (p) => p.copyWith(
+          practiceNewCardsPerDay: 10,
+          practiceReviewHighlights: false,
+          practiceDesiredRetention: 0.8,
+        ),
+      );
+      await tester.pumpWidget(hub());
+      await settle(tester);
+      await tester.tap(settingsButton);
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<AppChoiceControl<int>>(
+              find.byKey(const ValueKey('practiceSettingsNewCards')),
+            )
+            .selected,
+        10,
+      );
+      expect(
+        tester
+            .widget<AppChoiceControl<bool>>(
+              find.byKey(const ValueKey('practiceSettingsReview')),
+            )
+            .selected,
+        isFalse,
+      );
+      expect(
+        tester
+            .widget<AppChoiceControl<PracticeMemoryTarget>>(
+              find.byKey(const ValueKey('practiceSettingsMemory')),
+            )
+            .selected,
+        PracticeMemoryTarget.lighter,
+      );
+    });
+
+    for (final locale in ReadflexSupportedLocales.locales) {
+      testWidgets('200% text at 320x568 without overflow: $locale', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(320, 568);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          hub(locale: locale, textScaler: const TextScaler.linear(2)),
+        );
+        await settle(tester);
+        await tester.tap(settingsButton);
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(PracticeSettingsSheet), findsOneWidget);
+        await tester.scrollUntilVisible(
+          find.byKey(const ValueKey('practiceSettingsMemoryHint')),
+          200,
+          scrollable: find
+              .descendant(
+                of: find.byType(PracticeSettingsSheet),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        expect(tester.takeException(), isNull);
       });
     }
   });

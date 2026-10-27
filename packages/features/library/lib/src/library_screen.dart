@@ -102,6 +102,7 @@ class LibraryScreen extends StatelessWidget {
             articleRepository: articleRepository,
             collectionRepository: collectionRepository,
             fsrsRepository: fsrsRepository,
+            preferencesService: preferencesService,
           )..add(const LibraryLoadRequested()),
         ),
         BlocProvider(

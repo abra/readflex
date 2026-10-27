@@ -283,6 +283,35 @@ void main() {
       expect(pill.right, lessThanOrEqualTo(target.right));
     });
 
+    testWidgets('highlights count as due only while sessions review them', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      fsrsRepository.stats = reviewStats(
+        words: 3,
+        highlights: 2,
+        due: 1,
+        dueHighlights: 1,
+      );
+      await preferencesService.update(
+        (p) => p.copyWith(practiceReviewHighlights: false),
+      );
+      await tester.pumpWidget(buildSubject(onPracticePressed: () async {}));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: _row, matching: find.text('1 card due today')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: _badge, matching: find.text('1')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('all reviewed: a quiet row with the totals, no badge', (
       tester,
     ) async {

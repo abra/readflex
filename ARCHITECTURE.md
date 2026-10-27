@@ -297,8 +297,8 @@ remain for migration compatibility only (last revision `189e2cc1`).
 | `contextual_translation_service` | Contextual translation request/result contracts, remote client, cache, and ML Kit offline fallback coordinator. | Used by the `translate` feature. |
 | `dictionary_service` | System definition UI bridge contract and typed HTTP client/models for monolingual dictionary lookup. | Used by the `dictionary` feature; native implementations live in the app runners. |
 | `monitoring` | Logger, log observers, analytics/error reporter contracts, GlitchTip reporting, and no-op fallbacks. | GlitchTip is active when configured; analytics remains a no-op. |
-| `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, Practice, and app composition. Practice limits (`practiceNewCardsPerDay`, `practiceReviewHighlights`) are stored with defaults; no screen edits them yet. |
-| `review_scheduler` | FSRS v6 wrapper: computes the next review state and log for a rating, previews intervals. One learning and one relearning step of 10 min because the step is not persisted; fuzzing off so previews match. | Used by `fsrs_repository` only. |
+| `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, Practice, and app composition. Practice limits (`practiceNewCardsPerDay`, `practiceReviewHighlights`, `practiceDesiredRetention`) are edited in the Practice settings sheet. |
+| `review_scheduler` | FSRS-6 over the vendored `fsrs`: computes the next review state and log for a rating at the reader's desired retention, previews intervals. Study days start at 04:00; day-level intervals are at least a day, ordered by rating and capped at 365; one learning and one relearning step of 10 min because the step is not persisted; fuzzing off so previews match. Held to py-fsrs by a 118-history reference test. | Used by `fsrs_repository` only. |
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
 | `reader_server` | Localhost HTTP server for reader assets and book/article files. | Supports range requests for books and local article HTML/assets for WebView readers. |
 | `reader_webview` | Foliate book WebView wrapper, vertical article HTML wrapper, JS bridges, asset extraction, metadata extraction. | Used by Reader and Import Flow. |
@@ -318,6 +318,7 @@ they keep their upstream license, structure and style, and each one's
 | Package | Upstream | Readflex patch | Used through |
 |---------|----------|----------------|--------------|
 | `device_screen_brightness` | 0.3.1 (MIT) | Linear Android window brightness. | Path dependency of `screen_control_service`. |
+| `fsrs` | 2.0.1 (MIT) | Two FSRS-6 fixes as py-fsrs and fsrs-rs compute them: difficulty mean reversion targets the unclamped initial difficulty, and a same-day Hard never lowers stability; held to py-fsrs by `review_scheduler`'s reference test. | Path dependency of `review_scheduler`. |
 | `flutter_inappwebview_android` | 1.1.3 (Apache-2.0) | Reader selection handles and magnifier; console messages kept out of logcat. | Root `dependency_overrides`. |
 | `flutter_inappwebview_ios` | 1.1.2 (Apache-2.0) | Hides the modern iOS edit menu when context menus are disabled. | Root `dependency_overrides`. |
 
@@ -739,8 +740,7 @@ a task explicitly asks to implement them:
   `189e2cc1` only if that product scope returns. Practice was rebuilt in
   2026-10 on the restored `review_scheduler`, `fsrs_repository` and
   `dictionary_repository`; there is no Home or Profile tab.
-- Practice has no Listen (TTS) on word cards and no daily reminder; the
-  practice limits in preferences have no settings screen yet.
+- Practice has no Listen (TTS) on word cards and no daily reminder.
 
 When replacing a remaining no-op with a production implementation, update this
 document, the relevant package README, and tests around the public contract.

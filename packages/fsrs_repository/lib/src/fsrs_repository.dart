@@ -180,7 +180,9 @@ class FsrsRepository {
   Future<ReviewStats> getStats() async {
     try {
       final now = _clock();
-      final today = DateTime(now.year, now.month, now.day);
+      // Activity is counted in study days, like the schedule itself.
+      final studyDay = _reviewScheduler.studyDay;
+      final today = studyDay.dateOf(now);
       final dueByType = <ReviewableType, int>{};
       final totalByType = <ReviewableType, int>{};
       final masteredByType = <ReviewableType, int>{};
@@ -200,9 +202,9 @@ class FsrsRepository {
       var reviewedLast7Days = 0;
       final weekStart = today.subtract(const Duration(days: 6));
       for (final log in logs) {
-        final at = DateTime.tryParse(log.reviewedAt)?.toLocal();
+        final at = DateTime.tryParse(log.reviewedAt);
         if (at == null) continue;
-        final day = DateTime(at.year, at.month, at.day);
+        final day = studyDay.dateOf(at);
         days.add(day);
         if (!day.isBefore(today)) {
           reviewedToday++;
@@ -237,10 +239,18 @@ class FsrsRepository {
     }
   }
 
-  /// How far each rating would postpone [current]; see
-  /// [ReviewScheduler.previewIntervals].
-  Map<Rating, Duration> previewIntervals(FsrsCardData current) =>
-      _reviewScheduler.previewIntervals(current);
+  /// How far each rating would postpone [current] at [desiredRetention];
+  /// see [ReviewScheduler.previewIntervals].
+  Map<Rating, Duration> previewIntervals(
+    FsrsCardData current, {
+    double desiredRetention = defaultDesiredRetention,
+  }) => _reviewScheduler.previewIntervals(
+    current,
+    desiredRetention: desiredRetention,
+  );
+
+  /// The day boundary the schedule and the activity counts follow.
+  StudyDay get studyDay => _reviewScheduler.studyDay;
 
   // ─── Review ───
 
@@ -256,6 +266,7 @@ class FsrsRepository {
     required Rating rating,
     String? sourceId,
     int? reviewDurationMs,
+    double desiredRetention = defaultDesiredRetention,
   }) async {
     try {
       // Read → compute → upsert + log all live inside one transaction so two
@@ -270,6 +281,7 @@ class FsrsRepository {
           currentFsrs: currentFsrs,
           rating: rating,
           reviewDurationMs: reviewDurationMs,
+          desiredRetention: desiredRetention,
         );
 
         // Keep the stored sourceId on later reviews so passing null never

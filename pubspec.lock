@@ -455,10 +455,9 @@ packages:
   fsrs:
     dependency: transitive
     description:
-      name: fsrs
-      sha256: b50dbee450a424dbac4fb0f49cae25ff2e4e6d01844caa1ec0c26de5baba8071
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/fsrs"
+      relative: true
+    source: path
     version: "2.0.1"
   fsrs_repository:
     dependency: "direct main"

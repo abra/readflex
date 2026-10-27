@@ -1935,6 +1935,66 @@ abstract class ReadflexLocalizations {
   /// **'Nothing due. Come back tomorrow.'**
   String get practiceCaughtUpBody;
 
+  /// No description provided for @practiceSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice settings'**
+  String get practiceSettingsTitle;
+
+  /// No description provided for @practiceSettingsNewCards.
+  ///
+  /// In en, this message translates to:
+  /// **'New cards a day'**
+  String get practiceSettingsNewCards;
+
+  /// No description provided for @practiceSettingsReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get practiceSettingsReview;
+
+  /// No description provided for @practiceSettingsReviewVocabulary.
+  ///
+  /// In en, this message translates to:
+  /// **'Vocabulary only'**
+  String get practiceSettingsReviewVocabulary;
+
+  /// No description provided for @practiceSettingsReviewWithHighlights.
+  ///
+  /// In en, this message translates to:
+  /// **'With highlights'**
+  String get practiceSettingsReviewWithHighlights;
+
+  /// No description provided for @practiceSettingsMemory.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory target'**
+  String get practiceSettingsMemory;
+
+  /// No description provided for @practiceMemoryLighter.
+  ///
+  /// In en, this message translates to:
+  /// **'Lighter'**
+  String get practiceMemoryLighter;
+
+  /// No description provided for @practiceMemoryBalanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get practiceMemoryBalanced;
+
+  /// No description provided for @practiceMemoryStronger.
+  ///
+  /// In en, this message translates to:
+  /// **'Stronger'**
+  String get practiceMemoryStronger;
+
+  /// No description provided for @practiceMemoryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced brings a card back when you would still recall 9 in 10. Lighter waits longer and means fewer reviews; Stronger comes back sooner.'**
+  String get practiceMemoryHint;
+
   /// No description provided for @practiceCaughtUpShort.
   ///
   /// In en, this message translates to:

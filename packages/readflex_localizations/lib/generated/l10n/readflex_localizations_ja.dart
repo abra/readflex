@@ -1022,6 +1022,37 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get practiceCaughtUpBody => '復習はありません。また明日。';
 
   @override
+  String get practiceSettingsTitle => '練習の設定';
+
+  @override
+  String get practiceSettingsNewCards => '1日の新しいカード';
+
+  @override
+  String get practiceSettingsReview => '復習する対象';
+
+  @override
+  String get practiceSettingsReviewVocabulary => '単語帳のみ';
+
+  @override
+  String get practiceSettingsReviewWithHighlights => 'ハイライトも';
+
+  @override
+  String get practiceSettingsMemory => '記憶の目標';
+
+  @override
+  String get practiceMemoryLighter => '軽め';
+
+  @override
+  String get practiceMemoryBalanced => '標準';
+
+  @override
+  String get practiceMemoryStronger => 'しっかり';
+
+  @override
+  String get practiceMemoryHint =>
+      '「標準」は10枚中9枚をまだ覚えているうちにカードを戻します。「軽め」はより長く待ち、復習が減ります。「しっかり」は早めに戻します。';
+
+  @override
   String get practiceCaughtUpShort => '完了';
 
   @override

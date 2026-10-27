@@ -12,6 +12,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:toast_service/toast_service.dart';
 
 import 'practice_bloc.dart';
+import 'practice_settings_sheet.dart';
 import 'practice_source_cover.dart';
 import 'practice_source_summary.dart';
 
@@ -62,6 +63,7 @@ class PracticeScreen extends StatelessWidget {
         preferencesService: preferencesService,
       )..add(const PracticeLoadRequested()),
       child: _PracticeView(
+        preferencesService: preferencesService,
         onStartReview: onStartReview,
         onWordsPressed: onWordsPressed,
         onHighlightsPressed: onHighlightsPressed,
@@ -72,11 +74,13 @@ class PracticeScreen extends StatelessWidget {
 
 class _PracticeView extends StatefulWidget {
   const _PracticeView({
+    required this.preferencesService,
     required this.onStartReview,
     required this.onWordsPressed,
     required this.onHighlightsPressed,
   });
 
+  final PreferencesService preferencesService;
   final PracticeStartReview onStartReview;
   final Future<void> Function() onWordsPressed;
   final Future<void> Function() onHighlightsPressed;
@@ -94,6 +98,14 @@ class _PracticeViewState extends State<_PracticeView> {
     if (mounted) _refresh();
   }
 
+  /// Settings change what counts as due, so the hub reloads after them.
+  Future<void> _openSettings() => _after(
+    () => showPracticeSettingsSheet(
+      context: context,
+      preferencesService: widget.preferencesService,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -105,6 +117,15 @@ class _PracticeViewState extends State<_PracticeView> {
           appBar: AppBar(
             leading: const AppBackButton(),
             title: Text(l10n.practiceTitle),
+            actions: [
+              AppPlainIconButton(
+                key: const ValueKey('practiceSettingsButton'),
+                icon: AppIcons.settings,
+                tooltip: l10n.practiceSettingsTitle,
+                color: context.colors.onSurface,
+                onPressed: _openSettings,
+              ),
+            ],
           ),
           body: SafeArea(
             top: false,

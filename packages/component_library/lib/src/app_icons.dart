@@ -50,6 +50,7 @@ abstract final class AppIcons {
   static const IconData home = LucideIcons.house;
   // A fan of cards: the review deck. Lucide 4 (Lucide 1.56+).
   static const IconData practice = LucideIcons.playingCardsFan;
+  static const IconData settings = LucideIcons.settings;
   static const IconData profile = LucideIcons.user;
 
   // ── Practice ──────────────────────────────────────────────

@@ -575,9 +575,16 @@ class Preferences {
     this.readerSelectionTipDismissed = false,
     this.practiceNewCardsPerDay = defaultPracticeNewCardsPerDay,
     this.practiceReviewHighlights = true,
+    this.practiceDesiredRetention = defaultPracticeDesiredRetention,
   });
 
   static const defaultPracticeNewCardsPerDay = 20;
+
+  /// FSRS's desired retention: the probability of recall a card is
+  /// scheduled to have when it comes due. The scheduler accepts 0.7–0.97.
+  static const defaultPracticeDesiredRetention = 0.9;
+  static const minPracticeDesiredRetention = 0.7;
+  static const maxPracticeDesiredRetention = 0.97;
 
   final ThemeMode themeMode;
   final Locale locale;
@@ -622,6 +629,11 @@ class Preferences {
 
   /// Whether review sessions resurface highlights besides saved words.
   final bool practiceReviewHighlights;
+
+  /// How sure of a card the reader wants to be when it comes back: FSRS's
+  /// desired retention, within [minPracticeDesiredRetention] and
+  /// [maxPracticeDesiredRetention]. Lower means fewer reviews.
+  final double practiceDesiredRetention;
 
   ReaderAppearancePreferences get readerAppearance =>
       ReaderAppearancePreferences(
@@ -689,6 +701,7 @@ class Preferences {
     bool? readerSelectionTipDismissed,
     int? practiceNewCardsPerDay,
     bool? practiceReviewHighlights,
+    double? practiceDesiredRetention,
   }) => Preferences(
     themeMode: themeMode ?? this.themeMode,
     locale: locale ?? this.locale,
@@ -731,6 +744,8 @@ class Preferences {
         practiceNewCardsPerDay ?? this.practiceNewCardsPerDay,
     practiceReviewHighlights:
         practiceReviewHighlights ?? this.practiceReviewHighlights,
+    practiceDesiredRetention:
+        practiceDesiredRetention ?? this.practiceDesiredRetention,
   );
 
   @override
@@ -770,7 +785,8 @@ class Preferences {
           readerSelectionTipShowCount == other.readerSelectionTipShowCount &&
           readerSelectionTipDismissed == other.readerSelectionTipDismissed &&
           practiceNewCardsPerDay == other.practiceNewCardsPerDay &&
-          practiceReviewHighlights == other.practiceReviewHighlights;
+          practiceReviewHighlights == other.practiceReviewHighlights &&
+          practiceDesiredRetention == other.practiceDesiredRetention;
 
   @override
   int get hashCode => Object.hashAll([
@@ -803,6 +819,7 @@ class Preferences {
     readerSelectionTipDismissed,
     practiceNewCardsPerDay,
     practiceReviewHighlights,
+    practiceDesiredRetention,
   ]);
 }
 

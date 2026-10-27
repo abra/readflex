@@ -18,12 +18,19 @@ class FakeFsrsRepository implements FsrsRepository {
   }
 }
 
-ReviewStats reviewStats({int words = 0, int highlights = 0, int due = 0}) =>
-    ReviewStats(
-      totalByType: {
-        ReviewableType.dictionary: words,
-        ReviewableType.highlight: highlights,
-      },
-      // The Library reads the sum only; the split is the hub's business.
-      dueByType: {ReviewableType.dictionary: due},
-    );
+ReviewStats reviewStats({
+  int words = 0,
+  int highlights = 0,
+  int due = 0,
+  int dueHighlights = 0,
+}) => ReviewStats(
+  totalByType: {
+    ReviewableType.dictionary: words,
+    ReviewableType.highlight: highlights,
+  },
+  // [due] words; highlights only count while the setting reviews them.
+  dueByType: {
+    ReviewableType.dictionary: due,
+    ReviewableType.highlight: dueHighlights,
+  },
+);

@@ -73,6 +73,10 @@ Practice has no tab; the Library is its one way in, in two places:
   review: "N cards due today" with the accent-tinted glyph, or "All caught
   up" with the totals, muted. It scrolls with the rows, so a short window at
   large text keeps its list. A reader who never saves sees no row.
+- The due count is words due plus highlights due while Practice settings
+  review highlights (`practiceReviewHighlights`), read from
+  `PreferencesService` at each load, so the row and the badge agree with the
+  hub.
 - `LibraryPracticeButton` sits in the bottom capsule between the collection
   switcher and "+", behind a hairline, always: Practice stays reachable before
   the first save (it opens the empty section), and the due count is its

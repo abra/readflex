@@ -1064,6 +1064,37 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get practiceCaughtUpBody => 'Nothing due. Come back tomorrow.';
 
   @override
+  String get practiceSettingsTitle => 'Practice settings';
+
+  @override
+  String get practiceSettingsNewCards => 'New cards a day';
+
+  @override
+  String get practiceSettingsReview => 'Review';
+
+  @override
+  String get practiceSettingsReviewVocabulary => 'Vocabulary only';
+
+  @override
+  String get practiceSettingsReviewWithHighlights => 'With highlights';
+
+  @override
+  String get practiceSettingsMemory => 'Memory target';
+
+  @override
+  String get practiceMemoryLighter => 'Lighter';
+
+  @override
+  String get practiceMemoryBalanced => 'Balanced';
+
+  @override
+  String get practiceMemoryStronger => 'Stronger';
+
+  @override
+  String get practiceMemoryHint =>
+      'Balanced brings a card back when you would still recall 9 in 10. Lighter waits longer and means fewer reviews; Stronger comes back sooner.';
+
+  @override
   String get practiceCaughtUpShort => 'Done';
 
   @override

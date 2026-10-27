@@ -73,6 +73,7 @@ run "article_extraction_service"   "$DART test test/" "$SCRIPT_DIR/packages/arti
 run "remote_content_policy"        "$DART test test/" "$SCRIPT_DIR/packages/remote_content_policy"
 run "article_repository"           "$FLUTTER test test/" "$SCRIPT_DIR/packages/article_repository"
 run "highlight_repository"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/highlight_repository"
+run "fsrs"                         "$DART test test/" "$SCRIPT_DIR/third_party/fsrs"
 run "review_scheduler"             "$FLUTTER test test/" "$SCRIPT_DIR/packages/review_scheduler"
 run "fsrs_repository"              "$FLUTTER test test/" "$SCRIPT_DIR/packages/fsrs_repository"
 run "dictionary_repository"        "$FLUTTER test test/" "$SCRIPT_DIR/packages/dictionary_repository"

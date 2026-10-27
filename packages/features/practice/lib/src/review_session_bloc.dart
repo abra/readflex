@@ -63,6 +63,10 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
   final PreferencesService _preferencesService;
   final PracticeItemLoader _loader;
 
+  /// The reader's memory target, read once when the session starts so every
+  /// preview and rating in it schedules the same way.
+  double _desiredRetention = Preferences.defaultPracticeDesiredRetention;
+
   Future<void> _onStarted(
     ReviewSessionStarted event,
     Emitter<ReviewSessionState> emit,
@@ -70,6 +74,7 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     emit(const ReviewSessionState());
     try {
       final prefs = _preferencesService.current;
+      _desiredRetention = prefs.practiceDesiredRetention;
       final (rows, sources, stats) = await (
         _dueRows(),
         PracticeSourceIndex.load(
@@ -139,7 +144,10 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     return ReviewSessionState(
       status: ReviewSessionStatus.reviewing,
       items: items,
-      intervals: _fsrsRepository.previewIntervals(items.first.fsrs),
+      intervals: _fsrsRepository.previewIntervals(
+        items.first.fsrs,
+        desiredRetention: _desiredRetention,
+      ),
     );
   }
 
@@ -163,6 +171,7 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
         itemType: item.itemType,
         rating: event.rating,
         sourceId: item.sourceId,
+        desiredRetention: _desiredRetention,
       );
     } catch (e, st) {
       addError(e, st);
@@ -207,7 +216,10 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
         items: items,
         index: index,
         revealed: false,
-        intervals: _fsrsRepository.previewIntervals(items[index].fsrs),
+        intervals: _fsrsRepository.previewIntervals(
+          items[index].fsrs,
+          desiredRetention: _desiredRetention,
+        ),
       ),
     );
   }
@@ -243,7 +255,10 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
         revealed: false,
         ratings: ratings,
         again: again,
-        intervals: _fsrsRepository.previewIntervals(state.items[next].fsrs),
+        intervals: _fsrsRepository.previewIntervals(
+          state.items[next].fsrs,
+          desiredRetention: _desiredRetention,
+        ),
       ),
     );
   }

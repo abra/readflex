@@ -40,7 +40,8 @@ class PreferencesRepository {
   ///   12: reset global reader line height to the explicit 1.6 default.
   ///   13: add active preferred translation target language.
   ///   14: add practice limits (new cards per day, review highlights).
-  static const _currentSchemaVersion = 14;
+  ///   15: add the practice desired retention (FSRS), clamped on read.
+  static const _currentSchemaVersion = 15;
 
   final PreferencesStorage _storage;
 
@@ -142,6 +143,13 @@ class PreferencesRepository {
         ),
         practiceReviewHighlights:
             map['practiceReviewHighlights'] as bool? ?? true,
+        practiceDesiredRetention:
+            ((map['practiceDesiredRetention'] as num?)?.toDouble() ??
+                    Preferences.defaultPracticeDesiredRetention)
+                .clamp(
+                  Preferences.minPracticeDesiredRetention,
+                  Preferences.maxPracticeDesiredRetention,
+                ),
       );
       return preferences.copyWith(
         readerAppearanceOverrides: _removeNoOpReaderAppearanceOverrides(
@@ -197,6 +205,7 @@ class PreferencesRepository {
       'readerSelectionTipDismissed': prefs.readerSelectionTipDismissed,
       'practiceNewCardsPerDay': prefs.practiceNewCardsPerDay,
       'practiceReviewHighlights': prefs.practiceReviewHighlights,
+      'practiceDesiredRetention': prefs.practiceDesiredRetention,
     };
     final json = jsonEncode(map);
     if (json == _storedJson) return;

@@ -21,6 +21,7 @@ void main() {
 
       expect(prefs.practiceNewCardsPerDay, 20);
       expect(prefs.practiceReviewHighlights, isTrue);
+      expect(prefs.practiceDesiredRetention, 0.9);
     });
 
     test('round-trip through storage', () async {
@@ -29,6 +30,7 @@ void main() {
       final prefs = (await repo.load(_supportedCodes)).copyWith(
         practiceNewCardsPerDay: 50,
         practiceReviewHighlights: false,
+        practiceDesiredRetention: 0.8,
       );
 
       await repo.save(prefs);
@@ -36,8 +38,45 @@ void main() {
 
       expect(loaded.practiceNewCardsPerDay, 50);
       expect(loaded.practiceReviewHighlights, isFalse);
+      expect(loaded.practiceDesiredRetention, 0.8);
       final stored = jsonDecode((await storage.getString(_key))!) as Map;
-      expect(stored['_schemaVersion'], 14);
+      expect(stored['_schemaVersion'], 15);
+    });
+
+    test('holds the desired retention to the scheduler range', () async {
+      for (final (stored, expected) in [
+        (0.5, 0.7),
+        (0.99, 0.97),
+        (0.85, 0.85),
+      ]) {
+        final storage = PreferencesStorage();
+        await storage.setString(
+          _key,
+          jsonEncode({
+            '_schemaVersion': 15,
+            'practiceDesiredRetention': stored,
+          }),
+        );
+
+        final prefs = await PreferencesRepository(
+          storage,
+        ).load(_supportedCodes);
+
+        expect(prefs.practiceDesiredRetention, expected, reason: '$stored');
+      }
+    });
+
+    test('a schema 14 store gets the default retention', () async {
+      final storage = PreferencesStorage();
+      await storage.setString(
+        _key,
+        jsonEncode({'_schemaVersion': 14, 'practiceNewCardsPerDay': 30}),
+      );
+
+      final prefs = await PreferencesRepository(storage).load(_supportedCodes);
+
+      expect(prefs.practiceNewCardsPerDay, 30);
+      expect(prefs.practiceDesiredRetention, 0.9);
     });
 
     test(
@@ -66,6 +105,10 @@ void main() {
       expect(a, isNot(const Preferences(practiceNewCardsPerDay: 6)));
       expect(
         const Preferences(practiceReviewHighlights: false),
+        isNot(const Preferences()),
+      );
+      expect(
+        const Preferences(practiceDesiredRetention: 0.8),
         isNot(const Preferences()),
       );
     });

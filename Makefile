@@ -16,6 +16,7 @@ PACKAGES = \
 	packages/remote_content_policy \
 	packages/article_repository \
 	packages/highlight_repository \
+	third_party/fsrs \
 	packages/review_scheduler \
 	packages/fsrs_repository \
 	packages/dictionary_repository \

@@ -1050,6 +1050,37 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get practiceCaughtUpBody => 'कुछ बाकी नहीं। कल फिर आएँ।';
 
   @override
+  String get practiceSettingsTitle => 'अभ्यास सेटिंग';
+
+  @override
+  String get practiceSettingsNewCards => 'प्रतिदिन नए कार्ड';
+
+  @override
+  String get practiceSettingsReview => 'दोहराएँ';
+
+  @override
+  String get practiceSettingsReviewVocabulary => 'केवल शब्दावली';
+
+  @override
+  String get practiceSettingsReviewWithHighlights => 'हाइलाइट सहित';
+
+  @override
+  String get practiceSettingsMemory => 'स्मृति लक्ष्य';
+
+  @override
+  String get practiceMemoryLighter => 'हल्का';
+
+  @override
+  String get practiceMemoryBalanced => 'संतुलित';
+
+  @override
+  String get practiceMemoryStronger => 'मज़बूत';
+
+  @override
+  String get practiceMemoryHint =>
+      '«संतुलित» कार्ड तब लौटाता है जब आपको 10 में से 9 अब भी याद हों। «हल्का» ज़्यादा प्रतीक्षा करता है, दोहराव कम; «मज़बूत» जल्दी लौटाता है।';
+
+  @override
   String get practiceCaughtUpShort => 'पूरा';
 
   @override

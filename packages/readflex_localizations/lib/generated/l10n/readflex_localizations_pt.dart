@@ -1071,6 +1071,37 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   String get practiceCaughtUpBody => 'Nada pendente. Volte amanhã.';
 
   @override
+  String get practiceSettingsTitle => 'Ajustes da prática';
+
+  @override
+  String get practiceSettingsNewCards => 'Cartões novos por dia';
+
+  @override
+  String get practiceSettingsReview => 'Revisar';
+
+  @override
+  String get practiceSettingsReviewVocabulary => 'Só o vocabulário';
+
+  @override
+  String get practiceSettingsReviewWithHighlights => 'Com destaques';
+
+  @override
+  String get practiceSettingsMemory => 'Meta de memória';
+
+  @override
+  String get practiceMemoryLighter => 'Mais leve';
+
+  @override
+  String get practiceMemoryBalanced => 'Equilibrada';
+
+  @override
+  String get practiceMemoryStronger => 'Mais firme';
+
+  @override
+  String get practiceMemoryHint =>
+      '“Equilibrada” traz um cartão de volta enquanto você ainda lembra 9 em 10. “Mais leve” espera mais e significa menos revisões; “Mais firme” volta antes.';
+
+  @override
   String get practiceCaughtUpShort => 'Em dia';
 
   @override

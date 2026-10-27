@@ -36,9 +36,10 @@ tracking existed; `recordReview` still creates a missing row implicitly.
 | `getDueItems({type, limit, offset})` | Due now, oldest due first |
 | `getDueItemsBySource(sourceId, {type})` | Due items from one source |
 | `getDueItemCount({type})` | Due count |
-| `getStats()` | `ReviewStats`: due/total/mastered per type, today, 7 days, streak |
-| `previewIntervals(current)` | Interval per rating for the button labels |
-| `recordReview({itemId, itemType, rating, sourceId, reviewDurationMs})` | Apply a rating |
+| `getStats()` | `ReviewStats`: due/total/mastered per type, today, 7 days, streak, counted in study days (`studyDay`) |
+| `previewIntervals(current, {desiredRetention})` | Interval per rating for the button labels |
+| `recordReview({itemId, itemType, rating, sourceId, reviewDurationMs, desiredRetention})` | Apply a rating at the reader's memory target |
+| `studyDay` | The 04:00 day boundary the schedule and the counts follow |
 
 Receives `AppDatabase` and an optional `clock` (tests). Storage errors are
 wrapped in `StorageException`.

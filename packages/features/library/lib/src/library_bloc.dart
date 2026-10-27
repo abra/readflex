@@ -7,6 +7,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
+import 'package:preferences_service/preferences_service.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 part 'library_event.dart';
@@ -18,10 +19,12 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     ArticleRepository? articleRepository,
     CollectionRepository? collectionRepository,
     FsrsRepository? fsrsRepository,
+    PreferencesService? preferencesService,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
        _collectionRepository = collectionRepository,
        _fsrsRepository = fsrsRepository,
+       _preferencesService = preferencesService,
        super(LibraryState()) {
     on<LibraryLoadRequested>(_onLoadRequested);
     on<LibrarySourceDeleted>(_onSourceDeleted);
@@ -66,6 +69,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   /// Review counts for the Practice entry; `null` leaves the Library
   /// without one.
   final FsrsRepository? _fsrsRepository;
+  final PreferencesService? _preferencesService;
   int _loadGeneration = 0;
 
   /// Progress saved since the latest load started. That load may have read a
@@ -263,10 +267,15 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     if (repository == null) return null;
     try {
       final stats = await repository.getStats();
+      // Highlights count as due only while sessions review them.
+      final reviewHighlights =
+          _preferencesService?.current.practiceReviewHighlights ?? true;
       return LibraryPracticeSummary(
         words: stats.totalOf(ReviewableType.dictionary),
         highlights: stats.totalOf(ReviewableType.highlight),
-        due: stats.due,
+        due:
+            stats.dueOf(ReviewableType.dictionary) +
+            (reviewHighlights ? stats.dueOf(ReviewableType.highlight) : 0),
       );
     } catch (e, st) {
       addError(e, st);

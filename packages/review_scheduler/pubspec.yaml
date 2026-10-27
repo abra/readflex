@@ -9,7 +9,8 @@ environment:
 dependencies:
   domain_models:
     path: ../domain_models
-  fsrs: ^2.0.1
+  fsrs:
+    path: ../../third_party/fsrs
   uuid: ^4.5.1
 
 dev_dependencies:

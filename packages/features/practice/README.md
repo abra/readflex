@@ -56,6 +56,21 @@ session as a full-screen dialog page. The hub reloads after each of them
 closes; there is no tab to return to. Nothing else is public;
 tests reach cubits and `PracticeItem` through `src/` imports.
 
+## Settings
+
+The hub's app bar ends with Practice settings (`AppIcons.settings`), a sheet
+built like Library's Display sheet (`ActionBottomSheetLayout.scrollable`,
+`AppSettingsSection`, `AppChoiceControl`): new cards a day (10 / 20 / 40),
+what a session reviews (Vocabulary only / With highlights) and the memory
+target (Lighter / Balanced / Stronger: FSRS desired retention 0.8 / 0.9 /
+0.95, `PracticeMemoryTarget`). `PracticeSettingsCubit` shows each choice at
+once and writes it to `PreferencesService`; a failed write is reported and
+the choice goes back. A stored value the sheet does not offer shows as its
+nearest choice (`practice_settings_presets.dart`) and is rewritten only when
+the reader picks one. The hub reloads when the sheet closes, since the
+highlights setting changes what counts as due; the Library's due count
+follows the same setting.
+
 ## Architecture
 
 - `PracticeScreen` → `PracticeBloc`: review stats, the per-source summaries
@@ -77,9 +92,11 @@ tests reach cubits and `PracticeItem` through `src/` imports.
 
 ### Session rules
 
-- The queue honours Profile: highlights only when `practiceReviewHighlights`
-  is on; never-reviewed cards only up to `practiceNewCardsPerDay` less
-  `ReviewStats.newReviewedToday`.
+- The queue honours Practice settings: highlights only when
+  `practiceReviewHighlights` is on; never-reviewed cards only up to
+  `practiceNewCardsPerDay` less `ReviewStats.newReviewedToday`; every
+  preview and rating in a session schedules at the memory target
+  (`practiceDesiredRetention`) read when the session starts.
 - At most 50 cards per session. A caught-up reader can review `ahead`: the
   20 cards due soonest across both types, never-reviewed cards last.
 - Each rating is recorded through `FsrsRepository.recordReview` as it is
@@ -139,6 +156,8 @@ tests reach cubits and `PracticeItem` through `src/` imports.
 - `test/practice_words_cubit_test.dart` and
   `test/practice_highlights_cubit_test.dart` cover loading with titles and
   anchors, search and filters, removal and grouping.
+- `test/practice_settings_cubit_test.dart` covers the presets, each choice's
+  write, no-op choices and the roll-back on a failed write.
 - `test/practice_screens_test.dart` covers the hub, Vocabulary, Highlights and
   the session end to end with fakes, the app bar of each pushed screen
   (title, `AppBackButton`, localized Back, pop), plus 200% text at 320×568

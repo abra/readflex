@@ -1083,6 +1083,37 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get practiceCaughtUpBody => 'لا شيء مستحق. عُد غدًا.';
 
   @override
+  String get practiceSettingsTitle => 'إعدادات التدريب';
+
+  @override
+  String get practiceSettingsNewCards => 'بطاقات جديدة في اليوم';
+
+  @override
+  String get practiceSettingsReview => 'المراجعة';
+
+  @override
+  String get practiceSettingsReviewVocabulary => 'المفردات فقط';
+
+  @override
+  String get practiceSettingsReviewWithHighlights => 'مع التظليلات';
+
+  @override
+  String get practiceSettingsMemory => 'هدف الذاكرة';
+
+  @override
+  String get practiceMemoryLighter => 'أخف';
+
+  @override
+  String get practiceMemoryBalanced => 'متوازن';
+
+  @override
+  String get practiceMemoryStronger => 'أمتن';
+
+  @override
+  String get practiceMemoryHint =>
+      '«متوازن» يعيد البطاقة ما دمت تتذكر 9 من 10. «أخف» ينتظر أطول ومراجعات أقل؛ «أمتن» يعيدها أبكر.';
+
+  @override
   String get practiceCaughtUpShort => 'تم';
 
   @override

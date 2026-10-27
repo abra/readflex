@@ -1081,6 +1081,37 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get practiceCaughtUpBody => 'Ничего не ждёт. Возвращайтесь завтра.';
 
   @override
+  String get practiceSettingsTitle => 'Настройки практики';
+
+  @override
+  String get practiceSettingsNewCards => 'Новых карточек в день';
+
+  @override
+  String get practiceSettingsReview => 'Повторять';
+
+  @override
+  String get practiceSettingsReviewVocabulary => 'Только лексику';
+
+  @override
+  String get practiceSettingsReviewWithHighlights => 'И выделения';
+
+  @override
+  String get practiceSettingsMemory => 'Цель памяти';
+
+  @override
+  String get practiceMemoryLighter => 'Легче';
+
+  @override
+  String get practiceMemoryBalanced => 'Сбалансированно';
+
+  @override
+  String get practiceMemoryStronger => 'Крепче';
+
+  @override
+  String get practiceMemoryHint =>
+      '«Сбалансированно» возвращает карточку, пока вы помните 9 из 10. «Легче» ждёт дольше, повторений меньше; «Крепче» возвращает раньше.';
+
+  @override
   String get practiceCaughtUpShort => 'Готово';
 
   @override

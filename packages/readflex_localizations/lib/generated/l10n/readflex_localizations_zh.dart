@@ -1022,6 +1022,37 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get practiceCaughtUpBody => '暂无待复习，明天再来。';
 
   @override
+  String get practiceSettingsTitle => '练习设置';
+
+  @override
+  String get practiceSettingsNewCards => '每天新卡片';
+
+  @override
+  String get practiceSettingsReview => '复习内容';
+
+  @override
+  String get practiceSettingsReviewVocabulary => '仅生词本';
+
+  @override
+  String get practiceSettingsReviewWithHighlights => '包括标注';
+
+  @override
+  String get practiceSettingsMemory => '记忆目标';
+
+  @override
+  String get practiceMemoryLighter => '轻松';
+
+  @override
+  String get practiceMemoryBalanced => '均衡';
+
+  @override
+  String get practiceMemoryStronger => '牢固';
+
+  @override
+  String get practiceMemoryHint =>
+      '“均衡”会在你仍记得 10 张中 9 张时让卡片回来。“轻松”等得更久、复习更少；“牢固”回来得更早。';
+
+  @override
   String get practiceCaughtUpShort => '完成';
 
   @override

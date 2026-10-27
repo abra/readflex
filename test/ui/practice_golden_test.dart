@@ -137,6 +137,24 @@ void main() {
       await unmountUi(tester);
     }, tags: ['golden']);
 
+    testWidgets('practice settings sheet $name', (tester) async {
+      final app = await createApp(tester);
+      await seedPractice(app);
+      await pump(
+        tester,
+        app,
+        AppRoutes.practice,
+        () => find
+            .byKey(const ValueKey('practiceTodayCard'))
+            .evaluate()
+            .isNotEmpty,
+      );
+      await tester.tap(find.byKey(const ValueKey('practiceSettingsButton')));
+      await tester.pumpAndSettle();
+      await snapshot(tester, 'practice-settings');
+      await unmountUi(tester);
+    }, tags: ['golden']);
+
     testWidgets('practice section with nothing saved $name', (tester) async {
       final app = await createApp(tester);
       await pump(

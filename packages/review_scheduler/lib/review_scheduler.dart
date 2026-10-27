@@ -2,3 +2,4 @@
 // turn a rating into the next review state; no Flutter, no I/O.
 
 export 'src/review_scheduler.dart';
+export 'src/study_day.dart';
