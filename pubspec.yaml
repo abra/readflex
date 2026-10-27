@@ -33,6 +33,10 @@ dependencies:
     path: packages/article_repository
   highlight_repository:
     path: packages/highlight_repository
+  dictionary_repository:
+    path: packages/dictionary_repository
+  fsrs_repository:
+    path: packages/fsrs_repository
   connectivity_service:
     path: packages/connectivity_service
   contextual_translation_service:
@@ -65,6 +69,8 @@ dependencies:
     path: packages/features/reader
   onboarding:
     path: packages/features/onboarding
+  practice:
+    path: packages/features/practice
 
   # External packages
   flutter_bloc: ^9.1.1

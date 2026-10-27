@@ -7,6 +7,7 @@ import 'library_add_button.dart';
 import 'library_bloc.dart';
 import 'library_collections_button.dart';
 import 'library_layout.dart';
+import 'library_practice_button.dart';
 
 /// Inset of the 48dp controls inside the 56dp capsule, also the gap between
 /// them.
@@ -14,9 +15,9 @@ const double _controlInset =
     (kLibraryFloatingActionsHeight - AppSizes.buttonHeight) / 2;
 
 /// The Library's bottom capsule, where the thumb rests: the collection
-/// switcher naming what the Library shows, then the filled "+" at the outer
-/// end. The row follows the reading direction, so "+" keeps the outer corner
-/// in RTL as well.
+/// switcher naming what the Library shows, Practice behind a hairline with
+/// its due badge, then the filled "+" at the outer end. The row follows the
+/// reading direction, so "+" keeps the outer corner in RTL as well.
 ///
 /// Mounted in the Scaffold's floating action slot. That slot strips the safe
 /// insets, so the width bound uses the 16dp gutters only; side insets exist
@@ -26,6 +27,8 @@ class LibraryFloatingActions extends StatelessWidget {
     required this.scope,
     required this.onCollectionsPressed,
     required this.onAddPressed,
+    this.practiceDue = 0,
+    this.onPracticePressed,
     super.key,
   });
 
@@ -36,8 +39,15 @@ class LibraryFloatingActions extends StatelessWidget {
   /// `null` while an import flow is already open.
   final VoidCallback? onAddPressed;
 
+  /// Cards due in Practice, shown as a badge.
+  final int practiceDue;
+
+  /// Opens Practice; `null` leaves the capsule without it.
+  final VoidCallback? onPracticePressed;
+
   @override
   Widget build(BuildContext context) {
+    final onPracticePressed = this.onPracticePressed;
     final controls = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -47,6 +57,15 @@ class LibraryFloatingActions extends StatelessWidget {
             onPressed: onCollectionsPressed,
           ),
         ),
+        if (onPracticePressed != null) ...[
+          const SizedBox(width: _controlInset),
+          const _ControlDivider(),
+          const SizedBox(width: _controlInset),
+          LibraryPracticeButton(
+            due: practiceDue,
+            onPressed: onPracticePressed,
+          ),
+        ],
         const SizedBox(width: _controlInset),
         LibraryAddButton(onPressed: onAddPressed),
       ],
@@ -88,4 +107,19 @@ class LibraryFloatingActions extends StatelessWidget {
       },
     );
   }
+}
+
+/// Hairline between the collection switcher and Practice, so the two
+/// unfilled controls do not read as one.
+class _ControlDivider extends StatelessWidget {
+  const _ControlDivider();
+
+  static const double _height = AppSpacing.xl;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 1 / MediaQuery.devicePixelRatioOf(context),
+    height: _height,
+    child: ColoredBox(color: context.colors.outlineVariant),
+  );
 }

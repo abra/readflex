@@ -699,18 +699,6 @@ abstract class ReadflexLocalizations {
   /// **'View'**
   String get libraryDisplayView;
 
-  /// No description provided for @libraryDisplayAppearance.
-  ///
-  /// In en, this message translates to:
-  /// **'Appearance'**
-  String get libraryDisplayAppearance;
-
-  /// No description provided for @libraryDisplayLanguage.
-  ///
-  /// In en, this message translates to:
-  /// **'Language'**
-  String get libraryDisplayLanguage;
-
   /// No description provided for @libraryDisplayList.
   ///
   /// In en, this message translates to:
@@ -722,42 +710,6 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Grid'**
   String get libraryDisplayGrid;
-
-  /// No description provided for @libraryThemeSystem.
-  ///
-  /// In en, this message translates to:
-  /// **'System'**
-  String get libraryThemeSystem;
-
-  /// No description provided for @libraryThemeSystemDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Follow device setting'**
-  String get libraryThemeSystemDescription;
-
-  /// No description provided for @libraryThemeLight.
-  ///
-  /// In en, this message translates to:
-  /// **'Light'**
-  String get libraryThemeLight;
-
-  /// No description provided for @libraryThemeLightDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Use light appearance'**
-  String get libraryThemeLightDescription;
-
-  /// No description provided for @libraryThemeDark.
-  ///
-  /// In en, this message translates to:
-  /// **'Dark'**
-  String get libraryThemeDark;
-
-  /// No description provided for @libraryThemeDarkDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Use dark appearance'**
-  String get libraryThemeDarkDescription;
 
   /// No description provided for @libraryFailedToLoad.
   ///
@@ -1905,6 +1857,372 @@ abstract class ReadflexLocalizations {
   /// **'Check your connection or try again later.'**
   String get dictionaryFailureBody;
 
+  /// No description provided for @wordSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to Vocabulary'**
+  String get wordSave;
+
+  /// No description provided for @wordSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved for review'**
+  String get wordSaved;
+
+  /// No description provided for @wordUnsave.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from Vocabulary'**
+  String get wordUnsave;
+
+  /// No description provided for @wordSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save to Vocabulary'**
+  String get wordSaveFailed;
+
+  /// No description provided for @practiceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get practiceTitle;
+
+  /// No description provided for @practiceWordCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} word} other{{count} words}}'**
+  String practiceWordCount(int count);
+
+  /// No description provided for @practiceHighlightCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} highlight} other{{count} highlights}}'**
+  String practiceHighlightCount(int count);
+
+  /// No description provided for @practiceNewToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} new today'**
+  String practiceNewToday(int count);
+
+  /// No description provided for @practiceLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load your cards'**
+  String get practiceLoadFailed;
+
+  /// No description provided for @practiceDueToday.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} card due today} other{{count} cards due today}}'**
+  String practiceDueToday(int count);
+
+  /// No description provided for @practiceDueCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} due'**
+  String practiceDueCount(int count);
+
+  /// No description provided for @practiceCaughtUp.
+  ///
+  /// In en, this message translates to:
+  /// **'All caught up'**
+  String get practiceCaughtUp;
+
+  /// No description provided for @practiceCaughtUpBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due. Come back tomorrow.'**
+  String get practiceCaughtUpBody;
+
+  /// No description provided for @practiceCaughtUpShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get practiceCaughtUpShort;
+
+  /// No description provided for @practiceNothingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to practice yet'**
+  String get practiceNothingTitle;
+
+  /// No description provided for @practiceNothingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a word from a translation or highlight a passage while reading. They come back here for review.'**
+  String get practiceNothingBody;
+
+  /// No description provided for @practiceOpenLibrary.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Library'**
+  String get practiceOpenLibrary;
+
+  /// No description provided for @practiceStartReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Start review'**
+  String get practiceStartReview;
+
+  /// No description provided for @practiceReviewAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'Review ahead'**
+  String get practiceReviewAhead;
+
+  /// No description provided for @practiceTodayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get practiceTodayTitle;
+
+  /// No description provided for @practiceStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}-day streak'**
+  String practiceStreak(int days);
+
+  /// No description provided for @practiceThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} this week'**
+  String practiceThisWeek(int count);
+
+  /// No description provided for @practiceTotalCards.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} total'**
+  String practiceTotalCards(int count);
+
+  /// No description provided for @practiceSectionCollections.
+  ///
+  /// In en, this message translates to:
+  /// **'Collections'**
+  String get practiceSectionCollections;
+
+  /// No description provided for @practiceSectionBySource.
+  ///
+  /// In en, this message translates to:
+  /// **'By book'**
+  String get practiceSectionBySource;
+
+  /// No description provided for @practiceWordsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Vocabulary'**
+  String get practiceWordsTitle;
+
+  /// No description provided for @practiceHighlightsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlights'**
+  String get practiceHighlightsTitle;
+
+  /// No description provided for @practiceCollectionCounts.
+  ///
+  /// In en, this message translates to:
+  /// **'{total} saved · {due} due'**
+  String practiceCollectionCounts(int total, int due);
+
+  /// No description provided for @practiceSearchWords.
+  ///
+  /// In en, this message translates to:
+  /// **'Search vocabulary'**
+  String get practiceSearchWords;
+
+  /// No description provided for @practiceSearchHighlights.
+  ///
+  /// In en, this message translates to:
+  /// **'Search highlights'**
+  String get practiceSearchHighlights;
+
+  /// No description provided for @practiceFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get practiceFilterAll;
+
+  /// No description provided for @practiceFilterLearning.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning'**
+  String get practiceFilterLearning;
+
+  /// No description provided for @practiceFilterMastered.
+  ///
+  /// In en, this message translates to:
+  /// **'Mastered'**
+  String get practiceFilterMastered;
+
+  /// No description provided for @practiceWordsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No vocabulary yet'**
+  String get practiceWordsEmptyTitle;
+
+  /// No description provided for @practiceWordsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Save in a translation or definition while reading'**
+  String get practiceWordsEmptyBody;
+
+  /// No description provided for @practiceHighlightsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No highlights yet'**
+  String get practiceHighlightsEmptyTitle;
+
+  /// No description provided for @practiceHighlightsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Select text while reading and choose Highlight'**
+  String get practiceHighlightsEmptyBody;
+
+  /// No description provided for @practiceNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches'**
+  String get practiceNoMatches;
+
+  /// No description provided for @practiceDueNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get practiceDueNew;
+
+  /// No description provided for @practiceDueNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Due'**
+  String get practiceDueNow;
+
+  /// No description provided for @practiceDueIn.
+  ///
+  /// In en, this message translates to:
+  /// **'In {interval}'**
+  String practiceDueIn(String interval);
+
+  /// No description provided for @practiceIntervalMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}m'**
+  String practiceIntervalMinutes(int count);
+
+  /// No description provided for @practiceIntervalHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}h'**
+  String practiceIntervalHours(int count);
+
+  /// No description provided for @practiceIntervalDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}d'**
+  String practiceIntervalDays(int count);
+
+  /// No description provided for @practiceIntervalWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}w'**
+  String practiceIntervalWeeks(int count);
+
+  /// No description provided for @practiceIntervalMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}mo'**
+  String practiceIntervalMonths(int count);
+
+  /// No description provided for @practiceIntervalYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}y'**
+  String practiceIntervalYears(int count);
+
+  /// No description provided for @practiceOpenInBook.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in book'**
+  String get practiceOpenInBook;
+
+  /// No description provided for @practiceRemoveFromReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from review'**
+  String get practiceRemoveFromReview;
+
+  /// No description provided for @practiceMoreActions.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get practiceMoreActions;
+
+  /// No description provided for @practiceCardPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'{position} of {total}'**
+  String practiceCardPosition(int position, int total);
+
+  /// No description provided for @practiceShowAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Show answer'**
+  String get practiceShowAnswer;
+
+  /// No description provided for @practiceRateAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Again'**
+  String get practiceRateAgain;
+
+  /// No description provided for @practiceRateHard.
+  ///
+  /// In en, this message translates to:
+  /// **'Hard'**
+  String get practiceRateHard;
+
+  /// No description provided for @practiceRateGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get practiceRateGood;
+
+  /// No description provided for @practiceKeep.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep'**
+  String get practiceKeep;
+
+  /// No description provided for @practiceShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get practiceShowLess;
+
+  /// No description provided for @practiceNoNote.
+  ///
+  /// In en, this message translates to:
+  /// **'No note'**
+  String get practiceNoNote;
+
+  /// No description provided for @practiceSessionDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Session complete'**
+  String get practiceSessionDone;
+
+  /// No description provided for @practiceSessionSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{reviewed} reviewed · {known} known · {again} again'**
+  String practiceSessionSummary(int reviewed, int known, int again);
+
+  /// No description provided for @practiceReviewAgainCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Review {count} again} other{Review {count} again}}'**
+  String practiceReviewAgainCount(int count);
+
   /// No description provided for @readerHighlightFilterAll.
   ///
   /// In en, this message translates to:
@@ -2227,6 +2545,54 @@ abstract class ReadflexLocalizations {
   /// In en, this message translates to:
   /// **'Copy link'**
   String get readerExternalLinkCopy;
+
+  /// No description provided for @libraryDisplayAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get libraryDisplayAppearance;
+
+  /// No description provided for @libraryDisplayLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get libraryDisplayLanguage;
+
+  /// No description provided for @libraryThemeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get libraryThemeSystem;
+
+  /// No description provided for @libraryThemeSystemDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow device setting'**
+  String get libraryThemeSystemDescription;
+
+  /// No description provided for @libraryThemeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get libraryThemeLight;
+
+  /// No description provided for @libraryThemeLightDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use light appearance'**
+  String get libraryThemeLightDescription;
+
+  /// No description provided for @libraryThemeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get libraryThemeDark;
+
+  /// No description provided for @libraryThemeDarkDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Use dark appearance'**
+  String get libraryThemeDarkDescription;
 }
 
 class _ReadflexLocalizationsDelegate

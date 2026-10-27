@@ -16,7 +16,10 @@ import 'package:toast_service/toast_service.dart';
 
 /// Entry point for the application that creates [MaterialApp.router].
 class ReadflexApp extends StatefulWidget {
-  const ReadflexApp({super.key});
+  const ReadflexApp({this.initialLocation = AppRoutes.root, super.key});
+
+  /// Where the router starts; tests open a tab directly.
+  final String initialLocation;
 
   @override
   State<ReadflexApp> createState() => _ReadflexAppState();
@@ -30,7 +33,10 @@ class _ReadflexAppState extends State<ReadflexApp> {
   @override
   void initState() {
     super.initState();
-    _router = buildRouter(deps: DependenciesScope.of(context));
+    _router = buildRouter(
+      deps: DependenciesScope.of(context),
+      initialLocation: widget.initialLocation,
+    );
   }
 
   @override

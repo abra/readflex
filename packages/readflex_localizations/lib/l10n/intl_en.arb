@@ -207,16 +207,8 @@
   "libraryDisplayOptions": "Display options",
   "libraryDisplayTitle": "Display",
   "libraryDisplayView": "View",
-  "libraryDisplayAppearance": "Appearance",
-  "libraryDisplayLanguage": "Language",
   "libraryDisplayList": "List",
   "libraryDisplayGrid": "Grid",
-  "libraryThemeSystem": "System",
-  "libraryThemeSystemDescription": "Follow device setting",
-  "libraryThemeLight": "Light",
-  "libraryThemeLightDescription": "Use light appearance",
-  "libraryThemeDark": "Dark",
-  "libraryThemeDarkDescription": "Use dark appearance",
   "libraryFailedToLoad": "Failed to load library",
   "libraryLoadCollectionsFailed": "Failed to load collections",
   "libraryUpdateCollectionFailed": "Failed to update collection",
@@ -513,6 +505,212 @@
   "dictionaryUnsupportedLanguageBody": "The Readflex dictionary does not support this language yet.",
   "dictionaryFailureTitle": "Definition unavailable",
   "dictionaryFailureBody": "Check your connection or try again later.",
+  "wordSave": "Save to Vocabulary",
+  "wordSaved": "Saved for review",
+  "wordUnsave": "Remove from Vocabulary",
+  "wordSaveFailed": "Couldn't save to Vocabulary",
+  "practiceTitle": "Practice",
+  "practiceWordCount": "{count, plural, one{{count} word} other{{count} words}}",
+  "@practiceWordCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceHighlightCount": "{count, plural, one{{count} highlight} other{{count} highlights}}",
+  "@practiceHighlightCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceNewToday": "{count} new today",
+  "@practiceNewToday": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceLoadFailed": "Couldn't load your cards",
+  "practiceDueToday": "{count, plural, one{{count} card due today} other{{count} cards due today}}",
+  "@practiceDueToday": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceDueCount": "{count} due",
+  "@practiceDueCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceCaughtUp": "All caught up",
+  "practiceCaughtUpBody": "Nothing due. Come back tomorrow.",
+  "practiceCaughtUpShort": "Done",
+  "practiceNothingTitle": "Nothing to practice yet",
+  "practiceNothingBody": "Save a word from a translation or highlight a passage while reading. They come back here for review.",
+  "practiceOpenLibrary": "Open Library",
+  "practiceStartReview": "Start review",
+  "practiceReviewAhead": "Review ahead",
+  "practiceTodayTitle": "Today",
+  "practiceStreak": "{days}-day streak",
+  "@practiceStreak": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceThisWeek": "{count} this week",
+  "@practiceThisWeek": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceTotalCards": "{count} total",
+  "@practiceTotalCards": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceSectionCollections": "Collections",
+  "practiceSectionBySource": "By book",
+  "practiceWordsTitle": "Vocabulary",
+  "practiceHighlightsTitle": "Highlights",
+  "practiceCollectionCounts": "{total} saved · {due} due",
+  "@practiceCollectionCounts": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "due": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceSearchWords": "Search vocabulary",
+  "practiceSearchHighlights": "Search highlights",
+  "practiceFilterAll": "All",
+  "practiceFilterLearning": "Learning",
+  "practiceFilterMastered": "Mastered",
+  "practiceWordsEmptyTitle": "No vocabulary yet",
+  "practiceWordsEmptyBody": "Tap Save in a translation or definition while reading",
+  "practiceHighlightsEmptyTitle": "No highlights yet",
+  "practiceHighlightsEmptyBody": "Select text while reading and choose Highlight",
+  "practiceNoMatches": "No matches",
+  "practiceDueNew": "New",
+  "practiceDueNow": "Due",
+  "practiceDueIn": "In {interval}",
+  "@practiceDueIn": {
+    "placeholders": {
+      "interval": {
+        "type": "String"
+      }
+    }
+  },
+  "practiceIntervalMinutes": "{count}m",
+  "@practiceIntervalMinutes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceIntervalHours": "{count}h",
+  "@practiceIntervalHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceIntervalDays": "{count}d",
+  "@practiceIntervalDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceIntervalWeeks": "{count}w",
+  "@practiceIntervalWeeks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceIntervalMonths": "{count}mo",
+  "@practiceIntervalMonths": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceIntervalYears": "{count}y",
+  "@practiceIntervalYears": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceOpenInBook": "Open in book",
+  "practiceRemoveFromReview": "Remove from review",
+  "practiceMoreActions": "More",
+  "practiceCardPosition": "{position} of {total}",
+  "@practiceCardPosition": {
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceShowAnswer": "Show answer",
+  "practiceRateAgain": "Again",
+  "practiceRateHard": "Hard",
+  "practiceRateGood": "Good",
+  "practiceKeep": "Keep",
+  "practiceShowLess": "Show less",
+  "practiceNoNote": "No note",
+  "practiceSessionDone": "Session complete",
+  "practiceSessionSummary": "{reviewed} reviewed · {known} known · {again} again",
+  "@practiceSessionSummary": {
+    "placeholders": {
+      "reviewed": {
+        "type": "int"
+      },
+      "known": {
+        "type": "int"
+      },
+      "again": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceReviewAgainCount": "{count, plural, one{Review {count} again} other{Review {count} again}}",
+  "@practiceReviewAgainCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "readerHighlightFilterAll": "All",
   "readerBrightnessSystem": "System",
   "readerPageOfTotal": "{page} / {total}",
@@ -748,5 +946,13 @@
   "readerExternalLinkCopy": "Copy link",
   "@readerExternalLinkCopy": {
     "description": "Reader: secondary button of the link sheet; copies the link without opening it"
-  }
+  },
+  "libraryDisplayAppearance": "Appearance",
+  "libraryDisplayLanguage": "Language",
+  "libraryThemeSystem": "System",
+  "libraryThemeSystemDescription": "Follow device setting",
+  "libraryThemeLight": "Light",
+  "libraryThemeLightDescription": "Use light appearance",
+  "libraryThemeDark": "Dark",
+  "libraryThemeDarkDescription": "Use dark appearance"
 }

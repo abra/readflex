@@ -1,24 +1,29 @@
 import 'package:component_library/component_library.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:dictionary_service/dictionary_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show Bidi;
 import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:toast_service/toast_service.dart';
 import 'package:shared/shared.dart';
 
 import 'dictionary_cubit.dart';
+import 'word_save_status.dart';
 
 Future<void> showDictionarySheet(
   BuildContext context, {
   required TextSelectionContext selection,
   required DictionaryLookupService dictionaryService,
+  DictionaryRepository? dictionaryRepository,
 }) {
   return showAppBottomSheet<void>(
     context,
     builder: (_) => DictionarySheet(
       selection: selection,
       dictionaryService: dictionaryService,
+      dictionaryRepository: dictionaryRepository,
     ),
   );
 }
@@ -27,20 +32,26 @@ class DictionarySheet extends StatelessWidget {
   const DictionarySheet({
     required this.selection,
     required this.dictionaryService,
+    this.dictionaryRepository,
     super.key,
   });
 
   final TextSelectionContext selection;
   final DictionaryLookupService dictionaryService;
 
+  /// Where Save keeps the word; without it the sheet offers no Save.
+  final DictionaryRepository? dictionaryRepository;
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
-          DictionaryCubit(dictionaryService: dictionaryService)
-            ..lookup(selection),
+      create: (_) => DictionaryCubit(
+        dictionaryService: dictionaryService,
+        dictionaryRepository: dictionaryRepository,
+      )..lookup(selection),
       child: _DictionarySheetView(
         selection: selection,
+        canSave: dictionaryRepository != null,
         onCopy: (text) => Clipboard.setData(ClipboardData(text: text)),
       ),
     );
@@ -48,9 +59,14 @@ class DictionarySheet extends StatelessWidget {
 }
 
 class _DictionarySheetView extends StatelessWidget {
-  const _DictionarySheetView({required this.selection, required this.onCopy});
+  const _DictionarySheetView({
+    required this.selection,
+    required this.canSave,
+    required this.onCopy,
+  });
 
   final TextSelectionContext selection;
+  final bool canSave;
   final Future<void> Function(String) onCopy;
 
   @override
@@ -60,11 +76,21 @@ class _DictionarySheetView extends StatelessWidget {
       closeLabel: context.l10n.commonClose,
       onClose: () => Navigator.of(context).pop(),
       bodyPadding: const EdgeInsets.only(bottom: AppSpacing.lg),
-      child: BlocBuilder<DictionaryCubit, DictionarySheetState>(
+      child: BlocConsumer<DictionaryCubit, DictionarySheetState>(
+        // Only a tap that saved: the lookup of an earlier save is silent.
+        listenWhen: (previous, current) =>
+            previous.saveStatus == WordSaveStatus.saving &&
+            current.saveStatus == WordSaveStatus.saved,
+        listener: (context, _) => showToast(
+          context,
+          type: NotificationType.success,
+          message: context.l10n.wordSaved,
+        ),
         builder: (context, state) {
           final body = _DictionaryBody(
             selection: selection,
             state: state,
+            canSave: canSave,
             onCopy: onCopy,
           );
           if (state.status == DictionarySheetStatus.success) return body;
@@ -103,11 +129,13 @@ class _DictionaryBody extends StatelessWidget {
   const _DictionaryBody({
     required this.selection,
     required this.state,
+    required this.canSave,
     required this.onCopy,
   });
 
   final TextSelectionContext selection;
   final DictionarySheetState state;
+  final bool canSave;
   final Future<void> Function(String) onCopy;
 
   @override
@@ -122,6 +150,8 @@ class _DictionaryBody extends StatelessWidget {
       DictionarySheetStatus.success => _DictionaryResultView(
         result: state.result!,
         selectedText: selection.effectiveSelectedText,
+        saveStatus: state.saveStatus,
+        onToggleSaved: canSave ? () => cubit.toggleSaved(selection) : null,
         onCopy: onCopy,
       ),
       DictionarySheetStatus.notFound => AppStatusMessage(
@@ -152,11 +182,17 @@ class _DictionaryResultView extends StatelessWidget {
   const _DictionaryResultView({
     required this.result,
     required this.selectedText,
+    required this.saveStatus,
+    required this.onToggleSaved,
     required this.onCopy,
   });
 
   final DictionaryLookupResult result;
   final String selectedText;
+  final WordSaveStatus saveStatus;
+
+  /// Saves the word to Vocabulary; `null` when the sheet cannot save.
+  final VoidCallback? onToggleSaved;
   final Future<void> Function(String) onCopy;
 
   @override
@@ -177,6 +213,8 @@ class _DictionaryResultView extends StatelessWidget {
           selectedText: selectedText,
           style: context.text.headlineSmall,
           onCopy: onCopy,
+          saveStatus: saveStatus,
+          onToggleSaved: onToggleSaved,
         ),
         const SizedBox(height: AppSpacing.xs),
         Column(
@@ -245,9 +283,10 @@ class _EntrySection extends StatelessWidget {
   }
 }
 
-/// An entry's lemma in [style] with its metadata right below it, Copy on the
-/// lemma's line and an optional section [title] above. The row keeps 12dp of
-/// room above and below its text at any text size.
+/// An entry's lemma in [style] with its metadata right below it, Copy (and
+/// Save for the headword) on the lemma's line and an optional section
+/// [title] above. The row keeps 12dp of room above and below its text at any
+/// text size.
 class _DictionaryEntryHeader extends StatelessWidget {
   const _DictionaryEntryHeader({
     required this.entry,
@@ -255,11 +294,15 @@ class _DictionaryEntryHeader extends StatelessWidget {
     required this.onCopy,
     this.selectedText,
     this.title,
+    this.saveStatus = WordSaveStatus.notSaved,
+    this.onToggleSaved,
   });
 
   final DictionaryLexicalEntry entry;
   final TextStyle style;
   final Future<void> Function(String) onCopy;
+  final WordSaveStatus saveStatus;
+  final VoidCallback? onToggleSaved;
 
   /// The selected form, shown before the lemma when it differs.
   final String? selectedText;
@@ -277,13 +320,32 @@ class _DictionaryEntryHeader extends StatelessWidget {
       partOfSpeech: entry.partOfSpeech,
       textDirection: direction,
     );
+    final onToggleSaved = this.onToggleSaved;
+    final l10n = context.l10n;
+    final copy = AppCopyButton(
+      key: ValueKey(entry),
+      onCopy: () => onCopy(
+        [
+          entry.lemma,
+          for (var i = 0; i < entry.definitions.length; i++)
+            '${i + 1}. ${entry.definitions[i].text}',
+        ].join('\n'),
+      ),
+      copyLabel: l10n.commonCopy,
+      copiedLabel: l10n.commonCopied,
+      failureLabel: l10n.commonCopyFailed,
+    );
     return LayoutBuilder(
       builder: (context, constraints) {
+        final actionCount = onToggleSaved == null ? 1 : 2;
         final lemmaStyle = appFitSelectableText(
           context,
           style,
           text: entry.lemma,
-          boxWidth: AppSheetActionRow.childWidthFor(constraints.maxWidth),
+          boxWidth: AppSheetActionRow.childWidthFor(
+            constraints.maxWidth,
+            actionCount: actionCount,
+          ),
           textDirection: direction,
         );
         return AppSheetActionRow(
@@ -294,19 +356,25 @@ class _DictionaryEntryHeader extends StatelessWidget {
           lead: title == null ? null : AppSheetSectionTitle(title),
           leadSpacing: AppSpacing.sm,
           minTextRoom: AppSpacing.md,
-          action: AppCopyButton(
-            key: ValueKey(entry),
-            onCopy: () => onCopy(
-              [
-                entry.lemma,
-                for (var i = 0; i < entry.definitions.length; i++)
-                  '${i + 1}. ${entry.definitions[i].text}',
-              ].join('\n'),
-            ),
-            copyLabel: context.l10n.commonCopy,
-            copiedLabel: context.l10n.commonCopied,
-            failureLabel: context.l10n.commonCopyFailed,
-          ),
+          action: onToggleSaved == null
+              ? copy
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppSaveToggleButton(
+                      key: const ValueKey('dictionary-save-word'),
+                      saved: saveStatus == WordSaveStatus.saved,
+                      busy: saveStatus == WordSaveStatus.saving,
+                      failed: saveStatus == WordSaveStatus.failure,
+                      onPressed: onToggleSaved,
+                      saveLabel: l10n.wordSave,
+                      savedLabel: l10n.wordSaved,
+                      unsaveLabel: l10n.wordUnsave,
+                      failureLabel: l10n.wordSaveFailed,
+                    ),
+                    copy,
+                  ],
+                ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

@@ -179,6 +179,7 @@ class ReaderScreen extends StatelessWidget {
     this.onReadingPositionSaved,
     this.onArticleTitlePressed,
     this.onOpenExternalLink,
+    this.initialCfi,
     super.key,
   });
 
@@ -204,6 +205,10 @@ class ReaderScreen extends StatelessWidget {
   /// Opens a link from a book, article or PDF after the reader confirmed it
   /// in the link sheet: a web page, an email or a phone number.
   final ValueChanged<String>? onOpenExternalLink;
+
+  /// Where to open instead of the saved position: a highlight or a saved
+  /// word's anchor. Applied once the document is ready.
+  final String? initialCfi;
 
   @override
   Widget build(BuildContext context) {
@@ -269,6 +274,7 @@ class ReaderScreen extends StatelessWidget {
                 child: _ReaderView(
                   serverBaseUri: serverBaseUri,
                   textActions: textActions,
+                  initialCfi: initialCfi,
                   onRetry: () => context.read<ReaderBloc>().add(
                     ReaderSourceLoadRequested(sourceId: sourceId),
                   ),

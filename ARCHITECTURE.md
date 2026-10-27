@@ -273,16 +273,20 @@ and UI. Storage rows and DAO types should remain behind repositories.
 | `book_repository` | Imported books, cover metadata, source bookmark/progress, filesystem ownership for books. | `domain_models`, `local_storage`, `monitoring` |
 | `article_repository` | Extracted articles, bounded remote assets, and vertical HTML reader content. | `domain_models`, `local_storage`, `monitoring`, `remote_content_policy` |
 | `collection_repository` | Manual library collections and built-in favorite membership. | `domain_models`, `local_storage` |
-| `highlight_repository` | Highlight persistence and domain mapping. | `domain_models`, `local_storage` |
+| `highlight_repository` | Highlight persistence and domain mapping; a new text highlight registers its review row. | `domain_models`, `local_storage` |
+| `dictionary_repository` | Saved words (`DictionaryEntry`) with their source anchors; saving a word registers its review row. | `domain_models`, `local_storage` |
+| `fsrs_repository` | One FSRS review store over `review_items`/`review_logs`: due queue, per-type stats and streaks (`ReviewStats`), rating previews, backfill of untracked highlights. | `domain_models`, `local_storage`, `review_scheduler` |
 
 Repositories orchestrate data sources and return domain models/exceptions.
 Feature blocs/cubits talk to repositories; feature UI should not import DAOs.
 
-Legacy vocabulary, flashcard, and FSRS storage tables/domain models are still
-present for migration compatibility and future restoration. The active
-Dictionary feature is a monolingual lookup surface and intentionally does not
-reuse those saved-translation tables. The last revision containing the legacy
-vocabulary features is `189e2cc1`.
+Saved words and highlights share one review store. `dictionary_repository`
+and `highlight_repository` register a `review_items` row when content is
+saved (`insertOrIgnore`, so re-saving never resets scheduling);
+`fsrs_repository` serves the due queue and stats and records ratings through
+`review_scheduler`. The Dictionary feature's lookup is monolingual; its Save
+writes the word with the definition as its meaning. Legacy flashcard tables
+remain for migration compatibility only (last revision `189e2cc1`).
 
 ### Services and Infrastructure
 
@@ -293,7 +297,8 @@ vocabulary features is `189e2cc1`.
 | `contextual_translation_service` | Contextual translation request/result contracts, remote client, cache, and ML Kit offline fallback coordinator. | Used by the `translate` feature. |
 | `dictionary_service` | System definition UI bridge contract and typed HTTP client/models for monolingual dictionary lookup. | Used by the `dictionary` feature; native implementations live in the app runners. |
 | `monitoring` | Logger, log observers, analytics/error reporter contracts, GlitchTip reporting, and no-op fallbacks. | GlitchTip is active when configured; analytics remains a no-op. |
-| `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, and app composition. |
+| `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, Practice, and app composition. Practice limits (`practiceNewCardsPerDay`, `practiceReviewHighlights`) are stored with defaults; no screen edits them yet. |
+| `review_scheduler` | FSRS v6 wrapper: computes the next review state and log for a rating, previews intervals. One learning and one relearning step of 10 min because the step is not persisted; fuzzing off so previews match. | Used by `fsrs_repository` only. |
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
 | `reader_server` | Localhost HTTP server for reader assets and book/article files. | Supports range requests for books and local article HTML/assets for WebView readers. |
 | `reader_webview` | Foliate book WebView wrapper, vertical article HTML wrapper, JS bridges, asset extraction, metadata extraction. | Used by Reader and Import Flow. |
@@ -320,12 +325,13 @@ they keep their upstream license, structure and style, and each one's
 
 | Package | UI surface | Direct local dependencies |
 |---------|------------|---------------------------|
-| `library_feature` (`packages/features/library`) | Main Library screen, source search/filter/list/grid, collection management. | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `preferences_service`, `readflex_localizations`, `toast_service` |
+| `library_feature` (`packages/features/library`) | Main Library screen, source search/filter/list/grid, collection management, the entry into Practice (row leading the content once something is saved, capsule button with the due badge). | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `fsrs_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
+| `practice` | Practice section pushed above the Library: hub (today, Vocabulary, Highlights, by book), Vocabulary and Highlights lists, full-screen review session. | `article_repository`, `book_repository`, `component_library`, `dictionary_repository`, `domain_models`, `fsrs_repository`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
 | `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `reader_webview`, `readflex_localizations` |
 | `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `reader_webview`, `readflex_localizations`, `screen_control_service`, `shared` |
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `readflex_localizations`, `shared` |
-| `translate` | Reader text action and contextual translation bottom sheet. | `component_library`, `contextual_translation_service`, `preferences_service`, `readflex_localizations`, `shared` |
-| `dictionary` | Reader Define action and monolingual definition bottom sheet with system-first fallback. | `component_library`, `dictionary_service`, `readflex_localizations`, `shared` |
+| `translate` | Reader text action and contextual translation bottom sheet; Save in the word header keeps the word for review. | `component_library`, `contextual_translation_service`, `dictionary_repository`, `preferences_service`, `readflex_localizations`, `shared`, `toast_service` |
+| `dictionary` | Reader Define action and monolingual definition bottom sheet with system-first fallback; Save in the word header keeps the word for review (only in the Readflex sheet, the native UI has none). | `component_library`, `dictionary_repository`, `dictionary_service`, `readflex_localizations`, `shared`, `toast_service` |
 | `onboarding` | First-launch welcome screen; the router persists completion and picks the destination. | `component_library`, `readflex_localizations` |
 
 `library_feature` is the Dart package name because `library` is a Dart language
@@ -644,8 +650,9 @@ baselines; the current projection keeps existing search/filter semantics.
 Use one domain model layer and source-specific storage/service models:
 
 - `domain_models` contains stable app concepts such as `Book`, `Article`,
-  `LibrarySource`, `Highlight`, `SourceType`, and domain exceptions. Dormant
-  dictionary/flashcard/review models remain for storage compatibility.
+  `LibrarySource`, `Highlight`, `DictionaryEntry`, `ReviewItem`,
+  `ReviewStats`, `SourceType`, and domain exceptions. Dormant flashcard
+  models remain for storage compatibility.
 - `local_storage` contains Drift tables, DAOs, migrations, and storage row
   shapes. File-backed migration fixtures cover historical schemas that require
   filesystem as well as SQL migration.
@@ -675,6 +682,18 @@ feature package      UI and state management
   feature rows of equal weight. Selecting text is taught in the reader by its
   one-time tip, not drawn here. Both Add your first book and Not now mark it
   completed before going to Library.
+- The route table is flat; there is no tab shell. `/library` is the home
+  screen. `/practice` is pushed above it with a back button, its `words` and
+  `highlights` lists nest under it, and `review` opens the session as a
+  full-screen dialog page. The reader is a root route (`/reader/:sourceId`)
+  that Library, Practice lists and the session all push; the session's
+  "Open in book" passes `ReaderRouteArguments.initialCfi`, applied once the
+  document is ready.
+- The Library owns the way in: `LibraryScreen.onPracticePressed` pushes
+  `/practice` and completes when it pops, and the Library reloads its
+  sources and review counts (`LibraryState.practice`) then. The reader
+  closing refreshes the same way, so a word saved in a Translation sheet
+  shows in the Library's Practice row on return.
 Features should express navigation needs through callbacks. They should not
 call GoRouter to navigate to sibling features directly.
 
@@ -715,9 +734,13 @@ a task explicitly asks to implement them:
 - `NoopAnalyticsReporter` does not send analytics telemetry.
 - Production backend authentication/attestation and short-lived access tokens
   are not implemented; static build-time credentials are intentionally blocked.
-- Flashcard, practice, profile, subscription, auth, AI, and notification
-  packages are frozen outside the active package graph. Restore their legacy
-  implementation from `189e2cc1` only if that product scope returns.
+- Flashcard, subscription, auth, AI, and notification packages are frozen
+  outside the active package graph. Restore their legacy implementation from
+  `189e2cc1` only if that product scope returns. Practice was rebuilt in
+  2026-10 on the restored `review_scheduler`, `fsrs_repository` and
+  `dictionary_repository`; there is no Home or Profile tab.
+- Practice has no Listen (TTS) on word cards and no daily reminder; the
+  practice limits in preferences have no settings screen yet.
 
 When replacing a remaining no-op with a production implementation, update this
 document, the relevant package README, and tests around the public contract.

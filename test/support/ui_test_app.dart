@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
@@ -18,6 +20,7 @@ import 'package:readflex/app/app_scopes.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/resource_disposer.dart';
+import 'package:readflex/app/routing.dart' show AppRoutes;
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
@@ -56,6 +59,8 @@ final class UiTestApp {
   late final RecordingArticleRepository articleRepository;
   late final CollectionRepository collectionRepository;
   late final HighlightRepository highlightRepository;
+  late final DictionaryRepository dictionaryRepository;
+  late final FsrsRepository fsrsRepository;
   late final ReaderServer readerServer;
   Book? book;
 
@@ -75,6 +80,8 @@ final class UiTestApp {
     bookRepository: bookRepository,
     collectionRepository: collectionRepository,
     highlightRepository: highlightRepository,
+    dictionaryRepository: dictionaryRepository,
+    fsrsRepository: fsrsRepository,
     connectivityService: connectivityService,
     contextualTranslationService: contextualTranslationService,
     systemDictionaryService: systemDictionaryService,
@@ -132,6 +139,8 @@ final class UiTestApp {
       app._resources.add('article repository', app.articleRepository.dispose);
       app.collectionRepository = CollectionRepository(database: app.database);
       app.highlightRepository = HighlightRepository(database: app.database);
+      app.dictionaryRepository = DictionaryRepository(database: app.database);
+      app.fsrsRepository = FsrsRepository(database: app.database);
       app.readerServer = ReaderServer(
         assetsDirectory: Directory('${app.directory.path}/reader_assets'),
         booksDirectory: books,
@@ -171,7 +180,12 @@ final class UiTestApp {
     }
   }
 
-  Widget get widget => AppScopes(dependencies: dependencies);
+  /// The app opened on the Library, where the reading flows start.
+  Widget get widget => widgetAt(AppRoutes.library);
+
+  /// The app opened at [location], such as Practice or a review session.
+  Widget widgetAt(String location) =>
+      AppScopes(dependencies: dependencies, initialLocation: location);
 
   Future<void> dispose() => _resources.dispose();
 }

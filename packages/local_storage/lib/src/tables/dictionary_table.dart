@@ -3,6 +3,8 @@ import 'package:drift/drift.dart';
 /// Drift schema for saved dictionary entries (words / phrases / idioms).
 /// Optional [sourceId] + [sourceType] link the entry back to the book it
 /// was captured from; [usageExamples] is a JSON-encoded list of strings.
+/// [translation] is the meaning in context; [baseTranslation] the word's
+/// own meaning and [contextTranslation] the sentence's, when known.
 /// FSRS review state lives separately in `review_items_table`.
 class DictionaryTable extends Table {
   TextColumn get id => text()();
@@ -23,6 +25,11 @@ class DictionaryTable extends Table {
       text().nullable()(); // 'book' or null (legacy SourceType column)
   TextColumn get usageExamples => text().nullable()(); // JSON-encoded list
   TextColumn get addedAt => text()(); // ISO 8601
+  TextColumn get lemma => text().nullable()();
+
+  TextColumn get baseTranslation => text().nullable()();
+
+  TextColumn get contextTranslation => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

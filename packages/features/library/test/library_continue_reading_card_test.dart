@@ -5,10 +5,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
 import 'package:library_feature/src/library_continue_reading_title_layout.dart';
-import 'package:library_feature/src/library_grid_view.dart';
+import 'package:library_feature/src/library_content_scroll_view.dart';
+import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_layout.dart';
 import 'package:library_feature/src/library_list_cover_slot.dart';
-import 'package:library_feature/src/library_list_view.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -672,7 +672,8 @@ void main() {
       LibrarySource? opened;
       await tester.pumpWidget(
         host(
-          LibraryListView(
+          LibraryContentScrollView(
+            layoutMode: LibraryLayoutMode.list,
             sources: rows,
             continueReadingSource: _article,
             selection: const LibrarySelectionState(),
@@ -722,7 +723,8 @@ void main() {
       addTearDown(controller.dispose);
       await tester.pumpWidget(
         host(
-          LibraryListView(
+          LibraryContentScrollView(
+            layoutMode: LibraryLayoutMode.list,
             sources: rows,
             selection: const LibrarySelectionState(),
             scrollController: controller,
@@ -751,13 +753,15 @@ void main() {
           host(
             Directionality(
               textDirection: direction,
-              child: LibraryGridView(
+              child: LibraryContentScrollView(
+                layoutMode: LibraryLayoutMode.grid,
                 sources: rows,
                 continueReadingSource: _article,
                 selection: const LibrarySelectionState(),
                 scrollController: controller,
                 onSourcePressed: (source) => opened = source,
                 onSourceLongPressed: (_) {},
+                onConfirmSwipeDelete: (_) async => false,
               ),
             ),
           ),

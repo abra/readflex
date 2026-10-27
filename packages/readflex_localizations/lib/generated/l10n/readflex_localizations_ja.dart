@@ -323,34 +323,10 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get libraryDisplayView => 'ビュー';
 
   @override
-  String get libraryDisplayAppearance => '外観';
-
-  @override
-  String get libraryDisplayLanguage => '言語';
-
-  @override
   String get libraryDisplayList => 'リスト';
 
   @override
   String get libraryDisplayGrid => 'グリッド';
-
-  @override
-  String get libraryThemeSystem => 'システム';
-
-  @override
-  String get libraryThemeSystemDescription => '端末設定に合わせる';
-
-  @override
-  String get libraryThemeLight => 'ライト';
-
-  @override
-  String get libraryThemeLightDescription => 'ライト表示を使用';
-
-  @override
-  String get libraryThemeDark => 'ダーク';
-
-  @override
-  String get libraryThemeDarkDescription => 'ダーク表示を使用';
 
   @override
   String get libraryFailedToLoad => 'ライブラリを読み込めませんでした';
@@ -997,6 +973,228 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get dictionaryFailureBody => '接続を確認するか、後でもう一度お試しください。';
 
   @override
+  String get wordSave => '単語帳に保存';
+
+  @override
+  String get wordSaved => '復習用に保存しました';
+
+  @override
+  String get wordUnsave => '単語帳から削除';
+
+  @override
+  String get wordSaveFailed => '単語帳に保存できませんでした';
+
+  @override
+  String get practiceTitle => '練習';
+
+  @override
+  String practiceWordCount(int count) {
+    return '単語 $count';
+  }
+
+  @override
+  String practiceHighlightCount(int count) {
+    return 'ハイライト $count';
+  }
+
+  @override
+  String practiceNewToday(int count) {
+    return '今日の新規 $count';
+  }
+
+  @override
+  String get practiceLoadFailed => 'カードを読み込めませんでした';
+
+  @override
+  String practiceDueToday(int count) {
+    return '今日の復習カード $count 枚';
+  }
+
+  @override
+  String practiceDueCount(int count) {
+    return '$count 件';
+  }
+
+  @override
+  String get practiceCaughtUp => 'すべて完了';
+
+  @override
+  String get practiceCaughtUpBody => '復習はありません。また明日。';
+
+  @override
+  String get practiceCaughtUpShort => '完了';
+
+  @override
+  String get practiceNothingTitle => 'まだ練習するものがありません';
+
+  @override
+  String get practiceNothingBody =>
+      '読みながら翻訳から単語を保存したり、一節をハイライトしましょう。ここで復習できます。';
+
+  @override
+  String get practiceOpenLibrary => 'ライブラリを開く';
+
+  @override
+  String get practiceStartReview => '復習を始める';
+
+  @override
+  String get practiceReviewAhead => '先に復習';
+
+  @override
+  String get practiceTodayTitle => '今日';
+
+  @override
+  String practiceStreak(int days) {
+    return '$days 日連続';
+  }
+
+  @override
+  String practiceThisWeek(int count) {
+    return '今週 $count';
+  }
+
+  @override
+  String practiceTotalCards(int count) {
+    return '合計 $count';
+  }
+
+  @override
+  String get practiceSectionCollections => 'コレクション';
+
+  @override
+  String get practiceSectionBySource => '本ごと';
+
+  @override
+  String get practiceWordsTitle => '単語帳';
+
+  @override
+  String get practiceHighlightsTitle => 'ハイライト';
+
+  @override
+  String practiceCollectionCounts(int total, int due) {
+    return '保存 $total · 復習 $due';
+  }
+
+  @override
+  String get practiceSearchWords => '単語帳を検索';
+
+  @override
+  String get practiceSearchHighlights => 'ハイライトを検索';
+
+  @override
+  String get practiceFilterAll => 'すべて';
+
+  @override
+  String get practiceFilterLearning => '学習中';
+
+  @override
+  String get practiceFilterMastered => '習得済み';
+
+  @override
+  String get practiceWordsEmptyTitle => '単語帳はまだ空です';
+
+  @override
+  String get practiceWordsEmptyBody => '読みながら翻訳や定義で「保存」をタップ';
+
+  @override
+  String get practiceHighlightsEmptyTitle => 'ハイライトはまだありません';
+
+  @override
+  String get practiceHighlightsEmptyBody => '読みながらテキストを選択して「ハイライト」を選択';
+
+  @override
+  String get practiceNoMatches => '一致なし';
+
+  @override
+  String get practiceDueNew => '新規';
+
+  @override
+  String get practiceDueNow => '復習時';
+
+  @override
+  String practiceDueIn(String interval) {
+    return '$interval後';
+  }
+
+  @override
+  String practiceIntervalMinutes(int count) {
+    return '$count分';
+  }
+
+  @override
+  String practiceIntervalHours(int count) {
+    return '$count時間';
+  }
+
+  @override
+  String practiceIntervalDays(int count) {
+    return '$count日';
+  }
+
+  @override
+  String practiceIntervalWeeks(int count) {
+    return '$count週';
+  }
+
+  @override
+  String practiceIntervalMonths(int count) {
+    return '$countか月';
+  }
+
+  @override
+  String practiceIntervalYears(int count) {
+    return '$count年';
+  }
+
+  @override
+  String get practiceOpenInBook => '本の中で開く';
+
+  @override
+  String get practiceRemoveFromReview => '復習から外す';
+
+  @override
+  String get practiceMoreActions => 'その他';
+
+  @override
+  String practiceCardPosition(int position, int total) {
+    return '$total 枚中 $position';
+  }
+
+  @override
+  String get practiceShowAnswer => '答えを見る';
+
+  @override
+  String get practiceRateAgain => 'もう一度';
+
+  @override
+  String get practiceRateHard => '難しい';
+
+  @override
+  String get practiceRateGood => '覚えた';
+
+  @override
+  String get practiceKeep => '残す';
+
+  @override
+  String get practiceShowLess => '減らす';
+
+  @override
+  String get practiceNoNote => 'メモなし';
+
+  @override
+  String get practiceSessionDone => 'セッション完了';
+
+  @override
+  String practiceSessionSummary(int reviewed, int known, int again) {
+    return '復習 $reviewed · 覚えた $known · もう一度 $again';
+  }
+
+  @override
+  String practiceReviewAgainCount(int count) {
+    return '$count 枚をもう一度';
+  }
+
+  @override
   String get readerHighlightFilterAll => 'すべて';
 
   @override
@@ -1173,4 +1371,28 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
 
   @override
   String get readerExternalLinkCopy => 'リンクをコピー';
+
+  @override
+  String get libraryDisplayAppearance => '外観';
+
+  @override
+  String get libraryDisplayLanguage => '言語';
+
+  @override
+  String get libraryThemeSystem => 'システム';
+
+  @override
+  String get libraryThemeSystemDescription => '端末設定に合わせる';
+
+  @override
+  String get libraryThemeLight => 'ライト';
+
+  @override
+  String get libraryThemeLightDescription => 'ライト表示を使用';
+
+  @override
+  String get libraryThemeDark => 'ダーク';
+
+  @override
+  String get libraryThemeDarkDescription => 'ダーク表示を使用';
 }

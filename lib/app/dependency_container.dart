@@ -10,7 +10,9 @@ import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:dictionary_service/dictionary_service.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
@@ -34,6 +36,8 @@ class DependenciesContainer {
     required this.bookRepository,
     required this.collectionRepository,
     required this.highlightRepository,
+    required this.dictionaryRepository,
+    required this.fsrsRepository,
     required this.connectivityService,
     required this.contextualTranslationService,
     required this.systemDictionaryService,
@@ -54,6 +58,8 @@ class DependenciesContainer {
   final BookRepository bookRepository;
   final CollectionRepository collectionRepository;
   final HighlightRepository highlightRepository;
+  final DictionaryRepository dictionaryRepository;
+  final FsrsRepository fsrsRepository;
   final ConnectivityService connectivityService;
   final ContextualTranslationService contextualTranslationService;
   final SystemDictionaryService systemDictionaryService;

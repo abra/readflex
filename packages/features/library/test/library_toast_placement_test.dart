@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
-import 'package:library_feature/src/library_list_view.dart';
+import 'package:library_feature/src/library_content_scroll_view.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -69,7 +69,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final row = find.descendant(
-      of: find.byType(LibraryListView),
+      of: find.byType(LibraryContentScrollView),
       matching: find.text('First Book'),
     );
     final gesture = await tester.startGesture(tester.getCenter(row));

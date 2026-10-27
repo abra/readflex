@@ -51,13 +51,13 @@ class AppSheetActionRow extends StatelessWidget {
   final double minTextRoom;
   final TextDirection? textDirection;
 
-  /// The width [child] gets in a row [rowWidth] wide with a 48dp action, for
-  /// measuring its text before building it.
-  static double childWidthFor(double rowWidth) =>
+  /// The width [child] gets in a row [rowWidth] wide with [actionCount]
+  /// 48dp actions side by side, for measuring its text before building it.
+  static double childWidthFor(double rowWidth, {int actionCount = 1}) =>
       rowWidth -
       AppSpacing.xl -
       (AppSpacing.xl - AppSizes.iconActionOutset) -
-      AppSizes.buttonHeight;
+      AppSizes.buttonHeight * actionCount;
 
   @override
   Widget build(BuildContext context) {

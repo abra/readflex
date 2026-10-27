@@ -7,17 +7,15 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'library_bloc.dart';
 import 'library_collection_scope_icon.dart';
 import 'library_empty_state.dart';
-import 'library_grid_view.dart';
+import 'library_content_scroll_view.dart';
 import 'library_import_entry.dart';
 import 'library_layout.dart';
 import 'library_layout_cubit.dart';
-import 'library_list_view.dart';
+import 'library_practice_row.dart';
 import 'library_selection_cubit.dart';
 
-const _layoutTransitionOffset = 8.0;
-
-/// Scrollable body of the library: renders the right layout (list / grid)
-/// for the current user preference, or one of two empty states if there's
+/// Scrollable body of the library: [LibraryContentScrollView] in the layout
+/// the user chose (list / grid), or one of two empty states if there's
 /// nothing to show.
 ///
 /// Distinguishes two empty states by design:
@@ -25,9 +23,10 @@ const _layoutTransitionOffset = 8.0;
 ///   2. Library has items but the current filter/search hides them all —
 ///      tell the user to relax the filter.
 ///
-/// In the default view (no search or collection) the Continue reading card
-/// leads the content in both layouts, in place of its source's row or tile,
-/// also while selecting.
+/// In the default view (no search or collection) the Practice row, once
+/// something is saved for review, and then the Continue reading card lead
+/// the content in both layouts, the card in place of its source's row or
+/// tile, also while selecting.
 ///
 /// Wrapping [RefreshIndicator] is always present (even for the empty
 /// states) so pull-to-refresh stays available.
@@ -42,6 +41,7 @@ class LibraryBody extends StatelessWidget {
     required this.onRefresh,
     required this.onClearSearch,
     required this.onShowWholeLibrary,
+    this.onPracticePressed,
     super.key,
   });
 
@@ -60,6 +60,9 @@ class LibraryBody extends StatelessWidget {
 
   /// Leaves an empty collection for the whole Library.
   final VoidCallback onShowWholeLibrary;
+
+  /// Opens Practice from its row; `null` leaves the content without it.
+  final VoidCallback? onPracticePressed;
 
   @override
   Widget build(BuildContext context) {
@@ -109,29 +112,31 @@ class LibraryBody extends StatelessWidget {
               // The card stays while selecting, so entering selection never
               // moves the covers under it.
               final continueReadingSource = state.continueReadingCardSource;
-              final child = switch (layoutMode) {
-                LibraryLayoutMode.list => LibraryListView(
-                  sources: state.listedItems,
-                  continueReadingSource: continueReadingSource,
-                  selection: selection,
-                  scrollController: scrollController,
-                  onSourcePressed: onSourcePressed,
-                  onSourceLongPressed: onSourceLongPressed,
-                  onConfirmSwipeDelete: onConfirmSwipeDelete,
-                ),
-                LibraryLayoutMode.grid => LibraryGridView(
-                  sources: state.listedItems,
-                  continueReadingSource: continueReadingSource,
-                  selection: selection,
-                  scrollController: scrollController,
-                  onSourcePressed: onSourcePressed,
-                  onSourceLongPressed: onSourceLongPressed,
-                ),
-              };
-
-              return _LibraryLayoutTransition(
+              final practice = state.practice;
+              final onPracticePressed = this.onPracticePressed;
+              // Appears after the first save and then stays: a stable entry
+              // up here besides the capsule, only in the default view like
+              // the card.
+              final leading =
+                  state.isDefaultView &&
+                      practice != null &&
+                      !practice.isEmpty &&
+                      onPracticePressed != null
+                  ? LibraryPracticeRow(
+                      practice: practice,
+                      onPressed: onPracticePressed,
+                    )
+                  : null;
+              return LibraryContentScrollView(
                 layoutMode: layoutMode,
-                child: child,
+                sources: state.listedItems,
+                leading: leading,
+                continueReadingSource: continueReadingSource,
+                selection: selection,
+                scrollController: scrollController,
+                onSourcePressed: onSourcePressed,
+                onSourceLongPressed: onSourceLongPressed,
+                onConfirmSwipeDelete: onConfirmSwipeDelete,
               );
             },
           );
@@ -182,43 +187,6 @@ class _LibraryNoMatches extends StatelessWidget {
         onPressed: onShowWholeLibrary,
         child: AppButtonLabel(l10n.libraryShowWholeLibrary),
       ),
-    );
-  }
-}
-
-class _LibraryLayoutTransition extends StatelessWidget {
-  const _LibraryLayoutTransition({
-    required this.layoutMode,
-    required this.child,
-  });
-
-  final LibraryLayoutMode layoutMode;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    if (context.reduceMotion) {
-      return KeyedSubtree(
-        key: ValueKey(layoutMode),
-        child: child,
-      );
-    }
-
-    return TweenAnimationBuilder<double>(
-      key: ValueKey(layoutMode),
-      tween: Tween(begin: 0, end: 1),
-      duration: context.motion(AppMotion.short),
-      curve: Curves.easeOutCubic,
-      child: child,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, (1 - value) * _layoutTransitionOffset),
-            child: child,
-          ),
-        );
-      },
     );
   }
 }

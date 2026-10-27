@@ -43,6 +43,15 @@ void main() {
     () async {
       final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
       await current.customSelect('SELECT 1').getSingle();
+      for (final column in [
+        'lemma',
+        'base_translation',
+        'context_translation',
+      ]) {
+        await current.customStatement(
+          'ALTER TABLE dictionary_table DROP COLUMN $column',
+        );
+      }
       await current.customStatement(
         'ALTER TABLE books_table DROP COLUMN comic_page_order_version',
       );
@@ -61,9 +70,37 @@ void main() {
     },
   );
 
+  test('v25 dictionary entries gain empty translation details', () async {
+    final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
+    await current.customSelect('SELECT 1').getSingle();
+    for (final column in ['lemma', 'base_translation', 'context_translation']) {
+      await current.customStatement(
+        'ALTER TABLE dictionary_table DROP COLUMN $column',
+      );
+    }
+    await current.customStatement('''
+      INSERT INTO dictionary_table (id, word, translation, added_at)
+      VALUES ('w', 'light', 'свет', '2026-01-01T00:00:00.000')
+    ''');
+    await current.customStatement('PRAGMA user_version = 25');
+    await current.close();
+
+    final migrated = await openMigratedDatabase();
+    final row = (await migrated.dictionaryDao.entryById('w'))!;
+    expect(row.word, 'light');
+    expect(row.lemma, isNull);
+    expect(row.baseTranslation, isNull);
+    expect(row.contextTranslation, isNull);
+  });
+
   test('v24 bookmarks gain an empty anchor version', () async {
     final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
     await current.customSelect('SELECT 1').getSingle();
+    for (final column in ['lemma', 'base_translation', 'context_translation']) {
+      await current.customStatement(
+        'ALTER TABLE dictionary_table DROP COLUMN $column',
+      );
+    }
     await current.customStatement(
       'ALTER TABLE bookmarks_table DROP COLUMN anchor_version',
     );
@@ -102,6 +139,11 @@ void main() {
   test('v23 articles move their text after every other column', () async {
     final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
     await current.customSelect('SELECT 1').getSingle();
+    for (final column in ['lemma', 'base_translation', 'context_translation']) {
+      await current.customStatement(
+        'ALTER TABLE dictionary_table DROP COLUMN $column',
+      );
+    }
     await current.customStatement(
       'ALTER TABLE bookmarks_table DROP COLUMN anchor_version',
     );

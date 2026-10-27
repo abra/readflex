@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:dictionary/dictionary.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:dictionary_service/dictionary_service.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ Future<void> pumpDictionarySheet(
   TextSelectionContext selection = powerSelection,
   Locale locale = const Locale('en'),
   TextScaler textScaler = TextScaler.noScaling,
+  DictionaryRepository? dictionaryRepository,
 }) async {
   late BuildContext sheetContext;
   await tester.pumpWidget(
@@ -40,6 +42,7 @@ Future<void> pumpDictionarySheet(
     sheetContext,
     selection: selection,
     dictionaryService: service ?? EntryDictionaryService(),
+    dictionaryRepository: dictionaryRepository,
   );
   await tester.pumpAndSettle();
 }

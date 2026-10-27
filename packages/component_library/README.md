@@ -189,6 +189,7 @@ Reusable presentation-only widgets used across features:
 |-------------------------------------|------------------------------------------------|
 | `ActionBottomSheetLayout`           | Bottom sheet shell; optional constrained scroll body and wrapping header actions |
 | `AppPlainIconButton`                | Labeled 48dp utility action with transparent background and circular press feedback; `icon` or a custom `iconWidget` |
+| `AppBackButton`                     | `AppBar.leading` back action: `AppIcons.back` (mirrors in RTL) on an `AppPlainIconButton`, Material's localized Back tooltip; pops the route unless `onPressed` is given |
 | `AppActionCard`                     | Reusable command card for action pickers       |
 | `AppDrillInRow`                     | Row that opens a nested step: accent leading icon (or a caller-framed `leading` widget, e.g. the import menu's tinted tile), `bodyMedium` title, muted subtitle, directional chevron, 48dp minimum, muted and ripple-free when disabled |
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
@@ -207,12 +208,14 @@ Reusable presentation-only widgets used across features:
 | `AppSettingsSection`                | Shared settings heading and label/control spacing |
 | `AppChoiceControl` / `AppChoiceOption` | Single-choice settings, with the same themed states for text, icons, painted `glyph`s and font previews; `reselectable` reports a tap on the selected option for nearest-match presets |
 | `AppCopyButton`                     | 48px copy command with local success/error feedback |
+| `AppSaveToggleButton`               | Save / Saved bookmark toggle for a sheet row (Translation and Definition word headers); the tooltip names the next tap, a state change is announced through a live region, `failed` shows the error glyph until the next tap |
 | `AppFilterChip`                     | App-styled filter chip with stable tap target  |
 | `AppFloatingCapsule`                | Stadium that floats a screen's bottom controls over content (reader chrome, Library collection switcher + "+"): `surface` at 92%, hairline `outlineVariant`, `AppShadows.popover`, radius from the caller's height; controls paint their own ink |
 | `AppInlineSheet` / `AppInlineSheetGeometry` | Bottom sheet drawn in a screen's `Stack` instead of a route, retained offstage while hidden; half (60%) and full positions, header drag, list-driven grow/collapse, keyboard-aware |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
 | `ButtonLoadingIndicator`            | Compact circular progress for buttons; takes the button's own foreground via `IconTheme` |
 | `CenteredCircularProgressIndicator` | Centered loading spinner                       |
+| `AppFirstRunState`                  | A screen's first-run state: accent glyph, serif title, optional stretched commands |
 | `EmptyState`                        | Centered empty state; `compact` for list/panel placeholders |
 | `ErrorState`                        | Centered failure with filled Retry, optional title/icon/secondary exit and busy geometry |
 | `AppSourceCover` / `AppSourceCoverFrame` | Shared source cover rendering and frame |
@@ -235,9 +238,21 @@ field clearing and filter reset retain the familiar non-destructive cross.
 Keep localized tooltips specific to the action and preserve existing save,
 confirmation and Undo behavior when changing an icon.
 Use `AppIcons.undo` for reversing a deletion, not the refresh/retry icon.
+`AppIcons.practice` is Lucide's `playing-cards-fan`, the review deck, wherever
+Practice is named: the Library capsule and row, Start review, the empty hub.
+Icons come from `lucide_icons_flutter` 4 (Lucide 1.56+); regular glyphs and
+their `Dir` variants keep the 3.x API, weighted variants live in separate
+libraries and are not used. A Lucide bump can refine glyphs, so compare every
+golden diff against an icon-sized box before updating baselines.
 Inline deletion/restoration actions use the same icon-only button and target;
 do not replace an icon with a variable-width text label. The localized tooltip
 names the action for both pointer users and assistive technology.
+
+Screens pushed with an `AppBar` pass `leading: const AppBackButton()` rather
+than relying on the automatic leading, which draws Material's platform arrow
+in place of the app's chevron. The app bar title style carries the sans
+family explicitly: a theme-level `TextStyle` is not merged with
+`ThemeData.fontFamily`.
 
 `AppPlainIconButton` keeps a minimum 48dp target independently of `iconSize`; the default
 glyph is 20dp, while `SearchField` uses 16dp. Its resting background is
@@ -317,9 +332,15 @@ Text fields share the search field's and buttons' `AppRadius.md` (12dp).
 
 ### Generic States
 
-`EmptyState` and `ErrorState` are the only full-panel placeholders: Library,
-reader drawers, reader search, reader load failure and collection lists use them
-rather than a hand-rolled `Center(Text)`. Retry is always the filled primary
+`AppFirstRunState` is a screen's first-run state, the one a reader sees before
+saving anything: the glyph in a 72dp circle tinted with the accent, a serif
+`headlineSmall` title, a muted hint, then any commands stretched to a 480dp
+column (the first filled) and an optional caption. The empty Library and the
+empty Practice section both draw it, so the app's first screens read as one.
+`EmptyState` and `ErrorState` are the only other full-panel placeholders:
+reader drawers, reader search, reader load failure, collection lists and
+Practice's Vocabulary and Highlights lists use them rather than a hand-rolled
+`Center(Text)`. Retry is always the filled primary
 command; a secondary exit (reader "Go back") is outlined beside it, and when
 the two labels do not fit side by side the filled Retry comes first in the
 stack, like `AppSheetActions`. `busy`

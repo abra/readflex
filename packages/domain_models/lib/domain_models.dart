@@ -21,6 +21,7 @@ export 'src/models/library_source.dart';
 export 'src/models/rating.dart';
 export 'src/models/review_item.dart';
 export 'src/models/review_log.dart';
+export 'src/models/review_stats.dart';
 export 'src/models/reviewable_type.dart';
 export 'src/models/source_bookmark.dart';
 export 'src/models/source_type.dart';

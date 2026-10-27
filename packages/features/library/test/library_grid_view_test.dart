@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
 import 'package:library_feature/src/library_grid_tile.dart';
-import 'package:library_feature/src/library_grid_view.dart';
+import 'package:library_feature/src/library_content_scroll_view.dart';
+import 'package:library_feature/src/library_grid_sliver.dart';
+import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -72,14 +74,17 @@ void main() {
   tearDown(() => controller.dispose());
 
   // Built once, as the Library body does, so only layout changes reach it.
-  LibraryGridView grid({bool continueReading = true}) => LibraryGridView(
-    sources: _sources,
-    continueReadingSource: continueReading ? _reading : null,
-    selection: const LibrarySelectionState(),
-    scrollController: controller,
-    onSourcePressed: (_) {},
-    onSourceLongPressed: (_) {},
-  );
+  LibraryContentScrollView grid({bool continueReading = true}) =>
+      LibraryContentScrollView(
+        layoutMode: LibraryLayoutMode.grid,
+        sources: _sources,
+        continueReadingSource: continueReading ? _reading : null,
+        selection: const LibrarySelectionState(),
+        scrollController: controller,
+        onSourcePressed: (_) {},
+        onSourceLongPressed: (_) {},
+        onConfirmSwipeDelete: (_) async => false,
+      );
 
   Widget app(Widget body) => MaterialApp(
     theme: AppTheme.light(),

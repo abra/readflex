@@ -6,10 +6,7 @@ import '../tables/dictionary_table.dart';
 
 part 'dictionary_dao.g.dart';
 
-/// CRUD access to dormant dictionary rows and their source anchors.
-///
-/// Kept for database compatibility while the Dictionary feature is outside the
-/// active package graph.
+/// CRUD access to saved words and their source anchors.
 @DriftAccessor(tables: [DictionaryTable, DictionaryAnchorsTable])
 class DictionaryDao extends DatabaseAccessor<AppDatabase>
     with _$DictionaryDaoMixin {
@@ -37,6 +34,26 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
   Future<DictionaryTableData?> entryById(String id) => (select(
     dictionaryTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  /// The newest saved entry for [word] (case-insensitive), optionally only
+  /// one saved from [sourceId].
+  Future<DictionaryTableData?> entryByWord(String word, {String? sourceId}) =>
+      (select(dictionaryTable)
+            ..where((t) {
+              final sameWord = t.word.lower().equals(word.toLowerCase());
+              if (sourceId == null) return sameWord;
+              return sameWord & t.sourceId.equals(sourceId);
+            })
+            ..orderBy([(t) => OrderingTerm.desc(t.addedAt)])
+            ..limit(1))
+          .getSingleOrNull();
+
+  Future<int> entryCount() {
+    final count = dictionaryTable.id.count();
+    return (selectOnly(
+      dictionaryTable,
+    )..addColumns([count])).map((row) => row.read(count) ?? 0).getSingle();
+  }
 
   Future<List<DictionaryTableData>> entriesByIds(List<String> ids) =>
       (select(dictionaryTable)..where((t) => t.id.isIn(ids))).get();

@@ -333,34 +333,10 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get libraryDisplayView => 'दृश्य';
 
   @override
-  String get libraryDisplayAppearance => 'रूप';
-
-  @override
-  String get libraryDisplayLanguage => 'भाषा';
-
-  @override
   String get libraryDisplayList => 'सूची';
 
   @override
   String get libraryDisplayGrid => 'ग्रिड';
-
-  @override
-  String get libraryThemeSystem => 'सिस्टम';
-
-  @override
-  String get libraryThemeSystemDescription => 'डिवाइस सेटिंग का पालन करें';
-
-  @override
-  String get libraryThemeLight => 'लाइट';
-
-  @override
-  String get libraryThemeLightDescription => 'लाइट रूप का उपयोग करें';
-
-  @override
-  String get libraryThemeDark => 'डार्क';
-
-  @override
-  String get libraryThemeDarkDescription => 'डार्क रूप का उपयोग करें';
 
   @override
   String get libraryFailedToLoad => 'लाइब्रेरी लोड नहीं हो सकी';
@@ -1019,6 +995,236 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
       'अपना कनेक्शन जांचें या बाद में पुनः प्रयास करें।';
 
   @override
+  String get wordSave => 'शब्दावली में सहेजें';
+
+  @override
+  String get wordSaved => 'दोहराने के लिए सहेजा गया';
+
+  @override
+  String get wordUnsave => 'शब्दावली से हटाएँ';
+
+  @override
+  String get wordSaveFailed => 'शब्दावली में सहेजा नहीं जा सका';
+
+  @override
+  String get practiceTitle => 'अभ्यास';
+
+  @override
+  String practiceWordCount(int count) {
+    return '$count शब्द';
+  }
+
+  @override
+  String practiceHighlightCount(int count) {
+    return '$count हाइलाइट';
+  }
+
+  @override
+  String practiceNewToday(int count) {
+    return 'आज $count नए';
+  }
+
+  @override
+  String get practiceLoadFailed => 'आपके कार्ड लोड नहीं हो सके';
+
+  @override
+  String practiceDueToday(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'आज $count कार्ड बाकी',
+      one: 'आज $count कार्ड बाकी',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String practiceDueCount(int count) {
+    return '$count बाकी';
+  }
+
+  @override
+  String get practiceCaughtUp => 'सब हो गया';
+
+  @override
+  String get practiceCaughtUpBody => 'कुछ बाकी नहीं। कल फिर आएँ।';
+
+  @override
+  String get practiceCaughtUpShort => 'पूरा';
+
+  @override
+  String get practiceNothingTitle => 'अभी अभ्यास के लिए कुछ नहीं';
+
+  @override
+  String get practiceNothingBody =>
+      'पढ़ते समय अनुवाद से शब्द सहेजें या अंश हाइलाइट करें। वे दोहराने के लिए यहाँ आएँगे।';
+
+  @override
+  String get practiceOpenLibrary => 'लाइब्रेरी खोलें';
+
+  @override
+  String get practiceStartReview => 'दोहराना शुरू करें';
+
+  @override
+  String get practiceReviewAhead => 'पहले से दोहराएँ';
+
+  @override
+  String get practiceTodayTitle => 'आज';
+
+  @override
+  String practiceStreak(int days) {
+    return '$days दिन की लगातार श्रृंखला';
+  }
+
+  @override
+  String practiceThisWeek(int count) {
+    return 'इस सप्ताह $count';
+  }
+
+  @override
+  String practiceTotalCards(int count) {
+    return 'कुल $count';
+  }
+
+  @override
+  String get practiceSectionCollections => 'संग्रह';
+
+  @override
+  String get practiceSectionBySource => 'किताब के अनुसार';
+
+  @override
+  String get practiceWordsTitle => 'शब्दावली';
+
+  @override
+  String get practiceHighlightsTitle => 'हाइलाइट';
+
+  @override
+  String practiceCollectionCounts(int total, int due) {
+    return '$total सहेजे · $due बाकी';
+  }
+
+  @override
+  String get practiceSearchWords => 'शब्दावली में खोजें';
+
+  @override
+  String get practiceSearchHighlights => 'हाइलाइट खोजें';
+
+  @override
+  String get practiceFilterAll => 'सभी';
+
+  @override
+  String get practiceFilterLearning => 'सीख रहे';
+
+  @override
+  String get practiceFilterMastered => 'सीख लिए';
+
+  @override
+  String get practiceWordsEmptyTitle => 'अभी कोई शब्दावली नहीं';
+
+  @override
+  String get practiceWordsEmptyBody =>
+      'पढ़ते समय अनुवाद या परिभाषा में सहेजें दबाएँ';
+
+  @override
+  String get practiceHighlightsEmptyTitle => 'अभी कोई हाइलाइट नहीं';
+
+  @override
+  String get practiceHighlightsEmptyBody =>
+      'पढ़ते समय टेक्स्ट चुनें और हाइलाइट चुनें';
+
+  @override
+  String get practiceNoMatches => 'कोई मेल नहीं';
+
+  @override
+  String get practiceDueNew => 'नया';
+
+  @override
+  String get practiceDueNow => 'बाकी';
+
+  @override
+  String practiceDueIn(String interval) {
+    return '$interval में';
+  }
+
+  @override
+  String practiceIntervalMinutes(int count) {
+    return '$count मि';
+  }
+
+  @override
+  String practiceIntervalHours(int count) {
+    return '$count घं';
+  }
+
+  @override
+  String practiceIntervalDays(int count) {
+    return '$count दिन';
+  }
+
+  @override
+  String practiceIntervalWeeks(int count) {
+    return '$count सप्ता';
+  }
+
+  @override
+  String practiceIntervalMonths(int count) {
+    return '$count मही';
+  }
+
+  @override
+  String practiceIntervalYears(int count) {
+    return '$count वर्ष';
+  }
+
+  @override
+  String get practiceOpenInBook => 'किताब में खोलें';
+
+  @override
+  String get practiceRemoveFromReview => 'दोहराव से हटाएँ';
+
+  @override
+  String get practiceMoreActions => 'और';
+
+  @override
+  String practiceCardPosition(int position, int total) {
+    return '$total में से $position';
+  }
+
+  @override
+  String get practiceShowAnswer => 'उत्तर दिखाएँ';
+
+  @override
+  String get practiceRateAgain => 'फिर से';
+
+  @override
+  String get practiceRateHard => 'कठिन';
+
+  @override
+  String get practiceRateGood => 'अच्छा';
+
+  @override
+  String get practiceKeep => 'रखें';
+
+  @override
+  String get practiceShowLess => 'कम दिखाएँ';
+
+  @override
+  String get practiceNoNote => 'कोई नोट नहीं';
+
+  @override
+  String get practiceSessionDone => 'सत्र पूरा';
+
+  @override
+  String practiceSessionSummary(int reviewed, int known, int again) {
+    return '$reviewed दोहराए · $known याद · $again फिर से';
+  }
+
+  @override
+  String practiceReviewAgainCount(int count) {
+    return '$count फिर से दोहराएँ';
+  }
+
+  @override
   String get readerHighlightFilterAll => 'सभी';
 
   @override
@@ -1195,4 +1401,28 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
 
   @override
   String get readerExternalLinkCopy => 'लिंक कॉपी करें';
+
+  @override
+  String get libraryDisplayAppearance => 'रूप';
+
+  @override
+  String get libraryDisplayLanguage => 'भाषा';
+
+  @override
+  String get libraryThemeSystem => 'सिस्टम';
+
+  @override
+  String get libraryThemeSystemDescription => 'डिवाइस सेटिंग का पालन करें';
+
+  @override
+  String get libraryThemeLight => 'लाइट';
+
+  @override
+  String get libraryThemeLightDescription => 'लाइट रूप का उपयोग करें';
+
+  @override
+  String get libraryThemeDark => 'डार्क';
+
+  @override
+  String get libraryThemeDarkDescription => 'डार्क रूप का उपयोग करें';
 }

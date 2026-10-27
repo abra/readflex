@@ -98,6 +98,31 @@ class LibraryDeletionEffect extends Equatable {
   List<Object?> get props => [version, success, sourceIds, singleTitle];
 }
 
+/// What Practice has to say in the Library: how much is saved for review
+/// and how many cards are due now.
+class LibraryPracticeSummary extends Equatable {
+  const LibraryPracticeSummary({
+    required this.words,
+    required this.highlights,
+    required this.due,
+  });
+
+  /// Saved words in the review queue.
+  final int words;
+
+  /// Text highlights in the review queue.
+  final int highlights;
+
+  /// Cards due now, words and highlights together.
+  final int due;
+
+  /// Nothing saved yet: the Library shows no Practice row.
+  bool get isEmpty => words == 0 && highlights == 0;
+
+  @override
+  List<Object?> get props => [words, highlights, due];
+}
+
 class LibraryState extends Equatable {
   // Non-const because filtered/sorted lists are computed once per state.
   LibraryState({
@@ -109,6 +134,7 @@ class LibraryState extends Equatable {
     this.searchQuery = '',
     this.deletionVersion = 0,
     this.deletionEffect,
+    this.practice,
   });
 
   static const _absent = Object();
@@ -129,6 +155,11 @@ class LibraryState extends Equatable {
   /// One-shot UI effect emitted after a delete finishes. The screen listens
   /// for changes and renders the toast; it no longer owns delete queues.
   final LibraryDeletionEffect? deletionEffect;
+
+  /// Review counts for the Practice entry, loaded with the sources; `null`
+  /// until the first load, when the Library has no review store, or when
+  /// the counts could not be read and none were read before.
+  final LibraryPracticeSummary? practice;
 
   bool get isEmpty => sources.isEmpty;
 
@@ -340,6 +371,7 @@ class LibraryState extends Equatable {
     String? searchQuery,
     int? deletionVersion,
     LibraryDeletionEffect? deletionEffect,
+    LibraryPracticeSummary? practice,
   }) => LibraryState(
     status: status ?? this.status,
     sources: sources ?? this.sources,
@@ -351,6 +383,7 @@ class LibraryState extends Equatable {
     searchQuery: searchQuery ?? this.searchQuery,
     deletionVersion: deletionVersion ?? this.deletionVersion,
     deletionEffect: deletionEffect ?? this.deletionEffect,
+    practice: practice ?? this.practice,
   );
 
   @override
@@ -363,6 +396,7 @@ class LibraryState extends Equatable {
     searchQuery,
     deletionVersion,
     deletionEffect,
+    practice,
   ];
 }
 

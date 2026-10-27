@@ -324,34 +324,10 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryDisplayView => '视图';
 
   @override
-  String get libraryDisplayAppearance => '外观';
-
-  @override
-  String get libraryDisplayLanguage => '语言';
-
-  @override
   String get libraryDisplayList => '列表';
 
   @override
   String get libraryDisplayGrid => '网格';
-
-  @override
-  String get libraryThemeSystem => '系统';
-
-  @override
-  String get libraryThemeSystemDescription => '跟随设备设置';
-
-  @override
-  String get libraryThemeLight => '浅色';
-
-  @override
-  String get libraryThemeLightDescription => '使用浅色外观';
-
-  @override
-  String get libraryThemeDark => '深色';
-
-  @override
-  String get libraryThemeDarkDescription => '使用深色外观';
 
   @override
   String get libraryFailedToLoad => '无法加载书库';
@@ -997,6 +973,227 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get dictionaryFailureBody => '请检查网络连接或稍后重试。';
 
   @override
+  String get wordSave => '保存到生词本';
+
+  @override
+  String get wordSaved => '已保存以供复习';
+
+  @override
+  String get wordUnsave => '从生词本移除';
+
+  @override
+  String get wordSaveFailed => '无法保存到生词本';
+
+  @override
+  String get practiceTitle => '练习';
+
+  @override
+  String practiceWordCount(int count) {
+    return '$count 个单词';
+  }
+
+  @override
+  String practiceHighlightCount(int count) {
+    return '$count 条标注';
+  }
+
+  @override
+  String practiceNewToday(int count) {
+    return '今天新学 $count';
+  }
+
+  @override
+  String get practiceLoadFailed => '无法加载卡片';
+
+  @override
+  String practiceDueToday(int count) {
+    return '今天有 $count 张卡片待复习';
+  }
+
+  @override
+  String practiceDueCount(int count) {
+    return '$count 待复习';
+  }
+
+  @override
+  String get practiceCaughtUp => '全部完成';
+
+  @override
+  String get practiceCaughtUpBody => '暂无待复习，明天再来。';
+
+  @override
+  String get practiceCaughtUpShort => '完成';
+
+  @override
+  String get practiceNothingTitle => '还没有可练习的内容';
+
+  @override
+  String get practiceNothingBody => '阅读时从翻译中保存单词或标注段落，它们会在这里出现以供复习。';
+
+  @override
+  String get practiceOpenLibrary => '打开书库';
+
+  @override
+  String get practiceStartReview => '开始复习';
+
+  @override
+  String get practiceReviewAhead => '提前复习';
+
+  @override
+  String get practiceTodayTitle => '今天';
+
+  @override
+  String practiceStreak(int days) {
+    return '连续 $days 天';
+  }
+
+  @override
+  String practiceThisWeek(int count) {
+    return '本周 $count';
+  }
+
+  @override
+  String practiceTotalCards(int count) {
+    return '共 $count';
+  }
+
+  @override
+  String get practiceSectionCollections => '集合';
+
+  @override
+  String get practiceSectionBySource => '按书籍';
+
+  @override
+  String get practiceWordsTitle => '生词本';
+
+  @override
+  String get practiceHighlightsTitle => '标注';
+
+  @override
+  String practiceCollectionCounts(int total, int due) {
+    return '已保存 $total · 待复习 $due';
+  }
+
+  @override
+  String get practiceSearchWords => '搜索生词本';
+
+  @override
+  String get practiceSearchHighlights => '搜索标注';
+
+  @override
+  String get practiceFilterAll => '全部';
+
+  @override
+  String get practiceFilterLearning => '学习中';
+
+  @override
+  String get practiceFilterMastered => '已掌握';
+
+  @override
+  String get practiceWordsEmptyTitle => '生词本还是空的';
+
+  @override
+  String get practiceWordsEmptyBody => '阅读时在翻译或释义中点击保存';
+
+  @override
+  String get practiceHighlightsEmptyTitle => '还没有标注';
+
+  @override
+  String get practiceHighlightsEmptyBody => '阅读时选择文本并选择标注';
+
+  @override
+  String get practiceNoMatches => '没有匹配项';
+
+  @override
+  String get practiceDueNew => '新';
+
+  @override
+  String get practiceDueNow => '待复习';
+
+  @override
+  String practiceDueIn(String interval) {
+    return '$interval后';
+  }
+
+  @override
+  String practiceIntervalMinutes(int count) {
+    return '$count分';
+  }
+
+  @override
+  String practiceIntervalHours(int count) {
+    return '$count小时';
+  }
+
+  @override
+  String practiceIntervalDays(int count) {
+    return '$count天';
+  }
+
+  @override
+  String practiceIntervalWeeks(int count) {
+    return '$count周';
+  }
+
+  @override
+  String practiceIntervalMonths(int count) {
+    return '$count个月';
+  }
+
+  @override
+  String practiceIntervalYears(int count) {
+    return '$count年';
+  }
+
+  @override
+  String get practiceOpenInBook => '在书中打开';
+
+  @override
+  String get practiceRemoveFromReview => '从复习中移除';
+
+  @override
+  String get practiceMoreActions => '更多';
+
+  @override
+  String practiceCardPosition(int position, int total) {
+    return '$position / $total';
+  }
+
+  @override
+  String get practiceShowAnswer => '显示答案';
+
+  @override
+  String get practiceRateAgain => '重来';
+
+  @override
+  String get practiceRateHard => '困难';
+
+  @override
+  String get practiceRateGood => '记得';
+
+  @override
+  String get practiceKeep => '保留';
+
+  @override
+  String get practiceShowLess => '少显示';
+
+  @override
+  String get practiceNoNote => '无笔记';
+
+  @override
+  String get practiceSessionDone => '本次复习完成';
+
+  @override
+  String practiceSessionSummary(int reviewed, int known, int again) {
+    return '已复习 $reviewed · 记得 $known · 重来 $again';
+  }
+
+  @override
+  String practiceReviewAgainCount(int count) {
+    return '再复习 $count 张';
+  }
+
+  @override
   String get readerHighlightFilterAll => '全部';
 
   @override
@@ -1173,4 +1370,28 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get readerExternalLinkCopy => '复制链接';
+
+  @override
+  String get libraryDisplayAppearance => '外观';
+
+  @override
+  String get libraryDisplayLanguage => '语言';
+
+  @override
+  String get libraryThemeSystem => '系统';
+
+  @override
+  String get libraryThemeSystemDescription => '跟随设备设置';
+
+  @override
+  String get libraryThemeLight => '浅色';
+
+  @override
+  String get libraryThemeLightDescription => '使用浅色外观';
+
+  @override
+  String get libraryThemeDark => '深色';
+
+  @override
+  String get libraryThemeDarkDescription => '使用深色外观';
 }

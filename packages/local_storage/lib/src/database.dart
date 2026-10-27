@@ -72,7 +72,7 @@ class AppDatabase extends _$AppDatabase {
   final Future<Directory> Function() _documentsDirectoryProvider;
 
   @override
-  int get schemaVersion => 25;
+  int get schemaVersion => 26;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -366,6 +366,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 25) {
         await _addBookmarkAnchorVersion();
       }
+      if (from < 26) {
+        await _addDictionaryTranslationDetails();
+      }
     },
   );
 
@@ -637,6 +640,14 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'ALTER TABLE bookmarks_table ADD COLUMN anchor_version INTEGER',
     );
+  }
+
+  Future<void> _addDictionaryTranslationDetails() async {
+    for (final column in ['lemma', 'base_translation', 'context_translation']) {
+      await customStatement(
+        'ALTER TABLE dictionary_table ADD COLUMN $column TEXT',
+      );
+    }
   }
 
   Future<void> _addHighlightLocationMetadata() async {

@@ -12,8 +12,10 @@ import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:connectivity_service/connectivity_service.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:dictionary_service/dictionary_service.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
@@ -201,6 +203,9 @@ Future<DependenciesContainer> _createDependenciesContainer(
     resources.add('articleRepository.dispose', articleRepository.dispose);
     final collectionRepository = CollectionRepository(database: database);
     final highlightRepository = HighlightRepository(database: database);
+    final dictionaryRepository = DictionaryRepository(database: database);
+    resources.add('dictionaryRepository.dispose', dictionaryRepository.dispose);
+    final fsrsRepository = FsrsRepository(database: database);
 
     // ─── Preferences ───
     final preferencesService = await PreferencesService.create(
@@ -230,6 +235,8 @@ Future<DependenciesContainer> _createDependenciesContainer(
       bookRepository: bookRepository,
       collectionRepository: collectionRepository,
       highlightRepository: highlightRepository,
+      dictionaryRepository: dictionaryRepository,
+      fsrsRepository: fsrsRepository,
       connectivityService: connectivityService,
       contextualTranslationService:
           backendServices.contextualTranslationService,

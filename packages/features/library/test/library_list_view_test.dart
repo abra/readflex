@@ -2,7 +2,8 @@ import 'package:library_feature/src/library_bloc.dart';
 import 'package:library_feature/src/library_header.dart';
 import 'package:library_feature/src/library_layout.dart';
 import 'package:library_feature/src/library_selection_tint.dart';
-import 'package:library_feature/src/library_list_view.dart';
+import 'package:library_feature/src/library_content_scroll_view.dart';
+import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_list_tile.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:component_library/component_library.dart';
@@ -285,7 +286,8 @@ void main() {
           MaterialApp(
             theme: theme,
             home: Scaffold(
-              body: LibraryListView(
+              body: LibraryContentScrollView(
+                layoutMode: LibraryLayoutMode.list,
                 sources: _books.map(LibrarySource.fromBook).toList(),
                 selection: const LibrarySelectionState(),
                 scrollController: controller,
@@ -325,7 +327,8 @@ void main() {
         expect(dividerLeft, AppSpacing.lg);
         expect(
           tester.getTopRight(dividerFinder).dx,
-          tester.getSize(find.byType(LibraryListView)).width - AppSpacing.lg,
+          tester.getSize(find.byType(LibraryContentScrollView)).width -
+              AppSpacing.lg,
         );
         expect(dividerLeft, lessThan(secondTitleOffset.dx));
       },
@@ -337,7 +340,8 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         home: Scaffold(
-          body: LibraryListView(
+          body: LibraryContentScrollView(
+            layoutMode: LibraryLayoutMode.list,
             sources: [LibrarySource.fromArticle(_article)],
             selection: const LibrarySelectionState(),
             scrollController: ScrollController(),
@@ -561,7 +565,8 @@ void main() {
         home: Directionality(
           textDirection: TextDirection.rtl,
           child: Scaffold(
-            body: LibraryListView(
+            body: LibraryContentScrollView(
+              layoutMode: LibraryLayoutMode.list,
               sources: [LibrarySource.fromBook(_books.first)],
               selection: const LibrarySelectionState(),
               scrollController: controller,
@@ -722,7 +727,8 @@ void main() {
                   onSearchChanged: (_) {},
                 ),
                 Expanded(
-                  child: LibraryListView(
+                  child: LibraryContentScrollView(
+                    layoutMode: LibraryLayoutMode.list,
                     sources: _books.map(LibrarySource.fromBook).toList(),
                     selection: const LibrarySelectionState(),
                     scrollController: controller,
@@ -774,7 +780,8 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         home: Scaffold(
-          body: LibraryListView(
+          body: LibraryContentScrollView(
+            layoutMode: LibraryLayoutMode.list,
             sources: [LibrarySource.fromBook(_books.first)],
             selection: const LibrarySelectionState(),
             scrollController: controller,

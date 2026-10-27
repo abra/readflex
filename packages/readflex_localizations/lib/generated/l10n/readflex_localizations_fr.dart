@@ -334,35 +334,10 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get libraryDisplayView => 'Vue';
 
   @override
-  String get libraryDisplayAppearance => 'Apparence';
-
-  @override
-  String get libraryDisplayLanguage => 'Langue';
-
-  @override
   String get libraryDisplayList => 'Liste';
 
   @override
   String get libraryDisplayGrid => 'Grille';
-
-  @override
-  String get libraryThemeSystem => 'Système';
-
-  @override
-  String get libraryThemeSystemDescription =>
-      'Suivre le réglage de l\'appareil';
-
-  @override
-  String get libraryThemeLight => 'Clair';
-
-  @override
-  String get libraryThemeLightDescription => 'Utiliser l\'apparence claire';
-
-  @override
-  String get libraryThemeDark => 'Sombre';
-
-  @override
-  String get libraryThemeDarkDescription => 'Utiliser l\'apparence sombre';
 
   @override
   String get libraryFailedToLoad => 'Impossible de charger la bibliothèque';
@@ -1033,6 +1008,248 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
       'Vérifiez votre connexion ou réessayez plus tard.';
 
   @override
+  String get wordSave => 'Enregistrer dans le vocabulaire';
+
+  @override
+  String get wordSaved => 'Enregistré pour révision';
+
+  @override
+  String get wordUnsave => 'Retirer du vocabulaire';
+
+  @override
+  String get wordSaveFailed => 'Impossible d\'enregistrer dans le vocabulaire';
+
+  @override
+  String get practiceTitle => 'Pratique';
+
+  @override
+  String practiceWordCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mots',
+      one: '$count mot',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String practiceHighlightCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count surlignages',
+      one: '$count surlignage',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String practiceNewToday(int count) {
+    return '$count nouvelles aujourd\'hui';
+  }
+
+  @override
+  String get practiceLoadFailed => 'Impossible de charger vos cartes';
+
+  @override
+  String practiceDueToday(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cartes à revoir aujourd\'hui',
+      one: '$count carte à revoir aujourd\'hui',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String practiceDueCount(int count) {
+    return '$count à revoir';
+  }
+
+  @override
+  String get practiceCaughtUp => 'Tout est à jour';
+
+  @override
+  String get practiceCaughtUpBody => 'Rien à revoir. Revenez demain.';
+
+  @override
+  String get practiceCaughtUpShort => 'À jour';
+
+  @override
+  String get practiceNothingTitle => 'Rien à pratiquer pour l\'instant';
+
+  @override
+  String get practiceNothingBody =>
+      'Enregistrez un mot depuis une traduction ou surlignez un passage en lisant. Ils reviendront ici pour révision.';
+
+  @override
+  String get practiceOpenLibrary => 'Ouvrir la bibliothèque';
+
+  @override
+  String get practiceStartReview => 'Réviser';
+
+  @override
+  String get practiceReviewAhead => 'Réviser avant';
+
+  @override
+  String get practiceTodayTitle => 'Aujourd\'hui';
+
+  @override
+  String practiceStreak(int days) {
+    return 'Série de $days jours';
+  }
+
+  @override
+  String practiceThisWeek(int count) {
+    return '$count cette semaine';
+  }
+
+  @override
+  String practiceTotalCards(int count) {
+    return '$count au total';
+  }
+
+  @override
+  String get practiceSectionCollections => 'Collections';
+
+  @override
+  String get practiceSectionBySource => 'Par livre';
+
+  @override
+  String get practiceWordsTitle => 'Vocabulaire';
+
+  @override
+  String get practiceHighlightsTitle => 'Surlignages';
+
+  @override
+  String practiceCollectionCounts(int total, int due) {
+    return '$total enregistrés · $due à revoir';
+  }
+
+  @override
+  String get practiceSearchWords => 'Rechercher dans le vocabulaire';
+
+  @override
+  String get practiceSearchHighlights => 'Rechercher des surlignages';
+
+  @override
+  String get practiceFilterAll => 'Tous';
+
+  @override
+  String get practiceFilterLearning => 'En cours';
+
+  @override
+  String get practiceFilterMastered => 'Acquis';
+
+  @override
+  String get practiceWordsEmptyTitle => 'Pas encore de vocabulaire';
+
+  @override
+  String get practiceWordsEmptyBody =>
+      'Touchez Enregistrer dans une traduction ou une définition en lisant';
+
+  @override
+  String get practiceHighlightsEmptyTitle => 'Aucun surlignage pour l\'instant';
+
+  @override
+  String get practiceHighlightsEmptyBody =>
+      'Sélectionnez du texte en lisant et choisissez Surligner';
+
+  @override
+  String get practiceNoMatches => 'Aucun résultat';
+
+  @override
+  String get practiceDueNew => 'Nouveau';
+
+  @override
+  String get practiceDueNow => 'À revoir';
+
+  @override
+  String practiceDueIn(String interval) {
+    return 'Dans $interval';
+  }
+
+  @override
+  String practiceIntervalMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String practiceIntervalHours(int count) {
+    return '$count h';
+  }
+
+  @override
+  String practiceIntervalDays(int count) {
+    return '$count j';
+  }
+
+  @override
+  String practiceIntervalWeeks(int count) {
+    return '$count sem';
+  }
+
+  @override
+  String practiceIntervalMonths(int count) {
+    return '$count mois';
+  }
+
+  @override
+  String practiceIntervalYears(int count) {
+    return '$count an';
+  }
+
+  @override
+  String get practiceOpenInBook => 'Ouvrir dans le livre';
+
+  @override
+  String get practiceRemoveFromReview => 'Retirer de la révision';
+
+  @override
+  String get practiceMoreActions => 'Plus';
+
+  @override
+  String practiceCardPosition(int position, int total) {
+    return '$position sur $total';
+  }
+
+  @override
+  String get practiceShowAnswer => 'Afficher la réponse';
+
+  @override
+  String get practiceRateAgain => 'Encore';
+
+  @override
+  String get practiceRateHard => 'Difficile';
+
+  @override
+  String get practiceRateGood => 'Bien';
+
+  @override
+  String get practiceKeep => 'Garder';
+
+  @override
+  String get practiceShowLess => 'Montrer moins';
+
+  @override
+  String get practiceNoNote => 'Pas de note';
+
+  @override
+  String get practiceSessionDone => 'Session terminée';
+
+  @override
+  String practiceSessionSummary(int reviewed, int known, int again) {
+    return '$reviewed revues · $known sues · $again à refaire';
+  }
+
+  @override
+  String practiceReviewAgainCount(int count) {
+    return 'Revoir $count encore';
+  }
+
+  @override
   String get readerHighlightFilterAll => 'Tout';
 
   @override
@@ -1210,4 +1427,29 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
 
   @override
   String get readerExternalLinkCopy => 'Copier le lien';
+
+  @override
+  String get libraryDisplayAppearance => 'Apparence';
+
+  @override
+  String get libraryDisplayLanguage => 'Langue';
+
+  @override
+  String get libraryThemeSystem => 'Système';
+
+  @override
+  String get libraryThemeSystemDescription =>
+      'Suivre le réglage de l\'appareil';
+
+  @override
+  String get libraryThemeLight => 'Clair';
+
+  @override
+  String get libraryThemeLightDescription => 'Utiliser l\'apparence claire';
+
+  @override
+  String get libraryThemeDark => 'Sombre';
+
+  @override
+  String get libraryThemeDarkDescription => 'Utiliser l\'apparence sombre';
 }

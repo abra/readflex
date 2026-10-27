@@ -73,6 +73,9 @@ run "article_extraction_service"   "$DART test test/" "$SCRIPT_DIR/packages/arti
 run "remote_content_policy"        "$DART test test/" "$SCRIPT_DIR/packages/remote_content_policy"
 run "article_repository"           "$FLUTTER test test/" "$SCRIPT_DIR/packages/article_repository"
 run "highlight_repository"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/highlight_repository"
+run "review_scheduler"             "$FLUTTER test test/" "$SCRIPT_DIR/packages/review_scheduler"
+run "fsrs_repository"              "$FLUTTER test test/" "$SCRIPT_DIR/packages/fsrs_repository"
+run "dictionary_repository"        "$FLUTTER test test/" "$SCRIPT_DIR/packages/dictionary_repository"
 run "connectivity_service"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/connectivity_service"
 run "contextual_translation_service" "$FLUTTER test test/" "$SCRIPT_DIR/packages/contextual_translation_service"
 run "dictionary_service"           "$FLUTTER test test/" "$SCRIPT_DIR/packages/dictionary_service"
@@ -92,6 +95,7 @@ run "translate"                   "$FLUTTER test test/" "$SCRIPT_DIR/packages/fe
 run "dictionary"                  "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/dictionary"
 run "reader"                      "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/reader"
 run "onboarding"                  "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/onboarding"
+run "practice"                    "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/practice"
 
 echo ""
 echo "────────────────────────────"

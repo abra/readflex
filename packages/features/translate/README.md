@@ -10,7 +10,7 @@ loading/error states, and target-language preference updates.
 
 | Symbol | Purpose |
 |--------|---------|
-| `TranslateAction` | Reader context-panel action wired by `routing.dart`; optional `onDefine` opens the definition of the same selection |
+| `TranslateAction` | Reader context-panel action wired by `routing.dart`; optional `onDefine` opens the definition of the same selection; optional `dictionaryRepository` enables Save in the word header, which keeps the word for review (`AppSaveToggleButton`, toast "Saved for review" on save only, quiet on remove) |
 | `showTranslateSheet` | Opens the translation sheet for a `TextSelectionContext`; completes with `TranslateSheetOutcome.define` when the reader asked for the definition |
 | `TranslateSheetOutcome` | How the sheet closed when it asks the opening action for a follow-up |
 

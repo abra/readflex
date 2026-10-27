@@ -1,0 +1,51 @@
+name: practice
+description: "Practice tab with spaced review of saved words and highlights."
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  equatable: ^2.0.8
+  flutter_bloc: ^9.1.1
+  intl: ^0.20.2
+  stream_transform: ^2.1.0
+
+  article_repository:
+    path: ../../article_repository
+  book_repository:
+    path: ../../book_repository
+  component_library:
+    path: ../../component_library
+  dictionary_repository:
+    path: ../../dictionary_repository
+  domain_models:
+    path: ../../domain_models
+  fsrs_repository:
+    path: ../../fsrs_repository
+  highlight_repository:
+    path: ../../highlight_repository
+  preferences_service:
+    path: ../../preferences_service
+  readflex_localizations:
+    path: ../../readflex_localizations
+  toast_service:
+    path: ../../toast_service
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  bloc_test: ^10.0.0
+  drift: ^2.34.1
+  flutter_lints: ^6.0.0
+  local_storage:
+    path: ../../local_storage
+  shared_preferences_platform_interface: ^2.4.1
+
+flutter:
+  uses-material-design: true

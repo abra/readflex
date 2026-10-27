@@ -9,11 +9,19 @@ import 'package:readflex/app/app_lifecycle.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/dependency_scope.dart';
 import 'package:readflex/app/readflex_app.dart';
+import 'package:readflex/app/routing.dart' show AppRoutes;
 
 class AppScopes extends StatelessWidget {
-  const AppScopes({required this.dependencies, super.key});
+  const AppScopes({
+    required this.dependencies,
+    this.initialLocation = AppRoutes.root,
+    super.key,
+  });
 
   final DependenciesContainer dependencies;
+
+  /// Where the router starts; tests open a tab directly.
+  final String initialLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +33,7 @@ class AppScopes extends StatelessWidget {
           service: dependencies.connectivityService,
           child: AppLifecycle(
             dependencies: dependencies,
-            child: const ReadflexApp(),
+            child: ReadflexApp(initialLocation: initialLocation),
           ),
         ),
       ),

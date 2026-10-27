@@ -8,14 +8,15 @@ import 'package:library_feature/src/library_bloc.dart';
 import 'package:library_feature/src/library_body.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
 import 'package:library_feature/src/library_grid_tile.dart';
-import 'package:library_feature/src/library_grid_view.dart';
+import 'package:library_feature/src/library_content_scroll_view.dart';
+import 'package:library_feature/src/library_grid_sliver.dart';
 import 'package:library_feature/src/library_header.dart';
 import 'package:library_feature/src/library_layout.dart';
 import 'package:library_feature/src/library_list_tile.dart';
 import 'package:library_feature/src/library_selection_bar.dart';
 import 'package:library_feature/src/library_language_sheet.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
-import 'package:library_feature/src/library_list_view.dart';
+import 'package:library_feature/src/library_list_sliver.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -744,7 +745,7 @@ void main() {
     });
   }
 
-  testWidgets('switches layout without mounting both scroll views', (
+  testWidgets('switches layout within one scroll view', (
     tester,
   ) async {
     bookRepository.seedBooks([_book]);
@@ -752,16 +753,16 @@ void main() {
     await tester.pumpWidget(buildSubject());
     await tester.pump();
 
-    expect(find.byType(LibraryGridView), findsOneWidget);
-    expect(find.byType(LibraryListView), findsNothing);
+    expect(find.byType(LibraryGridSliver), findsOneWidget);
+    expect(find.byType(LibraryListSliver), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('List'));
     await tester.pump();
 
-    expect(find.byType(LibraryGridView), findsNothing);
-    expect(find.byType(LibraryListView), findsOneWidget);
+    expect(find.byType(LibraryGridSliver), findsNothing);
+    expect(find.byType(LibraryListSliver), findsOneWidget);
   });
 
   testWidgets('header actions stay aligned to the right edge', (tester) async {
@@ -3257,17 +3258,17 @@ void main() {
     );
     await tester.pumpWidget(buildSubject());
     await tester.pumpAndSettle();
-    expect(find.byType(LibraryListView), findsOneWidget);
+    expect(find.byType(LibraryListSliver), findsOneWidget);
   }
 
   Finder listRow(Book book) => find.descendant(
-    of: find.byType(LibraryListView),
+    of: find.byType(LibraryListSliver),
     matching: find.text(book.title),
   );
 
   // The toast overlay has a Dismissible of its own; count only list rows.
   Finder listRows() => find.descendant(
-    of: find.byType(LibraryListView),
+    of: find.byType(LibraryListSliver),
     matching: find.byType(Dismissible),
   );
 
@@ -3425,10 +3426,8 @@ void main() {
           tester.widget<LibraryContinueReadingCard>(card).source.id,
           reading.id,
         );
-        final scrollView = switch (mode) {
-          LibraryLayoutMode.list => find.byType(LibraryListView),
-          LibraryLayoutMode.grid => find.byType(LibraryGridView),
-        };
+        // One scroll view holds the card in either layout.
+        final scrollView = find.byType(LibraryContentScrollView);
         expect(find.descendant(of: scrollView, matching: card), findsOneWidget);
         // The card is the book's place; the rest stay in their order.
         expect(listed(reading.id), findsNothing);
@@ -3697,13 +3696,13 @@ void main() {
       await tester.pumpAndSettle();
 
       double bottomPadding() => tester
-          .widget<ListView>(
+          .widget<SliverPadding>(
             find.descendant(
-              of: find.byType(LibraryListView),
-              matching: find.byType(ListView),
+              of: find.byType(LibraryListSliver),
+              matching: find.byType(SliverPadding),
             ),
           )
-          .padding!
+          .padding
           .resolve(TextDirection.ltr)
           .bottom;
       // 56dp capsule + 8dp lift + 16dp Scaffold margin + 16dp gap.
@@ -3762,10 +3761,7 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
 
-        final scrollView = switch (mode) {
-          LibraryLayoutMode.list => find.byType(LibraryListView),
-          LibraryLayoutMode.grid => find.byType(LibraryGridView),
-        };
+        final scrollView = find.byType(LibraryContentScrollView);
         final viewport = find.descendant(
           of: scrollView,
           matching: find.byType(Scrollable),

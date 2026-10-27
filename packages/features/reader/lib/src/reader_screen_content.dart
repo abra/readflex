@@ -6,12 +6,14 @@ class _ReaderView extends StatelessWidget {
     required this.serverBaseUri,
     required this.textActions,
     required this.onRetry,
+    this.initialCfi,
     this.onArticleTitlePressed,
     this.onOpenExternalLink,
   });
 
   final Uri serverBaseUri;
   final List<TextAction> textActions;
+  final String? initialCfi;
   final VoidCallback onRetry;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onOpenExternalLink;
@@ -24,6 +26,7 @@ class _ReaderView extends StatelessWidget {
       builder: (context, onExternalLink) => _ReaderScaffold(
         serverBaseUri: serverBaseUri,
         textActions: textActions,
+        initialCfi: initialCfi,
         onRetry: onRetry,
         onArticleTitlePressed: onArticleTitlePressed,
         onExternalLink: onExternalLink,
@@ -41,10 +44,12 @@ class _ReaderScaffold extends StatelessWidget {
     required this.onRetry,
     required this.onArticleTitlePressed,
     required this.onExternalLink,
+    this.initialCfi,
   });
 
   final Uri serverBaseUri;
   final List<TextAction> textActions;
+  final String? initialCfi;
   final VoidCallback onRetry;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
@@ -68,6 +73,7 @@ class _ReaderScaffold extends StatelessWidget {
                     canMountWebView: canMountWebView,
                     serverBaseUri: serverBaseUri,
                     textActions: textActions,
+                    initialCfi: initialCfi,
                     onRetry: onRetry,
                     onArticleTitlePressed: onArticleTitlePressed,
                     onExternalLink: onExternalLink,
@@ -90,6 +96,7 @@ class _ReaderBody extends StatefulWidget {
     required this.serverBaseUri,
     required this.textActions,
     required this.onRetry,
+    this.initialCfi,
     this.onArticleTitlePressed,
     this.onExternalLink,
   });
@@ -98,6 +105,7 @@ class _ReaderBody extends StatefulWidget {
   final bool canMountWebView;
   final Uri serverBaseUri;
   final List<TextAction> textActions;
+  final String? initialCfi;
   final VoidCallback onRetry;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
@@ -151,6 +159,7 @@ class _ReaderBodyState extends State<_ReaderBody> {
             ReaderStatus.ready when contentReady => _ReadyContent(
               serverBaseUri: widget.serverBaseUri,
               textActions: widget.textActions,
+              initialCfi: widget.initialCfi,
               onArticleTitlePressed: widget.onArticleTitlePressed,
               onExternalLink: widget.onExternalLink,
               onWebViewReady: _handleWebViewReady,
@@ -180,12 +189,14 @@ class _ReadyContent extends StatelessWidget {
     required this.serverBaseUri,
     required this.textActions,
     required this.onWebViewReady,
+    this.initialCfi,
     this.onArticleTitlePressed,
     this.onExternalLink,
   });
 
   final Uri serverBaseUri;
   final List<TextAction> textActions;
+  final String? initialCfi;
   final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
@@ -195,6 +206,7 @@ class _ReadyContent extends StatelessWidget {
     return _ReadyContentBody(
       serverBaseUri: serverBaseUri,
       textActions: textActions,
+      initialCfi: initialCfi,
       onArticleTitlePressed: onArticleTitlePressed,
       onExternalLink: onExternalLink,
       onWebViewReady: onWebViewReady,
@@ -208,12 +220,16 @@ class _ReadyContentBody extends StatefulWidget {
     required this.serverBaseUri,
     required this.textActions,
     required this.onWebViewReady,
+    this.initialCfi,
     this.onArticleTitlePressed,
     this.onExternalLink,
   });
 
   final Uri serverBaseUri;
   final List<TextAction> textActions;
+
+  /// Opened instead of the saved position, once the document is ready.
+  final String? initialCfi;
   final ValueChanged<String?> onWebViewReady;
   final void Function(String url, String title)? onArticleTitlePressed;
   final ValueChanged<String>? onExternalLink;
@@ -232,9 +248,22 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
   final GlobalKey<ArticleHtmlReaderWebViewState> _articleWebViewKey =
       GlobalKey<ArticleHtmlReaderWebViewState>();
   String? _webViewReadySourceId;
+  bool _initialCfiApplied = false;
   ReaderSearchLocation? _latestLocation;
   ReaderSearchLocation? _searchStartLocation;
   int _searchNavigationGeneration = 0;
+
+  /// Jumps to [_ReadyContentBody.initialCfi] on the first ready document.
+  void _applyInitialCfi({required bool article}) {
+    final cfi = widget.initialCfi;
+    if (cfi == null || cfi.isEmpty || _initialCfiApplied) return;
+    _initialCfiApplied = true;
+    if (article) {
+      _articleWebViewKey.currentState?.goToCfi(cfi);
+    } else {
+      _webViewKey.currentState?.goToCfi(cfi);
+    }
+  }
 
   void _seekFraction(double fraction) {
     _endSearch();
@@ -638,6 +667,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                                       () => _webViewReadySourceId = sourceId,
                                     );
                                     widget.onWebViewReady(sourceId);
+                                    _applyInitialCfi(article: true);
                                   },
                                 )
                               : _ReaderWebViewBody(
@@ -672,6 +702,7 @@ class _ReadyContentBodyState extends State<_ReadyContentBody> {
                                       () => _webViewReadySourceId = sourceId,
                                     );
                                     widget.onWebViewReady(sourceId);
+                                    _applyInitialCfi(article: false);
                                   },
                                 ),
                         ),

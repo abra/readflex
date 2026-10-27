@@ -15,11 +15,27 @@ class DictionaryEntry extends Equatable {
     this.sourceId,
     this.sourceType,
     this.usageExamples = const [],
+    this.lemma,
+    this.baseTranslation,
+    this.contextTranslation,
   });
 
   final String id;
+
+  /// The form the reader selected.
   final String word;
+
+  /// The meaning in the saved [context].
   final String translation;
+
+  /// Dictionary form when it differs from [word].
+  final String? lemma;
+
+  /// The word's own meaning, when it differs from [translation].
+  final String? baseTranslation;
+
+  /// Translation of [context].
+  final String? contextTranslation;
   final String? pronunciation;
   final String? partOfSpeech;
   final String? context;
@@ -39,6 +55,9 @@ class DictionaryEntry extends Equatable {
     Object? sourceId = _absent,
     Object? sourceType = _absent,
     List<String>? usageExamples,
+    Object? lemma = _absent,
+    Object? baseTranslation = _absent,
+    Object? contextTranslation = _absent,
   }) => DictionaryEntry(
     id: id,
     word: word ?? this.word,
@@ -55,6 +74,13 @@ class DictionaryEntry extends Equatable {
         ? this.sourceType
         : sourceType as SourceType?,
     usageExamples: usageExamples ?? this.usageExamples,
+    lemma: lemma == _absent ? this.lemma : lemma as String?,
+    baseTranslation: baseTranslation == _absent
+        ? this.baseTranslation
+        : baseTranslation as String?,
+    contextTranslation: contextTranslation == _absent
+        ? this.contextTranslation
+        : contextTranslation as String?,
     addedAt: addedAt,
   );
 
@@ -69,6 +95,9 @@ class DictionaryEntry extends Equatable {
     sourceId,
     sourceType,
     usageExamples,
+    lemma,
+    baseTranslation,
+    contextTranslation,
     addedAt,
   ];
 }

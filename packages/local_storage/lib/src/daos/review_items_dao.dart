@@ -9,7 +9,6 @@ part 'review_items_dao.g.dart';
 /// CRUD + due-queue queries over [ReviewItemsTable] and append-only writes
 /// to [ReviewLogsTable].
 ///
-/// Dormant review rows remain part of the schema for migration compatibility.
 /// Hot paths ([dueItems], [dueItemsBySource]) are served by composite indexes
 /// created in `AppDatabase._createIndexes`.
 @DriftAccessor(tables: [ReviewItemsTable, ReviewLogsTable])
@@ -98,6 +97,39 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
   Future<void> insertItem(ReviewItemsTableCompanion item) =>
       into(reviewItemsTable).insert(item);
 
+  /// Registers [item] for review unless a row already exists, so re-saving
+  /// content never resets its scheduling state.
+  Future<void> ensureItem(ReviewItemsTableCompanion item) => into(
+    reviewItemsTable,
+  ).insert(item, mode: InsertMode.insertOrIgnore);
+
+  Future<void> ensureItems(List<ReviewItemsTableCompanion> items) {
+    if (items.isEmpty) return Future.value();
+    return batch((b) {
+      b.insertAll(reviewItemsTable, items, mode: InsertMode.insertOrIgnore);
+    });
+  }
+
+  Future<int> itemCount({String? type}) {
+    final count = reviewItemsTable.itemId.count();
+    final query = selectOnly(reviewItemsTable)..addColumns([count]);
+    if (type != null) query.where(reviewItemsTable.itemType.equals(type));
+    return query.map((row) => row.read(count) ?? 0).getSingle();
+  }
+
+  Future<int> masteredItemCount({String? type}) {
+    final count = reviewItemsTable.itemId.count();
+    final mastered = reviewItemsTable.fsrsState.equals('review');
+    final query = selectOnly(reviewItemsTable)
+      ..addColumns([count])
+      ..where(
+        type != null
+            ? reviewItemsTable.itemType.equals(type) & mastered
+            : mastered,
+      );
+    return query.map((row) => row.read(count) ?? 0).getSingle();
+  }
+
   Future<void> upsertItem(ReviewItemsTableCompanion item) =>
       into(reviewItemsTable).insertOnConflictUpdate(item);
 
@@ -141,6 +173,20 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
 
   Future<void> insertReviewLog(ReviewLogsTableCompanion log) =>
       into(reviewLogsTable).insert(log);
+
+  Future<int> reviewLogCount() {
+    final count = reviewLogsTable.id.count();
+    return (selectOnly(
+      reviewLogsTable,
+    )..addColumns([count])).map((row) => row.read(count) ?? 0).getSingle();
+  }
+
+  /// Logs reviewed at or after [since] (ISO-8601), newest first.
+  Future<List<ReviewLogsTableData>> reviewLogsSince(String since) =>
+      (select(reviewLogsTable)
+            ..where((t) => t.reviewedAt.isBiggerOrEqual(Variable(since)))
+            ..orderBy([(t) => OrderingTerm.desc(t.reviewedAt)]))
+          .get();
 
   Future<List<ReviewLogsTableData>> reviewLogsByItem(String itemId) =>
       (select(reviewLogsTable)

@@ -2,12 +2,11 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
-import 'library_continue_reading_card.dart';
 import 'library_list_tile.dart';
 import 'library_selection_cubit.dart';
 import 'library_layout.dart';
 
-/// Vertically scrolling list of library source rows.
+/// The Library's source rows as a sliver of [LibraryContentScrollView].
 ///
 /// Each row is one tile; per-row top hairlines are drawn by the tile
 /// itself (see `showTopDivider`) so cover shadows cannot cover separators.
@@ -21,124 +20,107 @@ import 'library_layout.dart';
 /// delete on confirm, and resolves true only once the write succeeded so
 /// the row finishes dismissing (false on cancel or failure springs it back).
 ///
-/// A non-null [continueReadingSource] puts its full-width card first,
-/// scrolling with the rows; [sources] leave it out.
+/// The first row's own top padding supplies [kLibraryContentTopPadding];
+/// with [hasContentAbove] (the Practice row or the Continue reading card)
+/// the sliver adds the rest of [kLibraryContinueReadingGap]. Rows carry
+/// their own semantic index from [semanticIndexOffset], after the card.
 ///
 /// A wide window ([AppWindowSize]) lays the rows out in two columns, read
 /// across then down, so a tablet line neither stretches a row nor leaves it
 /// mostly empty. Each line is as tall as its taller row; rows keep their own
 /// height, and every line after the first starts with both hairlines. Screen
 /// readers still count sources, not lines, as in the grid.
-class LibraryListView extends StatelessWidget {
-  const LibraryListView({
+class LibraryListSliver extends StatelessWidget {
+  const LibraryListSliver({
     required this.sources,
     required this.selection,
-    required this.scrollController,
+    required this.hasContentAbove,
+    required this.semanticIndexOffset,
     required this.onSourcePressed,
     required this.onSourceLongPressed,
     required this.onConfirmSwipeDelete,
-    this.continueReadingSource,
     super.key,
   });
 
   final List<LibrarySource> sources;
-  final LibrarySource? continueReadingSource;
   final LibrarySelectionState selection;
-  final ScrollController scrollController;
+
+  /// Something scrolls above the rows, so the gap below it is completed.
+  final bool hasContentAbove;
+
+  /// Semantic index of the first row: 1 after the Continue reading card.
+  final int semanticIndexOffset;
   final void Function(LibrarySource source) onSourcePressed;
   final void Function(LibrarySource source) onSourceLongPressed;
   final Future<bool> Function(LibrarySource source) onConfirmSwipeDelete;
 
   @override
   Widget build(BuildContext context) {
-    final continueReadingSource = this.continueReadingSource;
-    final leadingCount = continueReadingSource == null ? 0 : 1;
+    final cardCount = semanticIndexOffset;
     final columns = AppWindowSize.isWide(context) ? 2 : 1;
     final lineCount = (sources.length + columns - 1) ~/ columns;
     // Rows own the 16dp gutter so selection tints and the swipe background
     // run edge to edge.
-    return ListView.custom(
-      controller: scrollController,
-      padding: EdgeInsets.only(bottom: libraryContentBottomPadding(context)),
-      // Bouncing parent guarantees the elastic snap-back even on
-      // short lists where ClampingScrollPhysics (the Android default)
-      // would silently absorb the drag without returning.
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
+    return SliverPadding(
+      padding: EdgeInsets.only(
+        // The first row's own top padding completes the gap below the card.
+        top: hasContentAbove
+            ? kLibraryContinueReadingGap - kLibraryContentTopPadding
+            : 0,
+        bottom: libraryContentBottomPadding(context),
       ),
-      // A line can hold two sources, so screen readers count the card and
-      // the sources, each carrying its own index instead of the line's.
-      semanticChildCount: sources.length + leadingCount,
-      childrenDelegate: SliverChildBuilderDelegate(
-        childCount: lineCount + leadingCount,
-        addSemanticIndexes: false,
-        (context, itemIndex) {
-          if (continueReadingSource != null && itemIndex == 0) {
-            // The first row's own top padding completes the gap below.
-            return IndexedSemantics(
-              index: 0,
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  top: kLibraryContentTopPadding,
-                  bottom:
-                      kLibraryContinueReadingGap - kLibraryContentTopPadding,
+      sliver: SliverList(
+        // A line can hold two sources, so screen readers count the sources,
+        // each carrying its own index instead of the line's.
+        delegate: SliverChildBuilderDelegate(
+          childCount: lineCount,
+          addSemanticIndexes: false,
+          (context, line) {
+            if (columns == 1) {
+              return _LibraryListRow(
+                source: sources[line],
+                semanticIndex: cardCount + line,
+                selection: selection,
+                showTopDivider: line > 0,
+                onSourcePressed: onSourcePressed,
+                onSourceLongPressed: onSourceLongPressed,
+                onConfirmSwipeDelete: onConfirmSwipeDelete,
+              );
+            }
+            final first = line * 2;
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _LibraryListRow(
+                    source: sources[first],
+                    semanticIndex: cardCount + first,
+                    selection: selection,
+                    showTopDivider: line > 0,
+                    gutters: _kStartColumnGutters,
+                    onSourcePressed: onSourcePressed,
+                    onSourceLongPressed: onSourceLongPressed,
+                    onConfirmSwipeDelete: onConfirmSwipeDelete,
+                  ),
                 ),
-                child: LibraryContinueReadingCard(
-                  source: continueReadingSource,
-                  isSelectionMode: selection.isActive,
-                  isSelected: selection.contains(continueReadingSource.id),
-                  onPressed: () => onSourcePressed(continueReadingSource),
-                  onLongPressed: () =>
-                      onSourceLongPressed(continueReadingSource),
+                Expanded(
+                  child: first + 1 < sources.length
+                      ? _LibraryListRow(
+                          source: sources[first + 1],
+                          semanticIndex: cardCount + first + 1,
+                          selection: selection,
+                          showTopDivider: line > 0,
+                          gutters: _kEndColumnGutters,
+                          onSourcePressed: onSourcePressed,
+                          onSourceLongPressed: onSourceLongPressed,
+                          onConfirmSwipeDelete: onConfirmSwipeDelete,
+                        )
+                      : const SizedBox.shrink(),
                 ),
-              ),
+              ],
             );
-          }
-          final line = itemIndex - leadingCount;
-          if (columns == 1) {
-            return _LibraryListRow(
-              source: sources[line],
-              semanticIndex: leadingCount + line,
-              selection: selection,
-              showTopDivider: line > 0,
-              onSourcePressed: onSourcePressed,
-              onSourceLongPressed: onSourceLongPressed,
-              onConfirmSwipeDelete: onConfirmSwipeDelete,
-            );
-          }
-          final first = line * 2;
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _LibraryListRow(
-                  source: sources[first],
-                  semanticIndex: leadingCount + first,
-                  selection: selection,
-                  showTopDivider: line > 0,
-                  gutters: _kStartColumnGutters,
-                  onSourcePressed: onSourcePressed,
-                  onSourceLongPressed: onSourceLongPressed,
-                  onConfirmSwipeDelete: onConfirmSwipeDelete,
-                ),
-              ),
-              Expanded(
-                child: first + 1 < sources.length
-                    ? _LibraryListRow(
-                        source: sources[first + 1],
-                        semanticIndex: leadingCount + first + 1,
-                        selection: selection,
-                        showTopDivider: line > 0,
-                        gutters: _kEndColumnGutters,
-                        onSourcePressed: onSourcePressed,
-                        onSourceLongPressed: onSourceLongPressed,
-                        onConfirmSwipeDelete: onConfirmSwipeDelete,
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

@@ -337,34 +337,10 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get libraryDisplayView => 'طريقة العرض';
 
   @override
-  String get libraryDisplayAppearance => 'المظهر';
-
-  @override
-  String get libraryDisplayLanguage => 'اللغة';
-
-  @override
   String get libraryDisplayList => 'قائمة';
 
   @override
   String get libraryDisplayGrid => 'شبكة';
-
-  @override
-  String get libraryThemeSystem => 'النظام';
-
-  @override
-  String get libraryThemeSystemDescription => 'اتباع إعداد الجهاز';
-
-  @override
-  String get libraryThemeLight => 'فاتح';
-
-  @override
-  String get libraryThemeLightDescription => 'استخدام المظهر الفاتح';
-
-  @override
-  String get libraryThemeDark => 'داكن';
-
-  @override
-  String get libraryThemeDarkDescription => 'استخدام المظهر الداكن';
 
   @override
   String get libraryFailedToLoad => 'تعذر تحميل المكتبة';
@@ -1036,6 +1012,252 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
       'تحقق من الاتصال أو حاول مرة أخرى لاحقًا.';
 
   @override
+  String get wordSave => 'حفظ في المفردات';
+
+  @override
+  String get wordSaved => 'حُفظت للمراجعة';
+
+  @override
+  String get wordUnsave => 'إزالة من المفردات';
+
+  @override
+  String get wordSaveFailed => 'تعذّر الحفظ في المفردات';
+
+  @override
+  String get practiceTitle => 'التدريب';
+
+  @override
+  String practiceWordCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count كلمة',
+      few: '$count كلمات',
+      two: 'كلمتان',
+      one: 'كلمة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String practiceHighlightCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count تظليلًا',
+      few: '$count تظليلات',
+      two: 'تظليلان',
+      one: 'تظليل واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String practiceNewToday(int count) {
+    return '$count جديدة اليوم';
+  }
+
+  @override
+  String get practiceLoadFailed => 'تعذّر تحميل بطاقاتك';
+
+  @override
+  String practiceDueToday(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count بطاقات لليوم',
+      one: 'بطاقة واحدة لليوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String practiceDueCount(int count) {
+    return '$count مستحقة';
+  }
+
+  @override
+  String get practiceCaughtUp => 'لا شيء متبقٍّ';
+
+  @override
+  String get practiceCaughtUpBody => 'لا شيء مستحق. عُد غدًا.';
+
+  @override
+  String get practiceCaughtUpShort => 'تم';
+
+  @override
+  String get practiceNothingTitle => 'لا شيء للتدريب بعد';
+
+  @override
+  String get practiceNothingBody =>
+      'احفظ كلمة من ترجمة أو ظلّل مقطعًا أثناء القراءة. ستعود هنا للمراجعة.';
+
+  @override
+  String get practiceOpenLibrary => 'فتح المكتبة';
+
+  @override
+  String get practiceStartReview => 'بدء المراجعة';
+
+  @override
+  String get practiceReviewAhead => 'مراجعة مبكرة';
+
+  @override
+  String get practiceTodayTitle => 'اليوم';
+
+  @override
+  String practiceStreak(int days) {
+    return 'سلسلة $days أيام';
+  }
+
+  @override
+  String practiceThisWeek(int count) {
+    return '$count هذا الأسبوع';
+  }
+
+  @override
+  String practiceTotalCards(int count) {
+    return '$count إجمالاً';
+  }
+
+  @override
+  String get practiceSectionCollections => 'المجموعات';
+
+  @override
+  String get practiceSectionBySource => 'حسب الكتاب';
+
+  @override
+  String get practiceWordsTitle => 'المفردات';
+
+  @override
+  String get practiceHighlightsTitle => 'التظليلات';
+
+  @override
+  String practiceCollectionCounts(int total, int due) {
+    return '$total محفوظة · $due مستحقة';
+  }
+
+  @override
+  String get practiceSearchWords => 'البحث في المفردات';
+
+  @override
+  String get practiceSearchHighlights => 'البحث في التظليلات';
+
+  @override
+  String get practiceFilterAll => 'الكل';
+
+  @override
+  String get practiceFilterLearning => 'قيد التعلّم';
+
+  @override
+  String get practiceFilterMastered => 'متقنة';
+
+  @override
+  String get practiceWordsEmptyTitle => 'لا مفردات بعد';
+
+  @override
+  String get practiceWordsEmptyBody =>
+      'اضغط حفظ في ترجمة أو تعريف أثناء القراءة';
+
+  @override
+  String get practiceHighlightsEmptyTitle => 'لا تظليلات بعد';
+
+  @override
+  String get practiceHighlightsEmptyBody =>
+      'حدد نصًا أثناء القراءة واختر تظليل';
+
+  @override
+  String get practiceNoMatches => 'لا نتائج';
+
+  @override
+  String get practiceDueNew => 'جديدة';
+
+  @override
+  String get practiceDueNow => 'مستحقة';
+
+  @override
+  String practiceDueIn(String interval) {
+    return 'بعد $interval';
+  }
+
+  @override
+  String practiceIntervalMinutes(int count) {
+    return '$count د';
+  }
+
+  @override
+  String practiceIntervalHours(int count) {
+    return '$count س';
+  }
+
+  @override
+  String practiceIntervalDays(int count) {
+    return '$count ي';
+  }
+
+  @override
+  String practiceIntervalWeeks(int count) {
+    return '$count أ';
+  }
+
+  @override
+  String practiceIntervalMonths(int count) {
+    return '$count ش';
+  }
+
+  @override
+  String practiceIntervalYears(int count) {
+    return '$count سنة';
+  }
+
+  @override
+  String get practiceOpenInBook => 'فتح في الكتاب';
+
+  @override
+  String get practiceRemoveFromReview => 'إزالة من المراجعة';
+
+  @override
+  String get practiceMoreActions => 'المزيد';
+
+  @override
+  String practiceCardPosition(int position, int total) {
+    return '$position من $total';
+  }
+
+  @override
+  String get practiceShowAnswer => 'عرض الإجابة';
+
+  @override
+  String get practiceRateAgain => 'مجددًا';
+
+  @override
+  String get practiceRateHard => 'صعب';
+
+  @override
+  String get practiceRateGood => 'جيد';
+
+  @override
+  String get practiceKeep => 'إبقاء';
+
+  @override
+  String get practiceShowLess => 'عرض أقل';
+
+  @override
+  String get practiceNoNote => 'لا ملاحظة';
+
+  @override
+  String get practiceSessionDone => 'اكتملت الجلسة';
+
+  @override
+  String practiceSessionSummary(int reviewed, int known, int again) {
+    return '$reviewed مُراجَعة · $known معروفة · $again مجددًا';
+  }
+
+  @override
+  String practiceReviewAgainCount(int count) {
+    return 'مراجعة $count مجددًا';
+  }
+
+  @override
   String get readerHighlightFilterAll => 'الكل';
 
   @override
@@ -1212,4 +1434,28 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get readerExternalLinkCopy => 'نسخ الرابط';
+
+  @override
+  String get libraryDisplayAppearance => 'المظهر';
+
+  @override
+  String get libraryDisplayLanguage => 'اللغة';
+
+  @override
+  String get libraryThemeSystem => 'النظام';
+
+  @override
+  String get libraryThemeSystemDescription => 'اتباع إعداد الجهاز';
+
+  @override
+  String get libraryThemeLight => 'فاتح';
+
+  @override
+  String get libraryThemeLightDescription => 'استخدام المظهر الفاتح';
+
+  @override
+  String get libraryThemeDark => 'داكن';
+
+  @override
+  String get libraryThemeDarkDescription => 'استخدام المظهر الداكن';
 }

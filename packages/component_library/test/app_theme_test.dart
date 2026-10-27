@@ -171,6 +171,17 @@ void main() {
       }
     });
 
+    test('app bar titles explicitly use the app sans font', () {
+      for (final theme in [AppTheme.light(), AppTheme.dark()]) {
+        final title = theme.appBarTheme.titleTextStyle!;
+        expect(title.fontFamily, AppTypography.fontFamilySans);
+        expect(title.fontFamilyFallback, AppTypography.fontFamilyFallback);
+        expect(title.fontSize, theme.textTheme.titleMedium!.fontSize);
+        expect(title.fontWeight, FontWeight.w600);
+        expect(title.color, theme.textTheme.titleMedium!.color);
+      }
+    });
+
     test('light() uses correct scaffold color', () {
       final theme = AppTheme.light();
       expect(theme.scaffoldBackgroundColor, PrimitiveColors.gray50);

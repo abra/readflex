@@ -5,9 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:library_feature/src/library_bloc.dart';
 import 'package:library_feature/src/library_grid_tile.dart';
-import 'package:library_feature/src/library_grid_view.dart';
+import 'package:library_feature/src/library_content_scroll_view.dart';
+import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_list_tile.dart';
-import 'package:library_feature/src/library_list_view.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -31,7 +31,8 @@ void main() {
           MaterialApp(
             theme: AppTheme.light(),
             home: Scaffold(
-              body: LibraryGridView(
+              body: LibraryContentScrollView(
+                layoutMode: LibraryLayoutMode.grid,
                 sources: libraryWorkload(
                   20,
                 ).map(LibrarySource.fromBook).toList(),
@@ -39,6 +40,7 @@ void main() {
                 scrollController: scroll,
                 onSourcePressed: (_) {},
                 onSourceLongPressed: (_) {},
+                onConfirmSwipeDelete: (_) async => false,
               ),
             ),
           ),
@@ -82,22 +84,17 @@ void main() {
           localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: Scaffold(
-            body: list
-                ? LibraryListView(
-                    sources: sources,
-                    selection: const LibrarySelectionState(),
-                    scrollController: scroll,
-                    onSourcePressed: (source) => opened = source.id,
-                    onSourceLongPressed: (source) => longPressed = source.id,
-                    onConfirmSwipeDelete: (_) async => false,
-                  )
-                : LibraryGridView(
-                    sources: sources,
-                    selection: const LibrarySelectionState(),
-                    scrollController: scroll,
-                    onSourcePressed: (source) => opened = source.id,
-                    onSourceLongPressed: (source) => longPressed = source.id,
-                  ),
+            body: LibraryContentScrollView(
+              layoutMode: list
+                  ? LibraryLayoutMode.list
+                  : LibraryLayoutMode.grid,
+              sources: sources,
+              selection: const LibrarySelectionState(),
+              scrollController: scroll,
+              onSourcePressed: (source) => opened = source.id,
+              onSourceLongPressed: (source) => longPressed = source.id,
+              onConfirmSwipeDelete: (_) async => false,
+            ),
           ),
         ),
       );

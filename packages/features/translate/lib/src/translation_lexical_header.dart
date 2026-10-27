@@ -5,20 +5,24 @@ part of 'translate_sheet.dart';
 /// The selected word or phrase in `titleMedium` with its reading and
 /// pronunciation on one line; its part of speech and base form follow on a
 /// second line ([_TranslationGrammarLine]), all on the source text's own
-/// edge. The translation, not the
-/// source, is the sheet's only large text. A word too wide for the line at a
-/// large text size shrinks instead of breaking.
+/// edge, with Save trailing the word when the sheet can save it. The
+/// translation, not the source, is the sheet's only large text. A word too
+/// wide for the line at a large text size shrinks instead of breaking.
 class _TranslationLexicalHeader extends StatelessWidget {
   const _TranslationLexicalHeader({
     required this.selectedText,
     required this.isSingleWord,
     this.analysis,
+    this.saveStatus = WordSaveStatus.notSaved,
+    this.onToggleSaved,
     super.key,
   });
 
   final String selectedText;
   final bool isSingleWord;
   final ContextualTranslationAnalysis? analysis;
+  final WordSaveStatus saveStatus;
+  final VoidCallback? onToggleSaved;
 
   @override
   Widget build(BuildContext context) {
@@ -53,6 +57,7 @@ class _TranslationLexicalHeader extends StatelessWidget {
     final hasPronunciation =
         visibleReading != null || visiblePronunciation != null;
     final hasGrammar = partOfSpeech != null || showLemma;
+    final onToggleSaved = this.onToggleSaved;
     return LayoutBuilder(
       builder: (context, constraints) {
         final wordStyle = appFitSelectableText(
@@ -62,10 +67,12 @@ class _TranslationLexicalHeader extends StatelessWidget {
             color: context.colors.onSurface,
           ),
           text: selectedText,
-          boxWidth: constraints.maxWidth,
+          boxWidth: onToggleSaved == null
+              ? constraints.maxWidth
+              : AppSheetActionRow.childWidthFor(constraints.maxWidth),
           textDirection: sourceDirection,
         );
-        return Column(
+        final header = Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Wrap(
@@ -100,6 +107,24 @@ class _TranslationLexicalHeader extends StatelessWidget {
               ),
             ],
           ],
+        );
+        if (onToggleSaved == null) return header;
+        return AppSheetActionRow(
+          textDirection: sourceDirection,
+          firstLineStyle: wordStyle,
+          minTextRoom: 0,
+          action: AppSaveToggleButton(
+            key: const ValueKey('translation-save-word'),
+            saved: saveStatus == WordSaveStatus.saved,
+            busy: saveStatus == WordSaveStatus.saving,
+            failed: saveStatus == WordSaveStatus.failure,
+            onPressed: onToggleSaved,
+            saveLabel: l10n.wordSave,
+            savedLabel: l10n.wordSaved,
+            unsaveLabel: l10n.wordUnsave,
+            failureLabel: l10n.wordSaveFailed,
+          ),
+          child: header,
         );
       },
     );

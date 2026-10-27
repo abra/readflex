@@ -44,6 +44,19 @@ abstract final class AppIcons {
   static const IconData articleBadge = LucideIcons.newspaper;
   static const IconData bookmark = LucideIcons.bookmark;
   static const IconData bookmarkAdd = LucideIcons.bookmarkPlus;
+  static const IconData bookmarkSaved = LucideIcons.bookmarkCheck;
+
+  // ── Tabs ──────────────────────────────────────────────────
+  static const IconData home = LucideIcons.house;
+  // A fan of cards: the review deck. Lucide 4 (Lucide 1.56+).
+  static const IconData practice = LucideIcons.playingCardsFan;
+  static const IconData profile = LucideIcons.user;
+
+  // ── Practice ──────────────────────────────────────────────
+  static const IconData words = LucideIcons.spellCheck;
+  static const IconData circle = LucideIcons.circle;
+  static const IconData checkCircle = LucideIcons.circleCheck;
+  static const IconData reviewAgain = LucideIcons.rotateCcw;
   static const IconData collection = LucideIcons.folder;
   static const IconData collectionAdd = LucideIcons.folderPlus;
   static const IconData collectionFavourites = LucideIcons.heart;
@@ -59,7 +72,8 @@ abstract final class AppIcons {
 
   // ── Reader ────────────────────────────────────────────────
   static const IconData volumeUp = LucideIcons.volume2;
-  static const IconData back = chevronLeft;
+  // Mirrors in RTL: back points towards the previous screen.
+  static const IconData back = LucideIcons.chevronLeftDir;
   static const IconData toc = LucideIcons.list;
   static const IconData font = LucideIcons.type;
   // PDF page appearance choices.

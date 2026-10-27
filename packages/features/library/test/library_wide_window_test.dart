@@ -5,9 +5,10 @@ import 'package:flutter/rendering.dart' show SemanticsNode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_empty_state.dart';
-import 'package:library_feature/src/library_grid_view.dart';
+import 'package:library_feature/src/library_content_scroll_view.dart';
+import 'package:library_feature/src/library_grid_sliver.dart';
+import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_list_tile.dart';
-import 'package:library_feature/src/library_list_view.dart';
 import 'package:library_feature/src/library_selection_bar.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -102,12 +103,14 @@ void main() {
           localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: Scaffold(
-            body: LibraryGridView(
+            body: LibraryContentScrollView(
+              layoutMode: LibraryLayoutMode.grid,
               sources: _sources(9),
               selection: const LibrarySelectionState(),
               scrollController: controller,
               onSourcePressed: (_) {},
               onSourceLongPressed: (_) {},
+              onConfirmSwipeDelete: (_) async => false,
             ),
           ),
         ),
@@ -154,7 +157,8 @@ void main() {
           home: Directionality(
             textDirection: textDirection,
             child: Scaffold(
-              body: LibraryListView(
+              body: LibraryContentScrollView(
+                layoutMode: LibraryLayoutMode.list,
                 sources: _sources(count),
                 continueReadingSource: continueReadingSource,
                 selection: selection,
@@ -287,7 +291,10 @@ void main() {
               .evaluate()
               .single;
           expect(list.scrollChildCount, 4);
-          expect(list.scrollIndex, 0);
+          // Flutter takes the first visible index from the viewport's
+          // children in paint order, so the card's own sliver above the
+          // rows is passed over: the rows start the count at 1.
+          expect(list.scrollIndex, 1);
           final items = <int?, String>{};
           list.visitChildren((item) {
             items[item.indexInParent] = _semanticsLabel(item);

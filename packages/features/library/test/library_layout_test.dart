@@ -3,10 +3,9 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:library_feature/src/library_grid_view.dart';
+import 'package:library_feature/src/library_content_scroll_view.dart';
 import 'package:library_feature/src/library_layout.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
-import 'package:library_feature/src/library_list_view.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -39,7 +38,8 @@ void main() {
     Widget bothLayouts(ScrollController controller) => Column(
       children: [
         Expanded(
-          child: LibraryListView(
+          child: LibraryContentScrollView(
+            layoutMode: LibraryLayoutMode.list,
             sources: sources,
             selection: const LibrarySelectionState(),
             scrollController: controller,
@@ -49,12 +49,14 @@ void main() {
           ),
         ),
         Expanded(
-          child: LibraryGridView(
+          child: LibraryContentScrollView(
+            layoutMode: LibraryLayoutMode.grid,
             sources: sources,
             selection: const LibrarySelectionState(),
             scrollController: ScrollController(),
             onSourcePressed: (_) {},
             onSourceLongPressed: (_) {},
+            onConfirmSwipeDelete: (_) async => false,
           ),
         ),
       ],
@@ -80,7 +82,9 @@ void main() {
             child: host(bothLayouts(controller)),
           ),
         );
-        final context = tester.element(find.byType(LibraryListView));
+        final context = tester.element(
+          find.byType(LibraryContentScrollView).first,
+        );
         expect(libraryContentBottomPadding(context), expected);
         expect(
           libraryContentBottomPadding(context),
@@ -89,8 +93,13 @@ void main() {
               AppSpacing.lg * 2 +
               inset,
         );
-        final list = tester.widget<ListView>(find.byType(ListView));
-        expect(list.padding!.resolve(TextDirection.ltr).bottom, expected);
+        final listPadding = tester.widget<SliverPadding>(
+          find.ancestor(
+            of: find.byType(SliverList),
+            matching: find.byType(SliverPadding),
+          ),
+        );
+        expect(listPadding.padding.resolve(TextDirection.ltr).bottom, expected);
         final gridPadding = tester.widget<SliverPadding>(
           find.ancestor(
             of: find.byType(SliverGrid),
@@ -114,7 +123,8 @@ void main() {
       SizedBox(
         height: 400,
         child: switch (mode) {
-          LibraryLayoutMode.list => LibraryListView(
+          LibraryLayoutMode.list => LibraryContentScrollView(
+            layoutMode: LibraryLayoutMode.list,
             sources: sources,
             selection: const LibrarySelectionState(),
             scrollController: controller,
@@ -122,12 +132,14 @@ void main() {
             onSourceLongPressed: (_) {},
             onConfirmSwipeDelete: (_) async => false,
           ),
-          LibraryLayoutMode.grid => LibraryGridView(
+          LibraryLayoutMode.grid => LibraryContentScrollView(
+            layoutMode: LibraryLayoutMode.grid,
             sources: sources,
             selection: const LibrarySelectionState(),
             scrollController: controller,
             onSourcePressed: (_) {},
             onSourceLongPressed: (_) {},
+            onConfirmSwipeDelete: (_) async => false,
           ),
         },
       ),
@@ -153,12 +165,14 @@ void main() {
             height: 400,
             child: Directionality(
               textDirection: TextDirection.rtl,
-              child: LibraryGridView(
+              child: LibraryContentScrollView(
+                layoutMode: LibraryLayoutMode.grid,
                 sources: sources,
                 selection: const LibrarySelectionState(),
                 scrollController: controller,
                 onSourcePressed: (_) {},
                 onSourceLongPressed: (_) {},
+                onConfirmSwipeDelete: (_) async => false,
               ),
             ),
           ),
@@ -192,12 +206,14 @@ void main() {
         host(
           SizedBox(
             height: 600,
-            child: LibraryGridView(
+            child: LibraryContentScrollView(
+              layoutMode: LibraryLayoutMode.grid,
               sources: many,
               selection: const LibrarySelectionState(),
               scrollController: controller,
               onSourcePressed: (_) {},
               onSourceLongPressed: (_) {},
+              onConfirmSwipeDelete: (_) async => false,
             ),
           ),
           width: width,

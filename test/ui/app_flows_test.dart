@@ -2,7 +2,7 @@ import 'package:connectivity_service/connectivity_service.dart';
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:library_feature/src/library_list_view.dart';
+import 'package:library_feature/src/library_list_sliver.dart';
 import 'package:toast_service/toast_service.dart';
 
 import '../support/reading_fixture.dart';
@@ -44,7 +44,7 @@ void main() {
     await tapUi(tester, find.text('List'));
     expect(app.preferencesService.current.libraryLayoutMode, 'list');
     await dismissSheet(tester);
-    expect(find.byType(LibraryListView), findsOneWidget);
+    expect(find.byType(LibraryListSliver), findsOneWidget);
     expect(
       app.bookRepository.reads,
       initialReads,

@@ -169,6 +169,14 @@ class HighlightRepository {
           createdAt: DateTime.now(),
         );
         await _dao.insertHighlight(highlight.toStorageModel());
+        // New text highlights enter the review queue with their save.
+        await _db.reviewItemsDao.ensureItem(
+          ReviewItemsTableCompanion(
+            itemId: Value(highlight.id),
+            itemType: Value(ReviewableType.highlight.toStorageString()),
+            sourceId: Value(sourceId),
+          ),
+        );
         return highlight;
       });
     } catch (e, st) {

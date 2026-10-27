@@ -39,7 +39,8 @@ class PreferencesRepository {
   ///   11: drop translation preferences from the active app schema.
   ///   12: reset global reader line height to the explicit 1.6 default.
   ///   13: add active preferred translation target language.
-  static const _currentSchemaVersion = 13;
+  ///   14: add practice limits (new cards per day, review highlights).
+  static const _currentSchemaVersion = 14;
 
   final PreferencesStorage _storage;
 
@@ -134,6 +135,13 @@ class PreferencesRepository {
         ),
         readerSelectionTipDismissed:
             map['readerSelectionTipDismissed'] as bool? ?? false,
+        practiceNewCardsPerDay: math.max(
+          0,
+          (map['practiceNewCardsPerDay'] as num?)?.toInt() ??
+              Preferences.defaultPracticeNewCardsPerDay,
+        ),
+        practiceReviewHighlights:
+            map['practiceReviewHighlights'] as bool? ?? true,
       );
       return preferences.copyWith(
         readerAppearanceOverrides: _removeNoOpReaderAppearanceOverrides(
@@ -187,6 +195,8 @@ class PreferencesRepository {
       'onboardingCompleted': prefs.onboardingCompleted,
       'readerSelectionTipShowCount': prefs.readerSelectionTipShowCount,
       'readerSelectionTipDismissed': prefs.readerSelectionTipDismissed,
+      'practiceNewCardsPerDay': prefs.practiceNewCardsPerDay,
+      'practiceReviewHighlights': prefs.practiceReviewHighlights,
     };
     final json = jsonEncode(map);
     if (json == _storedJson) return;

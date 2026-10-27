@@ -18,21 +18,28 @@ dependencies:
     path: ../../component_library
   contextual_translation_service:
     path: ../../contextual_translation_service
+  dictionary_repository:
+    path: ../../dictionary_repository
+  domain_models:
+    path: ../../domain_models
   preferences_service:
     path: ../../preferences_service
   readflex_localizations:
     path: ../../readflex_localizations
   shared:
     path: ../../shared
+  toast_service:
+    path: ../../toast_service
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   bloc_test: ^10.0.0
-  domain_models:
-    path: ../../domain_models
+  drift: ^2.34.1
   flutter_lints: ^6.0.0
+  local_storage:
+    path: ../../local_storage
   shared_preferences_platform_interface: ^2.4.1
 
 flutter:

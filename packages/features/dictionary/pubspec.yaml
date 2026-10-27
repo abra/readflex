@@ -16,21 +16,28 @@ dependencies:
 
   component_library:
     path: ../../component_library
+  dictionary_repository:
+    path: ../../dictionary_repository
   dictionary_service:
     path: ../../dictionary_service
+  domain_models:
+    path: ../../domain_models
   readflex_localizations:
     path: ../../readflex_localizations
   shared:
     path: ../../shared
+  toast_service:
+    path: ../../toast_service
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
   bloc_test: ^10.0.0
-  domain_models:
-    path: ../../domain_models
+  drift: ^2.34.1
   flutter_lints: ^6.0.0
+  local_storage:
+    path: ../../local_storage
 
 flutter:
   uses-material-design: true

@@ -7,6 +7,7 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:toast_service/toast_service.dart';
@@ -47,8 +48,10 @@ typedef LibraryImportLauncher =
 /// Pure composition: creates [LibraryBloc] + [LibraryLayoutCubit] +
 /// [LibrarySelectionCubit], kicks off the initial load, and hands the
 /// widget tree down to [_LibraryView]. All external callbacks
-/// (`onSourcePressed`, `onAddPressed`) come from the composition root
-/// (`routing.dart`) — the feature itself doesn't know about navigation.
+/// (`onSourcePressed`, `onAddPressed`, `onPracticePressed`) come from the
+/// composition root (`routing.dart`) — the feature itself doesn't know about
+/// navigation. Practice is optional: without [fsrsRepository] and
+/// [onPracticePressed] the Library shows no review entry.
 class LibraryScreen extends StatelessWidget {
   const LibraryScreen({
     required this.bookRepository,
@@ -57,6 +60,8 @@ class LibraryScreen extends StatelessWidget {
     required this.onSourcePressed,
     required this.onAddPressed,
     this.articleRepository,
+    this.fsrsRepository,
+    this.onPracticePressed,
     this.isOffline = false,
     this.openImportOnStart = false,
     super.key,
@@ -65,6 +70,9 @@ class LibraryScreen extends StatelessWidget {
   final BookRepository bookRepository;
   final ArticleRepository? articleRepository;
   final CollectionRepository collectionRepository;
+
+  /// Review counts behind the Practice row and badge.
+  final FsrsRepository? fsrsRepository;
   final PreferencesService preferencesService;
   final bool isOffline;
   final Future<void> Function(
@@ -74,6 +82,9 @@ class LibraryScreen extends StatelessWidget {
   })
   onSourcePressed;
   final LibraryImportLauncher onAddPressed;
+
+  /// Opens Practice and completes when it closes, so the counts refresh.
+  final Future<void> Function()? onPracticePressed;
 
   /// Opens file import once after the first frame (onboarding's "Add a
   /// book"). Rebuilding the same screen does not reopen it.
@@ -90,6 +101,7 @@ class LibraryScreen extends StatelessWidget {
             bookRepository: bookRepository,
             articleRepository: articleRepository,
             collectionRepository: collectionRepository,
+            fsrsRepository: fsrsRepository,
           )..add(const LibraryLoadRequested()),
         ),
         BlocProvider(
@@ -124,6 +136,7 @@ class LibraryScreen extends StatelessWidget {
         openImportOnStart: openImportOnStart,
         onSourcePressed: onSourcePressed,
         onAddPressed: onAddPressed,
+        onPracticePressed: onPracticePressed,
       ),
     );
   }
@@ -142,6 +155,7 @@ class _LibraryView extends StatefulWidget {
     required this.openImportOnStart,
     required this.onSourcePressed,
     required this.onAddPressed,
+    required this.onPracticePressed,
   });
 
   final bool isOffline;
@@ -153,6 +167,7 @@ class _LibraryView extends StatefulWidget {
   })
   onSourcePressed;
   final LibraryImportLauncher onAddPressed;
+  final Future<void> Function()? onPracticePressed;
 
   @override
   State<_LibraryView> createState() => _LibraryViewState();
@@ -269,6 +284,24 @@ class _LibraryViewState extends State<_LibraryView> {
     // This delayed refresh is a fallback: the reader already reports each
     // saved position, including the write it flushes on close.
     await Future<void>.delayed(_sourceRouteReturnRefreshDelay);
+    if (!context.mounted) return;
+    context.read<LibraryBloc>().add(const LibraryRefreshRequested());
+  }
+
+  /// Opens Practice, then reloads: a session changes the due count, and
+  /// the reader opened from a card may have changed positions too.
+  Future<void> _handlePracticePressed(BuildContext context) async {
+    final onPracticePressed = widget.onPracticePressed;
+    if (onPracticePressed == null) return;
+    _suspendSearchFocus();
+    try {
+      await onPracticePressed();
+    } finally {
+      if (mounted) {
+        _dismissCurrentFocus();
+        _restoreSearchFocusAfterRouteFrame();
+      }
+    }
     if (!context.mounted) return;
     context.read<LibraryBloc>().add(const LibraryRefreshRequested());
   }
@@ -485,31 +518,42 @@ class _LibraryViewState extends State<_LibraryView> {
                             padding: const EdgeInsetsDirectional.only(
                               bottom: kLibraryFloatingActionsLift,
                             ),
-                            // Only the capsule follows the scope; the Scaffold
-                            // rebuilds for visibility alone.
+                            // Only the capsule follows the scope and the due
+                            // count; the Scaffold rebuilds for visibility
+                            // alone.
                             child:
                                 BlocSelector<
                                   LibraryBloc,
                                   LibraryState,
-                                  LibraryCollectionScope?
+                                  (LibraryCollectionScope?, int)
                                 >(
-                                  selector: (state) =>
-                                      state.selectedCollectionScope,
-                                  builder: (context, scope) =>
-                                      LibraryFloatingActions(
-                                        scope: scope,
-                                        onCollectionsPressed: () =>
-                                            _handleCollectionScopePressed(
+                                  selector: (state) => (
+                                    state.selectedCollectionScope,
+                                    state.practice?.due ?? 0,
+                                  ),
+                                  builder: (context, selected) {
+                                    final (scope, practiceDue) = selected;
+                                    return LibraryFloatingActions(
+                                      scope: scope,
+                                      practiceDue: practiceDue,
+                                      onCollectionsPressed: () =>
+                                          _handleCollectionScopePressed(
+                                            context,
+                                            context.read<LibraryBloc>().state,
+                                          ),
+                                      onPracticePressed:
+                                          widget.onPracticePressed == null
+                                          ? null
+                                          : () =>
+                                                _handlePracticePressed(context),
+                                      onAddPressed: _addInFlight
+                                          ? null
+                                          : () => _handleAdd(
                                               context,
-                                              context.read<LibraryBloc>().state,
+                                              LibraryImportEntry.menu,
                                             ),
-                                        onAddPressed: _addInFlight
-                                            ? null
-                                            : () => _handleAdd(
-                                                context,
-                                                LibraryImportEntry.menu,
-                                              ),
-                                      ),
+                                    );
+                                  },
                                 ),
                           ),
                         )
@@ -525,7 +569,8 @@ class _LibraryViewState extends State<_LibraryView> {
                               curr.collectionsLoadFailed ||
                           prev.selectedCollectionScope !=
                               curr.selectedCollectionScope ||
-                          prev.searchQuery != curr.searchQuery,
+                          prev.searchQuery != curr.searchQuery ||
+                          prev.practice != curr.practice,
                       builder: (context, state) {
                         final bloc = context.read<LibraryBloc>();
                         // null while an import flow is open renders the import
@@ -590,6 +635,10 @@ class _LibraryViewState extends State<_LibraryView> {
                                     onShowWholeLibrary: () => bloc.add(
                                       const LibraryCollectionScopeChanged(null),
                                     ),
+                                    onPracticePressed:
+                                        widget.onPracticePressed == null
+                                        ? null
+                                        : () => _handlePracticePressed(context),
                                   ),
                                 ),
                               ),

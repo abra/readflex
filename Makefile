@@ -16,6 +16,9 @@ PACKAGES = \
 	packages/remote_content_policy \
 	packages/article_repository \
 	packages/highlight_repository \
+	packages/review_scheduler \
+	packages/fsrs_repository \
+	packages/dictionary_repository \
 	packages/preferences_service \
 	packages/connectivity_service \
 	packages/contextual_translation_service \
@@ -31,7 +34,8 @@ PACKAGES = \
 	packages/features/translate \
 	packages/features/dictionary \
 	packages/features/reader \
-	packages/features/onboarding
+	packages/features/onboarding \
+	packages/features/practice \
 
 ROOT_ANALYZE_PATHS = lib test integration_test test_driver benchmarks scripts
 

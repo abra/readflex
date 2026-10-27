@@ -31,10 +31,15 @@ Barrel exports `AppDatabase` and every DAO:
 Generated Drift data classes (`BooksTableData`, `HighlightsTableData`, …)
 and companions are also reachable through the DAO exports.
 
-`FlashcardsDao`, `DictionaryDao`, and `ReviewItemsDao` are dormant in the
-current app surface. They remain exported so existing databases keep migrating
-cleanly and the frozen learning features can be restored from history without a
-destructive schema reset.
+`DictionaryDao` and `ReviewItemsDao` back saved words and spaced review
+(`dictionary_repository`, `fsrs_repository`). `FlashcardsDao` is dormant: it
+remains exported so existing databases keep migrating cleanly and the frozen
+flashcard feature can be restored from history without a destructive schema
+reset.
+
+Schema v26 adds `dictionary_table.lemma`, `base_translation` and
+`context_translation`: the dictionary form, the word's own meaning and the
+sentence translation a saved word keeps beside its meaning in context.
 
 Schema v25 adds `bookmarks_table.anchor_version`. The reader sets it when a
 bookmark's CFI and quote come from a word on the bookmarked page, so they stay

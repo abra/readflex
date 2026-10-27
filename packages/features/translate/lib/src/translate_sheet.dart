@@ -1,10 +1,12 @@
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:toast_service/toast_service.dart';
 import 'package:shared/shared.dart';
 
 import 'translate_cubit.dart';
@@ -12,6 +14,7 @@ import 'translation_language_direction.dart';
 import 'translate_sheet_outcome.dart';
 import 'translation_selection_mode.dart';
 import 'translation_text_direction.dart';
+import 'word_save_status.dart';
 
 part 'translation_answer_style.dart';
 part 'translation_details.dart';
@@ -27,6 +30,7 @@ Future<TranslateSheetOutcome?> showTranslateSheet(
   required TextSelectionContext selection,
   required ContextualTranslationService translationService,
   required PreferencesService preferencesService,
+  DictionaryRepository? dictionaryRepository,
   bool canDefine = false,
 }) {
   return showAppBottomSheet<TranslateSheetOutcome>(
@@ -35,6 +39,7 @@ Future<TranslateSheetOutcome?> showTranslateSheet(
       selection: selection,
       translationService: translationService,
       preferencesService: preferencesService,
+      dictionaryRepository: dictionaryRepository,
       canDefine: canDefine,
     ),
   );
@@ -45,6 +50,7 @@ class TranslateSheet extends StatelessWidget {
     required this.selection,
     required this.translationService,
     required this.preferencesService,
+    this.dictionaryRepository,
     this.canDefine = false,
     super.key,
   });
@@ -52,6 +58,9 @@ class TranslateSheet extends StatelessWidget {
   final TextSelectionContext selection;
   final ContextualTranslationService translationService;
   final PreferencesService preferencesService;
+
+  /// Where Save keeps the word; without it the sheet offers no Save.
+  final DictionaryRepository? dictionaryRepository;
 
   /// Whether the caller can open a definition, offered when a word is
   /// already in the target language.
@@ -63,10 +72,12 @@ class TranslateSheet extends StatelessWidget {
       create: (_) => TranslateCubit(
         translationService: translationService,
         preferencesService: preferencesService,
+        dictionaryRepository: dictionaryRepository,
       )..translate(selection),
       child: _TranslateSheetView(
         selection: selection,
         canDefine: canDefine,
+        canSave: dictionaryRepository != null,
         onCopy: (text) => Clipboard.setData(ClipboardData(text: text)),
       ),
     );
@@ -77,11 +88,13 @@ class _TranslateSheetView extends StatefulWidget {
   const _TranslateSheetView({
     required this.selection,
     required this.canDefine,
+    required this.canSave,
     required this.onCopy,
   });
 
   final TextSelectionContext selection;
   final bool canDefine;
+  final bool canSave;
   final Future<void> Function(String) onCopy;
 
   @override
@@ -109,53 +122,67 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
   @override
   Widget build(BuildContext context) {
     final selection = widget.selection;
-    return BlocBuilder<TranslateCubit, TranslateSheetState>(
-      builder: (context, state) {
-        final cubit = context.read<TranslateCubit>();
-        return ActionBottomSheetLayout.scrollable(
-          bodyPadding: state.status == TranslateSheetStatus.success
-              ? const EdgeInsets.only(bottom: AppSpacing.lg)
-              : const EdgeInsets.fromLTRB(
-                  AppSpacing.xl,
-                  0,
-                  AppSpacing.xl,
-                  AppSpacing.lg,
+    return BlocListener<TranslateCubit, TranslateSheetState>(
+      // Only a tap that saved: the lookup of an earlier save is silent.
+      listenWhen: (previous, current) =>
+          previous.saveStatus == WordSaveStatus.saving &&
+          current.saveStatus == WordSaveStatus.saved,
+      listener: (context, _) => showToast(
+        context,
+        type: NotificationType.success,
+        message: context.l10n.wordSaved,
+      ),
+      child: BlocBuilder<TranslateCubit, TranslateSheetState>(
+        builder: (context, state) {
+          final cubit = context.read<TranslateCubit>();
+          return ActionBottomSheetLayout.scrollable(
+            bodyPadding: state.status == TranslateSheetStatus.success
+                ? const EdgeInsets.only(bottom: AppSpacing.lg)
+                : const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    0,
+                    AppSpacing.xl,
+                    AppSpacing.lg,
+                  ),
+            title: context.l10n.translationTitle,
+            onClose: () => Navigator.of(context).pop(),
+            closeLabel: context.l10n.commonClose,
+            headerBottom: TranslationLanguageDirection(
+              sourceLanguageCode: state.sourceLanguageCode,
+              targetLanguageCode: state.targetLanguageCode,
+              detectedSourceLanguage: state.detectedSourceLanguage,
+              enabled: !state.isBusy,
+              sourceMenu: _sourceMenu,
+              targetMenu: _targetMenu,
+              onSourceChanged: (value) =>
+                  cubit.setSourceLanguage(selection, value),
+              onTargetChanged: (value) =>
+                  cubit.setTargetLanguage(selection, value),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (state.status != TranslateSheetStatus.success) ...[
+                  _TranslationSelectionPreview.quote(selection: selection),
+                  const SizedBox(height: AppSpacing.md),
+                ],
+                _TranslateBody(
+                  selection: selection,
+                  state: state,
+                  onChooseSourceLanguage: _chooseSourceLanguage,
+                  onChooseTargetLanguage: _chooseTargetLanguage,
+                  onDefine: widget.canDefine ? _define : null,
+                  onToggleSaved: widget.canSave
+                      ? () => cubit.toggleSaved(selection)
+                      : null,
+                  onCopy: widget.onCopy,
                 ),
-          title: context.l10n.translationTitle,
-          onClose: () => Navigator.of(context).pop(),
-          closeLabel: context.l10n.commonClose,
-          headerBottom: TranslationLanguageDirection(
-            sourceLanguageCode: state.sourceLanguageCode,
-            targetLanguageCode: state.targetLanguageCode,
-            detectedSourceLanguage: state.detectedSourceLanguage,
-            enabled: !state.isBusy,
-            sourceMenu: _sourceMenu,
-            targetMenu: _targetMenu,
-            onSourceChanged: (value) =>
-                cubit.setSourceLanguage(selection, value),
-            onTargetChanged: (value) =>
-                cubit.setTargetLanguage(selection, value),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (state.status != TranslateSheetStatus.success) ...[
-                _TranslationSelectionPreview.quote(selection: selection),
-                const SizedBox(height: AppSpacing.md),
               ],
-              _TranslateBody(
-                selection: selection,
-                state: state,
-                onChooseSourceLanguage: _chooseSourceLanguage,
-                onChooseTargetLanguage: _chooseTargetLanguage,
-                onDefine: widget.canDefine ? _define : null,
-                onCopy: widget.onCopy,
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -167,6 +194,7 @@ class _TranslateBody extends StatelessWidget {
     required this.onChooseSourceLanguage,
     required this.onChooseTargetLanguage,
     required this.onDefine,
+    required this.onToggleSaved,
     required this.onCopy,
   });
 
@@ -175,6 +203,7 @@ class _TranslateBody extends StatelessWidget {
   final VoidCallback onChooseSourceLanguage;
   final VoidCallback onChooseTargetLanguage;
   final VoidCallback? onDefine;
+  final VoidCallback? onToggleSaved;
   final Future<void> Function(String) onCopy;
 
   @override
@@ -195,6 +224,8 @@ class _TranslateBody extends StatelessWidget {
       TranslateSheetStatus.success => _TranslationResultView(
         selection: selection,
         result: state.result!,
+        saveStatus: state.saveStatus,
+        onToggleSaved: onToggleSaved,
         onCopy: onCopy,
       ),
       TranslateSheetStatus.sourceLanguageRequired => AppStatusMessage(
@@ -282,11 +313,17 @@ class _TranslationResultView extends StatelessWidget {
   const _TranslationResultView({
     required this.selection,
     required this.result,
+    required this.saveStatus,
+    required this.onToggleSaved,
     required this.onCopy,
   });
 
   final TextSelectionContext selection;
   final ContextualTranslationResult result;
+  final WordSaveStatus saveStatus;
+
+  /// Saves the word to Vocabulary; `null` when the sheet cannot save.
+  final VoidCallback? onToggleSaved;
   final Future<void> Function(String) onCopy;
 
   @override
@@ -360,6 +397,8 @@ class _TranslationResultView extends StatelessWidget {
               selectedText: selectedText,
               isSingleWord: isSingleWord,
               analysis: result.analysis,
+              saveStatus: saveStatus,
+              onToggleSaved: onToggleSaved,
             ),
           ),
         if (offline) ...[

@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:contextual_translation_service/contextual_translation_service.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:shared/shared.dart';
 
 import 'translation_selection_mode.dart';
+import 'word_save_status.dart';
 
 enum TranslateSheetStatus {
   initial,
@@ -29,6 +32,8 @@ class TranslateSheetState extends Equatable {
     this.result,
     this.failure,
     this.detectedSourceLanguage,
+    this.saveStatus = WordSaveStatus.notSaved,
+    this.savedEntryId,
   });
 
   final String sourceLanguageCode;
@@ -41,6 +46,10 @@ class TranslateSheetState extends Equatable {
   /// describes the text, not a request, so it outlives target changes: the
   /// direction label keeps it and a target equal to it needs no request.
   final String? detectedSourceLanguage;
+
+  /// Whether the selected word is in the reader's saved words.
+  final WordSaveStatus saveStatus;
+  final String? savedEntryId;
 
   bool get isBusy =>
       status == TranslateSheetStatus.loading ||
@@ -60,6 +69,8 @@ class TranslateSheetState extends Equatable {
     Object? result = _absent,
     Object? failure = _absent,
     Object? detectedSourceLanguage = _absent,
+    WordSaveStatus? saveStatus,
+    Object? savedEntryId = _absent,
   }) {
     return TranslateSheetState(
       sourceLanguageCode: sourceLanguageCode ?? this.sourceLanguageCode,
@@ -74,6 +85,10 @@ class TranslateSheetState extends Equatable {
       detectedSourceLanguage: detectedSourceLanguage == _absent
           ? this.detectedSourceLanguage
           : detectedSourceLanguage as String?,
+      saveStatus: saveStatus ?? this.saveStatus,
+      savedEntryId: savedEntryId == _absent
+          ? this.savedEntryId
+          : savedEntryId as String?,
     );
   }
 
@@ -85,6 +100,8 @@ class TranslateSheetState extends Equatable {
     result,
     failure,
     detectedSourceLanguage,
+    saveStatus,
+    savedEntryId,
   ];
 }
 
@@ -92,8 +109,10 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
   TranslateCubit({
     required ContextualTranslationService translationService,
     required PreferencesService preferencesService,
+    DictionaryRepository? dictionaryRepository,
   }) : _translationService = translationService,
        _preferencesService = preferencesService,
+       _dictionaryRepository = dictionaryRepository,
        super(
          TranslateSheetState(
            sourceLanguageCode: autoSourceLanguageCode,
@@ -104,6 +123,8 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
 
   final ContextualTranslationService _translationService;
   final PreferencesService _preferencesService;
+  final DictionaryRepository? _dictionaryRepository;
+  bool _savedLookupDone = false;
   int _operationGeneration = 0;
   Completer<void>? _abort;
 
@@ -127,11 +148,109 @@ class TranslateCubit extends Cubit<TranslateSheetState> {
   }) async {
     if (isClosed || state.isBusy) return;
     final operationGeneration = _beginOperation();
-    await _runTranslation(
-      selection,
-      operationGeneration: operationGeneration,
-      allowOfflineModelDownload: allowOfflineModelDownload,
-    );
+    await Future.wait([
+      _runTranslation(
+        selection,
+        operationGeneration: operationGeneration,
+        allowOfflineModelDownload: allowOfflineModelDownload,
+      ),
+      _lookupSavedWord(selection),
+    ]);
+  }
+
+  /// Whether the word was saved earlier, checked once per sheet.
+  Future<void> _lookupSavedWord(TextSelectionContext selection) async {
+    final repository = _dictionaryRepository;
+    if (repository == null || _savedLookupDone) return;
+    _savedLookupDone = true;
+    try {
+      final entry = await repository.findEntry(
+        selection.effectiveSelectedText,
+        sourceId: selection.sourceId,
+      );
+      if (isClosed || entry == null) return;
+      emit(
+        state.copyWith(
+          saveStatus: WordSaveStatus.saved,
+          savedEntryId: entry.id,
+        ),
+      );
+    } on StorageException catch (error, stackTrace) {
+      addError(error, stackTrace);
+    }
+  }
+
+  /// Saves the translated word to Vocabulary, or removes it when already saved.
+  /// Nothing happens without a translation to save or a repository.
+  Future<void> toggleSaved(TextSelectionContext selection) async {
+    final repository = _dictionaryRepository;
+    final result = state.result;
+    if (isClosed ||
+        repository == null ||
+        state.saveStatus == WordSaveStatus.saving) {
+      return;
+    }
+    final savedEntryId = state.savedEntryId;
+    emit(state.copyWith(saveStatus: WordSaveStatus.saving));
+    try {
+      if (savedEntryId != null) {
+        await repository.deleteEntry(savedEntryId);
+        if (isClosed) return;
+        emit(
+          state.copyWith(
+            saveStatus: WordSaveStatus.notSaved,
+            savedEntryId: null,
+          ),
+        );
+        return;
+      }
+      if (result == null || state.status != TranslateSheetStatus.success) {
+        emit(state.copyWith(saveStatus: WordSaveStatus.notSaved));
+        return;
+      }
+      final entry = await repository.addEntry(
+        word: selection.effectiveSelectedText.trim(),
+        translation: _primaryTranslation(result),
+        lemma: result.analysis?.lemma,
+        baseTranslation: result.translation.baseTranslation,
+        contextTranslation: result.translation.sentenceTranslation,
+        pronunciation:
+            result.analysis?.pronunciation ?? result.analysis?.reading,
+        partOfSpeech: result.analysis?.partOfSpeech,
+        context: selection.contextText,
+        sourceId: selection.sourceId,
+        sourceType: selection.sourceType,
+        anchorText: selection.effectiveSelectedText,
+        anchorContext: selection.contextText,
+        anchorCfiRange: selection.cfiRange,
+      );
+      if (isClosed) return;
+      emit(
+        state.copyWith(
+          saveStatus: WordSaveStatus.saved,
+          savedEntryId: entry.id,
+        ),
+      );
+    } on StorageException catch (error, stackTrace) {
+      addError(error, stackTrace);
+      if (isClosed) return;
+      emit(state.copyWith(saveStatus: WordSaveStatus.failure));
+    }
+  }
+
+  // The same answer the sheet shows first.
+  static String _primaryTranslation(ContextualTranslationResult result) {
+    for (final candidate in [
+      result.contextualExpression?.translation,
+      result.translation.contextualTranslation,
+      result.translation.translatedFragment,
+      result.translation.baseTranslation,
+      result.translation.sentenceTranslation,
+    ]) {
+      final text = candidate?.trim();
+      if (text != null && text.isNotEmpty) return text;
+    }
+    return '';
   }
 
   Future<void> _runTranslation(

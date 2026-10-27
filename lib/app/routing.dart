@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:onboarding/onboarding.dart';
+import 'package:practice/practice.dart';
 import 'package:reader/reader.dart';
 import 'package:readflex/app/reader_system_navigation_bar_mode.dart';
 import 'package:readflex/app/dependency_container.dart';
@@ -29,6 +30,10 @@ const _readflexPrivacyUrl = 'https://abra.github.io/readflex/privacy/';
 abstract final class AppRoutes {
   static const root = '/';
   static const library = '/library';
+  static const practice = '/practice';
+  static const practiceWords = '/practice/words';
+  static const practiceHighlights = '/practice/highlights';
+  static const practiceReview = '/practice/review';
   static const onboarding = '/onboarding';
   static const readerPath = '/reader/:sourceId';
 
@@ -39,8 +44,12 @@ abstract final class AppRoutes {
 ///
 /// This file is intentionally the navigation composition root: routes may pass
 /// repositories/services into Screen or Sheet entry points, while Views stay
-/// isolated behind feature BLoCs/Cubits.
-GoRouter buildRouter({required DependenciesContainer deps}) {
+/// isolated behind feature BLoCs/Cubits. The Library is the home screen;
+/// Practice, the reader and review sessions are pushed above it.
+GoRouter buildRouter({
+  required DependenciesContainer deps,
+  String initialLocation = AppRoutes.root,
+}) {
   deps.logger.debug('buildRouter: GoRouter created');
 
   return GoRouter(
@@ -50,7 +59,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
     // Sheets and dialogs open on the root navigator; a new one clears toasts
     // that would cover its bottom commands.
     observers: [ToastNavigatorObserver()],
-    initialLocation: AppRoutes.root,
+    initialLocation: initialLocation,
     redirect: (context, state) {
       final location = state.uri.path;
 
@@ -73,6 +82,7 @@ GoRouter buildRouter({required DependenciesContainer deps}) {
         builder: (context, state) => const SizedBox.shrink(),
       ),
       _buildLibraryRoute(deps),
+      _buildPracticeRoute(deps),
       _buildReaderRoute(deps),
       _buildOnboardingRoute(deps),
     ],
@@ -92,6 +102,7 @@ GoRoute _buildLibraryRoute(DependenciesContainer deps) => GoRoute(
       bookRepository: deps.bookRepository,
       articleRepository: deps.articleRepository,
       collectionRepository: deps.collectionRepository,
+      fsrsRepository: deps.fsrsRepository,
       preferencesService: deps.preferencesService,
       isOffline: isOffline,
       // Read once by the screen's first frame; later rebuilds keep the state.
@@ -112,8 +123,91 @@ GoRoute _buildLibraryRoute(DependenciesContainer deps) => GoRoute(
             entry: _importFlowEntryFor(entry),
             onImported: onImported,
           ),
+      onPracticePressed: () => context.push<void>(AppRoutes.practice),
     );
   },
+);
+
+/// Practice above the Library: the hub, its Vocabulary and Highlights lists and,
+/// above everything, the review session.
+GoRoute _buildPracticeRoute(DependenciesContainer deps) => GoRoute(
+  path: AppRoutes.practice,
+  builder: (context, state) => PracticeScreen(
+    fsrsRepository: deps.fsrsRepository,
+    dictionaryRepository: deps.dictionaryRepository,
+    highlightRepository: deps.highlightRepository,
+    bookRepository: deps.bookRepository,
+    articleRepository: deps.articleRepository,
+    preferencesService: deps.preferencesService,
+    onStartReview: ({sourceId, ahead = false}) => context.push<void>(
+      AppRoutes.practiceReview,
+      extra: ReviewSessionArguments(sourceId: sourceId, ahead: ahead),
+    ),
+    onWordsPressed: () => context.push<void>(AppRoutes.practiceWords),
+    onHighlightsPressed: () => context.push<void>(AppRoutes.practiceHighlights),
+  ),
+  routes: [
+    GoRoute(
+      path: 'words',
+      builder: (context, state) => PracticeWordsScreen(
+        dictionaryRepository: deps.dictionaryRepository,
+        fsrsRepository: deps.fsrsRepository,
+        bookRepository: deps.bookRepository,
+        articleRepository: deps.articleRepository,
+        onOpenInSource: (sourceId, cfiRange) =>
+            _openAtCfi(context, sourceId: sourceId, cfiRange: cfiRange),
+      ),
+    ),
+    GoRoute(
+      path: 'highlights',
+      builder: (context, state) => PracticeHighlightsScreen(
+        highlightRepository: deps.highlightRepository,
+        fsrsRepository: deps.fsrsRepository,
+        bookRepository: deps.bookRepository,
+        articleRepository: deps.articleRepository,
+        onOpenInSource: (highlight) => _openAtCfi(
+          context,
+          sourceId: highlight.sourceId,
+          cfiRange: highlight.cfiRange,
+        ),
+      ),
+    ),
+    GoRoute(
+      path: 'review',
+      pageBuilder: (context, state) {
+        final arguments = switch (state.extra) {
+          ReviewSessionArguments arguments => arguments,
+          _ => const ReviewSessionArguments(),
+        };
+        return MaterialPage(
+          key: state.pageKey,
+          fullscreenDialog: true,
+          child: ReviewSessionScreen(
+            fsrsRepository: deps.fsrsRepository,
+            dictionaryRepository: deps.dictionaryRepository,
+            highlightRepository: deps.highlightRepository,
+            bookRepository: deps.bookRepository,
+            articleRepository: deps.articleRepository,
+            preferencesService: deps.preferencesService,
+            sourceId: arguments.sourceId,
+            ahead: arguments.ahead,
+            onOpenInSource: (sourceId, cfiRange) =>
+                _openAtCfi(context, sourceId: sourceId, cfiRange: cfiRange),
+          ),
+        );
+      },
+    ),
+  ],
+);
+
+/// Opens [sourceId] in the reader at [cfiRange] when known.
+Future<void> _openAtCfi(
+  BuildContext context, {
+  required String sourceId,
+  required String? cfiRange,
+}) => context.push<void>(
+  AppRoutes.reader(sourceId),
+  extra: ReaderRouteArguments(initialCfi: cfiRange),
 );
 
 GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
@@ -134,6 +228,7 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
     final dictionaryAction = DictionaryAction(
       systemDictionaryService: deps.systemDictionaryService,
       dictionaryLookupService: deps.dictionaryLookupService,
+      dictionaryRepository: deps.dictionaryRepository,
     );
     return CustomTransitionPage(
       key: state.pageKey,
@@ -145,6 +240,7 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
         child: ReaderScreen(
           sourceId: sourceId,
           initialSource: matchingSource,
+          initialCfi: arguments.initialCfi,
           serverBaseUri: deps.readerServer.baseUri,
           bookRepository: deps.bookRepository,
           articleRepository: deps.articleRepository,
@@ -176,6 +272,7 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
             TranslateAction(
               translationService: deps.contextualTranslationService,
               preferencesService: deps.preferencesService,
+              dictionaryRepository: deps.dictionaryRepository,
               // A word already in the target language opens its definition.
               onDefine: dictionaryAction.onExecute,
             ),
@@ -308,13 +405,27 @@ class LibraryRouteArguments {
 class ReaderRouteArguments {
   const ReaderRouteArguments({
     this.initialSource,
+    this.initialCfi,
     this.onSourceOpened,
     this.onReadingPositionSaved,
   });
 
   final Book? initialSource;
+
+  /// Where to open instead of the saved position: a highlight or a saved
+  /// word's anchor.
+  final String? initialCfi;
   final VoidCallback? onSourceOpened;
   final ValueChanged<double>? onReadingPositionSaved;
+}
+
+/// What a review session covers: one source or everything, due cards or
+/// the ones due soonest.
+class ReviewSessionArguments {
+  const ReviewSessionArguments({this.sourceId, this.ahead = false});
+
+  final String? sourceId;
+  final bool ahead;
 }
 
 /// Adapts the import sheet contract to article extraction and storage services.

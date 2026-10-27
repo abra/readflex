@@ -240,6 +240,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  dictionary_repository:
+    dependency: "direct main"
+    description:
+      path: "packages/dictionary_repository"
+      relative: true
+    source: path
+    version: "0.1.0"
   dictionary_service:
     dependency: "direct main"
     description:
@@ -445,6 +452,21 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.0"
+  fsrs:
+    dependency: transitive
+    description:
+      name: fsrs
+      sha256: b50dbee450a424dbac4fb0f49cae25ff2e4e6d01844caa1ec0c26de5baba8071
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
+  fsrs_repository:
+    dependency: "direct main"
+    description:
+      path: "packages/fsrs_repository"
+      relative: true
+    source: path
+    version: "0.1.0"
   fuchsia_remote_debug_protocol:
     dependency: transitive
     description: flutter
@@ -638,10 +660,10 @@ packages:
     dependency: transitive
     description:
       name: lucide_icons_flutter
-      sha256: "7c5dc01a32a9905ae34e2d84224e92d6d0c42acf8926df9e01c35a1446bf1b69"
+      sha256: a07370b432d4a88ed8fd6c26b5bbcc4e29fb7b24b6350517fd32209a6b1a50c1
       url: "https://pub.dev"
     source: hosted
-    version: "3.1.14+2"
+    version: "4.0.1"
   matcher:
     dependency: transitive
     description:
@@ -856,6 +878,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.2"
+  practice:
+    dependency: "direct main"
+    description:
+      path: "packages/features/practice"
+      relative: true
+    source: path
+    version: "0.1.0"
   preferences_service:
     dependency: "direct main"
     description:
@@ -919,6 +948,13 @@ packages:
     dependency: transitive
     description:
       path: "packages/remote_content_policy"
+      relative: true
+    source: path
+    version: "0.1.0"
+  review_scheduler:
+    dependency: transitive
+    description:
+      path: "packages/review_scheduler"
       relative: true
     source: path
     version: "0.1.0"

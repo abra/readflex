@@ -273,9 +273,12 @@ ThemeData _assembleTheme({
       elevation: AppElevation.level0,
       toolbarHeight: AppSizes.appBarHeight,
       systemOverlayStyle: systemOverlayStyle,
-      titleTextStyle: textTheme.titleMedium?.copyWith(
+      // A theme-level style is not merged with ThemeData.fontFamily, so the
+      // sans family is set here, as the button themes do.
+      titleTextStyle: AppTypography.sans(
+        textStyle: textTheme.titleMedium,
         fontWeight: FontWeight.w600,
-      ),
+      ).copyWith(fontFamilyFallback: AppTypography.fontFamilyFallback),
     ),
 
     // --- ListTile ---

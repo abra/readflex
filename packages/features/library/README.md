@@ -19,10 +19,12 @@ and UI preference cubits internally.
 | `bookRepository`      | `BookRepository`                    | Book list + delete                           |
 | `articleRepository`   | `ArticleRepository?`                | Optional article list + delete               |
 | `collectionRepository`| `CollectionRepository`              | Collections and favourites persistence      |
+| `fsrsRepository`      | `FsrsRepository?`                   | Review counts for the Practice entry; `null` shows none |
 | `preferencesService`  | `PreferencesService`                | Persist list/grid, theme, and locale choices |
 | `isOffline`           | `bool`                               | Connectivity indicator for the Library UI   |
 | `onSourcePressed`     | `Future<void> Function(...)`        | Open reader, then refresh                    |
 | `onAddPressed`        | `LibraryImportLauncher`             | Open import UI at a `LibraryImportEntry`; notify successful persistence |
+| `onPracticePressed`   | `Future<void> Function()?`          | Open Practice; the Library reloads its counts when it closes. `null` shows no entry |
 | `openImportOnStart`   | `bool` (default `false`)            | Open file import once after the first frame  |
 
 `LibraryImportEntry` (exported) names the import step to open: `menu` from
@@ -39,7 +41,11 @@ Independent state units keep domain loading, persisted display preferences,
 selection, and collection commands separate:
 
 - `LibraryBloc` — domain data. Loads books and article metadata into a single
-  `LibraryState.sources` list of `LibrarySource` values and exposes
+  `LibraryState.sources` list of `LibrarySource` values, and, given an
+  `FsrsRepository`, the review counts into `LibraryState.practice`
+  (`LibraryPracticeSummary`: saved words, highlights, cards due). The counts
+  load in parallel with the sources; a failed read is reported and keeps the
+  last counts, never the Library. It exposes
   `visibleItems` sorted by `lastOpenedAt ?? addedAt` DESC, then
   `addedAt` DESC and title. Narrows by one `selectedCollectionScope` and
   `searchQuery` (debounced 300ms). `visibleItems` is cached per state
@@ -57,6 +63,29 @@ selection, and collection commands separate:
 
 The Library exposes protected Favourites, persisted manual collections, and
 derived author/site smart collections.
+
+### Practice entry
+
+Practice has no tab; the Library is its one way in, in two places:
+
+- `LibraryPracticeRow` leads the content in the default view (no search or
+  collection), above the Continue reading band, once something is saved for
+  review: "N cards due today" with the accent-tinted glyph, or "All caught
+  up" with the totals, muted. It scrolls with the rows, so a short window at
+  large text keeps its list. A reader who never saves sees no row.
+- `LibraryPracticeButton` sits in the bottom capsule between the collection
+  switcher and "+", behind a hairline, always: Practice stays reachable before
+  the first save (it opens the empty section), and the due count is its
+  badge. One semantics node: "Practice, N cards due today".
+- The badge is Material's 16dp pill with a 2dp ring in the capsule's colour,
+  centred on the glyph's top-end corner (Flutter's `Badge` offsets suit a
+  24dp icon and would cover a third of this 20dp glyph); a wider count grows
+  inwards and stops at "99+", so it never reaches "+". The ring is the
+  convention for a badge laid over strokes or artwork; Material and iOS put
+  bare badges on icon corners.
+
+Both call `onPracticePressed`; the screen suspends search focus like opening
+the reader and dispatches `LibraryRefreshRequested` when Practice pops.
 
 `LibraryImportLauncher({required onImported, entry})` completes when the
 import UI closes. Implementations declare `entry` with a default
@@ -83,9 +112,17 @@ full-text article read. Search and scope changes reuse the same source list.
 Favourite membership reads are scoped in SQLite rather than loading every
 manual collection's memberships a second time.
 
-The screen uses separate widgets (`LibraryListView`, `LibraryGridView`) for
-each layout and a local `TextEditingController` for the search field so
-keystrokes don't churn bloc state.
+The screen scrolls one `LibraryContentScrollView` in both layouts: the
+Practice row and the Continue reading card are its own slivers, the sources
+follow as `LibraryListSliver` or `LibraryGridSliver`. Switching List and Grid
+swaps only the sources sliver, which fades in over `AppMotion.short` (nothing
+slides: a slide would move the covers under the still row and card); the row
+and the card keep their elements and the scroll position survives. One
+consequence: Flutter derives a scroll view's semantic `scrollIndex` from its
+slivers in paint order, so with the card above the rows it reports the first
+row, not the card; the card and the rows still carry their own indexes. The
+search field has a local `TextEditingController` so keystrokes don't churn
+bloc state.
 List separators use the shared `DividerTheme` for color and thickness, matching
 the import sheet. They are painted above cover shadows so the line stays visible.
 

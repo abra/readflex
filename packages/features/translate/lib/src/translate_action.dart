@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -17,11 +18,16 @@ class TranslateAction extends TextAction {
   TranslateAction({
     required this.translationService,
     required this.preferencesService,
+    this.dictionaryRepository,
     this.onDefine,
   });
 
   final ContextualTranslationService translationService;
   final PreferencesService preferencesService;
+
+  /// Keeps words the reader saves from the sheet; without it there is no
+  /// Save.
+  final DictionaryRepository? dictionaryRepository;
 
   /// Shows the definition of the same selection. Offered when a word is
   /// already in the target language, where a definition is what the reader
@@ -49,6 +55,7 @@ class TranslateAction extends TextAction {
       selection: selection,
       translationService: translationService,
       preferencesService: preferencesService,
+      dictionaryRepository: dictionaryRepository,
       canDefine: onDefine != null,
     );
     // The sheet is closed by now; [context] belongs to the caller and opens

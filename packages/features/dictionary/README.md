@@ -20,6 +20,15 @@ backend may append it as a second monolingual entry. For example, selecting
 expression supplements the selected word and never replaces it. A `found`
 result without entries reads as not found.
 
+## Save
+
+`DictionaryAction.dictionaryRepository` (optional) enables Save in the word
+header of the Readflex sheet: the word is kept for review with its first
+definition as the meaning (an "in this context" entry takes that place and the
+word's own definition becomes the base meaning). A tap that saves shows the
+"Saved for review" toast; removing is quiet. The native definition UI, shown
+first where available, has no Save.
+
 ## Architecture
 
 - `DictionaryAction` owns system-first orchestration and opens the sheet only

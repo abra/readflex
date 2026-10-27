@@ -6,6 +6,7 @@ import 'package:collection_repository/collection_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 part 'library_event.dart';
@@ -16,9 +17,11 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     required BookRepository bookRepository,
     ArticleRepository? articleRepository,
     CollectionRepository? collectionRepository,
+    FsrsRepository? fsrsRepository,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
        _collectionRepository = collectionRepository,
+       _fsrsRepository = fsrsRepository,
        super(LibraryState()) {
     on<LibraryLoadRequested>(_onLoadRequested);
     on<LibrarySourceDeleted>(_onSourceDeleted);
@@ -59,6 +62,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   final BookRepository _bookRepository;
   final ArticleRepository? _articleRepository;
   final CollectionRepository? _collectionRepository;
+
+  /// Review counts for the Practice entry; `null` leaves the Library
+  /// without one.
+  final FsrsRepository? _fsrsRepository;
   int _loadGeneration = 0;
 
   /// Progress saved since the latest load started. That load may have read a
@@ -214,6 +221,9 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
           ),
           deletionVersion: effect?.version,
           deletionEffect: effect,
+          // A failed count read keeps the last one rather than hiding
+          // the entry mid-session.
+          practice: snapshot.practice,
         ),
       );
     } catch (e, st) {
@@ -246,11 +256,30 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     }
   }
 
+  /// The review counts, read alongside the sources. A failure is reported
+  /// but never fails the Library: the sources matter more than the counts.
+  Future<LibraryPracticeSummary?> _loadPracticeSummary() async {
+    final repository = _fsrsRepository;
+    if (repository == null) return null;
+    try {
+      final stats = await repository.getStats();
+      return LibraryPracticeSummary(
+        words: stats.totalOf(ReviewableType.dictionary),
+        highlights: stats.totalOf(ReviewableType.highlight),
+        due: stats.due,
+      );
+    } catch (e, st) {
+      addError(e, st);
+      return null;
+    }
+  }
+
   Future<_LibrarySnapshot> _loadLibrarySnapshot() async {
-    final (books, articles) = await (
+    final (books, articles, practice) = await (
       _bookRepository.getBooks(),
       _articleRepository?.getLibrarySources() ??
           Future.value(const <LibrarySource>[]),
+      _loadPracticeSummary(),
     ).wait;
     final sources = [
       ...books.map(LibrarySource.fromBook),
@@ -268,6 +297,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     return _LibrarySnapshot(
       sources: sources,
       collectionScopes: collectionScopes,
+      practice: practice,
     );
   }
 
@@ -452,10 +482,14 @@ class _LibrarySnapshot {
   const _LibrarySnapshot({
     required this.sources,
     required this.collectionScopes,
+    required this.practice,
   });
 
   final List<LibrarySource> sources;
   final List<LibraryCollectionScope>? collectionScopes;
+
+  /// `null` when there is no review store or its counts failed to load.
+  final LibraryPracticeSummary? practice;
 }
 
 /// Temporary accumulator for smart collection scopes derived from source

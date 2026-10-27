@@ -1,4 +1,4 @@
-part of 'library_grid_view.dart';
+part of 'library_grid_sliver.dart';
 
 /// Covers in [libraryGridColumnCount] columns of the width the grid gets in
 /// layout. Only that width picks the columns, so the keyboard resizing the

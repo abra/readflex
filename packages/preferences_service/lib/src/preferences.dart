@@ -573,7 +573,11 @@ class Preferences {
     this.onboardingCompleted = false,
     this.readerSelectionTipShowCount = 0,
     this.readerSelectionTipDismissed = false,
+    this.practiceNewCardsPerDay = defaultPracticeNewCardsPerDay,
+    this.practiceReviewHighlights = true,
   });
+
+  static const defaultPracticeNewCardsPerDay = 20;
 
   final ThemeMode themeMode;
   final Locale locale;
@@ -612,6 +616,12 @@ class Preferences {
   /// Whether the user acknowledged the text selection tip or already selected
   /// text, so it never appears again.
   final bool readerSelectionTipDismissed;
+
+  /// How many never-reviewed cards a day's review sessions may introduce.
+  final int practiceNewCardsPerDay;
+
+  /// Whether review sessions resurface highlights besides saved words.
+  final bool practiceReviewHighlights;
 
   ReaderAppearancePreferences get readerAppearance =>
       ReaderAppearancePreferences(
@@ -677,6 +687,8 @@ class Preferences {
     bool? onboardingCompleted,
     int? readerSelectionTipShowCount,
     bool? readerSelectionTipDismissed,
+    int? practiceNewCardsPerDay,
+    bool? practiceReviewHighlights,
   }) => Preferences(
     themeMode: themeMode ?? this.themeMode,
     locale: locale ?? this.locale,
@@ -715,6 +727,10 @@ class Preferences {
         readerSelectionTipShowCount ?? this.readerSelectionTipShowCount,
     readerSelectionTipDismissed:
         readerSelectionTipDismissed ?? this.readerSelectionTipDismissed,
+    practiceNewCardsPerDay:
+        practiceNewCardsPerDay ?? this.practiceNewCardsPerDay,
+    practiceReviewHighlights:
+        practiceReviewHighlights ?? this.practiceReviewHighlights,
   );
 
   @override
@@ -752,7 +768,9 @@ class Preferences {
               other.bookImportTermsAcceptedVersion &&
           onboardingCompleted == other.onboardingCompleted &&
           readerSelectionTipShowCount == other.readerSelectionTipShowCount &&
-          readerSelectionTipDismissed == other.readerSelectionTipDismissed;
+          readerSelectionTipDismissed == other.readerSelectionTipDismissed &&
+          practiceNewCardsPerDay == other.practiceNewCardsPerDay &&
+          practiceReviewHighlights == other.practiceReviewHighlights;
 
   @override
   int get hashCode => Object.hashAll([
@@ -783,6 +801,8 @@ class Preferences {
     onboardingCompleted,
     readerSelectionTipShowCount,
     readerSelectionTipDismissed,
+    practiceNewCardsPerDay,
+    practiceReviewHighlights,
   ]);
 }
 

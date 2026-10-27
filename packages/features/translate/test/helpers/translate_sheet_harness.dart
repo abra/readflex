@@ -1,5 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
+import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +19,7 @@ Future<void> pumpTranslateSheet(
   TextScaler textScaler = TextScaler.noScaling,
   Locale locale = const Locale('en'),
   Brightness brightness = Brightness.light,
+  DictionaryRepository? dictionaryRepository,
 }) async {
   final preferences = await PreferencesService.create(
     supportedCodes: ReadflexSupportedLocales.codes,
@@ -44,6 +46,7 @@ Future<void> pumpTranslateSheet(
           selection: selection,
           translationService: service,
           preferencesService: preferences,
+          dictionaryRepository: dictionaryRepository,
         ),
       ),
     ),

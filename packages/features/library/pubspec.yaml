@@ -26,6 +26,8 @@ dependencies:
     path: ../../article_repository
   collection_repository:
     path: ../../collection_repository
+  fsrs_repository:
+    path: ../../fsrs_repository
   component_library:
     path: ../../component_library
   preferences_service:
