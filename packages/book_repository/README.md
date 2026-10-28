@@ -48,8 +48,8 @@ filenames before being written to the DB.
 | `deleteBookmarkBySourceAndCfi(sourceId, cfi)` | Legacy fallback removal by CFI |
 | `deleteBook(id, {scope})`           | Delete row + remove per-book directory; optionally preserve learning data |
 
-Cover bytes (`coverData`) are typically produced upstream by
-`reader_webview`'s `BookMetadataExtractor`.
+Cover bytes (`coverData`) are produced upstream by `vellum`'s metadata
+readers (`import_flow`'s `importBookFile`).
 
 Bookmark restoration checks source existence, detects an already recreated
 anchor and inserts in one transaction. It never recreates a deleted book/article

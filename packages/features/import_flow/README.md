@@ -32,16 +32,14 @@ Future<ImportFlowResult?> showImportFlowSheet(
   cancellation remains silent and late picker errors do not emit after close.
 - `onImportBook` — called after a file is picked; returns the persisted
   `Book?`. The default helper is `importBookFile(...)`, which reads the
-  metadata and persists via `BookRepository`. For a format listed in its
-  `nativeFormats` (the formats the native reader draws, from
-  `READFLEX_NATIVE_FORMATS`) that `vellum` reads — CBZ and PDF — the title
-  and a 480×720 JPEG cover come from `readComicMetadata` or
-  `readPdfMetadata` (Info title, or the file name; the first page as
-  cover), with no WebView; a file the engine rejects, including a
-  password-protected PDF, fails with `BookImportException` carrying the
-  engine's reason. Every other format still goes through
-  `BookMetadataExtractor` from `reader_webview` (foliate-js in a headless
-  WebView over the local HTTP server). The routing adapter
+  metadata with `vellum` and persists via `BookRepository`: the title,
+  author and a 480×720 JPEG cover from `readComicMetadata` (file name,
+  first page), `readPdfMetadata` (Info title, or the file name; the first
+  page), `readEpubMetadata`, `readFb2Metadata` and `readMobiMetadata` (the
+  book's own metadata, authors joined with `, `, the declared cover image,
+  the file name when there is no title). No WebView is involved. A file the
+  engine rejects, including a password-protected PDF, fails with
+  `BookImportException` carrying the engine's reason. The routing adapter
   then calls `deletePickedBookFile(...)` in a `finally`, after success and
   failure alike (dismissing the sheet does not cancel the import).
 - `onImportArticle` — imports a cleaned article from a URL.
@@ -207,13 +205,13 @@ disabled semantics, RTL/large-text
 header access, validation, clipboard races/failures, retry state, picker
 cancellation, progress layout, and keyboard access with enlarged text. Regression
 tests distinguish header/system Back from Close/scrim/drag and check draft retention.
-`book_import_test.dart` imports a real CBZ fixture through the native
-path (title from the file name, first page in reading order as a JPEG
-cover, progress forwarded) and a PDF fixture (Info title and author,
-first page as cover; an encrypted PDF is refused), checks the engine's
-rejection reaches the caller as `BookImportException`, that a format outside `nativeFormats`
-never consults the engine, and that a repository failure is logged and
-answered with null.
+`book_import_test.dart` imports a real CBZ fixture (title from the file
+name, first page in reading order as a JPEG cover, progress forwarded), a
+PDF fixture (Info title and author, first page as cover; an encrypted PDF
+is refused), an EPUB, an FB2 and the MOBI and AZW3 fixtures (title, joined
+authors, cover), checks the engine's rejection reaches the caller as
+`BookImportException`, that an unknown extension is read as EPUB, and that
+a repository failure is logged and answered with null.
 `picked_book_file_test.dart` covers picked-copy cleanup on real files: Android
 pick folders, iOS `tmp/`, originals outside temp, desktop platforms, linked
 temp roots and paths, links in and out of temp, climbing paths, and logged
@@ -240,8 +238,7 @@ and live extraction require separate device checks.
 ## Dependencies
 
 - `book_repository` — persistence
-- `reader_webview` — `BookMetadataExtractor` for formats the WebView still reads
-- `vellum` — `readComicMetadata` for formats the native engine reads
+- `vellum` — `read*Metadata` and `VellumException`
 - `domain_models` — `BookFormat`
 - `component_library` — `showAppBottomSheet`, `BottomSheetHeader`,
   `ActionBottomSheetLayout`, `AppDrillInRow`, `AppPlainIconButton`,

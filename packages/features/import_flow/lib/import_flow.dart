@@ -2,6 +2,7 @@
 // library.
 
 export 'src/book_import.dart';
+export 'src/book_import_exception.dart';
 export 'src/import_flow_cubit.dart';
 export 'src/import_flow_entry.dart';
 export 'src/import_flow_result.dart';

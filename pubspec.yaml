@@ -97,6 +97,8 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  vellum:
+    path: packages/vellum
 
   bloc_test: ^10.0.0
   coverage: ^1.15.0

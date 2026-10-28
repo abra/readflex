@@ -116,23 +116,6 @@ void main() {
       expect(response.statusCode, 404);
     });
 
-    test('temporary book grant is scoped and revocable', () async {
-      final externalBook = File('${tempDir.path}/external.epub');
-      await externalBook.writeAsBytes([1, 2, 3]);
-      final bookUri = Uri.parse(
-        url('/book/${Uri.encodeComponent(externalBook.path)}'),
-      );
-
-      final grant = await server.grantTemporaryBookAccess(externalBook);
-      final grantedResponse = await client.get(bookUri);
-      grant.revoke();
-      final revokedResponse = await client.get(bookUri);
-
-      expect(grantedResponse.statusCode, 200);
-      expect(grantedResponse.bodyBytes, [1, 2, 3]);
-      expect(revokedResponse.statusCode, 404);
-    });
-
     test('rejects a symlink from books to a file outside the root', () async {
       final externalBook = File('${tempDir.path}/external.epub');
       await externalBook.writeAsBytes([1, 2, 3]);

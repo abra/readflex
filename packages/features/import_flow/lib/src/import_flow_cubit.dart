@@ -5,9 +5,9 @@ import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:path/path.dart' as p;
-import 'package:reader_webview/reader_webview.dart';
 
 import 'article_url_utils.dart';
+import 'book_import_exception.dart';
 import 'import_flow_entry.dart';
 
 part 'import_flow_state.dart';

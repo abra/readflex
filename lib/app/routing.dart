@@ -342,24 +342,14 @@ Future<void> _showImportSheet(
     onPickBookFile: pickBookFile,
     onImportBook: (file, {onProgress}) async {
       try {
-        final grant = await deps.readerServer.grantTemporaryBookAccess(file);
-        try {
-          final book = await importBookFile(
-            sourceFile: file,
-            bookRepository: deps.bookRepository,
-            readerServerBaseUri: deps.readerServer.baseUri,
-            logger: deps.logger,
-            nativeFormats: effectiveNativeReaderFormats(
-              config: deps.config,
-              preferences: deps.preferencesService.current,
-            ),
-            onProgress: onProgress,
-          );
-          if (book != null) onImported();
-          return book;
-        } finally {
-          grant.revoke();
-        }
+        final book = await importBookFile(
+          sourceFile: file,
+          bookRepository: deps.bookRepository,
+          logger: deps.logger,
+          onProgress: onProgress,
+        );
+        if (book != null) onImported();
+        return book;
       } finally {
         // Success or failure, the library no longer needs the picker's copy.
         await deletePickedBookFile(file, logger: deps.logger);

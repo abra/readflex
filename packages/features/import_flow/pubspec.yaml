@@ -24,8 +24,6 @@ dependencies:
     path: ../../domain_models
   book_repository:
     path: ../../book_repository
-  reader_webview:
-    path: ../../reader_webview
   vellum:
     path: ../../vellum
   monitoring:

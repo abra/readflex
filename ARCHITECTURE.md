@@ -101,8 +101,8 @@ an embedding that reattaches a disposed runtime would need a fresh bootstrap.
 Reader navigation uses `ReaderRouteArguments` for both a preloaded book and the
 post-open callback. The URL source ID is authoritative; a mismatched preloaded
 book is ignored, and deep links need no payload. Route builders wire features;
-the import-sheet adapter retains temporary file access until import finishes,
-then deletes the picker's temporary copy (only inside the app's temp/cache).
+the import-sheet adapter deletes the picker's temporary copy (only inside the
+app's temp/cache) once the import finishes.
 
 `AppBlocObserver` disables event/transition formatting in release, before any
 state `toString()` calls. Error reporting remains enabled. Test-only partial
@@ -602,9 +602,7 @@ Book import:
 ImportFlowSheet
   -> pickBookFile callback from routing.dart
   -> importBookFile helper in import_flow
-  -> vellum reads title and cover for formats in READFLEX_NATIVE_FORMATS
-     that the engine supports (CBZ); reader_webview's headless WebView
-     for the rest
+  -> vellum reads the title, author and cover (every format; no WebView)
   -> BookRepository stores file/metadata
   -> deletePickedBookFile removes the picker's temp/cache copy
 ```
@@ -728,21 +726,20 @@ downloads never use it: they keep the extraction service's own pinned client.
 
 `READFLEX_NATIVE_FORMATS` (comma-separated book formats, empty by default)
 names the formats `ReaderScreen` draws with the native `vellum` engine
-instead of the WebView, and whose metadata `importBookFile` reads with the
-engine where it can (CBZ: title and a JPEG cover, no headless WebView);
-routing passes `effectiveNativeReaderFormats` into the screen and the import
-callback: `Preferences.nativeReaderFormats` when a developer saved an override
+instead of the WebView (CBZ and PDF so far; import reads every format's
+metadata with the engine regardless);
+routing passes `effectiveNativeReaderFormats` into the screen:
+`Preferences.nativeReaderFormats` when a developer saved an override
 from the Reader engine sheet (DEV builds only, long press on the Library
 title; "Use build settings" clears it), otherwise
 `ApplicationConfig.nativeReaderFormats`. The set is read as each book is
-opened or imported, so a change applies to the next one. A format joins the
+opened, so a change applies to the next one. A format joins the
 build default only after its parity run and device checks (see the native
 reader plan).
 
 `ReaderServer` exposes a process-local token-scoped base URI. Its book,
 article, and asset routes resolve symlinks and enforce configured filesystem
-roots. Files selected outside app storage receive a reference-counted grant
-only for the metadata extraction operation.
+roots.
 
 ## Known Non-Production Contracts
 

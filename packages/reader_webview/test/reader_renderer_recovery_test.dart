@@ -85,30 +85,6 @@ void main() {
     }),
   );
 
-  test(
-    'metadata extraction reports renderer death during native startup and disposes it',
-    () async {
-      final previous = InAppWebViewPlatform.instance;
-      final platform = FakeInAppWebViewPlatform();
-      InAppWebViewPlatform.instance = platform;
-      addTearDown(() {
-        if (previous != null) InAppWebViewPlatform.instance = previous;
-      });
-      final extractor = BookMetadataExtractor(
-        serverBaseUri: Uri.parse('http://127.0.0.1:1234/r/token/'),
-      );
-      await expectLater(
-        extractor.extract('/books/a.epub'),
-        throwsA(isA<BookImportException>()),
-      );
-      expect(
-        platform.headless!.params.initialSettings!.useOnRenderProcessGone,
-        isTrue,
-      );
-      expect(platform.headless!.disposed, isTrue);
-    },
-  );
-
   for (final article in [false, true]) {
     testWidgets(
       '${article ? 'article' : 'book'} replaces a dead renderer and ignores its late events',

@@ -34,7 +34,6 @@ Any change under `assets/` bumps `AssetExtractor.assetRevision`.
 | `BookReaderWebView`      | Widget    | Loads foliate-js `index.html`, which fetches the book file from `/book/<path>`. Emits position, selection, search, highlight-tap and bookmark events; accepts imperative calls (goToCfi, pageLeft/pageRight, nextPage, changeStyle, addAnnotation, toggleBookmark). |
 | `ArticleHtmlReaderWebView` | Widget  | Loads the vertical article shell, fetches saved `content.html` from `/article/<dir>/content.html`, emits progress/TOC/document-feature/search/bookmark/external-link events, and accepts `goToPercent`, `goToHref`, `goToCfi` (saved highlights, bookmarks), `goToSearchResult` (active search match), `changeStyle`, `startSearch`, `cancelSearch`, `clearSearch`, `toggleBookmarkHere`, and `setArticleBookmarks`. |
 | `AssetExtractor`         | Utility   | Copies book/article reader assets and reading fonts from rootBundle. Version/build plus asset revision controls replacement; matching existing files are skipped and missing files are retried. DEV bootstrap forces extraction. |
-| `BookMetadataExtractor`  | Utility   | Spawns a timeout-bounded `HeadlessInAppWebView` running foliate-js in import mode to extract `{title, author, description, coverData, coverMimeType}` from any supported format. Malformed bridge payloads fail promptly; an invalid optional cover does not discard valid metadata. Used by the import flow. |
 | Bridge types             | Models    | `BookPosition`, `ReaderSelection`, `ReaderImageAreaSelection`, `ReaderHighlight`, `ReaderBookmark`, `ReaderBookmarkChange`, `FoliateStyle` — DTOs exchanged with JS. |
 
 ## JS <-> Flutter bridge
@@ -93,8 +92,6 @@ CFI; the reader JS ignores it unless the CFI no longer resolves in its chapter
 (a DOM change since it was saved throws `IndexSizeError`). Then the book opens
 at that progress, or at the CFI's chapter start, instead of reporting a
 document load failure.
-Metadata extraction treats renderer termination as an import error and disposes
-the headless WebView.
 
 Book position callbacks are persistence-safe: early `onRelocated` events can
 reveal content, but only the latest buffered position is published after

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,7 +7,6 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:reader_webview/reader_webview.dart' show BookImportException;
 import 'package:vellum/testing.dart';
 import 'package:vellum/vellum.dart' show ImageDimensions, probeImageDimensions;
 
@@ -17,7 +17,6 @@ void main() {
   late _RecordingBookRepository books;
   late _CollectingLogObserver logs;
   late Logger logger;
-  final serverBaseUri = Uri.parse('http://127.0.0.1:1/token/');
 
   setUpAll(preparePdfEngineForTests);
 
@@ -53,9 +52,7 @@ void main() {
       final book = await importBookFile(
         sourceFile: source,
         bookRepository: books,
-        readerServerBaseUri: serverBaseUri,
         logger: logger,
-        nativeFormats: const {BookFormat.cbz},
         onProgress: progress.add,
       );
 
@@ -85,9 +82,7 @@ void main() {
     final book = await importBookFile(
       sourceFile: source,
       bookRepository: books,
-      readerServerBaseUri: serverBaseUri,
       logger: logger,
-      nativeFormats: const {BookFormat.pdf},
     );
 
     expect(book, isNotNull);
@@ -111,9 +106,7 @@ void main() {
       importBookFile(
         sourceFile: source,
         bookRepository: books,
-        readerServerBaseUri: serverBaseUri,
         logger: logger,
-        nativeFormats: const {BookFormat.pdf},
       ),
       throwsA(
         isA<BookImportException>().having(
@@ -133,9 +126,7 @@ void main() {
       importBookFile(
         sourceFile: source,
         bookRepository: books,
-        readerServerBaseUri: serverBaseUri,
         logger: logger,
-        nativeFormats: const {BookFormat.cbz},
       ),
       throwsA(
         isA<BookImportException>().having(
@@ -149,25 +140,108 @@ void main() {
     expect(logs.messages.single.message, 'Book import failed');
   });
 
-  test('a format outside nativeFormats keeps the WebView path', () async {
-    final source = await writeComic(
-      'issue.cbz',
-      buildComicArchive(portraitPages(2)),
-    );
+  test('imports an EPUB through the native engine', () async {
+    final fixture = Directory('../../vellum/test/fixtures/epub/epub3');
+    final zip = ZipBuilder();
+    for (final entity in fixture.listSync(recursive: true)) {
+      if (entity is File) {
+        final path = entity.path.substring(fixture.path.length + 1);
+        final bytes = path == 'OEBPS/images/cover.png'
+            ? encodeSolidPng(600, 900)
+            : entity.readAsBytesSync();
+        zip.add(path, bytes, deflate: path != 'mimetype');
+      }
+    }
+    final source = await writeComic('novel.epub', zip.build());
 
-    // No WebView plugin runs in tests, so the old path fails and is logged;
-    // what matters is that the native engine was not consulted.
     final book = await importBookFile(
       sourceFile: source,
       bookRepository: books,
-      readerServerBaseUri: serverBaseUri,
       logger: logger,
-      nativeFormats: const {BookFormat.epub},
     );
 
-    expect(book, isNull);
+    expect(book, isNotNull);
+    final added = books.added.single;
+    expect(added.title, 'The Fixture Book');
+    expect(added.author, 'Ada Lovelace, Grace Hopper');
+    expect(added.format, BookFormat.epub);
+    expect(added.coverMimeType, 'image/jpeg');
+    expect(
+      probeImageDimensions(added.coverData!),
+      const ImageDimensions(480, 720),
+    );
+    expect(logs.messages, isEmpty);
+  });
+
+  test('imports an FB2 through the native engine', () async {
+    final source = await writeComic(
+      'story.fb2',
+      await File('../../vellum/test/fixtures/fb2/rich.fb2').readAsBytes(),
+    );
+
+    final book = await importBookFile(
+      sourceFile: source,
+      bookRepository: books,
+      logger: logger,
+    );
+
+    expect(book, isNotNull);
+    final added = books.added.single;
+    expect(added.title, 'Книга с пробелами');
+    expect(added.author, 'Иван Петрович Сидоров, anon42, Only');
+    expect(added.format, BookFormat.fb2);
+    expect(added.coverData, isNull, reason: 'the fixture cover is a stub');
+  });
+
+  test('imports MOBI and AZW3 through the native engine', () async {
+    for (final (name, format) in [
+      ('six.mobi', BookFormat.mobi),
+      ('eight.azw3', BookFormat.azw3),
+    ]) {
+      books = _RecordingBookRepository();
+      final source = await writeComic(
+        name,
+        await File('../../vellum/test/fixtures/mobi/$name').readAsBytes(),
+      );
+
+      final book = await importBookFile(
+        sourceFile: source,
+        bookRepository: books,
+        logger: logger,
+      );
+
+      expect(book, isNotNull, reason: name);
+      final added = books.added.single;
+      expect(added.format, format);
+      expect(
+        added.title,
+        format == BookFormat.mobi ? 'Built MOBI <Updated>' : 'Built KF8',
+      );
+      expect(
+        added.author,
+        format == BookFormat.mobi ? 'Ada & Grace, Alan' : 'Someone',
+      );
+    }
+  });
+
+  test('a file with an unknown extension is read as an EPUB', () async {
+    final source = await writeComic('notes.txt', utf8.encode('plain text'));
+
+    await expectLater(
+      importBookFile(
+        sourceFile: source,
+        bookRepository: books,
+        logger: logger,
+      ),
+      throwsA(
+        isA<BookImportException>().having(
+          (e) => e.message,
+          'message',
+          'Not a ZIP archive',
+        ),
+      ),
+    );
     expect(books.added, isEmpty);
-    expect(logs.messages.single.message, 'Book import failed');
   });
 
   test('a repository failure is logged and answered with null', () async {
@@ -180,9 +254,7 @@ void main() {
     final book = await importBookFile(
       sourceFile: source,
       bookRepository: books,
-      readerServerBaseUri: serverBaseUri,
       logger: logger,
-      nativeFormats: const {BookFormat.cbz},
     );
 
     expect(book, isNull);

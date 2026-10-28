@@ -6,14 +6,6 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 /// drive the bridge without a native WebView.
 class FakeInAppWebViewPlatform extends InAppWebViewPlatform {
   final views = <FakeInAppWebView>[];
-  FakeHeadlessInAppWebView? headless;
-
-  @override
-  PlatformHeadlessInAppWebView createPlatformHeadlessInAppWebView(
-    PlatformHeadlessInAppWebViewCreationParams params,
-  ) {
-    return headless = FakeHeadlessInAppWebView(params);
-  }
 
   @override
   PlatformInAppWebViewWidget createPlatformInAppWebViewWidget(
@@ -22,30 +14,6 @@ class FakeInAppWebViewPlatform extends InAppWebViewPlatform {
     final view = FakeInAppWebView(params);
     views.add(view);
     return view;
-  }
-}
-
-class FakeHeadlessInAppWebView extends PlatformHeadlessInAppWebView {
-  FakeHeadlessInAppWebView(super.params) : super.implementation();
-
-  bool disposed = false;
-  @override
-  final FakeInAppWebViewController webViewController =
-      FakeInAppWebViewController();
-
-  @override
-  Future<void> run() async {
-    final controller = params.controllerFromPlatform!(webViewController);
-    params.onRenderProcessGone!(
-      controller,
-      RenderProcessGoneDetail(didCrash: true),
-    );
-    await Future<void>.delayed(Duration.zero);
-  }
-
-  @override
-  Future<void> dispose() async {
-    disposed = true;
   }
 }
 

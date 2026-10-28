@@ -13,7 +13,12 @@ make test-performance
   microseconds, state emissions, and cumulative result entries published.
 - `library_benchmark_test.dart`: 1k/5k/20k books through the production Library
   state projection/search; one warmup and five samples, plus 10k cached reads.
-- Results: `.local/performance/reader-search.json` and `library.json`. Preserve
+- `vellum_document_benchmark_test.dart`: synthetic XHTML chapters of 100/400/1600
+  paragraphs (about 100 KB to 1.7 MB) through `ContentDocument.parseXml`; one
+  warmup and three samples. Records source bytes, node count, median parse
+  microseconds and a full-tree walk.
+- Results: `.local/performance/reader-search.json`, `library.json` and
+  `vellum-document.json`. Preserve
   before/after artifacts locally before rerunning, since these paths are replaced.
 
 Normal tests enforce structural budgets, without flaky stopwatch thresholds:

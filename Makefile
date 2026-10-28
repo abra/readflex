@@ -89,7 +89,7 @@ coverage:
 
 ## Run repeatable workload benchmarks, with reports in .local/performance/
 test-performance:
-	$(FLUTTER) test benchmarks/reader_search_benchmark_test.dart benchmarks/library_benchmark_test.dart --concurrency=1 --reporter expanded
+	$(FLUTTER) test benchmarks/reader_search_benchmark_test.dart benchmarks/library_benchmark_test.dart benchmarks/vellum_document_benchmark_test.dart --concurrency=1 --reporter expanded
 
 ## Compare committed visual baselines (does not update them)
 test-goldens:

@@ -6,7 +6,6 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
-import 'package:reader_webview/reader_webview.dart';
 
 /// Cubit tests. Fakes record callback invocations so we assert state
 /// transitions without touching the real file picker or repository.

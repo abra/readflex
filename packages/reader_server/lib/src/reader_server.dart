@@ -10,8 +10,7 @@ import 'package:path/path.dart' as p;
 ///
 /// Requests use an unguessable, process-local URL prefix. Book and article
 /// paths are accepted only when they resolve inside their configured storage
-/// roots. A file selected from outside the app storage can be exposed for the
-/// duration of metadata extraction through [grantTemporaryBookAccess].
+/// roots.
 ///
 /// Created once in composition, lives in `DependenciesContainer`.
 class ReaderServer {
@@ -31,7 +30,6 @@ class ReaderServer {
   final Directory _articlesDir;
   final String _accessToken;
   final Logger _logger;
-  final Map<String, int> _temporaryBookPaths = {};
 
   String? _resolvedAssetsRoot;
   String? _resolvedBooksRoot;
@@ -102,41 +100,7 @@ class ReaderServer {
     _resolvedAssetsRoot = null;
     _resolvedBooksRoot = null;
     _resolvedArticlesRoot = null;
-    _temporaryBookPaths.clear();
     _logger.info('ReaderServer stopped (was port $port)');
-  }
-
-  /// Temporarily allows metadata extraction to read [file] when it lives
-  /// outside the managed books directory (for example, a file-picker result).
-  ///
-  /// The caller must revoke the returned grant in a `finally` block. Grants
-  /// are reference-counted so overlapping imports of the same file cannot
-  /// revoke each other's access.
-  Future<ReaderServerBookAccessGrant> grantTemporaryBookAccess(
-    File file,
-  ) async {
-    if (_server == null || _resolvedBooksRoot == null) {
-      throw StateError('ReaderServer has not been started.');
-    }
-    if (!await file.exists()) {
-      throw FileSystemException('Book file does not exist.', file.path);
-    }
-
-    final resolvedPath = await file.resolveSymbolicLinks();
-    _temporaryBookPaths.update(
-      resolvedPath,
-      (count) => count + 1,
-      ifAbsent: () => 1,
-    );
-    return ReaderServerBookAccessGrant._(() {
-      final count = _temporaryBookPaths[resolvedPath];
-      if (count == null) return;
-      if (count <= 1) {
-        _temporaryBookPaths.remove(resolvedPath);
-      } else {
-        _temporaryBookPaths[resolvedPath] = count - 1;
-      }
-    });
   }
 
   void _handleRequest(HttpRequest request) async {
@@ -248,7 +212,7 @@ class ReaderServer {
     final booksRoot = _resolvedBooksRoot;
     final isManagedBook =
         booksRoot != null && _isPathWithin(booksRoot, resolvedPath);
-    if (!isManagedBook && !_temporaryBookPaths.containsKey(resolvedPath)) {
+    if (!isManagedBook) {
       _respond(request, HttpStatus.notFound, 'Book file not found.');
       _logRequest('GET', path, HttpStatus.notFound, stopwatch);
       return;
@@ -565,21 +529,6 @@ class ReaderServer {
       '.ttf' => ContentType('font', 'ttf'),
       _ => ContentType.binary,
     };
-  }
-}
-
-/// Revocable access to a file selected outside the managed books directory.
-final class ReaderServerBookAccessGrant {
-  ReaderServerBookAccessGrant._(this._onRevoke);
-
-  final void Function() _onRevoke;
-  bool _revoked = false;
-
-  /// Revokes this grant. Calling this method more than once is safe.
-  void revoke() {
-    if (_revoked) return;
-    _revoked = true;
-    _onRevoke();
   }
 }
 

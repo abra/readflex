@@ -16,7 +16,7 @@ app launch and stopped on dispose.
 
 | Route                                         | Served from                                    |
 |-----------------------------------------------|------------------------------------------------|
-| `GET /r/<token>/book/<encoded-path>`          | Files inside `booksDirectory`, plus explicitly granted file-picker results. |
+| `GET /r/<token>/book/<encoded-path>`          | Files inside `booksDirectory`.                 |
 | `GET /r/<token>/article/<encoded-dir>/<path>` | Files inside `articlesDirectory` and the selected article directory. |
 | `GET /r/<token>/assets/<path>`                | Files inside `assetsDirectory` (foliate-js etc.). |
 
@@ -43,7 +43,6 @@ chapters without loading the whole file into memory.
 | `baseUri`                    | Token-scoped URI consumed by reader widgets       |
 | `isRunning`                  | Whether the server is currently listening         |
 | `assetsDirectory`            | Where extracted reader assets are stored          |
-| `grantTemporaryBookAccess()` | Revocable, reference-counted access for an imported external file |
 
 ## Dependencies
 
