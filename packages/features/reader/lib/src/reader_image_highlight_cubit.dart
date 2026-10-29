@@ -2,7 +2,8 @@ import 'package:domain_models/domain_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
-import 'package:reader_webview/reader_webview.dart';
+
+import 'reader_selection.dart';
 
 enum ReaderImageHighlightStatus { idle, saving }
 

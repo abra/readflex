@@ -1,16 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:domain_models/domain_models.dart';
 
 import 'ui_test_app.dart';
 
 /// A generated PDF in the managed library, without network or licensed books.
-Future<Book> addPdfFixture(UiTestApp app, {int pages = 6}) async {
+Future<Book> addPdfFixture(
+  UiTestApp app, {
+  int pages = 6,
+  List<(String, int)> outline = const [],
+}) async {
   final file = File('${app.directory.path}/pages.pdf');
-  await file.writeAsBytes(pdfFixtureBytes(pages: pages));
+  await file.writeAsBytes(pdfFixtureBytes(pages: pages, outline: outline));
   return app.bookRepository.addBook(
     sourceFile: file,
     title: 'PDF Fixture',
@@ -20,8 +22,12 @@ Future<Book> addPdfFixture(UiTestApp app, {int pages = 6}) async {
 
 /// A4 pages in points. Each page has a title, body lines inside 72 pt
 /// margins and a blue figure; page 1 links to page 3; the last page holds
-/// only a short centred title. Mirrors `makePdf` in the reader browser tests.
-List<int> pdfFixtureBytes({int pages = 6}) {
+/// only a short centred title. [outline] lists chapter titles with the
+/// zero-based page each opens.
+List<int> pdfFixtureBytes({
+  int pages = 6,
+  List<(String, int)> outline = const [],
+}) {
   final objects = <String?>[];
   int add(String? body) {
     objects.add(body);
@@ -53,7 +59,27 @@ List<int> pdfFixtureBytes({int pages = 6}) {
     pageRefs.add(add(null));
   }
   final link = add(null);
-  objects[catalog - 1] = '<< /Type /Catalog /Pages $pagesRef 0 R >>';
+  final outlineRoot = outline.isEmpty ? null : add(null);
+  final outlineItems = [for (final _ in outline) add(null)];
+  objects[catalog - 1] = outlineRoot == null
+      ? '<< /Type /Catalog /Pages $pagesRef 0 R >>'
+      : '<< /Type /Catalog /Pages $pagesRef 0 R /Outlines $outlineRoot 0 R '
+            '/PageMode /UseOutlines >>';
+  if (outlineRoot != null) {
+    objects[outlineRoot - 1] =
+        '<< /Type /Outlines /First ${outlineItems.first} 0 R '
+        '/Last ${outlineItems.last} 0 R /Count ${outline.length} >>';
+    for (var i = 0; i < outline.length; i++) {
+      final (title, page) = outline[i];
+      final prev = i > 0 ? ' /Prev ${outlineItems[i - 1]} 0 R' : '';
+      final next = i < outline.length - 1
+          ? ' /Next ${outlineItems[i + 1]} 0 R'
+          : '';
+      objects[outlineItems[i] - 1] =
+          '<< /Title ($title) /Parent $outlineRoot 0 R$prev$next '
+          '/Dest [${pageRefs[page]} 0 R /XYZ 0 842 0] >>';
+    }
+  }
   objects[pagesRef - 1] =
       '<< /Type /Pages /Count $pages '
       '/Kids [${pageRefs.map((ref) => '$ref 0 R').join(' ')}] >>';
@@ -85,29 +111,4 @@ List<int> pdfFixtureBytes({int pages = 6}) {
     'startxref\n$xref\n%%EOF\n',
   );
   return latin1.encode(pdf.toString());
-}
-
-/// A page preview like the reader's PDF thumbnails: white A4 paper with a
-/// title bar and body lines, at the 240 px width the reader sends. Lines vary
-/// with [index] so neighbouring tiles are told apart.
-Future<Uint8List> pdfPageThumbnailFixture(int index) async {
-  const size = ui.Size(240, 340);
-  final recorder = ui.PictureRecorder();
-  final canvas = ui.Canvas(recorder);
-  canvas.drawColor(const ui.Color(0xffffffff), ui.BlendMode.src);
-  final ink = ui.Paint()..color = const ui.Color(0xff3a3a3a);
-  canvas.drawRect(const ui.Rect.fromLTWH(30, 34, 120, 10), ink);
-  final body = ui.Paint()..color = const ui.Color(0xff8a8a8a);
-  for (var line = 0; line < 26; line++) {
-    final width = 180.0 - ((line * 7 + index * 13) % 5) * 12;
-    canvas.drawRect(ui.Rect.fromLTWH(30, 62 + line * 9.5, width, 3.5), body);
-  }
-  final picture = recorder.endRecording();
-  final image = await picture.toImage(size.width.toInt(), size.height.toInt());
-  final bytes = (await image.toByteData(
-    format: ui.ImageByteFormat.png,
-  ))!.buffer.asUint8List();
-  image.dispose();
-  picture.dispose();
-  return bytes;
 }

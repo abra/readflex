@@ -12,10 +12,7 @@ import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:preferences_service/preferences_service.dart';
-import 'package:reader_server/reader_server.dart';
-import 'package:reader_webview/reader_webview.dart';
 import 'package:readflex/app/app_scopes.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
@@ -31,7 +28,7 @@ import 'ui_test_services.dart';
 /// Runs the production root/router against isolated storage. Never calls
 /// composeDependencies(), reads API keys, or opens the user's application DB.
 final class UiTestApp {
-  UiTestApp._(this.directory, this._previousPreferencesPlatform) {
+  UiTestApp._(this.directory, this._previousPreferencesPlatform, this.config) {
     _resources
       ..add('logger', logger.destroy)
       ..add('directory', () => directory.delete(recursive: true))
@@ -44,7 +41,7 @@ final class UiTestApp {
   final Directory directory;
   final SharedPreferencesAsyncPlatform? _previousPreferencesPlatform;
   final logger = Logger();
-  final config = const ApplicationConfig();
+  final ApplicationConfig config;
   final errorReporter = const NoopErrorReporter();
   final articleExtractionService = FixtureArticleExtraction();
   final contextualTranslationService = FixtureTranslation();
@@ -61,19 +58,12 @@ final class UiTestApp {
   late final HighlightRepository highlightRepository;
   late final DictionaryRepository dictionaryRepository;
   late final FsrsRepository fsrsRepository;
-  late final ReaderServer readerServer;
   Book? book;
 
   late final dependencies = DependenciesContainer(
     logger: logger,
     config: config,
     errorReporter: errorReporter,
-    packageInfo: PackageInfo(
-      appName: 'Readflex Tests',
-      packageName: 'readflex.tests',
-      version: '1',
-      buildNumber: '1',
-    ),
     preferencesService: preferencesService,
     articleExtractionService: articleExtractionService,
     articleRepository: articleRepository,
@@ -87,14 +77,12 @@ final class UiTestApp {
     systemDictionaryService: systemDictionaryService,
     dictionaryLookupService: dictionaryLookupService,
     screenControlService: screenControlService,
-    readerServer: readerServer,
     database: database,
     resourceDisposer: _resources,
   );
 
   static Future<UiTestApp> create({
     bool withBook = true,
-    bool nativeReader = false,
     bool onboardingCompleted = true,
     // Scenarios show a returning reader; the first-run selection tip has its
     // own test.
@@ -104,6 +92,7 @@ final class UiTestApp {
     final app = UiTestApp._(
       await Directory.systemTemp.createTemp('readflex-ui-'),
       previous,
+      const ApplicationConfig(),
     );
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
@@ -141,20 +130,6 @@ final class UiTestApp {
       app.highlightRepository = HighlightRepository(database: app.database);
       app.dictionaryRepository = DictionaryRepository(database: app.database);
       app.fsrsRepository = FsrsRepository(database: app.database);
-      app.readerServer = ReaderServer(
-        assetsDirectory: Directory('${app.directory.path}/reader_assets'),
-        booksDirectory: books,
-        articlesDirectory: articles,
-        logger: app.logger,
-      );
-      app._resources.add('reader server', app.readerServer.stop);
-      if (nativeReader) {
-        await AssetExtractor(
-          targetDirectory: app.readerServer.assetsDirectory,
-          logger: app.logger,
-        ).extractAll(version: 'ui-test');
-        await app.readerServer.start();
-      }
       if (withBook) {
         // Cover palette depends on the ID; random IDs make goldens unstable.
         const id = 'ui-fixture-book';

@@ -47,10 +47,6 @@ dependencies:
     path: packages/screen_control_service
   preferences_service:
     path: packages/preferences_service
-  reader_server:
-    path: packages/reader_server
-  reader_webview:
-    path: packages/reader_webview
   toast_service:
     path: packages/toast_service
 
@@ -75,20 +71,10 @@ dependencies:
   # External packages
   flutter_bloc: ^9.1.1
   http: ^1.6.0
-  package_info_plus: ^9.0.1
   go_router: ^17.3.0
   url_launcher: ^6.3.1
   path: ^1.9.0
   path_provider: ^2.1.6
-
-dependency_overrides:
-  # Preserve Android selection handles when the system action menu is hidden.
-  flutter_inappwebview_android:
-    path: third_party/flutter_inappwebview_android
-  # flutter_inappwebview_ios 1.1.2 does not suppress the modern iOS edit menu
-  # when disableContextMenu is enabled. Keep the native fix reproducible.
-  flutter_inappwebview_ios:
-    path: third_party/flutter_inappwebview_ios
 
 dev_dependencies:
   analyzer: ^10.0.1
@@ -103,7 +89,6 @@ dev_dependencies:
   bloc_test: ^10.0.0
   coverage: ^1.15.0
   drift: ^2.34.1
-  flutter_inappwebview: ^6.1.5
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
   sqflite_common_ffi: ^2.4.2

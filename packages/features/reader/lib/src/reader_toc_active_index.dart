@@ -1,4 +1,4 @@
-import 'package:reader_webview/reader_webview.dart';
+import 'reader_toc_item.dart';
 
 const _progressEpsilon = 0.000001;
 

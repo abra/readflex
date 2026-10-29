@@ -1,9 +1,8 @@
 part of 'reader_screen.dart';
 
-/// Hosts the native comic engine (`package:vellum`) and translates its
-/// events into the same reader bloc and cubit updates the WebView body
-/// produces, so the chrome, drawers and context panel do not know which
-/// engine draws the pages.
+/// Hosts the comic engine (`package:vellum`) and translates its events into
+/// the reader bloc and cubit updates every page body produces, so the
+/// chrome, drawers and context panel do not know what draws the pages.
 class _ReaderComicBody extends StatefulWidget {
   const _ReaderComicBody({
     super.key,
@@ -50,7 +49,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
   }
 
   /// The parent marks the surface unready in its own state; from inside a
-  /// build that has to wait for the frame, as the WebView's callback does.
+  /// build that has to wait for the frame.
   void _notifyLoading() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && !_ready) widget.onLoading?.call();
@@ -96,11 +95,11 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
     } catch (error, stackTrace) {
       if (!mounted || generation != _openGeneration) return;
       _debugTraceReader('_ReaderComicBody open failed: $error');
-      context.read<ReaderBloc>().reportError(error, stackTrace);
       context.read<ReaderBloc>().add(
-        ReaderWebViewFailed(
+        ReaderSurfaceFailed(
           sourceId: document.id,
-          failure: const ReaderLoadFailure(ReaderLoadFailureKind.document),
+          error: error,
+          stackTrace: stackTrace,
         ),
       );
       return;
@@ -146,8 +145,8 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
     _reportedBookmarkedPage = null;
   }
 
-  /// The saved page: the CFI the WebView reader wrote, or the fraction for
-  /// rows saved without one.
+  /// The saved page: its fake CFI, or the fraction for rows saved without
+  /// one.
   static int _initialPage(ReaderDocument document, int pageCount) {
     final cfi = document.currentCfi;
     if (cfi != null) {
@@ -160,8 +159,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
     return math.min(pageCount - 1, (fraction * pageCount).floor());
   }
 
-  /// One entry per page, named like the archive entry, as the WebView
-  /// reader lists a comic's contents.
+  /// One entry per page, named like the archive entry.
   static List<ReaderTocItem> _tocItems(ComicBook book) => [
     for (final page in book.pages)
       ReaderTocItem(
@@ -169,7 +167,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
         href: page.name,
         level: 0,
         startPercentage: page.index / book.pageCount,
-        startPage: page.index,
+        startPage: page.index + 1,
       ),
   ];
 
@@ -219,7 +217,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
     );
   }
 
-  /// The WebView shell drops titles longer than this.
+  /// Longer titles are not chapter names; the chrome drops them.
   static const _chapterTitleMaxLength = 512;
 
   static String? _chapterTitle(String label) {
@@ -247,7 +245,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
   }
 
   /// Bookmarks changed under the current page: the chrome's bookmark state
-  /// follows the position report, as it does for the WebView.
+  /// follows the position report.
   void _onBookmarksChanged(List<SourceBookmark> bookmarks) {
     final controller = _controller;
     if (controller == null) return;

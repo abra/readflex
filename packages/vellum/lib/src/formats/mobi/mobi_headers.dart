@@ -112,10 +112,18 @@ class MobiHeader {
       huffcdic: b.u32(112),
       numHuffcdic: b.u32(116),
       exthFlag: b.u32(128),
-      trailingFlags: b.length >= 244 ? b.u32(240) : 0,
-      indx: b.length >= 248 ? b.u32(244) : 0xFFFFFFFF,
+      // Past the header's own length (16 bytes after the PalmDOC header)
+      // the bytes belong to what follows it, the title in old MOBI 3
+      // files: those fields are absent, as Calibre reads them.
+      trailingFlags: _within(length, 244, b) ? b.u32(240) : 0,
+      indx: _within(length, 248, b) ? b.u32(244) : 0xFFFFFFFF,
     );
   }
+
+  /// Whether record 0 holds bytes up to [end] inside a MOBI header of
+  /// [length] bytes.
+  static bool _within(int length, int end, MobiBytes b) =>
+      16 + length >= end && b.length >= end;
 
   final int length;
   final int type;

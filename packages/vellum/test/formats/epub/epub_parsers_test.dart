@@ -1,7 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/src/container/book_url.dart';
+import 'package:vellum/all_formats.dart';
 import 'package:xml/xml.dart';
 
 void main() {
@@ -100,7 +101,7 @@ void main() {
 </ncx>''');
       final ncx = parseEpubNcx(
         doc,
-        resolve: (href) => resolveEpubUrl(href, 'OEBPS/toc.ncx'),
+        resolve: (href) => resolveBookUrl(href, 'OEBPS/toc.ncx'),
       );
       final part = ncx.toc!.single;
       expect(part.href, 'OEBPS/Text/c.html#p1');

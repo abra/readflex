@@ -108,5 +108,5 @@ lemma line reaching its outline and its side in an Arabic interface,
 baseline-aligned numbers, and long lemmas that shrink instead of breaking.
 Root goldens include definitions, contextual expressions and not-found states
 in five visual profiles. Native reader scenarios verify both copies, the exact
-lookup term and the same WebView after dismissing the sheet. These use fixture
+lookup term and the same reader page after dismissing the sheet. These use fixture
 services and do not contact live providers or measure release-mode FPS.

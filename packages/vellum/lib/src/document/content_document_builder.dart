@@ -8,6 +8,7 @@ class _ContentDocumentBuilder {
   final _firstChildren = <int>[];
   final _lastChildren = <int>[];
   final _nextSiblings = <int>[];
+  final _previousSiblings = <int>[];
   final _childCounts = <int>[];
   final _names = <int>[];
   final _attributeStarts = <int>[];
@@ -41,6 +42,7 @@ class _ContentDocumentBuilder {
     _firstChildren.add(ContentDocument.none);
     _lastChildren.add(ContentDocument.none);
     _nextSiblings.add(ContentDocument.none);
+    _previousSiblings.add(ContentDocument.none);
     _childCounts.add(0);
     _names.add(name);
     _attributeStarts.add(_attributeNames.length);
@@ -51,6 +53,7 @@ class _ContentDocumentBuilder {
         _firstChildren[_open] = index;
       } else {
         _nextSiblings[last] = index;
+        _previousSiblings[index] = last;
       }
       _lastChildren[_open] = index;
       _childCounts[_open]++;
@@ -87,6 +90,7 @@ class _ContentDocumentBuilder {
     firstChildren: Int32List.fromList(_firstChildren),
     lastChildren: Int32List.fromList(_lastChildren),
     nextSiblings: Int32List.fromList(_nextSiblings),
+    previousSiblings: Int32List.fromList(_previousSiblings),
     childCounts: Int32List.fromList(_childCounts),
     names: Int32List.fromList(_names),
     attributeStarts: Int32List.fromList(_attributeStarts),

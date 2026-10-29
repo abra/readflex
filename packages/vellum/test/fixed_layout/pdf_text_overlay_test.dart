@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 /// Two lines of ten-point glyphs on a 200×100 pt page, drawn 1:1 into a
 /// 200×100 layer at the origin: "The quick fox" over "jumps over".

@@ -20,6 +20,23 @@ void main() {
   });
 
   group('DictionaryRepository', () {
+    test(
+      'saved-word lookup recognizes Cyrillic and accented capitals',
+      () async {
+        for (final word in ['Слово', 'ÜBER']) {
+          final entry = await repo.addEntry(
+            word: word,
+            translation: 'meaning',
+            sourceId: 's1',
+            sourceType: SourceType.book,
+          );
+          for (final query in [word, word.toLowerCase(), word.toUpperCase()]) {
+            expect((await repo.findEntry(query, sourceId: 's1'))?.id, entry.id);
+          }
+        }
+      },
+    );
+
     test('addEntry creates and returns entry', () async {
       final e = await repo.addEntry(word: 'hello', translation: 'привет');
       expect(e.word, 'hello');

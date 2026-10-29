@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 void main() {
   // The layer fills a 400×600 box; the image sits in the middle 300×450.

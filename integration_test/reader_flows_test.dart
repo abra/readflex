@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:dictionary_service/dictionary_service.dart';
-import 'package:domain_models/domain_models.dart' show HighlightColor;
+import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,7 +15,8 @@ import 'package:reader/src/reader_highlight_controls.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_result_tile.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_selection_cubit.dart';
+import 'package:vellum/all_formats.dart';
 
 import '../test/support/reading_fixture.dart';
 import '../test/support/native_screenshots.dart';
@@ -29,7 +29,7 @@ void main() {
   late UiTestApp app;
 
   setUp(() async {
-    app = await UiTestApp.create(nativeReader: true);
+    app = await UiTestApp.create();
   });
   tearDown(() async => app.dispose());
   tearDownAll(() {
@@ -59,8 +59,10 @@ void main() {
     }
   }
 
-  BookReaderWebViewState bookState(WidgetTester tester) =>
-      tester.state<BookReaderWebViewState>(find.byType(BookReaderWebView));
+  final pages = find.byType(TextPagesView);
+
+  ReaderBloc readerBloc(WidgetTester tester) =>
+      tester.element(pages).read<ReaderBloc>();
 
   void expectTrailingActionAligned(
     WidgetTester tester,
@@ -84,20 +86,28 @@ void main() {
     expect(tester.getSize(button), const Size(48, 48));
   }
 
-  Future<void> waitForBookDom(
+  /// The first paragraph on the page that contains [text], with the page
+  /// it is drawn on.
+  ({Finder page, TextColumnPage widget, ColumnText item})? paragraphWith(
     WidgetTester tester,
-    String condition, {
-    required String description,
-  }) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 15));
-    while (true) {
-      final ready = await bookState(tester).debugController!.evaluateJavascript(
-        source: condition,
-      );
-      if (ready == true) return;
-      if (DateTime.now().isAfter(deadline)) fail(description);
-      await tester.pump(const Duration(milliseconds: 50));
+    String text,
+  ) {
+    for (final element in find.byType(TextColumnPage).evaluate()) {
+      final widget = element.widget as TextColumnPage;
+      for (final item in widget.column.items.whereType<ColumnText>()) {
+        if (item.rect.top < widget.page.top ||
+            item.rect.bottom > widget.page.bottom ||
+            !item.paragraph.box.text.contains(text)) {
+          continue;
+        }
+        return (
+          page: find.byWidget(widget),
+          widget: widget,
+          item: item,
+        );
+      }
     }
+    return null;
   }
 
   Future<void> openBook(WidgetTester tester, {bool mount = true}) async {
@@ -124,79 +134,61 @@ void main() {
     );
     await waitForUi(
       tester,
-      () {
-        final element = find.byType(BookReaderWebView).evaluate().firstOrNull;
-        return element != null && bookState(tester).debugIsReady;
-      },
-      description: 'native book renderer ready',
+      () =>
+          paragraphWith(tester, ReadingFixture.phrase) != null &&
+          readerBloc(tester).state.chapterTitle != null,
+      description: 'the book page with the fixture text',
       timeout: const Duration(seconds: 45),
-    );
-    await waitForBookDom(
-      tester,
-      '''(window.reader?.view?.renderer?.getContents?.() ?? [])
-          .some(({doc}) => doc.body?.textContent.includes(${jsonEncode(ReadingFixture.phrase)}))''',
-      description: 'Book DOM never became readable',
     );
     await tester.pump(const Duration(milliseconds: 300));
   }
 
-  Future<void> select(
-    WidgetTester tester,
-    String text, {
-    bool article = false,
-  }) async {
-    final controller = article
-        ? tester
-              .state<ArticleHtmlReaderWebViewState>(
-                find.byType(ArticleHtmlReaderWebView),
-              )
-              .debugController!
-        : bookState(tester).debugController!;
-    // DOM selection intentionally tests JS -> Flutter -> action routing.
-    // It does not pretend to drag iOS/Android native selection handles.
-    final selected = await controller.evaluateJavascript(
-      source:
-          '''(() => {
-      const text = ${jsonEncode(text)};
-      const contents = ${article ? '[{doc: document}]' : 'window.reader.view.renderer.getContents()'};
-      const doc = contents.find(({doc}) => doc.body.textContent.includes(text))?.doc;
-      if (!doc) return {error: 'No matching document', documents: contents.length};
-      const root = doc.querySelector('#article-content') ?? doc.body;
-      const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      const nodes = [];
-      let fullText = '';
-      let node;
-      while ((node = walker.nextNode())) {
-        nodes.push({node, start: fullText.length, end: fullText.length + node.length});
-        fullText += node.textContent;
-      }
-      const start = fullText.indexOf(text);
-      const end = start + text.length;
-      const first = nodes.find(entry => start >= entry.start && start < entry.end);
-      const last = nodes.find(entry => end > entry.start && end <= entry.end);
-      if (!first || !last) return {error: 'No matching range', text: fullText.slice(0, 100)};
-      const range = doc.createRange();
-      range.setStart(first.node, start - first.start);
-      range.setEnd(last.node, end - last.start);
-      doc.dispatchEvent(new Event('selectstart'));
-      const selection = doc.getSelection();
-      selection.removeAllRanges();
-      selection.addRange(range);
-      doc.dispatchEvent(new Event('selectionchange'));
-      // Android delivers the long-press action through contextmenu; WebKit
-      // delivers it through selectionchange. Keep both production handlers.
-      if (${Platform.isAndroid && !article}) {
-        doc.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true}));
-      }
-      return selection.toString();
-    })()''',
-    );
-    expect(selected, text);
+  /// Selects [text] the way a reader does: a long press on its first word,
+  /// dragged to its last character, through the platform selection and the
+  /// reader's action menu. On one page; a selection does not turn pages.
+  Future<void> select(WidgetTester tester, String text) async {
+    final selection = tester.element(pages).read<ReaderSelectionCubit>();
+    if (selection.state.hasSelection) {
+      // A tap on the page ends the selection there is; the reader then
+      // presses the next word.
+      await tester.tapAt(tester.getRect(pages).topCenter + const Offset(0, 24));
+      await waitForUi(
+        tester,
+        () =>
+            !selection.state.hasSelection &&
+            find.text('Translate').hitTestable().evaluate().isEmpty,
+        description: 'the previous selection cleared',
+      );
+    }
+    final found = paragraphWith(tester, text);
+    expect(found, isNotNull, reason: '"$text" on the page');
+    final (:page, :widget, :item) = found!;
+    final start = item.paragraph.box.text.indexOf(text);
+    // [along] of the way across the character at [offset].
+    Offset at(int offset, {double along = 0.5}) {
+      final box = item.paragraph.boxesFor(offset, offset + 1).first.toRect();
+      return tester.getTopLeft(page) +
+          item.rect.topLeft -
+          Offset(0, widget.page.top) +
+          Offset(box.left + box.width * along, box.center.dy);
+    }
+
+    final gesture = await tester.startGesture(at(start));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 150));
+    if (text.contains(' ')) {
+      // Into the last character, before its middle: the word it ends, not
+      // the space after it.
+      await gesture.moveTo(at(start + text.length - 1, along: 0.25));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await gesture.up();
+    await tester.pump();
     await waitForUi(
       tester,
       () => find.text('Translate').hitTestable().evaluate().isNotEmpty,
       description: 'selection action menu',
     );
+    expect(selection.state.selectedText, text);
   }
 
   // A toast placed while chrome was hidden keeps the bottom edge, so the
@@ -209,10 +201,7 @@ void main() {
 
   Future<void> showChrome(WidgetTester tester) async {
     if (find.byTooltip('Back').hitTestable().evaluate().isEmpty) {
-      await bookState(tester).debugController!.evaluateJavascript(
-        source:
-            "void window.flutter_inappwebview.callHandler('onClick', {x: 0.5, y: 0.5})",
-      );
+      await tester.tapAt(tester.getCenter(pages));
     }
     await waitForUi(
       tester,
@@ -221,19 +210,29 @@ void main() {
     );
   }
 
+  /// Whether the saved highlight [id] paints on a page on screen.
+  bool highlightDrawn(WidgetTester tester, String id) =>
+      find.byType(TextColumnPage).evaluate().any((element) {
+        final page = element.renderObject;
+        return page is RenderTextColumnPage &&
+            page.highlightRects(id).isNotEmpty;
+      });
+
+  /// The prose size the page draws: the fixture's sentence.
+  double proseSize(WidgetTester tester) {
+    final found = paragraphWith(tester, ReadingFixture.phrase)!;
+    return found.item.paragraph.box.runs.first.style.fontSize;
+  }
+
   testWidgets(
     'search UI navigates, remembers and clears a query',
     (tester) async {
       await openBook(tester);
-      final originalWebView = bookState(tester);
-      final originalBounds = tester.getRect(find.byType(BookReaderWebView));
-      final originalViewportHeight = await originalWebView.debugController!
-          .evaluateJavascript(source: 'window.innerHeight');
-      final readerBloc = tester
-          .element(find.byType(BookReaderWebView))
-          .read<ReaderBloc>();
+      final originalPages = tester.state(pages);
+      final originalBounds = tester.getRect(pages);
+      final bloc = readerBloc(tester);
       await showChrome(tester);
-      final originalProgress = readerBloc.state.document!.readingProgress;
+      final originalProgress = bloc.state.document!.readingProgress;
       await tapUi(tester, find.byTooltip('Search'));
       await tester.enterText(find.byType(TextField).hitTestable(), 'devices');
       await waitForUi(
@@ -277,14 +276,8 @@ void main() {
       await tapUi(tester, find.byTooltip('Previous match'));
       expect(searchCubit.state.activeResultIndex, 0);
       expect(searchCubit.state.returnLocation, origin);
-      expect(identical(bookState(tester), originalWebView), isTrue);
-      expect(tester.getRect(find.byType(BookReaderWebView)), originalBounds);
-      expect(
-        await originalWebView.debugController!.evaluateJavascript(
-          source: 'window.innerHeight',
-        ),
-        originalViewportHeight,
-      );
+      expect(tester.state(pages), same(originalPages));
+      expect(tester.getRect(pages), originalBounds);
       await capture(tester, 'book-search-navigation');
       await tapUi(tester, find.byKey(const ValueKey('reader-search-reopen')));
       expect(
@@ -305,14 +298,13 @@ void main() {
         tester,
         () =>
             !searchCubit.state.isNavigating &&
-            (readerBloc.state.document!.readingProgress - originalProgress)
-                    .abs() <
+            (bloc.state.document!.readingProgress - originalProgress).abs() <
                 0.02,
         description: 'return to the pre-search reading position',
       );
       expect(searchCubit.state.returnLocation, isNull);
-      expect(identical(bookState(tester), originalWebView), isTrue);
-      expect(tester.getRect(find.byType(BookReaderWebView)), originalBounds);
+      expect(tester.state(pages), same(originalPages));
+      expect(tester.getRect(pages), originalBounds);
       await capture(tester, 'book-search-returned');
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Search'));
@@ -361,9 +353,7 @@ void main() {
     'bookmark persists, has icon-only Undo and discards Undo on closing Contents',
     (tester) async {
       await openBook(tester);
-      final bloc = tester
-          .element(find.byType(BookReaderWebView))
-          .read<ReaderBloc>();
+      final bloc = readerBloc(tester);
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Bookmark'));
       await waitForUi(
@@ -375,9 +365,7 @@ void main() {
       final original = bloc.state.bookmarks.single;
       await tapUi(tester, find.byTooltip('Back'));
       await openBook(tester, mount: false);
-      final reopened = tester
-          .element(find.byType(BookReaderWebView))
-          .read<ReaderBloc>();
+      final reopened = readerBloc(tester);
       expect(reopened.state.bookmarks.single.cfi, cfi);
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Contents'));
@@ -426,14 +414,7 @@ void main() {
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Back'));
       await openBook(tester, mount: false);
-      expect(
-        tester
-            .element(find.byType(BookReaderWebView))
-            .read<ReaderBloc>()
-            .state
-            .bookmarks,
-        isEmpty,
-      );
+      expect(readerBloc(tester).state.bookmarks, isEmpty);
       await unmountUi(tester);
     },
     timeout: const Timeout(Duration(minutes: 3)),
@@ -441,20 +422,11 @@ void main() {
   );
 
   testWidgets(
-    'appearance reaches the DOM, persists per book and resets',
+    'appearance reaches the page, persists per book and resets',
     (tester) async {
       await openBook(tester);
-      final originalState = bookState(tester);
-      const paragraphSize = '''(() => {
-      const doc = window.reader.view.renderer.getContents()[0]?.doc;
-      const paragraph = doc?.querySelector('p');
-      return paragraph ? parseFloat(doc.defaultView.getComputedStyle(paragraph).fontSize) : 0;
-    })()''';
-      final before =
-          await originalState.debugController!.evaluateJavascript(
-                source: paragraphSize,
-              )
-              as num;
+      final originalPages = tester.state(pages);
+      final before = proseSize(tester);
       expect(before, greaterThan(0));
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Font'));
@@ -483,18 +455,20 @@ void main() {
       }, description: 'appearance preferences persisted');
       await capture(tester, 'book-appearance');
       await dismissSheet(tester);
-      expect(identical(bookState(tester), originalState), isTrue);
-      await waitForBookDom(
+      expect(tester.state(pages), same(originalPages));
+      await waitForUi(
         tester,
-        '$paragraphSize > $before',
-        description: 'font size did not reach the book DOM',
+        () =>
+            paragraphWith(tester, ReadingFixture.phrase) != null &&
+            proseSize(tester) > before,
+        description: 'font size did not reach the page',
       );
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Back'));
       await openBook(tester, mount: false);
-      await waitForBookDom(
+      await waitForUi(
         tester,
-        '$paragraphSize > $before',
+        () => proseSize(tester) > before,
         description: 'font size not restored after reopening',
       );
       await showChrome(tester);
@@ -508,10 +482,12 @@ void main() {
         description: 'book override reset',
       );
       await dismissSheet(tester);
-      await waitForBookDom(
+      await waitForUi(
         tester,
-        'Math.abs($paragraphSize - $before) < 0.1',
-        description: 'reset did not restore DOM font size',
+        () =>
+            paragraphWith(tester, ReadingFixture.phrase) != null &&
+            (proseSize(tester) - before).abs() < 0.1,
+        description: 'reset did not restore the font size',
       );
       await unmountUi(tester);
     },
@@ -557,181 +533,6 @@ void main() {
     timeout: const Timeout(Duration(minutes: 3)),
     tags: ['native'],
   );
-
-  for (final style in [
-    ReaderPageTurnStyle.horizontal,
-    ReaderPageTurnStyle.vertical,
-  ]) {
-    for (final direction in [-1, 1]) {
-      testWidgets(
-        'book ${style.name} selection continues $direction and translates the full range',
-        (tester) async {
-          await app.preferencesService.setReaderAppearanceOverride(
-            app.book!.id,
-            ReaderAppearanceOverride(pageTurnStyle: style),
-          );
-          await openBook(tester);
-          final controller = bookState(tester).debugController!;
-          final setup = await controller.callAsyncJavaScript(
-            functionBody:
-                '''
-            const view = window.reader.view;
-            await view.renderer.goTo({index: 0, anchor: 0.4});
-            const doc = view.renderer.getContents()[0].doc;
-            const visible = view.lastLocation.range;
-            const frame = doc.defaultView.frameElement.getBoundingClientRect();
-            const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-            let node, chosen;
-            while (node = walker.nextNode()) {
-              if (!node.data.includes('power')) continue;
-              const probe = doc.createRange();
-              const start = node.data.indexOf('power');
-              probe.setStart(node, start); probe.setEnd(node, start + 5);
-              const rect = probe.getBoundingClientRect();
-              if (rect.left + frame.left > 0 && rect.right + frame.left < innerWidth &&
-                  rect.top + frame.top > innerHeight / 3 && rect.bottom + frame.top < innerHeight * 0.8) { chosen = node; break; }
-            }
-            if (!chosen) throw Error('No visible fixture paragraph');
-            const offset = chosen.data.indexOf('power');
-            const selection = doc.getSelection();
-            selection.setBaseAndExtent(chosen, offset, chosen, offset + 5);
-            doc.dispatchEvent(new Event('selectionchange'));
-            const range = selection.getRangeAt(0).cloneRange();
-            if ($direction < 0) range.setStart(visible.startContainer, visible.startOffset);
-            else range.setEnd(visible.endContainer, visible.endOffset);
-            selection.setBaseAndExtent(range.startContainer, range.startOffset, range.endContainer, range.endOffset);
-            doc.dispatchEvent(new Event('selectionchange'));
-            if (selection.isCollapsed) throw Error('Fixture selection must remain on the current page');
-            // Exercise the real JS bridge and Flutter popup, not native handles.
-            window.fixturePageTouch = (type, moved = false) => {
-              const frame = doc.defaultView.frameElement.getBoundingClientRect();
-              const vertical = view.renderer.pageTurnAxisVertical;
-              const x = innerWidth / 2 - (moved && !vertical ? $direction * 120 : 0) - frame.left;
-              const y = innerHeight / 2 - (moved && vertical ? $direction * 120 : 0) - frame.top;
-              const touch = {identifier: 91, target: doc.body, clientX:x, clientY:y, screenX:x, screenY:y};
-              const event = new Event(type, {bubbles:true, cancelable:true});
-              Object.defineProperties(event, {
-                touches: {value: type === 'touchend' ? [] : [touch]},
-                changedTouches: {value: [touch]},
-              });
-              doc.body.dispatchEvent(event);
-            };
-            return view.renderer.page;
-        ''',
-          );
-          expect(setup?.error, isNull);
-          expect(setup?.value, isA<num>());
-          final originalPage = setup!.value as num;
-          expect(originalPage, greaterThan(1));
-          await waitForUi(
-            tester,
-            () => find.text('Translate').evaluate().isNotEmpty,
-            description: 'settled multi-page selection menu',
-          );
-          await tapUi(tester, find.byTooltip('Green'));
-          expect(
-            tester
-                .widget<ReaderHighlightControls>(
-                  find.byType(ReaderHighlightControls),
-                )
-                .selectedColor,
-            HighlightColor.green,
-          );
-          await controller.evaluateJavascript(
-            source: "window.fixturePageTouch('touchstart')",
-          );
-          await waitForUi(
-            tester,
-            () => find.byType(ReaderHighlightControls).evaluate().isEmpty,
-            description: 'selection actions hidden throughout the page gesture',
-          );
-          await controller.evaluateJavascript(
-            source:
-                "window.fixturePageTouch('touchmove', true); window.fixturePageTouch('touchend', true)",
-          );
-          await waitForBookDom(
-            tester,
-            'reader.view.renderer.page === ${originalPage + direction} && !reader.view.renderer.getContents()[0].doc.__readflexSelectionNavigation.isAdjusting',
-            description: 'exactly one selected page turned',
-          );
-          await waitForUi(
-            tester,
-            () => find.text('Translate').evaluate().isNotEmpty,
-            description: 'reanchored selection actions',
-          );
-          expect(
-            tester
-                .widget<ReaderHighlightControls>(
-                  find.byType(ReaderHighlightControls),
-                )
-                .selectedColor,
-            HighlightColor.green,
-          );
-          if (Platform.isAndroid) {
-            final handles =
-                await controller.evaluateJavascript(
-                      source:
-                          '''Array.from(document.querySelector('[data-readflex-selection-handles]')
-                .shadowRoot.querySelectorAll('button')).filter(button => !button.hidden)
-                .map(button => {const r = button.getBoundingClientRect();
-                  return {left:r.left, top:r.top, width:r.width, height:r.height};})''',
-                    )
-                    as List;
-            expect(handles, isNotEmpty);
-            final popup = tester.getRect(
-              find
-                  .ancestor(
-                    of: find.byType(ReaderHighlightControls),
-                    matching: find.byType(Material),
-                  )
-                  .first,
-            );
-            final webView = tester.getRect(find.byType(BookReaderWebView));
-            for (final handle in handles.cast<Map>()) {
-              final rect = Rect.fromLTWH(
-                (handle['left'] as num).toDouble(),
-                (handle['top'] as num).toDouble(),
-                (handle['width'] as num).toDouble(),
-                (handle['height'] as num).toDouble(),
-              ).shift(webView.topLeft);
-              expect(
-                popup.overlaps(rect),
-                isFalse,
-                reason:
-                    'The menu must leave the entire continuation handle reachable',
-              );
-            }
-          }
-          final text =
-              await controller.evaluateJavascript(
-                    source: 'window.getCurrentTextSelection().text',
-                  )
-                  as String;
-          expect(text.length, greaterThan(5));
-          await capture(tester, 'selection-${style.name}-$direction');
-          await tapUi(tester, find.text('Translate'));
-          await waitForUi(
-            tester,
-            () => find
-                .text(FixtureTranslation.translatedText)
-                .evaluate()
-                .isNotEmpty,
-            description: 'continued selection translated',
-          );
-          expect(
-            app.contextualTranslationService.requests.single.selection.text,
-            text.trim(),
-          );
-          expect(find.byType(ReaderHighlightControls), findsNothing);
-          // A fixture reply may arrive before the sheet's entrance finishes.
-          // Close the route before disposing its animation's overlay owner.
-          await tester.pumpAndSettle();
-          await dismissSheet(tester);
-          await unmountUi(tester);
-        },
-      );
-    }
-  }
 
   testWidgets(
     'book selection uses latest range, copies and dismisses action menu',
@@ -816,7 +617,7 @@ void main() {
         ),
       ];
       await openBook(tester);
-      final originalReader = bookState(tester);
+      final originalReader = tester.state(pages);
       await select(tester, 'shutting');
       await tapUi(tester, find.text('Define'));
       await waitForUi(
@@ -842,7 +643,7 @@ void main() {
       expect(app.dictionaryLookupService.requests, hasLength(1));
       expect(app.dictionaryLookupService.requests.single.term, 'shutting');
       await dismissSheet(tester);
-      expect(identical(bookState(tester), originalReader), isTrue);
+      expect(tester.state(pages), same(originalReader));
       await select(tester, 'power');
       expect(find.byType(ReaderHighlightControls), findsOneWidget);
       await unmountUi(tester);
@@ -856,7 +657,7 @@ void main() {
     (tester) async {
       app.contextualTranslationService.includeLexicalDetails = true;
       await openBook(tester);
-      final originalReader = bookState(tester);
+      final originalReader = tester.state(pages);
       await select(tester, ReadingFixture.phrase);
       expect(find.byIcon(AppIcons.translate), findsOneWidget);
       await tapUi(tester, find.text('Translate'));
@@ -901,7 +702,7 @@ void main() {
       expect(find.byType(ReaderHighlightControls), findsNothing);
       await capture(tester, 'book-translation-language-changed');
       await dismissSheet(tester);
-      expect(identical(bookState(tester), originalReader), isTrue);
+      expect(tester.state(pages), same(originalReader));
       await select(tester, 'power');
       expect(find.byType(ReaderHighlightControls), findsOneWidget);
       await unmountUi(tester);
@@ -920,11 +721,11 @@ void main() {
       final palette = find.byType(ReaderHighlightControls);
       expect(palette, findsOneWidget);
       await tapUi(tester, find.byTooltip('Highlight'));
-      await waitForUi(tester, () {
-        final element = find.byType(BookReaderWebView).evaluate().firstOrNull;
-        return element != null &&
-            element.read<ReaderBloc>().state.highlights.isNotEmpty;
-      }, description: 'saved highlight');
+      await waitForUi(
+        tester,
+        () => readerBloc(tester).state.highlights.isNotEmpty,
+        description: 'saved highlight',
+      );
       final saved = await app.highlightRepository.getHighlightsBySource(
         app.book!.id,
       );
@@ -937,32 +738,18 @@ void main() {
         description: 'highlight menu dismissed',
       );
       await waitForSaveToastGone(tester);
-      await bookState(tester).debugController!.evaluateJavascript(
-        source:
-            "void window.flutter_inappwebview.callHandler('onClick', {x: 0.5, y: 0.5})",
-      );
+      await showChrome(tester);
       await tapUi(tester, find.byTooltip('Back'));
       await openBook(tester, mount: false);
-      final highlights = tester
-          .widget<BookReaderWebView>(find.byType(BookReaderWebView))
-          .highlights;
+      final highlights = readerBloc(tester).state.highlights;
       expect(highlights, hasLength(1));
       expect(highlights.single.cfiRange, cfi);
-      await waitForBookDom(
+      await waitForUi(
         tester,
-        '''window.reader.view.renderer.getContents().some(({overlayer}) =>
-          [...(overlayer?.element.querySelectorAll('rect') ?? [])].some(rect => {
-            const bounds = rect.getBoundingClientRect();
-            return bounds.width > 0 && bounds.height > 0;
-          }))''',
+        () => highlightDrawn(tester, highlights.single.id),
         description: 'Saved highlight never rendered after reopening the book',
       );
       await capture(tester, 'book-highlight-reopened');
-      final rendered = await bookState(tester).debugController!.evaluateJavascript(
-        source:
-            'window.reader.view.renderer.getContents()[0].doc.body.innerText.length',
-      );
-      expect(rendered, greaterThan(100));
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Contents'));
       await tapUi(tester, find.text('Highlights'));
@@ -996,20 +783,12 @@ void main() {
         await select(tester, text);
         await tapUi(tester, find.byTooltip('Highlight'));
         await waitForUi(tester, () {
-          final highlights = tester
-              .element(find.byType(BookReaderWebView))
-              .read<ReaderBloc>()
-              .state
-              .highlights;
+          final highlights = readerBloc(tester).state.highlights;
           return highlights.length == count &&
               highlights.any((highlight) => highlight.text == text) &&
+              highlights.every((h) => highlightDrawn(tester, h.id)) &&
               find.byType(ReaderHighlightControls).evaluate().isEmpty;
-        }, description: 'highlight saved and menu dismissed');
-        await waitForBookDom(
-          tester,
-          'window.reader.annotationsById.size === $count',
-          description: 'Saved annotations not synchronized with WebView',
-        );
+        }, description: 'highlight saved, drawn and menu dismissed');
       }
 
       await saveSelection('power', 1);
@@ -1067,19 +846,11 @@ void main() {
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Back'));
       await openBook(tester, mount: false);
-      final reopened = tester
-          .widget<BookReaderWebView>(find.byType(BookReaderWebView))
-          .highlights
-          .single;
+      final reopened = readerBloc(tester).state.highlights.single;
       expect(reopened.cfiRange, merged.cfiRange);
-      await waitForBookDom(
+      await waitForUi(
         tester,
-        '''window.reader.annotationsById.size === 1 &&
-          window.reader.view.renderer.getContents().some(({overlayer}) =>
-            [...(overlayer?.element.querySelectorAll('rect') ?? [])].some(rect => {
-              const bounds = rect.getBoundingClientRect();
-              return bounds.width > 0 && bounds.height > 0;
-            }))''',
+        () => highlightDrawn(tester, reopened.id),
         description: 'Merged highlight did not render after reopening',
       );
       await capture(tester, 'book-merged-highlight-reopened');
@@ -1095,14 +866,19 @@ void main() {
       tester,
     ) async {
       await openBook(tester);
-      final state = bookState(tester);
-      final bloc = tester
-          .element(find.byType(BookReaderWebView))
-          .read<ReaderBloc>();
+      final state = tester.state(pages);
+      final bloc = readerBloc(tester);
       final initialPosition = bloc.state.document?.currentCfi;
-      final results = await state.searchBook('devices');
-      expect(results, isNotEmpty);
-      state.goToSearchResult(results.last.cfi);
+      await showChrome(tester);
+      await tapUi(tester, find.byTooltip('Search'));
+      await tester.enterText(find.byType(TextField).hitTestable(), 'devices');
+      final results = find.byType(ReaderSearchResultTile).hitTestable();
+      await waitForUi(
+        tester,
+        () => results.evaluate().isNotEmpty,
+        description: 'search results',
+      );
+      await tapUi(tester, results.last);
       await waitForUi(
         tester,
         () {
@@ -1123,208 +899,14 @@ void main() {
       binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pump(const Duration(milliseconds: 500));
       expect(
-        identical(bookState(tester), state),
-        isTrue,
-        reason: 'Ordinary resume must not recreate the book WebView',
+        tester.state(pages),
+        same(state),
+        reason: 'Ordinary resume must not recreate the book pages',
       );
       expect(bloc.state.document?.currentCfi, before);
-      expect(
-        await state.debugController!.evaluateJavascript(
-          source:
-              'window.reader.view.renderer.getContents()[0].doc.body.innerText.length',
-        ),
-        greaterThan(100),
-      );
+      expect(find.byType(TextColumnPage), findsWidgets);
       expect(tester.takeException(), isNull);
       await capture(tester, 'book-resumed');
-      await unmountUi(tester);
-    },
-    timeout: const Timeout(Duration(minutes: 3)),
-    tags: ['native'],
-  );
-
-  testWidgets(
-    'article searches, returns to reading and translates the complete selection',
-    (tester) async {
-      await app.articleRepository.addExtractedArticle(ReadingFixture.article);
-      await tester.pumpWidget(app.widget);
-      await tapUi(tester, find.text(ReadingFixture.articleTitle));
-      await waitForUi(
-        tester,
-        () {
-          final webView = find.byType(ArticleHtmlReaderWebView);
-          return webView.evaluate().isNotEmpty &&
-              tester.state<ArticleHtmlReaderWebViewState>(webView).debugIsReady;
-        },
-        description: 'native article renderer ready',
-        timeout: const Duration(seconds: 45),
-      );
-      await tester.pump(const Duration(milliseconds: 300));
-      final webView = find.byType(ArticleHtmlReaderWebView);
-      final originalWebView = tester.state<ArticleHtmlReaderWebViewState>(
-        webView,
-      );
-      final controller = originalWebView.debugController!;
-      final originalBounds = tester.getRect(webView);
-      final originalViewportHeight = await controller.evaluateJavascript(
-        source: 'window.innerHeight',
-      );
-      final bloc = tester.element(webView).read<ReaderBloc>();
-      for (final startProgress in [0.35, 0.0]) {
-        originalWebView.goToFraction(startProgress);
-        await waitForUi(
-          tester,
-          () =>
-              (bloc.state.document!.readingProgress - startProgress).abs() <
-              0.001,
-          description: 'article positioned at $startProgress',
-        );
-        final originalProgress = bloc.state.document!.readingProgress;
-        await controller.evaluateJavascript(
-          source:
-              "void window.flutter_inappwebview.callHandler('onClick', {x: 0.5, y: 0.5})",
-        );
-        await tapUi(tester, find.byTooltip('Search'));
-        await tester.enterText(
-          find.byType(TextField).hitTestable(),
-          'Section 22',
-        );
-        final search = tester
-            .element(find.byType(TextField).hitTestable())
-            .read<ReaderSearchCubit>();
-        await waitForUi(
-          tester,
-          () => !search.state.isLoading && search.state.results.isNotEmpty,
-          description: 'article search results',
-        );
-        await tapUi(
-          tester,
-          find.byType(ReaderSearchResultTile).hitTestable().first,
-        );
-        await waitForUi(
-          tester,
-          () => bloc.state.document!.readingProgress > 0.5,
-          description: 'article result near the end of the document',
-        );
-        await capture(
-          tester,
-          'article-search-navigation-${(startProgress * 100).round()}',
-        );
-        expect(tester.getRect(webView), originalBounds);
-        expect(
-          await controller.evaluateJavascript(source: 'window.innerHeight'),
-          originalViewportHeight,
-        );
-        // Put the exact active match behind the overlay using native WebView
-        // scrolling, not a mock marker or a second copy of the article layout.
-        const activeMatch =
-            "[...CSS.highlights.get('readflex-search-active')][0]";
-        final scrolled = await controller.evaluateJavascript(
-          source:
-              '''(() => {
-          const rect = $activeMatch.getBoundingClientRect();
-          window.scrollBy(0, rect.top - (window.innerHeight - 40));
-          return true;
-        })()''',
-        );
-        expect(scrolled, isTrue);
-        await tester.pump(const Duration(milliseconds: 300));
-        final edge = await controller.evaluateJavascript(
-          source:
-              '''(() => {
-          const marker = document.querySelector('[data-readflex-search-occlusion] > rect');
-          if (!marker) return null;
-          const bar = marker.getBoundingClientRect();
-          const word = $activeMatch.getBoundingClientRect();
-          return {left: bar.left, width: bar.width, wordLeft: word.left, wordWidth: word.width};
-        })()''',
-        );
-        expect(edge, isA<Map>());
-        await capture(
-          tester,
-          'article-search-covered-${(startProgress * 100).round()}',
-        );
-        expect(
-          (edge as Map)['left'],
-          closeTo(edge['wordLeft'] as num, 1),
-          reason: jsonEncode(edge),
-        );
-        expect(
-          edge['width'],
-          closeTo(edge['wordWidth'] as num, 1),
-          reason: jsonEncode(edge),
-        );
-        expect(
-          search.state.returnLocation!.fraction,
-          closeTo(originalProgress, 0.001),
-          reason: 'Capture the article position before opening the keyboard',
-        );
-        await tapUi(tester, find.byKey(const ValueKey('reader-search-return')));
-        try {
-          await waitForUi(
-            tester,
-            () =>
-                !search.state.isNavigating &&
-                (bloc.state.document!.readingProgress - originalProgress)
-                        .abs() <
-                    0.001,
-            description: 'article returns to the original position',
-          );
-        } on TestFailure {
-          fail(
-            'Article return: expected $originalProgress, '
-            'actual ${bloc.state.document!.readingProgress}, '
-            'navigating ${search.state.isNavigating}',
-          );
-        }
-        expect(
-          identical(
-            tester.state<ArticleHtmlReaderWebViewState>(webView),
-            originalWebView,
-          ),
-          isTrue,
-        );
-        expect(tester.getRect(webView), originalBounds);
-      }
-      await select(tester, 'power', article: true);
-      Future<void> expectNativeSelectionOnly(String text) async {
-        final state = await controller.evaluateJavascript(
-          source: '''(() => ({
-            text: window.getSelection().toString(),
-            cssPreview: Boolean(window.CSS?.highlights?.has('readflex-article-selection-preview')),
-            svgRects: document.querySelectorAll('[data-rf-highlight-overlay] rect').length
-          }))()''',
-        );
-        expect(state, {'text': text, 'cssPreview': false, 'svgRects': 0});
-      }
-
-      await expectNativeSelectionOnly('power');
-      await tapUi(tester, find.byTooltip('Green'));
-      expect(
-        tester
-            .widget<ReaderHighlightControls>(
-              find.byType(ReaderHighlightControls),
-            )
-            .selectedColor,
-        HighlightColor.green,
-      );
-      await expectNativeSelectionOnly('power');
-      await select(tester, ReadingFixture.sentence, article: true);
-      await expectNativeSelectionOnly(ReadingFixture.sentence);
-      await capture(tester, 'article-selection');
-      await tapUi(tester, find.text('Translate'));
-      await waitForUi(
-        tester,
-        () =>
-            find.text(FixtureTranslation.translatedText).evaluate().isNotEmpty,
-        description: 'complete article selection translated',
-      );
-      expect(
-        app.contextualTranslationService.requests.single.selection.text,
-        ReadingFixture.sentence,
-      );
-      expect(find.byType(ReaderHighlightControls), findsNothing);
-      await capture(tester, 'article-translation');
       await unmountUi(tester);
     },
     timeout: const Timeout(Duration(minutes: 3)),

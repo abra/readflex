@@ -129,7 +129,6 @@ void main() {
     bool openImportOnStart = false,
     LibraryImportLauncher? onAddPressed,
     ValueChanged<LibrarySource>? onSourcePressed,
-    VoidCallback? onDeveloperPressed,
   }) => PreferencesScope(
     service: preferencesService,
     child: Builder(
@@ -153,23 +152,10 @@ void main() {
           onAddPressed:
               onAddPressed ??
               ({required onImported, entry = LibraryImportEntry.menu}) async {},
-          onDeveloperPressed: onDeveloperPressed,
         ),
       ),
     ),
   );
-
-  testWidgets('a long press on the title opens developer tools', (
-    tester,
-  ) async {
-    var opened = 0;
-    await tester.pumpWidget(buildSubject(onDeveloperPressed: () => opened++));
-    await tester.pumpAndSettle();
-    await tester.longPress(_headerText('Library'));
-    await tester.pumpAndSettle();
-    expect(opened, 1);
-    expect(find.text('Selected: 1'), findsNothing);
-  });
 
   testWidgets('selection count and explicit cancel do not reload storage', (
     tester,

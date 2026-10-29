@@ -20,10 +20,10 @@ const _androidTabletScale = 1.04;
 
 /// Renderer-only multiplier for the reader's base font size.
 ///
-/// User-facing reader size stays at 100%; this multiplier is applied only when
-/// building FoliateStyle. It combines two independent corrections:
-/// - Android WebViews render text smaller than iOS at the same reader
-///   preference, so Android phones get up to 12% more and Android tablets 4%.
+/// User-facing reader size stays at 100%; this multiplier is applied only to
+/// the book style. It combines two independent corrections:
+/// - Android phones get up to 12% more and Android tablets 4%: the sizes the
+///   WebView reader gave them, whose Chromium drew text smaller than iOS.
 /// - Tablet-sized windows get 12.5% more on every platform.
 ///
 /// [viewportSize] is the window size, so a narrow Split View or Slide Over

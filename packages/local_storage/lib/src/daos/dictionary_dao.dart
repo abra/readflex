@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../database.dart';
+import '../dictionary_word_key.dart';
 import '../tables/dictionary_anchors_table.dart';
 import '../tables/dictionary_table.dart';
 
@@ -40,7 +41,7 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
   Future<DictionaryTableData?> entryByWord(String word, {String? sourceId}) =>
       (select(dictionaryTable)
             ..where((t) {
-              final sameWord = t.word.lower().equals(word.toLowerCase());
+              final sameWord = t.wordKey.equals(dictionaryWordKey(word));
               if (sourceId == null) return sameWord;
               return sameWord & t.sourceId.equals(sourceId);
             })
@@ -59,7 +60,9 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
       (select(dictionaryTable)..where((t) => t.id.isIn(ids))).get();
 
   Future<void> insertEntry(DictionaryTableCompanion entry) =>
-      into(dictionaryTable).insert(entry);
+      into(dictionaryTable).insert(
+        entry.copyWith(wordKey: Value(dictionaryWordKey(entry.word.value))),
+      );
 
   Future<List<DictionaryAnchorsTableData>> anchorsBySource(String sourceId) =>
       (select(dictionaryAnchorsTable)
@@ -76,9 +79,16 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
   Future<void> insertAnchor(DictionaryAnchorsTableCompanion anchor) =>
       into(dictionaryAnchorsTable).insert(anchor);
 
-  Future<void> updateEntry(DictionaryTableCompanion entry) => (update(
-    dictionaryTable,
-  )..where((t) => t.id.equals(entry.id.value))).write(entry);
+  Future<void> updateEntry(DictionaryTableCompanion entry) =>
+      (update(
+        dictionaryTable,
+      )..where((t) => t.id.equals(entry.id.value))).write(
+        entry.word.present
+            ? entry.copyWith(
+                wordKey: Value(dictionaryWordKey(entry.word.value)),
+              )
+            : entry,
+      );
 
   Future<void> deleteEntry(String id) async {
     await deleteAnchorsByEntry(id);

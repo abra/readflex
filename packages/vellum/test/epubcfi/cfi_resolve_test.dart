@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 /// Parity with `epubcfi.js` in Chromium: `test/fixtures/cfi/expected.json`
-/// records what the browser produced for the fixture documents (see
-/// `packages/reader_webview/test_browser/cfi_fixtures.mjs`); the same
+/// records what the browser produced for the fixture documents (recorded
+/// by `cfi_fixtures.mjs` before the WebView reader went, R6); the same
 /// positions must give the same strings here, and the strings must
 /// resolve to the same nodes.
 void main() {

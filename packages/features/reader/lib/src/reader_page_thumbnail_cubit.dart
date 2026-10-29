@@ -5,9 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Answers a page's preview image, or null when none can be made.
 ///
-/// The WebView reader answers with a `MemoryImage` of a small encoded
-/// preview; the native engine answers with its own provider decoded at
-/// preview width. Either way the framework's image cache holds the pixels.
+/// The engine answers with its own provider decoded at preview width; the
+/// framework's image cache holds the pixels.
 typedef PageThumbnailLoader = Future<ImageProvider?> Function(int page);
 
 /// Drawer-local cache. Only mounted tiles request work; closing it releases both

@@ -1,8 +1,8 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:reader/src/reader_search_event.dart';
 import 'package:reader/src/reader_search_result_tile.dart';
-import 'package:reader_webview/reader_webview.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 void main() {

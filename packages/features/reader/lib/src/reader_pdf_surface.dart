@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/painting.dart';
-import 'package:reader_webview/reader_webview.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/pdf.dart';
 
-import 'reader_comic_surface.dart' show parseCssHexColor;
+import 'reader_search_event.dart';
+import 'reader_selection.dart';
 import 'reader_surface.dart';
 
 /// What the PDF body hands the surface while a PDF is open.
@@ -34,7 +34,7 @@ class ReaderPdfSession {
 ///
 /// Navigation reaches the session's `FixedPagesController`; search runs
 /// through `searchPdfBook` over the session's text layers and reports
-/// hits as vellum CFIs with the WebView's excerpt shape; selection
+/// hits as vellum CFIs with excerpts around the match; selection
 /// commands drive the `PdfTextSelection`. Image-area commands are
 /// no-ops: PDF pages carry text highlights. Without a session commands
 /// are dropped and queries answer null.
@@ -203,8 +203,7 @@ class ReaderPdfSurface implements ReaderSurface {
     _clearSelection();
   }
 
-  /// The selection as the WebView reported one, from the page's text layer
-  /// when it is loaded.
+  /// The selection, from the page's text layer when it is loaded.
   @override
   Future<ReaderSelection?> currentTextSelection() {
     final session = _session;
@@ -221,19 +220,14 @@ class ReaderPdfSurface implements ReaderSurface {
   @override
   void showSelectionHighlightPreview({
     required String cfiRange,
-    required String color,
-    double? opacity,
-    String? mixBlendMode,
-    double? verticalOffset,
+    required Color color,
+    required double opacity,
   }) {
     final selection = _session?.selection;
     if (selection == null) return;
     final anchor = pdfTextAnchorFromCfi(cfiRange);
     if (anchor != null && anchor.pageIndex != selection.page) return;
-    final parsed = parseCssHexColor(color);
-    if (parsed != null) {
-      selection.setColor(parsed.withValues(alpha: opacity ?? parsed.a));
-    }
+    selection.setColor(color.withValues(alpha: opacity));
   }
 
   @override
@@ -247,21 +241,15 @@ class ReaderPdfSurface implements ReaderSurface {
   void showImageAreaSelectionPreview({
     required int pageIndex,
     required ReaderImageAreaRect rect,
-    required String color,
-    double? opacity,
+    required Color color,
+    required double opacity,
   }) {}
 
   @override
-  void clearImageAreaSelectionPreview({bool allowNextTap = false}) {}
+  void clearImageAreaSelectionPreview() {}
 
   @override
   void setImageAreaSelectionPreviewRetained(bool retained) {}
-
-  @override
-  void setImageAreaSelectionControlsBounds(ReaderSelectionPosition bounds) {}
-
-  @override
-  void clearImageAreaSelectionControlsBounds() {}
 
   @override
   Future<ImageProvider?> pageThumbnail(int index) {
@@ -283,8 +271,8 @@ class ReaderPdfSurface implements ReaderSurface {
 }
 
 /// The selection payload the reader's text actions take, built from a
-/// page's text layer the way the WebView's selection bridge built it:
-/// the exact text, the sentence around it, and vellum's range CFI.
+/// page's text layer: the exact text, the sentence around it, and vellum's
+/// range CFI.
 ReaderSelection readerSelectionFromLayer(
   PdfTextLayer layer,
   PdfTextRange range, {

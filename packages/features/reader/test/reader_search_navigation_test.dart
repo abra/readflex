@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_search_cubit.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_search_event.dart';
 
 void main() {
   const origin = ReaderSearchLocation(cfi: 'origin', fraction: 0.12);

@@ -8,7 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:monitoring/monitoring.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart' show ImageDimensions, probeImageDimensions;
+import 'package:vellum/all_formats.dart'
+    show ImageDimensions, probeImageDimensions;
 
 const pdfFixtures = '../../vellum/test/fixtures/pdf';
 

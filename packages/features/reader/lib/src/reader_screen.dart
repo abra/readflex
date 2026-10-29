@@ -9,69 +9,75 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
-import 'package:reader_webview/reader_webview.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';
 import 'package:toast_service/toast_service.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';
 import 'reader_appearance_sheet.dart';
+import 'reader_article_surface.dart';
 import 'reader_back_guard.dart';
-import 'reader_bookmark_filter.dart';
-import 'reader_page_grid.dart';
-import 'reader_page_thumbnail_cubit.dart';
 import 'reader_bloc.dart';
+import 'reader_bookmark_filter.dart';
 import 'reader_brightness_cubit.dart';
 import 'reader_chrome_actions.dart';
 import 'reader_chrome_colors.dart';
 import 'reader_chrome_labels.dart';
 import 'reader_chrome_progress_layout.dart';
+import 'reader_comic_surface.dart';
 import 'reader_contents_tabs.dart';
-import 'reader_image_page_progress_overlay.dart';
-import 'reader_color_utils.dart';
 import 'reader_device_font_scale.dart';
+import 'reader_directional_layout.dart';
+import 'reader_document_features.dart';
 import 'reader_drawer_layout.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_drawer_title_fit.dart';
 import 'reader_external_link_prompt.dart';
-import 'reader_directional_layout.dart';
-import 'reader_highlight_focus_cubit.dart';
-import 'reader_highlight_effect_listener.dart';
+import 'reader_font_ink.dart';
 import 'reader_highlight_color.dart';
 import 'reader_highlight_controls.dart';
+import 'reader_highlight_effect_listener.dart';
 import 'reader_highlight_filter.dart';
+import 'reader_highlight_focus_cubit.dart';
 import 'reader_highlight_list_tile.dart';
 import 'reader_highlight_merge.dart';
 import 'reader_highlight_note_sheet.dart';
 import 'reader_image_highlight_cubit.dart';
 import 'reader_image_highlight_preview.dart';
+import 'reader_image_page_progress_overlay.dart';
 import 'reader_image_selection_cubit.dart';
 import 'reader_keep_awake_cubit.dart';
-import 'reader_progress_label.dart';
-import 'reader_route_mount_gate.dart';
-import 'reader_comic_surface.dart';
+import 'reader_page_grid.dart';
+import 'reader_page_thumbnail_cubit.dart';
 import 'reader_pdf_surface.dart';
+import 'reader_position.dart';
+import 'reader_progress_label.dart';
 import 'reader_search_cubit.dart';
-import 'reader_surface.dart';
-import 'reader_webview_surface.dart';
+import 'reader_search_event.dart';
 import 'reader_search_navigation_bar.dart';
+import 'reader_search_occlusion.dart';
 import 'reader_search_panel.dart';
+import 'reader_selection.dart';
 import 'reader_selection_cubit.dart';
 import 'reader_selection_tip.dart';
 import 'reader_selection_tip_cubit.dart';
+import 'reader_surface.dart';
 import 'reader_swipe_to_delete.dart';
 import 'reader_system_ui_overlay.dart';
 import 'reader_tap_action.dart';
 import 'reader_tap_zone_hint.dart';
 import 'reader_text_columns.dart';
 import 'reader_text_line_height.dart';
+import 'reader_text_surface.dart';
 import 'reader_toc_active_index.dart';
+import 'reader_toc_item.dart';
 import 'reader_toc_progress.dart';
 import 'reader_ui_cubit.dart';
 
@@ -79,11 +85,13 @@ part 'reader_screen_lifecycle.dart';
 part 'reader_screen_content.dart';
 part 'reader_screen_comic_body.dart';
 part 'reader_screen_pdf_body.dart';
+part 'reader_screen_text_body.dart';
+part 'reader_screen_article_body.dart';
 part 'reader_screen_chrome.dart';
 part 'reader_screen_drawers.dart';
 part 'reader_screen_context_panel.dart';
 
-// Text actions are shown only after the WebView reports an actual text
+// Text actions are shown only after the page reports an actual text
 // selection. Image-page formats are filtered in the selection callback so they
 // cannot trap the reader chrome with a stale action panel.
 bool _selectionActionsVisible(bool hasSelection) => hasSelection;
@@ -92,7 +100,6 @@ bool _selectionActionsVisible(bool hasSelection) => hasSelection;
 /// `context.motion(AppMotion.short)` so reduced motion settles in one frame.
 const _kChromeAnimCurve = Curves.easeOutCubic;
 const _kChromeHideAnimCurve = Curves.easeInCubic;
-const _kReaderWebViewRouteMountDelay = Duration.zero;
 const _kReaderLoadingIconSize = 28.0;
 const _kReaderPageBookmarkIndicatorLift = 28.0;
 const _kReaderPageBookmarkIndicatorSize = AppIconSize.md;
@@ -176,7 +183,6 @@ Axis _nativePageAxis(ReaderPageTurnStyle style) =>
 class ReaderScreen extends StatelessWidget {
   const ReaderScreen({
     required this.sourceId,
-    required this.serverBaseUri,
     required this.bookRepository,
     required this.highlightRepository,
     required this.preferencesService,
@@ -191,12 +197,10 @@ class ReaderScreen extends StatelessWidget {
     this.onArticleTitlePressed,
     this.onOpenExternalLink,
     this.initialCfi,
-    this.nativeFormats = const {},
     super.key,
   });
 
   final String sourceId;
-  final Uri serverBaseUri;
   final BookRepository bookRepository;
   final ArticleRepository? articleRepository;
   final HighlightRepository highlightRepository;
@@ -221,10 +225,6 @@ class ReaderScreen extends StatelessWidget {
   /// Where to open instead of the saved position: a highlight or a saved
   /// word's anchor. Applied once the document is ready.
   final String? initialCfi;
-
-  /// Formats drawn by the native engine (`package:vellum`) instead of the
-  /// WebView. Empty keeps every format on the WebView.
-  final Set<BookFormat> nativeFormats;
 
   @override
   Widget build(BuildContext context) {
@@ -288,10 +288,8 @@ class ReaderScreen extends StatelessWidget {
             child: ReaderHighlightEffectListener(
               child: ReaderKeepAwakeDriver(
                 child: _ReaderView(
-                  serverBaseUri: serverBaseUri,
                   textActions: textActions,
                   initialCfi: initialCfi,
-                  nativeFormats: nativeFormats,
                   onRetry: () => context.read<ReaderBloc>().add(
                     ReaderSourceLoadRequested(sourceId: sourceId),
                   ),

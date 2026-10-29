@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 import 'mobi_fixture_books.dart';
 
@@ -94,6 +94,72 @@ void main() {
       expect((await book.loadRecindex(1)).sublist(0, 2), [0xFF, 0xD8]);
     });
 
+    test('an old MOBI 3 header ends before the trailing flags', () async {
+      // The bytes where the flags would be are the title's ("Chro"):
+      // read as flags they would cut every record to pieces.
+      final builder = MobiBuilder(
+        title: 'The Chronicles of Narnia',
+        version: 3,
+        compress: true,
+        mobiHeaderLength: 0xD0,
+      );
+      const text =
+          '<html><body><p>Once upon a time</p>'
+          '<mbp:pagebreak/><p>Narnia</p></body></html>';
+      builder.addText(utf8.encode(text));
+      final path = await write('narnia.mobi', builder.build());
+      final book = (await MobiBook.open(path) as MobiLegacy).book;
+      addTearDown(book.close);
+      final headers = book.container.headers;
+      expect(headers.mobi.length, 0xD0);
+      expect(headers.mobi.trailingFlags, 0);
+      expect(headers.mobi.indx, 0xFFFFFFFF);
+      expect(book.metadata.title, 'The Chronicles of Narnia');
+      expect(book.sections, hasLength(2));
+      expect(book.loadText(0), contains('Once upon a time'));
+      expect(book.loadText(1), contains('Narnia'));
+    });
+
+    test('a filepos inside a tag anchors before the tag', () async {
+      // The link points into `<p class="x">`: inserted there, the anchor
+      // would break the tag and its text would show `class="x">`.
+      const before = '<html><body><p><a filepos=0000000000>go</a></p>';
+      const target = '<p class="x">Target</p></body></html>';
+      final pos = before.length + 5;
+      final text =
+          before.replaceFirst(
+            '0000000000',
+            pos.toString().padLeft(10, '0'),
+          ) +
+          target;
+      final builder = MobiBuilder()..addText(utf8.encode(text));
+      final path = await write('inside.mobi', builder.build());
+      final book = (await MobiBook.open(path) as MobiLegacy).book;
+      addTearDown(book.close);
+      final section = book.loadText(0);
+      expect(
+        section,
+        contains(
+          '<a id="filepos${pos.toString().padLeft(10, '0')}"></a>'
+          '<p class="x">Target</p>',
+        ),
+      );
+      expect(book.anchorsMovedOutOfTags(0), 1);
+      final doc = book.createDocument(0);
+      expect(doc.body!.text, isNot(contains('class=')));
+    });
+
+    test('a filepos that is not a number opens no section', () async {
+      final path = await write('six.mobi', bytes);
+      final book = (await MobiBook.open(path) as MobiLegacy).book;
+      addTearDown(book.close);
+      // A guide reference without `filepos` reads `filepos:null`.
+      expect(book.resolveHref('filepos:null').index, -1);
+      expect(book.resolveHref('filepos:').index, 0, reason: 'Number("") is 0');
+      expect(book.resolveHref('filepos:${filepos(onePos)}').index, 2);
+      expect(book.resolveHref('filepos:999999999').index, -1);
+    });
+
     test('the guide and the nested table of contents', () async {
       final path = await write('six.mobi', bytes);
       final book = (await MobiBook.open(path) as MobiLegacy).book;
@@ -176,8 +242,8 @@ void main() {
         book.sections[0].size,
         skeleton1.length + fragment1.length + fragment2.length,
       );
-      expect(book.sections[0].pageSpread, EpubPageSpread.left);
-      expect(book.sections[1].pageSpread, EpubPageSpread.center);
+      expect(book.sections[0].pageSpread, SpreadSide.left);
+      expect(book.sections[1].pageSpread, SpreadSide.center);
       expect(book.sections[2].isLinear, isFalse);
       expect(book.sections[2].size, 0);
       expect(book.metadata.title, 'Built KF8');

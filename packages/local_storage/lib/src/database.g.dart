@@ -3725,6 +3725,18 @@ class $DictionaryTableTable extends DictionaryTable
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _wordKeyMeta = const VerificationMeta(
+    'wordKey',
+  );
+  @override
+  late final GeneratedColumn<String> wordKey = GeneratedColumn<String>(
+    'word_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -3740,6 +3752,7 @@ class $DictionaryTableTable extends DictionaryTable
     lemma,
     baseTranslation,
     contextTranslation,
+    wordKey,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -3854,6 +3867,12 @@ class $DictionaryTableTable extends DictionaryTable
         ),
       );
     }
+    if (data.containsKey('word_key')) {
+      context.handle(
+        _wordKeyMeta,
+        wordKey.isAcceptableOrUnknown(data['word_key']!, _wordKeyMeta),
+      );
+    }
     return context;
   }
 
@@ -3915,6 +3934,10 @@ class $DictionaryTableTable extends DictionaryTable
         DriftSqlType.string,
         data['${effectivePrefix}context_translation'],
       ),
+      wordKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}word_key'],
+      )!,
     );
   }
 
@@ -3939,6 +3962,7 @@ class DictionaryTableData extends DataClass
   final String? lemma;
   final String? baseTranslation;
   final String? contextTranslation;
+  final String wordKey;
   const DictionaryTableData({
     required this.id,
     required this.word,
@@ -3953,6 +3977,7 @@ class DictionaryTableData extends DataClass
     this.lemma,
     this.baseTranslation,
     this.contextTranslation,
+    required this.wordKey,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3988,6 +4013,7 @@ class DictionaryTableData extends DataClass
     if (!nullToAbsent || contextTranslation != null) {
       map['context_translation'] = Variable<String>(contextTranslation);
     }
+    map['word_key'] = Variable<String>(wordKey);
     return map;
   }
 
@@ -4024,6 +4050,7 @@ class DictionaryTableData extends DataClass
       contextTranslation: contextTranslation == null && nullToAbsent
           ? const Value.absent()
           : Value(contextTranslation),
+      wordKey: Value(wordKey),
     );
   }
 
@@ -4048,6 +4075,7 @@ class DictionaryTableData extends DataClass
       contextTranslation: serializer.fromJson<String?>(
         json['contextTranslation'],
       ),
+      wordKey: serializer.fromJson<String>(json['wordKey']),
     );
   }
   @override
@@ -4067,6 +4095,7 @@ class DictionaryTableData extends DataClass
       'lemma': serializer.toJson<String?>(lemma),
       'baseTranslation': serializer.toJson<String?>(baseTranslation),
       'contextTranslation': serializer.toJson<String?>(contextTranslation),
+      'wordKey': serializer.toJson<String>(wordKey),
     };
   }
 
@@ -4084,6 +4113,7 @@ class DictionaryTableData extends DataClass
     Value<String?> lemma = const Value.absent(),
     Value<String?> baseTranslation = const Value.absent(),
     Value<String?> contextTranslation = const Value.absent(),
+    String? wordKey,
   }) => DictionaryTableData(
     id: id ?? this.id,
     word: word ?? this.word,
@@ -4106,6 +4136,7 @@ class DictionaryTableData extends DataClass
     contextTranslation: contextTranslation.present
         ? contextTranslation.value
         : this.contextTranslation,
+    wordKey: wordKey ?? this.wordKey,
   );
   DictionaryTableData copyWithCompanion(DictionaryTableCompanion data) {
     return DictionaryTableData(
@@ -4136,6 +4167,7 @@ class DictionaryTableData extends DataClass
       contextTranslation: data.contextTranslation.present
           ? data.contextTranslation.value
           : this.contextTranslation,
+      wordKey: data.wordKey.present ? data.wordKey.value : this.wordKey,
     );
   }
 
@@ -4154,7 +4186,8 @@ class DictionaryTableData extends DataClass
           ..write('addedAt: $addedAt, ')
           ..write('lemma: $lemma, ')
           ..write('baseTranslation: $baseTranslation, ')
-          ..write('contextTranslation: $contextTranslation')
+          ..write('contextTranslation: $contextTranslation, ')
+          ..write('wordKey: $wordKey')
           ..write(')'))
         .toString();
   }
@@ -4174,6 +4207,7 @@ class DictionaryTableData extends DataClass
     lemma,
     baseTranslation,
     contextTranslation,
+    wordKey,
   );
   @override
   bool operator ==(Object other) =>
@@ -4191,7 +4225,8 @@ class DictionaryTableData extends DataClass
           other.addedAt == this.addedAt &&
           other.lemma == this.lemma &&
           other.baseTranslation == this.baseTranslation &&
-          other.contextTranslation == this.contextTranslation);
+          other.contextTranslation == this.contextTranslation &&
+          other.wordKey == this.wordKey);
 }
 
 class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
@@ -4208,6 +4243,7 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
   final Value<String?> lemma;
   final Value<String?> baseTranslation;
   final Value<String?> contextTranslation;
+  final Value<String> wordKey;
   final Value<int> rowid;
   const DictionaryTableCompanion({
     this.id = const Value.absent(),
@@ -4223,6 +4259,7 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     this.lemma = const Value.absent(),
     this.baseTranslation = const Value.absent(),
     this.contextTranslation = const Value.absent(),
+    this.wordKey = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DictionaryTableCompanion.insert({
@@ -4239,6 +4276,7 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     this.lemma = const Value.absent(),
     this.baseTranslation = const Value.absent(),
     this.contextTranslation = const Value.absent(),
+    this.wordKey = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        word = Value(word),
@@ -4258,6 +4296,7 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     Expression<String>? lemma,
     Expression<String>? baseTranslation,
     Expression<String>? contextTranslation,
+    Expression<String>? wordKey,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -4274,6 +4313,7 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
       if (lemma != null) 'lemma': lemma,
       if (baseTranslation != null) 'base_translation': baseTranslation,
       if (contextTranslation != null) 'context_translation': contextTranslation,
+      if (wordKey != null) 'word_key': wordKey,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -4292,6 +4332,7 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     Value<String?>? lemma,
     Value<String?>? baseTranslation,
     Value<String?>? contextTranslation,
+    Value<String>? wordKey,
     Value<int>? rowid,
   }) {
     return DictionaryTableCompanion(
@@ -4308,6 +4349,7 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
       lemma: lemma ?? this.lemma,
       baseTranslation: baseTranslation ?? this.baseTranslation,
       contextTranslation: contextTranslation ?? this.contextTranslation,
+      wordKey: wordKey ?? this.wordKey,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -4354,6 +4396,9 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
     if (contextTranslation.present) {
       map['context_translation'] = Variable<String>(contextTranslation.value);
     }
+    if (wordKey.present) {
+      map['word_key'] = Variable<String>(wordKey.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -4376,6 +4421,7 @@ class DictionaryTableCompanion extends UpdateCompanion<DictionaryTableData> {
           ..write('lemma: $lemma, ')
           ..write('baseTranslation: $baseTranslation, ')
           ..write('contextTranslation: $contextTranslation, ')
+          ..write('wordKey: $wordKey, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -8809,6 +8855,7 @@ typedef $$DictionaryTableTableCreateCompanionBuilder =
       Value<String?> lemma,
       Value<String?> baseTranslation,
       Value<String?> contextTranslation,
+      Value<String> wordKey,
       Value<int> rowid,
     });
 typedef $$DictionaryTableTableUpdateCompanionBuilder =
@@ -8826,6 +8873,7 @@ typedef $$DictionaryTableTableUpdateCompanionBuilder =
       Value<String?> lemma,
       Value<String?> baseTranslation,
       Value<String?> contextTranslation,
+      Value<String> wordKey,
       Value<int> rowid,
     });
 
@@ -8900,6 +8948,11 @@ class $$DictionaryTableTableFilterComposer
 
   ColumnFilters<String> get contextTranslation => $composableBuilder(
     column: $table.contextTranslation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get wordKey => $composableBuilder(
+    column: $table.wordKey,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -8977,6 +9030,11 @@ class $$DictionaryTableTableOrderingComposer
     column: $table.contextTranslation,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get wordKey => $composableBuilder(
+    column: $table.wordKey,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DictionaryTableTableAnnotationComposer
@@ -9040,6 +9098,9 @@ class $$DictionaryTableTableAnnotationComposer
     column: $table.contextTranslation,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get wordKey =>
+      $composableBuilder(column: $table.wordKey, builder: (column) => column);
 }
 
 class $$DictionaryTableTableTableManager
@@ -9092,6 +9153,7 @@ class $$DictionaryTableTableTableManager
                 Value<String?> lemma = const Value.absent(),
                 Value<String?> baseTranslation = const Value.absent(),
                 Value<String?> contextTranslation = const Value.absent(),
+                Value<String> wordKey = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DictionaryTableCompanion(
                 id: id,
@@ -9107,6 +9169,7 @@ class $$DictionaryTableTableTableManager
                 lemma: lemma,
                 baseTranslation: baseTranslation,
                 contextTranslation: contextTranslation,
+                wordKey: wordKey,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -9124,6 +9187,7 @@ class $$DictionaryTableTableTableManager
                 Value<String?> lemma = const Value.absent(),
                 Value<String?> baseTranslation = const Value.absent(),
                 Value<String?> contextTranslation = const Value.absent(),
+                Value<String> wordKey = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DictionaryTableCompanion.insert(
                 id: id,
@@ -9139,6 +9203,7 @@ class $$DictionaryTableTableTableManager
                 lemma: lemma,
                 baseTranslation: baseTranslation,
                 contextTranslation: contextTranslation,
+                wordKey: wordKey,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

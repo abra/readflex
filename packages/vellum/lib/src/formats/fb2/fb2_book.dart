@@ -22,7 +22,7 @@ import '../../container/zip_archive.dart';
 import '../../text/charsets.dart';
 import '../../vellum_exception.dart';
 import '../book_navigation.dart';
-import '../epub/epub_xml.dart' show normalizeWhitespace;
+import '../../text/whitespace.dart';
 
 /// A person from `title-info` or `document-info`.
 @immutable

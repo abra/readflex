@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_highlight_merge.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_selection.dart';
 import 'package:shared/shared.dart';
 
 void main() {
@@ -8,13 +8,13 @@ void main() {
     expect(highlightMergeTargetFor(null), isNull);
   });
 
-  test('maps the WebView plan onto the text-action contract', () {
+  test('maps a merge plan onto the text-action contract', () {
     final target = highlightMergeTargetFor(
-      ReaderHighlightMerge.fromValue({
-        'cfi': 'union-cfi',
-        'text': 'power bank keeps devices',
-        'highlightIds': ['left', 'right'],
-      }),
+      const ReaderHighlightMerge(
+        cfiRange: 'union-cfi',
+        text: 'power bank keeps devices',
+        highlightIds: ['left', 'right'],
+      ),
     );
     expect(
       target,

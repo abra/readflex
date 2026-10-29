@@ -37,6 +37,12 @@ remains exported so existing databases keep migrating cleanly and the frozen
 flashcard feature can be restored from history without a destructive schema
 reset.
 
+Schema v27 adds the indexed `dictionary_table.word_key`. `DictionaryDao`
+normalizes both saved words and lookup terms with Dart's Unicode lowercase
+conversion and trimming; insert and rename keep the key current. Migration
+backfills existing words with the same function without changing their display
+text, meanings, anchors or review state.
+
 Schema v26 adds `dictionary_table.lemma`, `base_translation` and
 `context_translation`: the dictionary form, the word's own meaning and the
 sentence translation a saved word keeps beside its meaning in context.

@@ -134,6 +134,33 @@ void main() {
     },
   );
 
+  testWidgets('a failed preview offers a retry that loads it again', (
+    tester,
+  ) async {
+    var fail = true;
+    var calls = 0;
+    final cubit = ReaderPageThumbnailCubit((_) async {
+      calls++;
+      return fail ? null : MemoryImage(bytes);
+    });
+    addTearDown(cubit.close);
+    await pump(tester, cubit, left);
+    await tester.pump();
+    final retry = find.byTooltip('Retry');
+    expect(retry, findsOneWidget);
+    expect(calls, 1);
+
+    fail = false;
+    await tester.tap(retry);
+    await tester.pump();
+    await tester.pump();
+    expect(retry, findsNothing);
+    expect(calls, 2);
+    final data = await pixels(tester);
+    expect(rgb(data, 5, 5), red);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('preserves aspect ratio and clamps legacy areas to the image', (
     tester,
   ) async {

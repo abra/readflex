@@ -52,6 +52,49 @@ void main() {
     expect(entries.first.translation, 'привет');
   });
 
+  for (final word in ['Слово', 'ÜBER', 'ΑΛΦΑ', 'Word']) {
+    test('looks up $word with the same Unicode normalization', () async {
+      await dao.insertEntry(makeEntry(word: ' $word '));
+      for (final query in [word, word.toLowerCase(), word.toUpperCase()]) {
+        expect((await dao.entryByWord(query))?.id, 'e1');
+      }
+    });
+  }
+
+  test('lookup keeps source scope and newest-entry ordering', () async {
+    await dao.insertEntry(makeEntry(id: 'old', word: 'Слово', sourceId: 's1'));
+    await dao.insertEntry(
+      makeEntry(
+        id: 'new',
+        word: 'СЛОВО',
+        sourceId: 's2',
+        addedAt: '2026-02-01',
+      ),
+    );
+    expect((await dao.entryByWord('слово'))?.id, 'new');
+    expect((await dao.entryByWord('слово', sourceId: 's1'))?.id, 'old');
+    expect(await dao.entryByWord('слово', sourceId: 'missing'), isNull);
+  });
+
+  test('renaming a word refreshes the key; other edits preserve it', () async {
+    await dao.insertEntry(makeEntry(word: 'Слово'));
+    await dao.updateEntry(
+      const DictionaryTableCompanion(
+        id: Value('e1'),
+        word: Value('Другое'),
+      ),
+    );
+    expect(await dao.entryByWord('слово'), isNull);
+    expect((await dao.entryByWord('другое'))?.id, 'e1');
+    await dao.updateEntry(
+      const DictionaryTableCompanion(
+        id: Value('e1'),
+        translation: Value('changed'),
+      ),
+    );
+    expect((await dao.entryByWord('ДРУГОЕ'))?.translation, 'changed');
+  });
+
   test('entriesBySource filters correctly', () async {
     await dao.insertEntry(makeEntry(id: 'e1', sourceId: 's1'));
     await dao.insertEntry(makeEntry(id: 'e2', sourceId: 's2'));

@@ -1,8 +1,8 @@
 # reader
 
 Full-screen reader for books, comics, and saved articles. The single route
-(`/reader/:sourceId`) hosts the WebView-based reading surface, bottom action
-chrome, and a text-selection context panel populated by pluggable
+(`/reader/:sourceId`) hosts the page, drawn by the `vellum` engine, bottom
+action chrome, and a text-selection context panel populated by pluggable
 `TextAction`s.
 
 ## Public API
@@ -11,7 +11,6 @@ chrome, and a text-selection context panel populated by pluggable
 class ReaderScreen extends StatelessWidget {
   ReaderScreen({
     required String sourceId,
-    required Uri serverBaseUri,                    // token-scoped localhost URI
     required BookRepository bookRepository,
     ArticleRepository? articleRepository,
     required HighlightRepository highlightRepository,
@@ -43,7 +42,7 @@ from the top reader chrome without coupling the reader package to
 
 A link in a book, article or PDF that leaves the reader (http(s), `mailto:`,
 `tel:`) never opens directly. `ReaderExternalLinkPrompt` turns each link the
-WebView reports into `ReaderExternalLinkSheet`: "Open link?", the real
+page reports into `ReaderExternalLinkSheet`: "Open link?", the real
 destination, Copy link and Open. Only Open hands the link, unchanged, to
 `onOpenExternalLink`; Copy puts it on the clipboard with a toast; Close, a scrim
 tap or Back keep the page as it was. One sheet at a time, so a double tap or a
@@ -74,7 +73,7 @@ actions in a two-row popup: highlight colors and Highlight are above the
 general Copy, Translate, and Define commands. Active feature implementations
 are supplied by sibling packages such as `highlight`, `translate`, and
 `dictionary`; the UI-only `CopyTextAction` remains in Reader.
-The popup captures input only inside its visible controls, leaving the WebView
+The popup captures input only inside its visible controls, leaving the page's
 selection handles interactive so the selected range can be resized in place.
 The saved-highlight popup (`ReaderSavedHighlightPopup`) is different: its
 full-screen barrier exists only while the popup is open and is opaque, so the
@@ -82,11 +81,11 @@ dismissing tap never also toggles chrome or turns the page.
 All three popups (text selection, image-area selection, saved highlight) clamp
 horizontally inside the safe area plus a 16dp inset, so landscape cutouts
 never cover them; their width is sized from the safe width.
-Each action starts resolving the current WebView range on pointer down, before
-focus can collapse the native WebKit selection, and awaits that same snapshot
-on execution. The reader runtime also retains the latest changed range as a
-fallback, so expanding a word into a paragraph cannot send the initial word to
-Copy, Translate, Define, or Highlight.
+Each action starts resolving the current selection on pointer down, before
+focus can collapse it, and awaits that same snapshot on execution. The reader
+also retains the latest changed range as a fallback, so expanding a word into
+a paragraph cannot send the initial word to Copy, Translate, Define, or
+Highlight.
 Before Translate or Define presents another surface, the driver dismisses the
 selection popup, waits for that frame to finish, and then executes the action
 from its stable context. This prevents a context menu from remaining visible
@@ -98,7 +97,7 @@ narrow. Save/edit/delete commands stay visible. Its callbacks preserve the
 existing preview/explicit-save contract and pointer-down selection capture.
 `ReaderSearchResultTile` respects the system text scaler for both its chapter
 label and highlighted excerpt, while retaining document direction and the
-three-line excerpt limit. Neither leaf owns repositories or WebView lifecycle.
+three-line excerpt limit. Neither leaf owns repositories or the page's lifecycle.
 
 Appearance uses `ActionBottomSheetLayout.scrollable`, the same shell as Display,
 Language and the text-action result sheets. `AppSettingsSection` and
@@ -152,7 +151,7 @@ while the title can shrink to fit beside it (`BottomSheetHeader.minTitleScale`)
 and otherwise becomes a tooltip-labeled icon (`headerCompactTrailing`); only
 when even that does not fit does it move below the title. Controls keep
 their narrow `context.select` subscriptions and existing preview/commit/reset
-callbacks; scrolling the sheet does not recreate the reading WebView.
+callbacks; scrolling the sheet does not recreate the page.
 `test/reader_appearance_layout_test.dart` checks gutters, the half-width
 controls in LTR/RTL, en/ru/de fit, Reset beside the title and whole theme names
 at 320dp with the bundled faces; `test/reader_theme_swatches_test.dart` covers
@@ -173,82 +172,185 @@ abstract class TextAction {
 ## Reader surface contract
 
 `ReaderSurface` (`reader_surface.dart`) is the set of commands the screen
-sends to whatever draws a book: navigation (`goToCfi`, `goToFraction`,
+sends to whatever draws the page: navigation (`goToCfi`, `goToFraction`,
 `goToHref`, `goToSectionIndex`, `goToSearchResult`, `goToBookmark`, page
 turns, `toggleBookmark`), search (`searchBookStream`, `clearSearch`), text
-selection (`clearSelection`, `currentTextSelection`, highlight previews),
-image areas (previews, retention, control bounds) and `pageThumbnail`. It
-was extracted from what the screen asked of `BookReaderWebViewState`;
-`ReaderWebViewSurface` forwards to the WebView under the screen's key and
-is a no-op before it mounts, exactly as the key-based calls were. Events
-from the surface (positions, selections, taps, annotations, load state)
-remain the callbacks of the surface widget, wired to the blocs where it is
-built (`_ReaderWebViewBody`). A native engine (`package:vellum`) takes the
-WebView's place behind this contract one format at a time; articles keep
-their own WebView outside it for now.
+selection (`clearSelection`, `currentTextSelection`, highlight previews in a
+`Color` and an opacity), image areas (previews and retention) and
+`pageThumbnail`. Every command is safe before the page is mounted. Events
+from the page (positions, selections, taps, annotations, load state) are
+callbacks of the body that draws it, wired to the blocs where it is built.
+`_ReadyContent` picks the body and surface by source type and format
+(`_PageKind`): articles scroll on `ReaderArticleSurface`, CBZ on
+`ReaderComicSurface`, PDF on `ReaderPdfSurface`, EPUB, FB2 and MOBI/AZW3 on
+`ReaderTextSurface`, all on `package:vellum`. The types the page reports
+(`BookPosition`, `ReaderTocItem`, `ReaderDocumentFeatures`, search events,
+`ReaderSelection` and its parts) live in this package. A body that cannot
+open or lay out its document adds `ReaderSurfaceFailed` with the error.
+There is no WebView: until R6 (2026-10-30) the WebView reader with
+foliate-js drew books behind the same contract; the last revision with it
+is `fb4b4e5c`. Saved positions, highlights and bookmarks keep the forms it
+wrote.
 
-### Native comics (`_ReaderComicBody`, `ReaderComicSurface`)
+### Comics (`_ReaderComicBody`, `ReaderComicSurface`)
 
-`ReaderScreen.nativeFormats` (from `READFLEX_NATIVE_FORMATS`, empty by
-default) names the formats drawn natively. For a CBZ in that set the
-content body mounts `_ReaderComicBody` instead of the WebView body: it
-opens the archive with `ComicBook` (the stored `comicPageOrderVersion`
+For a CBZ the content body mounts `_ReaderComicBody`: it opens the archive with `ComicBook` (the stored `comicPageOrderVersion`
 keeps the page order of saved positions), restores the page from the
 saved fake CFI or the fraction, and shows `FixedPagesView`. The
 Appearance sheet's page turn sets the view's `axis` (vertical turns pages
-up and down; taps keep their left and right zones as previous and next,
-as the WebView's `page-turn-axis` did). Its events feed
-the same blocs and cubits: positions become `ReaderBookPositionUpdated`
-with the WebView's numbers (`fraction = (page + 1) / pageCount`, chapter
+up and down; taps keep their left and right zones as previous and next).
+Its events feed the blocs and cubits: positions become
+`ReaderBookPositionUpdated` (`fraction = (page + 1) / pageCount`, chapter
 counter = page counter, `relocationReason` `page` for turns), the page
-list becomes `ReaderTocUpdated`, taps go through the shared tap-zone
+list becomes `ReaderTocUpdated` (each entry naming its page, counted from
+1), taps go through the shared tap-zone
 dispatcher, long presses create image-area drafts in a
 `ComicImageAreaDraft` that `ReaderImageSelectionCubit` mirrors, saved
 image-area highlights are drawn by `ComicImageAreaLayer`, and a bookmark
 toggle emits `ReaderBookmarkChanged` with the page as CFI, page anchor and
-`Page N / M` content, matching the rows the WebView writes. Readiness is
+`Page N / M` content, the rows the WebView reader wrote too. Readiness is
 the first visible page image (`onPageShown`), which releases the loading
 scrim. `ReaderComicSurface` implements the commands over the controller
 and the draft; comics have no text, so search and text-selection commands
 are inert, and previews are `ComicPageImage` providers. A document that
-fails to open reports `ReaderWebViewFailed` as the WebView would.
-`_ReadyContentBody` picks the surface and body per format, so the chrome,
-drawers and context panel never know which engine is drawing.
+fails to open reports `ReaderSurfaceFailed`. The chrome, drawers and
+context panel never know which body draws the page.
 
-### Native PDF (`_ReaderPdfBody`, `ReaderPdfSurface`)
+### PDF (`_ReaderPdfBody`, `ReaderPdfSurface`)
 
-For a PDF in `nativeFormats` the body mounts `_ReaderPdfBody`: it opens
-the file with `PdfBook` (a password-protected or damaged file reports
-`ReaderWebViewFailed` with the document kind), restores the page from
+For a PDF the body mounts `_ReaderPdfBody`: it opens the file with
+`PdfBook` (a password-protected or damaged file reports
+`ReaderSurfaceFailed`), restores the page from
 the saved CFI or fraction, and shows `FixedPagesView` over `PdfPages`,
 with the Appearance sheet's page turn as its `axis`, margin trimming as
 `visibleRectOf` and page colours as `pageColors` (vellum's
 `pageColorsFor`: a colour matrix, so the same pixels under Impeller and
 Skia).
-The outline becomes `ReaderTocUpdated` with page CFIs as hrefs and the
-entries' depth as `level` (an entry without a page keeps an empty href);
-the chrome's chapter line is the first outline entry that opens the
-current page, as the WebView matched TOC hrefs. `ReaderDocumentFeatures`
+The outline becomes `ReaderTocUpdated` with page CFIs as hrefs, the
+entries' depth as `level` and the page each opens, counted from 1, as
+`startPage` (an entry without a page keeps an empty href); the chrome's
+chapter line is the first outline entry that opens the current page. `ReaderDocumentFeatures`
 reports `pdf`, the page count and the outline, and `hasSearchableText`
 once a loaded page has text. Positions and bookmarks follow the comic
 body's numbers. Text layers come from a `PdfTextLayerCache` (the pages on
 screen and their neighbours are loaded ahead); `PdfTextOverlay` draws
 saved text highlights resolved on the page (`resolvePdfTextAnchor`: the
-WebView's DOM CFIs resolve by the highlight's text, vellum's by range),
-the search hit and the selection. A long press selects a word and feeds
-`ReaderSelectionCubit` what the WebView's bridge sent: the exact text,
+DOM CFIs the WebView reader wrote resolve by the highlight's text,
+vellum's by range), the search hit and the selection. A long press selects
+a word and feeds `ReaderSelectionCubit` the exact text,
 the sentence as `contextText`/`markedContextText`, vellum's range CFI and
 the selection rect as viewport fractions; a tap on a saved highlight
 focuses `ReaderHighlightFocusCubit` with the sentence as context. Margin
 crops (`trimPageMargins`) are measured per page with
 `detectPdfPageContent` for the box a page is fitted into and passed as
-`visibleRectOf`; `pageColors: theme` maps the reader theme's background
+`visibleRectOf` (a page whose crop arrives later is decoded again at the
+crop's density); `pageColors: theme` maps the reader theme's background
 and text colour through `pageColorsFor`. `ReaderPdfSurface` implements
 the commands: navigation over the controller, `searchBookStream` through
-`searchPdfBook` with the WebView's excerpt shape, `goToSearchResult`
+`searchPdfBook` with excerpts around the match, `goToSearchResult`
 opening the hit's page and marking its range, selection preview colour
 and retention on the `PdfTextSelection`, previews as `PdfPageImage`
 providers; image-area commands are inert.
+
+### Text books (`_ReaderTextBody`, `ReaderTextSurface`)
+
+For an EPUB, FB2 or MOBI/AZW3 book the body mounts `_ReaderTextBody`: it
+opens the file with vellum (`EpubBook`, `Fb2Book`, `MobiBook` from
+`package:vellum/all_formats.dart`, the source by `textBookSourceOf`; a
+failure reports `ReaderSurfaceFailed`) and shows `TextPagesView` over a
+`TextPagesController` restored from the saved CFI, or the fraction for rows
+saved without one. The appearance becomes the `BookStyle`: the layout
+preset's font size times the device scale as `fontScale`, the font
+preset's family, weight, spacing, indent, line height, alignment, the three
+override switches and the theme colours; the reader's style sheet
+(`buildBookCustomCSS`: prose at the reader's text size, headings scaled
+from it, quotes, code, link and dark-theme colours, in px from
+`BookCustomCssSizes`) as `readerStyleSheet`; the layout preset's
+hyphenation (Comfortable) as `hyphenate`; on iOS, the lines the WebView
+reader's WebKit drew (whole-pixel line heights, glyph line boxes with the
+reader fonts' ink from `readerFontInk`, and WebKit's hyphenation limits:
+three letters before a break, two lines in a row); the window, screen and colour scheme as the media
+queries' `CssMediaEnvironment`; margins, the side margin share, the column
+choice and the measure (32 em of the prose size) as `TextPageSettings`;
+CSS generics resolve to the bundled Literata and Open Sans and symbols to
+Noto Sans Symbols. The page turn sets the view's axis. The book's table
+of contents becomes `ReaderTocUpdated` (entries flattened with their
+depth); `ReaderDocumentFeatures` reports the format, the contents and
+searchable text. Positions carry the spread as the chapter page and the
+section's spreads as its total, 1500-byte locations (foliate-js's) as book
+pages, `sizeTotal`, `atStart`/`atEnd` and
+the contents entry as the chapter title. A bookmark is the first word on
+screen as a precise range CFI with anchor version 2, so it opens on that
+word in any layout; a bookmark is on screen when its start is between
+the first and last things shown. A long press selects with the
+platform's handles; `TextSelectionDetails` gives the context panel the
+exact and whole-word text and CFIs, the sentence and what a highlight would
+merge. A selection follows the reader through the section, as in the
+WebView reader: a swipe, or a tap in an edge zone (`onSelectionTap` turns
+it into the tap command, the middle clears the selection), turns one
+spread and takes the selection's moving edge onto it; the context panel
+hides while the page moves (`ReaderSelectionCubit.setAdjusting`) and its
+actions get the whole range. The reader's sheet (`buildBookCustomCSS`)
+gives tables `width: max-content`, `max-width: max(100%, 40em)` and
+`overflow-x: auto` and keeps their words whole, so a table wider than the
+page scrolls sideways in it, as the WebView reader's wrapper did (vellum
+turns the page with a swipe on a table at its edge). Saved highlights are resolved in each
+section's document and tinted under the text with the theme's colour and
+opacity; the selection's colour preview and the search hit are tinted
+on top. A tap on a link resolves it: a web link goes to the link sheet,
+a note reference opens the note in a sheet (`TextFragmentView`), other
+links go to their target. `ReaderTextSurface` implements the commands:
+navigation over the controller, `searchBookStream` through
+`searchTextBook` with chapter titles, `goToSearchResult` opening the hit
+and marking it, selection clearing and colour preview; image-area
+commands are inert and pages have no thumbnails. The table of contents
+is flattened from level 1, so sub-chapters indent.
+
+### Articles (`_ReaderArticleBody`, `ReaderArticleSurface`)
+
+A saved article opens on vellum, as one scrolling column.
+`ArticleTextSource` reads the article's `content.html` cleaned as the
+former WebView shell cleaned it
+and its pictures from its `images/` folder; `TextScrollController` lays
+it out the width of the window less the side margin (the shell's
+`articleSidePadding` share), no wider than 32 em of prose, below the
+status bar plus 32 and above the home indicator plus 40, and keeps the
+sentence read across a new size, style or font. The style is the books'
+(`_vellumBookStyle`) with the reader's layout, font and colours always
+on, and the shell's softer captions (72%), quotes (86%) and table rules
+(22%) ahead of the reader's sheet. Everything stored keeps the shell's
+forms, so what was saved while articles read in the WebView still
+resolves:
+
+- **Position** — the sentence at the middle of the view as a
+  `readflex-html-position:` anchor, the scroll share as progress, the
+  last heading above as the chapter, minutes left at 1200 characters a
+  minute from that sentence, `atStart`/`atEnd`. Reported as the shell
+  did: once per 140 ms at most while scrolling (or on a new sentence, a
+  0.4% move, an edge, a bookmark change), the place it settles on after.
+  An article left at its start or end reopens there; otherwise at its
+  sentence, centred; otherwise at its share.
+- **Contents** — headings with an id by depth, else up to twelve blocks
+  of 48 characters or more by their first words; each with the share of
+  the scroll where it starts once the article is laid out.
+- **Bookmarks** — the sentence read; it is on screen when its anchor or
+  its text matches.
+- **Selection** — a long press selects with the platform's handles;
+  `ArticleSelection` gives the context panel the shell's payload: the
+  text with white space collapsed, 200 characters of context within the
+  sentence or block, its anchor, the saved highlights it merges.
+- **Highlights** — saved anchors resolved in the document, tinted
+  oldest first; the colour preview on top.
+- **Search** — the sentences in order (`searchArticle`), each hit with
+  its heading; every hit is tinted, the one opened apart; one hidden
+  under the search bar is marked on the bar's edge
+  (`ReaderSearchOcclusionMarker`, which vellum books use too).
+- **Links** — an `#id` scrolls its element to the top, a web, mail or
+  phone address goes to the link sheet, a path inside the saved article
+  does nothing.
+
+`ReaderArticleSurface` implements the commands over the session the
+body attaches; there are no pages to turn, image areas or thumbnails.
 
 ## Architecture — independent units of state
 
@@ -276,20 +378,20 @@ this variant without the font step, and the chrome's appearance button reads
 - **Defaults.** Trimmed and Theme come from `ReaderAppearancePreferences`
   (`trimPageMargins`, `pageColors`). Changes in the sheet are per-book
   overrides through `ReaderAppearanceCubit`; Reset returns to the defaults.
-- **Delivery.** The reader maps both into `FoliateStyle.cropPageMargins` and
-  `FoliateStyle.pageColors`; `reader_webview` crops and recolors the bitmaps.
-  Other formats ignore them.
+- **Delivery.** The PDF body passes margin crops as `visibleRectOf` and the
+  theme's colour matrix as `pageColors` to `FixedPagesView`, which crops and
+  recolours the bitmaps. Other formats ignore them.
 - **Progress.** The bottom chrome shows `percent · page / total` for PDF from
   the zero-based page fixed layouts report, so page 15 reads 15.
 
-`test/ui/reader_pdf_controls_test.dart` drives the sheet, the WebView style
-and the Pages tab end to end; `reader_appearance_sheet_test.dart` covers the
+`test/ui/reader_pdf_controls_test.dart` drives the sheet, the page view and
+the Pages tab end to end; `reader_appearance_sheet_test.dart` covers the
 variant's controls, persistence, Reset, semantics and 2x text.
 
 ### Line length and text columns
 
 `readerTextColumns` (`reader_text_columns.dart`) keeps lines readable. In
-every window it gives `FoliateStyle` a measure of `kReaderMaxLineWidthEm`
+every window it gives the page settings a measure of `kReaderMaxLineWidthEm`
 (32em of body text, about 68 characters), so a phone in landscape and a
 tablet in portrait centre one column of it instead of running ~85 characters
 across the page. A phone page in portrait is narrower than the measure, even
@@ -304,19 +406,19 @@ also gets the reader's Columns choice:
 - **One**: one column at the measure; the margins grow around it.
 - **Two**: a spread in either orientation.
 
-Foliate applies it in one layout pass, including on rotation, so the style
-reaches the WebView again only when the window crosses the wide threshold or
-the choice changes. Narrow windows, phones included, keep one column at the
+vellum lays the pages out again only when the window or the choice changes
+the columns. Narrow windows, phones included, keep one column at the
 measure whatever the choice says; articles always keep one column at the
 measure; PDF and comic pages keep their own layout. Appearance shows
 **Columns** (Auto / One / Two, under Page turn) only for reflowable books in a
 wide window (`showReaderAppearanceSheet(showColumnControls:)`); the choice is
 a per-book override like the other rows (`ReaderAppearanceCubit.setColumns`,
 `ReaderAppearanceOverride.columns`) and Reset clears it. Root
-`test/ui/reader_text_layout_test.dart` follows the style through window
-changes; `reader_webview` browser tests cover the layout itself.
+`test/ui/reader_text_layout_test.dart` follows the page settings through
+window changes; vellum's `text_page_geometry_test.dart` covers the layout
+itself.
 
-In every window the style also carries the side safe-area insets
+In every window the page settings also carry the side safe-area insets
 (`MediaQuery.padding` left/right), so book and article text stays clear of a
 landscape phone's display cutout while the page and its tap zones still fill
 the window. The tap-edge lines sit inside the same insets.
@@ -324,7 +426,7 @@ the window. The tap-edge lines sit inside the same insets.
 ### Text size in tablet-sized windows
 
 `readerDeviceFontScale` (`reader_device_font_scale.dart`) multiplies the base
-font size that `FoliateStyle` sends to the page. The reader's own text size
+font size of the book style. The reader's own text size
 (100% by default in Appearance) applies on top and never changes. It combines
 two independent corrections:
 
@@ -334,14 +436,12 @@ two independent corrections:
   lines keep their length in characters. The shortest side ignores
   orientation: rotation never resizes the text, phones stay phones in
   landscape, and a narrow Split View or Slide Over window reads like a phone.
-  The style reaches the WebView again only when a resize crosses that
-  threshold.
-- Android WebViews render text smaller than iOS at the same size, so Android
-  adds up to 12% on phones and 4% on tablets.
+- Android adds up to 12% on phones and 4% on tablets: the sizes the WebView
+  reader gave it, whose Chromium drew text smaller than iOS, kept so books
+  read as they did.
 
 The platform is `defaultTargetPlatform`, not the `Theme`'s: the correction
-belongs to the WebView engine the app runs on, which the plugin picks the same
-way. Books and articles share the multiplier; PDF and comic pages are images
+follows the device the app runs on. Books and articles share the multiplier; PDF and comic pages are images
 and ignore it.
 
 ### One-time selection tip
@@ -353,15 +453,14 @@ real labels (`highlightAction`, `commonCopy`, `translationAction`,
 
 - **When it is due:** a ready article, EPUB, FB2, MOBI or AZW3, or a PDF whose
   features report a text layer (`readerSupportsSelectionTip`); never a comic.
-  The WebView must have painted the page, and no chrome, search navigation or
+  The page must be painted, and no chrome, search navigation or
   selection may be on screen. A tap on the chrome while the page loads does
   not use up the session.
 - **Policy (`ReaderSelectionTipCubit`):** at most once per reader session and
   in at most `maxShows` (3) sessions. "Got it" or any text selection ends it
   for good. Opening the controls or a book page turn (relocation reason
   `page` or `snap`, `isReaderPageTurn`) hides it until the next session.
-  Articles are not hidden by scrolling: their shell also reports image loads
-  and layout observers as `scroll`. `PreferencesService` stores
+  Articles are not hidden by scrolling, the way an article is read. `PreferencesService` stores
   `readerSelectionTipShowCount` and `readerSelectionTipDismissed`.
 - **Wiring:** `ReaderScreen` provides the cubit. `ReaderSelectionTipDriver`
   sits in the content `Stack` and feeds it through
@@ -510,11 +609,12 @@ Deleting a highlight from the saved-highlight popup follows the same model
 (`highlightEdits` in `ReaderState`): the page annotation disappears and the
 existing toast shows, while the Highlights tab keeps the row muted as
 "Highlight removed" with an icon-only Undo until Contents closes
-(`ReaderHighlightUndoDismissed` purges it). There is no restore API, so Undo
-re-adds the highlight through the repository (`addHighlight` /
-`addImageAreaHighlight`) and then writes back the original `createdAt`; the
-restored highlight has a new id but returns to its former list position and
-the page overlay refreshes from the repository. Restore failures keep the row
+(`ReaderHighlightUndoDismissed` purges it). The bloc retains the repository's
+`HighlightDeletion` snapshot while Undo is available. `restoreHighlight`
+restores the original ID, date, complete anchor and review schedule in one
+transaction, keeping the citation connected to its review history. It refuses
+deleted sources and preserves newer rows if already restored. The page
+overlay refreshes from the repository. Restore failures keep the row
 with Undo. Removed rows neither navigate nor expand; image rows keep their
 preview.
 
@@ -536,9 +636,8 @@ page. The grid keeps the 16dp drawer gutter on every side (plus the bottom
 system inset) with 12dp between tiles. Page order follows the book's
 progression direction independently of the app locale. Captions and controls still use the app locale. Only the visible
 Pages or Highlights tab owns `ReaderPageThumbnailCubit`; its callback is
-`ReaderSurface.pageThumbnail`, which answers an `ImageProvider` (the WebView
-wraps an encoded preview of at most 96 KiB in a `MemoryImage`; the native
-engine returns its own provider decoded at preview width), and the View
+`ReaderSurface.pageThumbnail`, which answers the engine's `ImageProvider`
+decoded at preview width, and the View
 receives no repository or engine controller. One preview is loaded at a time.
 Offscreen queued requests are discarded; a 24-entry LRU evicts providers from
 the Flutter image cache. Per-tile selectors avoid rebuilding the grid/list for
@@ -551,7 +650,6 @@ rows do not start preview work; text lists keep their normal prefetch.
 Closing/changing tabs evicts owned Flutter image-cache
 entries and ignores late responses. Failure keeps page navigation available and
 offers Retry. There is no startup thumbnail generation or whole-archive decode.
-The JS/WebView side's limits are documented in `reader_webview/README.md`.
 Tests cover shared-page leases, cancellation/retry, crop pixels/aspect ratio,
 long notes and missing anchors. `reader_contents_tabs_test.dart` pins the tab
 rules; `reader_toc_drawer_test.dart` covers PDF Chapters/Pages with and
@@ -589,9 +687,9 @@ and a return-to-reading action. The return anchor is captured before opening the
 panel (before native keyboard resizing), retained across query changes, and
 cleared only when the session ends. Books restore their CFI; articles restore
 scroll progress rather than re-centering the nearest sentence. Navigation controls
-overlay the existing WebView: opening/closing them never changes its height or
-repaginates the document. The reader sends only the covered height fraction to
-the renderer. If the active match lies behind the panel, an amber edge marker
+overlay the existing page: opening/closing them never changes its height or
+repaginates the document. The reader passes only the covered height fraction to
+the page. If the active match lies behind the panel, an amber edge marker
 projects its horizontal position just above the panel; fully visible matches
 and matches on other pages have no marker. The search drawer hides this marker.
 Ending search,
@@ -696,7 +794,7 @@ no plate, shadow or divider: `chapter · title` once a chapter title is known,
 otherwise the title, ellipsized. It keeps the top safe-area inset and a 48dp
 line; for articles the line is an ink button with button semantics, the title
 as its value and a 48dp-high target that opens the original URL.
-Changing chrome visibility must not resize or recreate the WebView; the root
+Changing chrome visibility must not resize or recreate the page; the root
 search-overlay regression verifies both contracts under iOS/Android policies.
 Status-bar icon brightness follows the page colour: the top line is drawn on
 the page, and the Appearance, Contents and Search sheets stop below the status
@@ -714,7 +812,7 @@ capsule's 16dp content gutter. The transient CBZ page pill sits
 "System" label comes from `readerBrightnessSystem`.
 Brightness diagnostic formatting/logging runs only in debug builds.
 
-`ReaderBookPositionUpdated.fromBookPosition` maps both WebViews' positions,
+`ReaderBookPositionUpdated.fromBookPosition` maps every body's positions,
 including the article's `minutesLeft` (`BookPosition.minutesLeft`; books send
 none), which the bloc keeps as live state like the page metrics. It is never
 persisted.
@@ -739,12 +837,11 @@ without rebuilding its content child. A queued command alone never produces a
 success toast. Selecting a color for a new text selection remains a preview;
 the Highlight action still explicitly saves it.
 
-WebView recovery clears stale selection UI and temporarily clears readiness.
-`ReaderWebViewFailed` reports terminal failure through the bloc's error pipeline
-and switches to the shared `ErrorState` (error icon, filled Retry, outlined
-Go Back). Retry
-recreates the reading surface from the retained document, while a late source
-load cannot erase a renderer failure.
+`ReaderSurfaceFailed` reports a page that cannot open or lay out its document,
+with the error, through the bloc's error pipeline and switches to the shared
+`ErrorState` (error icon, filled Retry, outlined Go Back). Retry recreates the
+page from the retained document, while a late source load cannot erase the
+failure.
 
 ## Widget tree highlights
 
@@ -757,74 +854,45 @@ load cannot erase a renderer failure.
   subscribe to multiple BLoC/Cubit sources via `context.select` and feed
   ready values into dumb leaf widgets (`_ReaderBottomChrome`,
   `_ContextPanel`). All BLoC/Cubit interaction lives in drivers.
-- **`_ReaderWebViewBody`** hosts a `BookReaderWebView` (foliate-js) keyed on
-  source id / recovery token so source swaps and WebContent recovery rebuild
-  the WebView cleanly. It maps domain highlights/bookmarks into WebView
-  annotations and sends pull-down bookmark events back to `ReaderBloc`.
-  Text highlights use CFI annotations; comic/image-page highlights use
-  normalized area annotations keyed by page index.
-- **`_ReaderArticleHtmlBody`** hosts `ArticleHtmlReaderWebView` for article
-  sources. Articles scroll vertically, report progress through stable sentence
-  anchors in `content.html`, expose contents/search/bookmark chrome actions,
-  and render text highlights through stable article anchors. Image-area
-  selection remains specific to the foliate comic/fixed-layout path.
+- **`_ReaderTextBody`, `_ReaderPdfBody`, `_ReaderComicBody`** host vellum's
+  pages keyed on the source id, so a source swap rebuilds them cleanly. Each
+  maps domain highlights and bookmarks onto its engine: text highlights by
+  CFI, comic highlights as normalized areas keyed by page index.
+- **`_ReaderArticleBody`** hosts vellum's `TextScrollView` for article
+  sources (see Articles above). Articles scroll vertically, report progress
+  through stable sentence anchors in `content.html`, expose
+  contents/search/bookmark chrome actions, and render text highlights through
+  stable article anchors. Image-area selection remains specific to comics and
+  fixed-layout pages.
 - Every reader motion (chrome slides, Contents/Search sheets, brightness pill, loading
   scrim, dimming tween, swatch rings, page overlay) resolves its duration
   through `context.motion(AppMotion.x)`, so reduced motion settles in one
   frame; the appearance step and tap-zone hint controllers jump instead.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
-  from `ReaderAppearanceCubit` and passed as CSS / URL params to the WebView
-  (`--rf-accent-color` is the reader theme's `accentColor`, not the app
-  primary); the
-  WebView bodies subscribe to the document, readiness, appearance and annotation
-  state they need, not to each selection-menu update. Rebuilding a body does not
-  recreate its keyed WebView unless source/recovery identity changes.
-- `buildBookCustomCSS` supplies semantic code panels, quotes, links and headings
-  above the reflowable book color reset in `reader_webview`. Code borders retain
-  the theme divider color; dark-theme descendants inherit semantic parent
-  colors instead of replacing link/quote colors with primary text. The same
-  semantic overlay is used by the article reader; book palette normalization
-  and its contrast fallback remain owned by the book JS runtime.
+  from `ReaderAppearanceCubit` into vellum's `BookStyle` and page settings;
+  the bodies subscribe to the document, readiness, appearance and annotation
+  state they need, not to each selection-menu update. Rebuilding a body does
+  not recreate its pages unless the source changes.
+- `buildBookCustomCSS` supplies semantic code panels, quotes, links and
+  headings, read after the book's own CSS. Code borders retain the theme
+  divider color; dark-theme descendants inherit semantic parent colors instead
+  of replacing link/quote colors with primary text. The same semantic overlay
+  is used by the article reader.
 - Comic page-zone taps remain available with chrome open and hide chrome while
   turning the page. Actual controls (brightness, toolbar buttons) keep their
-  own hit targets. Text books retain the dismiss-only page barrier. The zone
-  fraction comes from the `reader_webview` bridge contract so Flutter routing
-  and JS double-tap arbitration cannot drift independently.
+  own hit targets. Text books retain the dismiss-only page barrier. Each edge
+  zone is `readerLeftTapZoneEnd` (30%) of the page.
 - Code typography retains the system monospace families and adds the bundled
-  symbol fallback for missing callout numerals. The book normalizer excludes
-  publisher annotations/captions from code detection, so a long explanation
-  does not become a code panel merely because its class name contains `code`.
-  `flutter test test/book_typography_test.dart` exercises the generated CSS
-  with the production book runtime in Chromium/WebKit, including light/dark
-  themes, glyph pixels and selection/CFI stability.
-- Reflowable book tables use their intrinsic width inside the existing
-  horizontal scroll wrapper. Publisher percentage widths cannot compress
-  cells to individual letters. Paragraphs still wrap normally within cells;
-  a preferred `max(100%, 40em)` table width prevents prose rows from expanding
-  indefinitely, while minimum content width can exceed that cap. These rules
-  do not change article table sizing or emergency wrapping in ordinary prose.
-
-## Table Verification
-
-After `make reader-browser-setup`, run
-`flutter test test/book_table_layout_test.dart` from this package. It passes the actual
-Flutter-generated CSS to Chromium and WebKit and checks publisher widths,
-local scrolling, CFI stability, themes, viewport changes and sole-child tables.
-The native `integration_test/table_rendering_test.dart` additionally checks
-late-page table painting on iOS, scroll offsets and reading-position stability
-in all three reading modes. Run it from the repository root:
-
-```sh
-READFLEX_NATIVE_DEVICE=<device-id> fvm flutter drive \
-  --driver=test_driver/ui_driver.dart \
-  --target=integration_test/table_rendering_test.dart -d <device-id>
-```
-
-Artifacts go to `.local/ui-device/`. iOS screenshots include a text-pixel
-assertion; Android screenshots use the native driver transport. These checks
-do not simulate physical-device finger gestures. Playwright's WebKit build
-is not the system WKWebView: its late-column scroll-container painting can
-differ, so geometry-only browser results are not a native visual guarantee.
+  symbol fallback for missing callout numerals. vellum's document normalizer
+  excludes publisher annotations/captions from code detection, so a long
+  explanation does not become a code panel merely because its class name
+  contains `code`.
+- Book and article tables follow CSS's automatic layout, as wide as their
+  content up to 40em with their words whole; one wider than the page
+  scrolls sideways inside it (`overflow-x: auto` in the reader's sheet,
+  vellum's `ColumnScroller`). `test/book_table_layout_test.dart` lays tables
+  out under the reader's sheet; `integration_test/table_rendering_test.dart`
+  scrolls one on a device.
 
 ## Dependencies
 
@@ -834,8 +902,8 @@ differ, so geometry-only browser results are not a native visual guarantee.
   search history, and global reader brightness preference persistence
 - `screen_control_service` — content-only keep-awake plus temporary
   application brightness control
-- `reader_webview` — `BookReaderWebView`, `ArticleHtmlReaderWebView`,
-  `FoliateStyle`, `ReaderHighlight`, `ReaderImageAreaSelection`
+- `vellum` — the reader engine: text, comic, PDF and article pages, CFIs,
+  search and selection
 - `shared` — `TextAction`, `TextSelectionContext`
 - `domain_models` — `Book`, `SourceType`
 - `component_library` — `ReaderThemePreset`, `AppIcons`, `AppSpacing`,

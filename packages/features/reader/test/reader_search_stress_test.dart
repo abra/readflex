@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_search_cubit.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_search_event.dart';
 
 ReaderSearchResults chunk(int index) => ReaderSearchResults(
   requestId: 1,

@@ -21,11 +21,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:preferences_service/preferences_service.dart';
-import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/resource_disposer.dart';
@@ -167,8 +165,6 @@ Future<DependenciesContainer> _createDependenciesContainer(
     );
 
   try {
-    final packageInfo = await PackageInfo.fromPlatform();
-
     // ─── Database ───
     final database = AppDatabase();
     resources.add('database.close', database.close);
@@ -177,17 +173,6 @@ Future<DependenciesContainer> _createDependenciesContainer(
     final documentsDir = await getApplicationDocumentsDirectory();
     final booksDir = Directory(p.join(documentsDir.path, 'books'));
     final articlesDir = Directory(p.join(documentsDir.path, 'articles'));
-    final readerAssetsDir = Directory(
-      p.join(documentsDir.path, 'reader_assets'),
-    );
-
-    final readerServer = ReaderServer(
-      assetsDirectory: readerAssetsDir,
-      booksDirectory: booksDir,
-      articlesDirectory: articlesDir,
-      logger: logger,
-    );
-    resources.add('readerServer.stop', readerServer.stop);
 
     // ─── Repositories ───
     final bookRepository = BookRepository(
@@ -228,7 +213,6 @@ Future<DependenciesContainer> _createDependenciesContainer(
       logger: logger,
       config: config,
       errorReporter: errorReporter,
-      packageInfo: packageInfo,
       preferencesService: preferencesService,
       articleExtractionService: backendServices.articleExtractionService,
       articleRepository: articleRepository,
@@ -243,7 +227,6 @@ Future<DependenciesContainer> _createDependenciesContainer(
       systemDictionaryService: systemDictionaryService,
       dictionaryLookupService: backendServices.dictionaryLookupService,
       screenControlService: screenControlService,
-      readerServer: readerServer,
       database: database,
       resourceDisposer: resources,
     );

@@ -114,10 +114,10 @@ class _ReaderBookmarkGlyphPainter extends CustomPainter {
 
 /// Blocks page input while reader chrome is visible.
 ///
-/// WebView gestures are native enough that tap-zone logic alone is not
-/// sufficient: a swipe can still reach foliate-js before Flutter decides it is
-/// not a tap. This barrier sits above the page but below the chrome panels; any
-/// pointer on the page hides chrome and is not forwarded to the WebView.
+/// Tap-zone logic alone is not sufficient: a swipe would still turn the page
+/// under the chrome. This barrier sits above the page but below the chrome
+/// panels; any pointer on the page hides chrome and is not forwarded to the
+/// page.
 /// Comics keep page gestures available; their edge taps also hide chrome.
 class _ReaderChromeDismissBarrierDriver extends StatelessWidget {
   const _ReaderChromeDismissBarrierDriver();
@@ -847,7 +847,7 @@ class ReaderBottomChromeDriver extends StatelessWidget {
   final VoidCallback onSearchPressed;
 
   /// Forwarded to the slider's drag-end handler. Skips the bloc entirely —
-  /// the WebView's `goToFraction` triggers `onRelocated` once the new page
+  /// the surface's `goToFraction` reports the new position once the page
   /// lands and the bloc updates from there.
   final ValueChanged<double> onSeekFraction;
 
@@ -1260,8 +1260,8 @@ class _ReaderChromeCapsule extends StatelessWidget {
 /// Time left (or chapter), the thin progress slider and the page label.
 ///
 /// It intentionally keeps seek state local: dragging the thumb rebuilds only
-/// this row and does not call JS on every tick; only `onChangeEnd` calls
-/// `goToFraction(...)`.
+/// this row and does not move the page on every tick; only `onChangeEnd`
+/// calls `goToFraction(...)`.
 class _ReaderProgressRow extends StatefulWidget {
   const _ReaderProgressRow({
     required this.progress,
@@ -1302,7 +1302,7 @@ class _ReaderProgressRow extends StatefulWidget {
 
 class _ReaderProgressRowState extends State<_ReaderProgressRow> {
   /// Local override for smooth drag and for the post-release window before
-  /// foliate-js reports the new snapped location back to the bloc.
+  /// the surface reports the new snapped location back to the bloc.
   double? _dragValue;
   bool _isDragging = false;
   Timer? _dragReleaseTimer;

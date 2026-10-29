@@ -11,7 +11,7 @@ import 'package:xml/xml.dart';
 
 import '../../text/html_entities.dart';
 import '../book_navigation.dart';
-import '../epub/epub_book.dart' show EpubPageSpread;
+import '../../fixed_layout/spread_layout.dart' show SpreadSide;
 import 'mobi_container.dart';
 import 'mobi_headers.dart';
 import 'mobi_index.dart';
@@ -73,7 +73,7 @@ class Kf8Section {
 
   /// Skeleton and fragment bytes together, the progress weight.
   final int length;
-  final EpubPageSpread? pageSpread;
+  final SpreadSide? pageSpread;
 
   bool get isLinear => fragments.isNotEmpty;
 
@@ -471,10 +471,10 @@ class Kf8Book {
   }
 
   /// Page spreads from the RESC record's spine (`skelid` → properties).
-  static Future<Map<int, EpubPageSpread?>> _readPageSpreads(
+  static Future<Map<int, SpreadSide?>> _readPageSpreads(
     MobiContainer container,
   ) async {
-    final spreads = <int, EpubPageSpread?>{};
+    final spreads = <int, SpreadSide?>{};
     final kf8 = container.headers.kf8!;
     for (var i = kf8.resourceStart; i < container.pdb.numRecords; i++) {
       String magic;
@@ -511,15 +511,15 @@ class Kf8Book {
     return spreads;
   }
 
-  static EpubPageSpread? _pageSpread(List<String> properties) {
+  static SpreadSide? _pageSpread(List<String> properties) {
     for (final p in properties) {
       switch (p) {
         case 'page-spread-left' || 'rendition:page-spread-left':
-          return EpubPageSpread.left;
+          return SpreadSide.left;
         case 'page-spread-right' || 'rendition:page-spread-right':
-          return EpubPageSpread.right;
+          return SpreadSide.right;
         case 'rendition:page-spread-center':
-          return EpubPageSpread.center;
+          return SpreadSide.center;
       }
     }
     return null;

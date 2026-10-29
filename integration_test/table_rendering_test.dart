@@ -1,202 +1,121 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 
+import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:vellum/all_formats.dart';
 
 import '../test/support/native_screenshots.dart';
-import '../test/support/reading_fixture.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
+/// A table wider than the page on vellum in the real app: as in the
+/// WebView reader, it keeps every word whole and scrolls sideways in the
+/// column; a swipe on it scrolls it, and once it is at its edge the swipe
+/// turns the page.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('wide book tables scroll without moving the reading page', (
-    tester,
-  ) async {
-    final app = await UiTestApp.create(nativeReader: true);
+  testWidgets('a wide book table scrolls sideways', (tester) async {
+    final app = await UiTestApp.create(withBook: false);
     addTearDown(app.dispose);
-    // EPUB parsing is covered in browsers; isolate native table painting,
-    // scrolling and CFI behavior in the production renderer here.
-    const table = '''<table id="wide-table"><tr>
-<td id="table-label">Configuration</td><td>Coordination</td>
-<td>Distribution</td><td>Concurrency</td>
-<td>Communication</td><td id="last-label">Observability</td>
-</tr></table>''';
+    const labels = [
+      'Configuration',
+      'Coordination',
+      'Distribution',
+      'Concurrency',
+      'Communication',
+      'Observability',
+    ];
+    final file = File('${app.directory.path}/table.fb2');
+    await file.writeAsString('''<?xml version="1.0" encoding="utf-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+<description><title-info><book-title>Tables</book-title><lang>en</lang>
+</title-info></description><body><section><title><p>Tables</p></title>
+<table><tr>${labels.map((l) => '<td>$l</td>').join()}</tr></table>
+${List.generate(40, (i) => '<p>Paragraph $i after the table keeps the book long enough to turn.</p>').join('\n')}
+</section></body></FictionBook>''');
+    final book = await app.bookRepository.addBook(
+      sourceFile: file,
+      title: 'Tables',
+      format: BookFormat.fb2,
+    );
     tester.platformDispatcher.defaultRouteNameTestValue = '/';
     addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
     await tester.pumpWidget(app.widget);
-    await tapUi(tester, find.byKey(ValueKey('library-grid-${app.book!.id}')));
+    await tapUi(tester, find.byKey(ValueKey('library-grid-${book.id}')));
     await waitForUi(
       tester,
-      () {
-        final element = find.byType(BookReaderWebView).evaluate().firstOrNull;
-        return element != null &&
-            tester
-                .state<BookReaderWebViewState>(find.byType(BookReaderWebView))
-                .debugIsReady;
-      },
-      description: 'book ready',
+      () => find.byType(TextColumnPage).evaluate().isNotEmpty,
+      description: 'the first page',
       timeout: const Duration(seconds: 45),
     );
-    final controller = tester
-        .state<BookReaderWebViewState>(find.byType(BookReaderWebView))
-        .debugController!;
+    await tester.pumpAndSettle();
 
-    Future<void> waitForDom(String condition) async {
-      final deadline = DateTime.now().add(const Duration(seconds: 15));
-      while (await controller.evaluateJavascript(source: condition) != true) {
-        if (DateTime.now().isAfter(deadline)) fail(condition);
-        await tester.pump(const Duration(milliseconds: 50));
-      }
+    final page = tester.widget<TextColumnPage>(find.byType(TextColumnPage));
+    final cells = [
+      for (final label in labels)
+        page.column.items.whereType<ColumnText>().firstWhere(
+          (t) => t.paragraph.box.text == label,
+        ),
+    ];
+    final scroller = page.column.scrollers.single;
+    for (final cell in cells) {
+      expect(cell.paragraph.lines, hasLength(1), reason: 'whole words');
+      expect(cell.scroller, same(scroller));
     }
+    expect(scroller.contentWidth, greaterThan(page.column.width));
+    await _screenshot(binding, 'book-table');
 
-    Future<void> capture(String name, String labelId) async {
-      if (Platform.isAndroid) {
-        await captureAndroidScreenshot(name);
-        return;
-      }
-      final bounds =
-          await controller.evaluateJavascript(
-                source:
-                    '''(() => {
-          const {doc} = window.reader.view.renderer.getContents()[0];
-          const range = doc.createRange();
-          range.selectNodeContents(doc.getElementById(${jsonEncode(labelId)}));
-          const text = range.getBoundingClientRect();
-          const frame = doc.defaultView.frameElement.getBoundingClientRect();
-          return {x: frame.x + text.x, y: frame.y + text.y,
-            width: text.width, height: text.height};
-        })()''',
-              )
-              as Map;
-      final webView = tester.getRect(find.byType(BookReaderWebView));
-      final bytes = await binding
-          .takeScreenshot(name)
-          .timeout(const Duration(seconds: 20));
-      final codec = await ui.instantiateImageCodec(Uint8List.fromList(bytes));
-      final frame = await codec.getNextFrame();
-      try {
-        final pixels = (await frame.image.toByteData())!;
-        final logicalSize =
-            tester.view.physicalSize / tester.view.devicePixelRatio;
-        final scale = frame.image.width / logicalSize.width;
-        final rect = Rect.fromLTWH(
-          webView.left + (bounds['x'] as num).toDouble(),
-          webView.top + (bounds['y'] as num).toDouble(),
-          (bounds['width'] as num).toDouble(),
-          (bounds['height'] as num).toDouble(),
-        ).intersect(webView);
-        expect(rect.isEmpty, isFalse, reason: 'Table label must be in view');
-        var ink = 0;
-        for (
-          var y = (rect.top * scale).ceil();
-          y < (rect.bottom * scale).floor();
-          y++
-        ) {
-          for (
-            var x = (rect.left * scale).ceil();
-            x < (rect.right * scale).floor();
-            x++
-          ) {
-            final offset = (y * frame.image.width + x) * 4;
-            if (pixels.getUint8(offset) < 130 &&
-                pixels.getUint8(offset + 1) < 130 &&
-                pixels.getUint8(offset + 2) < 130) {
-              ink++;
-            }
-          }
-        }
-        expect(
-          ink,
-          greaterThan(20),
-          reason: 'Geometry alone cannot detect a blank table',
-        );
-      } finally {
-        frame.image.dispose();
-        codec.dispose();
-      }
-    }
-
-    await waitForDom(
-      '(window.reader?.view?.renderer?.getContents?.() ?? [])'
-      '.some(({doc}) => doc.body?.textContent.includes(${jsonEncode(ReadingFixture.phrase)}))',
+    // A swipe on the table scrolls it; the page stays.
+    final render = tester.renderObject<RenderTextColumnPage>(
+      find.byType(TextColumnPage),
     );
-    await tester.pump(const Duration(milliseconds: 350));
-    await controller.evaluateJavascript(
-      source:
-          '''void (async () => {
-      const {doc} = window.reader.view.renderer.getContents()[0];
-      const {normalizeLoadedDocument} = await import('./src/readflex_document_normalizer.js');
-      doc.body.innerHTML = '<p>Paragraphs before a table in a later book page.</p>'.repeat(60)
-        + ${jsonEncode(table)} + '<p>After the table.</p>';
-      normalizeLoadedDocument(doc);
-      window.tableTestReady = true;
-    })();''',
+    final onTable = render.localToGlobal(
+      Offset(
+        scroller.viewport.center.dx,
+        scroller.viewport.center.dy - page.page.top,
+      ),
     );
-    await waitForDom('window.tableTestReady === true');
-    for (final mode in ['slide', 'vertical', 'scroll']) {
-      await controller.evaluateJavascript(
-        source: 'window.changeStyle({pageTurnStyle: ${jsonEncode(mode)}});',
-      );
-      await tester.pump(const Duration(milliseconds: 350));
-      await controller.evaluateJavascript(
-        source: '''(() => {
-        const {doc, index} = window.reader.view.renderer.getContents()[0];
-        doc.getElementById('wide-table').parentElement.scrollLeft = 0;
-        const range = doc.createRange();
-        range.selectNodeContents(doc.getElementById('table-label'));
-        window.reader.view.goTo(window.reader.view.getCFI(index, range));
-      })();''',
-      );
-      await tester.pump(const Duration(milliseconds: 500));
-      final before =
-          await controller.evaluateJavascript(
-                source: '''(() => {
-        const {doc, index} = window.reader.view.renderer.getContents()[0];
-        const wrapper = doc.getElementById('wide-table').parentElement;
-        const range = doc.createRange();
-        range.selectNodeContents(doc.getElementById('table-label'));
-        window.tableTestCfi = window.reader.view.getCFI(index, range);
-        window.tableTestLocation = window.reader.view.lastLocation.cfi;
-        return {lines: range.getClientRects().length,
-          overflow: doc.defaultView.getComputedStyle(wrapper).overflowX,
-          wide: wrapper.scrollWidth > wrapper.clientWidth + 4};
-      })();''',
-              )
-              as Map;
-      expect(before['lines'], 1);
-      expect(before['overflow'], 'auto');
-      expect(before['wide'], true);
-      await capture('book-table-$mode-start', 'table-label');
-      await controller.evaluateJavascript(
-        source: '''(() => {
-        const {doc} = window.reader.view.renderer.getContents()[0];
-        const wrapper = doc.getElementById('wide-table').parentElement;
-        wrapper.scrollLeft = wrapper.scrollWidth - wrapper.clientWidth;
-      })();''',
-      );
-      await tester.pump(const Duration(milliseconds: 150));
-      final after =
-          await controller.evaluateJavascript(
-                source: '''(() => {
-        const {doc, index} = window.reader.view.renderer.getContents()[0];
-        const range = doc.createRange();
-        range.selectNodeContents(doc.getElementById('table-label'));
-        return {scrolled: doc.getElementById('wide-table').parentElement.scrollLeft > 0,
-          sameCfi: window.reader.view.getCFI(index, range) === window.tableTestCfi,
-          samePage: window.reader.view.lastLocation.cfi === window.tableTestLocation};
-      })();''',
-              )
-              as Map;
-      expect(after, {'scrolled': true, 'sameCfi': true, 'samePage': true});
-      await capture('book-table-$mode-end', 'last-label');
+    await tester.dragFrom(onTable, const Offset(-150, 0));
+    await tester.pumpAndSettle();
+    expect(scroller.offset.value, greaterThan(50));
+    expect(
+      tester.widget<TextColumnPage>(find.byType(TextColumnPage)).page.top,
+      page.page.top,
+    );
+    await _screenshot(binding, 'book-table-scrolled');
+
+    // At its edge, a swipe on it turns the page.
+    while (scroller.canScroll(1)) {
+      await tester.dragFrom(onTable, const Offset(-200, 0));
+      await tester.pumpAndSettle();
     }
-    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.flingFrom(onTable, const Offset(-260, 0), 1500);
+    await waitForUi(
+      tester,
+      () =>
+          tester
+              .widget<TextColumnPage>(find.byType(TextColumnPage).first)
+              .page
+              .top !=
+          page.page.top,
+      description: 'the next page',
+    );
+    // The reader saves its place after a pause.
+    await tester.pump(const Duration(seconds: 1));
+    await unmountUi(tester);
   });
+}
+
+Future<void> _screenshot(
+  IntegrationTestWidgetsFlutterBinding binding,
+  String name,
+) async {
+  if (Platform.isAndroid) {
+    await captureAndroidScreenshot(name);
+  } else {
+    await binding.takeScreenshot(name);
+  }
 }

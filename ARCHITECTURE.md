@@ -45,7 +45,7 @@ Preferred package shapes:
 - `packages/<name>_repository` for domain persistence and data-source
   orchestration.
 - `packages/<name>_service` for platform, backend, or infrastructure contracts.
-- A named specialized package such as `component_library` or `reader_webview`
+- A named specialized package such as `component_library` or `vellum`
   when the responsibility is neither a feature nor a
   repository/service.
 
@@ -62,7 +62,7 @@ The root package (`readflex`) is the composition and integration layer.
 |------|----------------|
 | `lib/main.dart` | Calls `starter()` only. |
 | `lib/app/starter.dart` | Flutter binding and `runApp` in the same error zone, bloc observer, build/frame tracing, recovery screen. |
-| `lib/app/app_bootstrap.dart` | Validates configuration before monitoring, retains monitoring across retries, prepares reader assets/server, transfers ownership to the running app. |
+| `lib/app/app_bootstrap.dart` | Validates configuration before monitoring, retains monitoring across retries, transfers ownership to the running app. |
 | `lib/app/config` | Compile-time/runtime configuration via `ApplicationConfig` and environment helpers. |
 | `lib/app/composition.dart` | Creates the database, repositories, services, filesystem directories, and app-wide dependencies. |
 | `lib/app/dependency_container.dart` | Dependency holder plus ordered, idempotent resource disposal and bootstrap rollback. |
@@ -70,10 +70,8 @@ The root package (`readflex`) is the composition and integration layer.
 | `lib/app/dependency_scope.dart` | Inherited scope for app-wide dependencies. |
 | `lib/app/app_scopes.dart` | Mounts dependency, preference, connectivity, and lifecycle scopes. |
 | `lib/app/readflex_app.dart` | Material app, theme/locale and a router retained across preference changes. |
-| `lib/app/app_lifecycle.dart` | Restores a stopped reader server on iOS resume; best-effort resource disposal on detach, not pause or widget unmount. |
+| `lib/app/app_lifecycle.dart` | Best-effort resource disposal on detach, not pause or widget unmount. |
 | `lib/app/routing.dart` | GoRouter route table, route guards, navigation callbacks, feature wiring. |
-| `lib/app/native_reader_formats.dart` | The formats the native engine handles: the developer override in preferences when set, otherwise the build's `READFLEX_NATIVE_FORMATS`. |
-| `lib/app/developer/reader_engine_sheet.dart` | Development-only sheet (long press on the Library title) that picks WebView or native per format and saves the override in preferences. |
 | `lib/app/screens` | Recovery screen for a failed bootstrap, shown before dependencies and the router exist. |
 
 There is no global service locator. App-wide objects are created once in
@@ -85,18 +83,16 @@ attempt; the logger and error reporter remain available for retry diagnostics.
 
 `AppBootstrap.run` owns each attempt until its synchronous `onReady` callback
 returns. Dependency construction rolls back its partial resources internally;
-asset preparation or synchronous `onReady` failures roll back the completed
-container. Later Flutter build errors use the installed error handlers; they
+a synchronous `onReady` failure rolls back the completed container. Later Flutter build errors use the installed error handlers; they
 are not caught as a failed bootstrap attempt.
 Configuration and monitoring failures use the same recovery path. The running
 container closes monitoring on final disposal. Composition timing stays in logs,
 not in the widget tree. Tests substitute bootstrap factories rather than opening
 production storage or contacting a backend.
 
-Lifecycle resume requests share one in-flight reader-server restart. Detach
-waits for that restart before closing resources and prevents subsequent restarts
-on the disposed runtime. This preserves the existing terminal-detach policy;
-an embedding that reattaches a disposed runtime would need a fresh bootstrap.
+Detach closes resources once and is terminal for the runtime; an embedding
+that reattaches a disposed runtime would need a fresh bootstrap. Pause and
+resume keep everything open.
 
 Reader navigation uses `ReaderRouteArguments` for both a preloaded book and the
 post-open callback. The URL source ID is authoritative; a mismatched preloaded
@@ -207,19 +203,19 @@ unchanged; the phone golden profiles prove it.
   shows two columns of rows, and the selection bar keeps its actions in one
   row. The empty state, like onboarding, stops at
   `AppSizes.centeredColumnMaxWidth` in every window.
-- Reader: a measure of 32em of body text reaches foliate through
-  `FoliateStyle` in every window (phone pages in portrait are narrower than
-  it); wide windows add the Auto / One / Two Columns choice. Foliate lays out
-  one column or a landscape spread in one pass, and articles keep one centred
-  column. See the reader and reader_webview READMEs.
+- Reader: a measure of 32em of body text reaches vellum's page settings in
+  every window (phone pages in portrait are narrower than it); wide windows
+  add the Auto / One / Two Columns choice. vellum lays out one column or a
+  landscape spread, and articles keep one centred column. See the reader and
+  vellum READMEs.
 
 Reading text size is not a layout, so it has its own rule: a tablet-sized
 window, at least 600 on its shortest side (Android's `sw600dp`), renders book
 and article text 12.5% larger (`readerDeviceFontScale` in the reader). The
 shortest side ignores orientation, so rotation never resizes the text, phones
 stay phones in landscape, and a narrow Split View window reads like a phone.
-The reader's own text size stays at 100%; the multiplier only reaches
-`FoliateStyle`.
+The reader's own text size stays at 100%; the multiplier only reaches the
+book style vellum lays out with.
 
 Bottom sheets keep Material's 640dp width on wide windows. Side panels and
 popovers for tablets are not implemented.
@@ -302,10 +298,9 @@ remain for migration compatibility only (last revision `189e2cc1`).
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, Practice, and app composition. Practice limits (`practiceNewCardsPerDay`, `practiceReviewHighlights`, `practiceDesiredRetention`) are edited in the Practice settings sheet. |
 | `review_scheduler` | FSRS-6 over the vendored `fsrs`: computes the next review state and log for a rating at the reader's desired retention, previews intervals. Study days start at 04:00; day-level intervals are at least a day, ordered by rating and capped at 365; one learning and one relearning step of 10 min because the step is not persisted; fuzzing off so previews match. Held to py-fsrs by a 118-history reference test. | Used by `fsrs_repository` only. |
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
-| `reader_server` | Localhost HTTP server for reader assets and book/article files. | Supports range requests for books and local article HTML/assets for WebView readers. |
-| `reader_webview` | Foliate book WebView wrapper, vertical article HTML wrapper, JS bridges, asset extraction, metadata extraction. | Used by Reader and Import Flow. |
-| `vellum` | Native reader engine replacing foliate-js one format at a time: ZIP container, CBZ pages in the WebView's order, fake CFIs, `FixedPagesView`/`FixedPagesController` for comics and PDFs, image areas, thumbnails, import metadata with JPEG covers, `PdfBook` over pdfium (`pdfrx_engine` + `pdfium_flutter`, the only third-party engine) with page rendering, zoom tiles, text layers, selection, search, anchors, margin crops and page colours; `package:vellum/testing.dart` builds fixtures. | Used by Reader behind `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. Plan: `.local/reports/native-reader-steps-2026-10-27.md`. |
+| `vellum` | The reader engine, which replaced foliate-js and the WebView for every format (R1–R6): ZIP container, CBZ pages in the order foliate-js gave them, fake CFIs, `FixedPagesView`/`FixedPagesController` for comics and PDFs, image areas, thumbnails, import metadata with JPEG covers, `PdfBook` over pdfium (`pdfrx_engine` + `pdfium_flutter`, the only third-party engine; SVG images are drawn with `flutter_svg`) with page rendering, zoom tiles, text layers, selection, search, anchors, margin crops and page colours; reflowable books (EPUB, FB2, MOBI/KF8) parsed into a document tree, styled by its own CSS cascade, laid out with `TextPainter` into columns and pages (`TextPagesController`/`TextPagesView`), with CFIs, progress, platform text selection, highlights, search, notes, embedded fonts, floats, inline blocks, `calc()`/`var()`, background images and SVG; saved articles as one scrolling column (`ArticleTextSource`, `TextScrollController`/`TextScrollView`) with the article shell's sanitizing, contents, sentence anchors, selection payloads and search; `package:vellum/testing.dart` builds fixtures. | Used by Reader behind `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. A library per format on top of the core `package:vellum/vellum.dart` (`epub.dart`, `fb2.dart`, `mobi.dart`, `comic.dart`, `pdf.dart`, `article.dart`; `all_formats.dart` with `textBookSourceOf` for apps that read them all, as readflex does): each format is one folder under `src/formats/` (articles `src/article/`), the core imports no format and no format another (`test/library_boundaries_test.dart`). Plan: `.local/reports/native-reader-steps-2026-10-27.md`. |
 | `screen_control_service` | Keep-awake and brightness coordination for active reading sessions. | Wraps low-level brightness plugin. |
+| `vellum_mobi_native` | Rust MOBI/KF8 text-record reading and decompression, native file/dictionary ownership, release Native Assets build hook and FRB bindings. | Used only by Vellum's MOBI module; no UI/domain/repository dependencies. |
 | `toast_service` | Thin toastification wrapper: bottom-anchored toasts that float above controls marked with `ToastAvoidArea`; `ToastNavigatorObserver` on the root navigator clears them when a sheet or dialog opens. | Feature packages do not import toastification directly. |
 
 Some infrastructure packages are used by only one feature today. That is still
@@ -322,8 +317,6 @@ they keep their upstream license, structure and style, and each one's
 |---------|----------|----------------|--------------|
 | `device_screen_brightness` | 0.3.1 (MIT) | Linear Android window brightness. | Path dependency of `screen_control_service`. |
 | `fsrs` | 2.0.1 (MIT) | Two FSRS-6 fixes as py-fsrs and fsrs-rs compute them: difficulty mean reversion targets the unclamped initial difficulty, and a same-day Hard never lowers stability; held to py-fsrs by `review_scheduler`'s reference test. | Path dependency of `review_scheduler`. |
-| `flutter_inappwebview_android` | 1.1.3 (Apache-2.0) | Reader selection handles and magnifier; console messages kept out of logcat. | Root `dependency_overrides`. |
-| `flutter_inappwebview_ios` | 1.1.2 (Apache-2.0) | Hides the modern iOS edit menu when context menus are disabled. | Root `dependency_overrides`. |
 
 ### Feature Packages
 
@@ -331,8 +324,8 @@ they keep their upstream license, structure and style, and each one's
 |---------|------------|---------------------------|
 | `library_feature` (`packages/features/library`) | Main Library screen, source search/filter/list/grid, collection management, the entry into Practice (row leading the content once something is saved, capsule button with the due badge). | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `fsrs_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
 | `practice` | Practice section pushed above the Library: hub (today, Vocabulary, Highlights, by book), Vocabulary and Highlights lists, full-screen review session. | `article_repository`, `book_repository`, `component_library`, `dictionary_repository`, `domain_models`, `fsrs_repository`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
-| `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `reader_webview`, `readflex_localizations`, `vellum` |
-| `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `reader_webview`, `readflex_localizations`, `screen_control_service`, `shared` |
+| `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `readflex_localizations`, `vellum` |
+| `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `screen_control_service`, `shared`, `toast_service`, `vellum` |
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `readflex_localizations`, `shared` |
 | `translate` | Reader text action and contextual translation bottom sheet; Save in the word header keeps the word for review. | `component_library`, `contextual_translation_service`, `dictionary_repository`, `preferences_service`, `readflex_localizations`, `shared`, `toast_service` |
 | `dictionary` | Reader Define action and monolingual definition bottom sheet with system-first fallback; Save in the word header keeps the word for review (only in the Readflex sheet, the native UI has none). | `component_library`, `dictionary_repository`, `dictionary_service`, `readflex_localizations`, `shared`, `toast_service` |
@@ -377,10 +370,8 @@ The reader is intentionally split across several packages:
 
 | Package | Responsibility |
 |---------|----------------|
-| `reader_server` | Serves root-confined reader assets, book bytes, article HTML, and article-local assets through a token-scoped localhost URI. |
-| `reader_webview` | Hosts foliate-js for books/comics, the vertical HTML shell for articles, JS bridge DTOs, asset extraction, metadata extraction. |
-| `vellum` | The native engine: `ComicBook` over its own ZIP reader, `FixedPagesView` (PageView spreads, pinch and double-tap zoom, tap arbitration), `ComicImageAreaLayer`, `ComicPageImage`/`ComicPageThumbnail`. Later: PDF, FB2, EPUB, MOBI, articles. |
-| `features/reader` | Reader screen, reader bloc/cubits, chrome, Contents and Search sheets, appearance, search, selection, brightness, keep-awake. Commands to the page go through `ReaderSurface`: `ReaderWebViewSurface` over the WebView key, `ReaderComicSurface` and `ReaderPdfSurface` over the native bodies; `ReaderScreen.nativeFormats` picks the body and surface per format. |
+| `vellum` | The engine: `ComicBook` over its own ZIP reader, `FixedPagesView` (PageView spreads, pinch and double-tap zoom, tap arbitration), `ComicImageAreaLayer`, `ComicPageImage`/`ComicPageThumbnail`; PDF; reflowable books through `TextPagesView` (EPUB, FB2, MOBI); articles through `TextScrollView`. |
+| `features/reader` | Reader screen, reader bloc/cubits, chrome, Contents and Search sheets, appearance, search, selection, brightness, keep-awake, and the page's types (`BookPosition`, `ReaderTocItem`, search events, selections). Commands to the page go through `ReaderSurface`: `ReaderTextSurface` (EPUB, FB2, MOBI on vellum's `TextPagesView`), `ReaderComicSurface`, `ReaderPdfSurface` and `ReaderArticleSurface` (articles on vellum's `TextScrollView`); the source type and format pick the body and surface. |
 | `shared` | `TextAction` plugin contract used by reader context-panel actions. |
 | `features/highlight` | Implements `HighlightAction`. |
 | `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
@@ -462,8 +453,9 @@ Reader-specific UI state is split by responsibility:
 - `ReaderBrightnessCubit` coordinates widget brightness, system brightness, and
   platform override behavior.
 - `ReaderPageThumbnailCubit` owns a Pages-tab-local queue and bounded preview
-  cache for comic and PDF pages. The reader host injects an async callback to its existing WebView;
-  view widgets never receive a repository, archive parser or WebView controller.
+  cache for comic and PDF pages. The reader host injects an async callback to
+  the page surface; view widgets never receive a repository, archive parser or
+  engine controller.
   Only visible tiles request previews, one at a time, independently of book
   startup and reading-position state. Closing the tab releases its cache.
 - `ReaderSelectionTipCubit` owns the one-time "Press and hold a word" tip.
@@ -473,78 +465,57 @@ Reader-specific UI state is split by responsibility:
   driver in the content stack feeds it reader state and the content's
   position handler reports book page turns.
 
-The WebView subtree is kept behind ready-state reader composition so routine
-UI changes do not recreate the reader runtime unnecessarily. Books and comics
-use the foliate WebView; articles use a separate vertical HTML WebView that
-loads `content.html` and restores position through stable sentence anchors.
+The page is kept behind ready-state reader composition so routine UI changes
+do not recreate it. Every source is drawn by vellum; there is no WebView and
+no local reader server (removed in R6; the last revision with them is
+`fb4b4e5c`). Books open as pages: EPUB, FB2 and MOBI/AZW3 on `TextPagesView`,
+CBZ and PDF on `FixedPagesView`. Articles scroll: `ArticleTextSource` reads
+`content.html` cleaned as the former article shell cleaned it
+(`articleDocumentHtml`, the DOMPurify allow-list, inside
+`<main id="article-content">`), and the reader keeps the shell's stored forms,
+so positions, bookmarks and highlights saved in the WebView still resolve:
+`readflex-html-position:` sentence anchors (`ArticleAnchor`, byte-identical to
+the shell's JSON), the sentence at the middle of the view as the position,
+minutes left at 1200 characters a minute, headings (or up to twelve blocks) as
+contents with their start share. Search runs over the sentences and tints
+every hit; the active hit hidden under the search bar is marked on the bar's
+edge (`ReaderSearchOcclusionMarker`, shared with books).
 
-Both shells intercept link taps in JS: in-document fragments navigate in place,
-everything else is reported through one `onExternalLink` callback. The reader
-feature asks first (`ReaderExternalLinkPrompt`, a sheet with the real
-destination, Copy link and Open) and passes only confirmed links to
+Link taps are resolved in Dart: in-document fragments and book links navigate
+in place, a note reference opens over the page, everything else is reported
+through one `onExternalLink` callback (a saved article's relative paths stay
+inert). The reader feature asks first (`ReaderExternalLinkPrompt`, a sheet with
+the real destination, Copy link and Open) and passes only confirmed links to
 `ReaderScreen.onOpenExternalLink`; `routing.dart` opens web pages in the in-app
-browser and `mailto:`/`tel:` in their apps. `ReaderNavigationPolicy` in
-`reader_webview` limits WebView navigation to the loopback reader server and
-forwards any external main-frame http(s) navigation to the same callback, so
-neither shell can leave the reader inside the WebView. Highlight drawing,
-search tints, the symbol font fallback and the post-selection tap debounce
-come from shared modules so articles and books render the same tokens alike.
+browser and `mailto:`/`tel:` in their apps. Highlight colours, search tints
+and the symbol font fallback come from shared modules, so articles and books
+render the same tokens alike.
 
-Page zoom for comics and PDF lives in `reader_webview` JS: edge taps are
-immediate, centre taps distinguish chrome from double-tap zoom, and zoomed drags
-only pan. PDF pages keep native text selection and link taps under zoom.
-Flutter owns chrome visibility and physical/logical page commands, with the
-same tap-zone fraction passed to JS; PDF keeps text-book chrome rules. The
-fixed-layout renderer serializes zoomable navigation with one replaceable
-pending intent; other fixed-layout formats keep their existing busy-input gate.
-It also owns layout geometry: margin crops and when a zoomed page needs a sharp
-tile. The comic loader owns deduplicated image-blob loads and bounded
-adjacent-page prefetch (8 MiB speculative encoded data). The PDF loader owns
-canvas page bitmaps for the visible page and its neighbours, sharp tiles and
-theme recoloring. Neither keeps feature state or Flutter pointer-move
-callbacks.
+Page zoom for comics and PDF lives in vellum's `FixedPagesView`: edge taps are
+immediate, centre taps distinguish chrome from double-tap zoom, and zoomed
+drags only pan. PDF pages keep text selection and link taps under zoom.
+Flutter owns chrome visibility and physical/logical page commands
+(`readerLeftTapZoneEnd`, 30% of the page per edge); PDF keeps text-book chrome
+rules. A zoom decodes the page again, denser, up to a pixel budget; past it
+the visible part is rendered as a sharp tile, planned over the page bitmap it
+is drawn on (a bitmap of another size plans it again). Margin crops decode the
+whole page at the density its visible part is shown at, again when a crop
+arrives after the page. Comic pages are decoded from the archive on demand;
+PDF pages, tiles and previews are rendered by pdfium.
 
-Book selection navigation stays inside `reader_webview`'s JS runtime. A handle
-drag never turns a page. A subsequent swipe or edge tap advances exactly one
-page and moves the active endpoint just inside the new viewport. The opposite
-DOM boundary stays fixed, including when navigation reverses or crosses it.
-The paginator blocks WebView auto-scroll while paginated text is selected;
-there are no edge-dwell timers. Selection cannot cross spine documents.
-Continuous Scroll and fixed-layout books keep their navigation behavior.
-iOS handles remain native; Android uses reader handles from the initial word
-selection onward. A reader-only Android plugin setting consumes native long
-press and dispatches normalized viewport coordinates to the JS selection start
-module. Browser word-boundary operations create the range; the existing JS
-controllers own handle movement and settling. No repository or feature bloc
-participates in per-pointer work. Non-reader WebViews stay native. The DOM
-Range remains the source of truth for text, CFI and annotations on both.
-Geometry uses endpoints, not all selected line rectangles. Pointer updates
-are coalesced per animation frame; full text/context is read only after the
-gesture settles or on an explicit action. The Flutter menu hides without
-disposal while adjusting and retains its chosen color. On iOS and Android the native
-selection is not overpainted by the temporary SVG highlight preview.
-The article reader applies the same single temporary tint rule on both iOS and
-Android, for CSS and SVG previews. Clearing that preview leaves native selection
-and persisted annotation renderers intact.
-The article selection controller locks native handle auto-scroll. A separate
-content swipe scrolls without changing the range; an offscreen endpoint gets
-a temporary continuation control. Dragging that control preserves the opposite
-DOM boundary, including reversal/crossing. iOS returns to visible native handles;
-Android keeps the same controls before and after range updates. Touch
-targets respect safe-area insets. Adjustment uses bounded endpoint geometry,
-frame-coalesced pointer work and deferred text/context serialization; its UI
-phase goes through the existing selection cubit. Book pagination is separate.
-For Android articles the JS controller temporarily pins the content container,
-preserving document height, to prevent native auto-scroll before JS events.
-It restores normal layout before separate content gestures and while both
-endpoints are offscreen. The guard does not move text nodes or rewrite
-styles on every range change; cancellation/disposal restore original styles.
-The Android WebView patch suppresses menu items without
-finishing the native selection action mode for other consumers. Visible Android
-readers opt into their own handles, retain Hybrid Composition and serialized pause/resume
-handling. This requires device performance and background/foreground checks.
-Browser tests do not substitute for native-handle checks on
-physical devices; see `packages/reader_webview/README.md`.
+Text selection is Flutter's `SelectionArea` over each page (or the scrolled
+slices of an article) with the platform's handles and magnifier: a word on a
+long press, word by word on a drag. `TextSelectionDetails` (books) and
+`ArticleSelection` (articles) read it into the context panel's payload: the
+exact and whole-word text and CFIs, the sentence as context, and the saved
+highlights it merges. In paged books a selection follows the reader through
+the section as it did in the WebView reader: a swipe or an edge tap turns by
+one spread, the boundary behind stays and the other edge moves onto the new
+page (to the end of its first line); a centre tap, a jump or another section
+clears it. Tables wider than the column scroll sideways inside it (the
+reader's sheet gives them `overflow-x: auto` and up to 40em of width), with
+their words whole; a swipe on a table at its edge turns the page. No
+repository or feature bloc participates in per-pointer work.
 
 Reader position writes are serialized and retain the 500ms trailing debounce.
 Repositories update only CFI/progress; `markOpened` updates only the opened
@@ -552,18 +523,16 @@ timestamp. Each saved write reports its progress to the Library, which updates
 that one source in memory instead of reloading storage on every page. SQLite
 runs in write-ahead mode with `synchronous = NORMAL`, so these commits need no
 fsync. A delayed source refresh preserves live position and document
-capabilities, and closing the bloc drains both queued and active writes.
-The book WebView publishes positions only after initial-location completion;
-early content readiness does not authorize a position save. Pending initial
-positions are discarded on failure or renderer replacement. The saved progress
-travels with the saved CFI: when the CFI no longer resolves in its chapter
-(book update, document normalization change), the reader opens at that
-progress, or at the chapter start without one, instead of failing to load.
-Book bookmarks with an anchor version keep the CFI of a word on their own page
-and survive repagination; older ones navigate by their visual page anchor
-(`packages/reader_webview/README.md`, Bookmark anchors). CBZ page ordering
-is versioned in the Book/ReaderDocument contract: existing rows keep legacy
-indices, while new imports use filtered, natural filename order.
+capabilities, and closing the bloc drains both queued and active writes. A
+book reports its position once it shows the saved page, so a reopened book
+keeps its place. The saved progress travels with the saved CFI: when the CFI
+no longer resolves in its chapter (book update, document normalization
+change), the reader opens at that progress, or at the chapter start without
+one, instead of failing to load. Book bookmarks with an anchor version keep
+the CFI of a word on their own page and survive repagination; older ones
+navigate by their visual page anchor. CBZ page ordering is versioned in the
+Book/ReaderDocument contract: existing rows keep legacy indices, while new
+imports use filtered, natural filename order.
 
 Source deletion and collection membership cleanup share one repository-owned
 transaction. Library collection read errors preserve the last valid scopes and
@@ -573,26 +542,18 @@ Saved highlight edits use field-specific repository updates for color/note,
 not full-object replacements from UI snapshots. Their event queue is separate
 from position handling; annotation operations do not delay live page metrics.
 Source reloads preserve newer annotation state. Typed mutation effects report
-completion/failure through a listener without rebuilding the WebView subtree;
+completion/failure through a listener without rebuilding the page subtree;
 the context popup does not report success when merely enqueueing an edit.
 
-The remote book byte cache is bounded by both 128 entries and 8 MiB of retained
-buffers. Oversized reads are returned without admission to the cache, preserving
-the working set. This is not a cap on total WebView memory or in-flight reads.
-Selection navigation validates its document and gesture generation before
-applying asynchronous results and disposes listeners when the chapter unloads.
+A page that cannot open or lay out its document reports `ReaderSurfaceFailed`
+with the error; the feature shows its localized error/retry state. vellum does
+not access repositories or feature cubits.
 
-Each reader WebView owns a bounded load session: one automatic replacement
-after renderer termination, then a terminal failure exposed to `ReaderBloc`.
-The replacement restores the last known position and ignores old bridge
-callbacks. The feature shows its localized error/retry state on terminal load
-failure; the WebView package does not access repositories or feature cubits.
-
-Untrusted EPUB sections are sanitized before Blob creation when publisher
-scripts are disabled (the application default). Article images are activated
-only after the repository's guarded download succeeds; the article shell also
-filters legacy saved fragments before insertion. These policies live in the
-content-loading layers, separately from post-load typography normalization.
+Publisher scripts never run: vellum lays out the document and executes no
+script. Article images are activated only after the repository's guarded
+download succeeds; vellum also cleans legacy saved fragments as the shell did
+and reads only pictures under the article's `images/` folder. These policies
+live in the content-loading layers, separately from typography.
 
 ## Import and Article Flow
 
@@ -602,7 +563,7 @@ Book import:
 ImportFlowSheet
   -> pickBookFile callback from routing.dart
   -> importBookFile helper in import_flow
-  -> vellum reads the title, author and cover (every format; no WebView)
+  -> vellum reads the title, author and cover (every format)
   -> BookRepository stores file/metadata
   -> deletePickedBookFile removes the picker's temp/cache copy
 ```
@@ -614,7 +575,7 @@ ImportFlowSheet
   -> ArticleExtractionService downloads/cleans article
   -> ArticleRepository stores article, body images, and content.html
      (the og:image stays a remote imageUrl; it is not downloaded)
-  -> Reader opens content.html through ArticleHtmlReaderWebView
+  -> Reader opens content.html on vellum (ArticleTextSource, TextScrollView)
   -> ReaderBloc persists the same source progress model through repositories
 ```
 
@@ -665,6 +626,14 @@ Use one domain model layer and source-specific storage/service models:
   models.
 - Feature blocs/cubits emit feature states built from domain models, not DAO
   rows or backend payloads.
+
+Saved-word lookup uses `dictionary_table.word_key`, normalized in Dart on
+inserts, word edits and schema v27 migration, so lookup uses the same Unicode
+case conversion for both sides. Reader highlight Undo retains a domain-only
+`HighlightDeletion` snapshot. The repository captures and restores the highlight
+and optional review state transactionally with the original ID; review logs
+remain connected, absent review rows stay absent, and deleted sources cannot
+be recreated by Undo.
 
 When adding a new persistence-backed domain concept, prefer:
 
@@ -724,22 +693,37 @@ registered for disposal before the services and closes after them, also on
 bootstrap rollback; services close only clients they created. Article page
 downloads never use it: they keep the extraction service's own pinned client.
 
-`READFLEX_NATIVE_FORMATS` (comma-separated book formats, empty by default)
-names the formats `ReaderScreen` draws with the native `vellum` engine
-instead of the WebView (CBZ and PDF so far; import reads every format's
-metadata with the engine regardless);
-routing passes `effectiveNativeReaderFormats` into the screen:
-`Preferences.nativeReaderFormats` when a developer saved an override
-from the Reader engine sheet (DEV builds only, long press on the Library
-title; "Use build settings" clears it), otherwise
-`ApplicationConfig.nativeReaderFormats`. The set is read as each book is
-opened, so a change applies to the next one. A format joins the
-build default only after its parity run and device checks (see the native
-reader plan).
+Every book and article is drawn by `vellum`; there is no engine switch. A
+book the text body does not lay out yet (vertical writing, a fixed-layout
+EPUB: `TextBookUnsupported`) shows the open error until vellum draws it
+(R3/R4 in the native reader plan).
 
-`ReaderServer` exposes a process-local token-scoped base URI. Its book,
-article, and asset routes resolve symlinks and enforce configured filesystem
-roots.
+`vellum` delegates only MOBI/KF8 text-record I/O, trailing-entry removal and
+PalmDOC/HUFF-CDIC decompression to `packages/vellum_mobi_native` over
+`flutter_rust_bridge` 2.13.0. PDB/MOBI headers, combined-file selection,
+metadata, resources, chapter reconstruction, document parsing and layout stay
+in Dart. The native package has no Flutter UI, domain or repository dependencies.
+MOBI 6 requests its text in one batch; KF8 keeps record reads on demand and its
+existing Dart range caches. The native session starts lazily, serializes reads
+on the FRB pool and drains them before closing its file/dictionary/opaque handle.
+Failed book opening closes both native and PDB resources. Native read errors
+surface as `VellumException`; there is no silent backend retry.
+
+The native package's build hook compiles a locked Cargo crate in release mode
+with its pinned rustup compiler and bundles it through Native Assets. Native
+assets are package-level dependencies even for consumers importing another
+Vellum format. Generated bindings and native lockfiles are versioned; development
+requires rustup and the target platform toolchain. Host tests/CLI resolve the
+build-hook asset, and packaged apps use FRB's platform loader. `make analyze`
+includes Rust checks; `make test` includes Rust and bridge/session tests.
+
+The current Dart decoders remain the explicit parity reference through
+`MobiContainer.open(..., useDartTextReader: true)` or the diagnostic build define
+`VELLUM_MOBI_USE_DART=true`; this is not a reader UI preference. The historical
+`benchmarks/mobi_rust` prototype remains independent of the app graph, while
+`benchmarks/reader_native` compares production MOBI containers with the Dart
+reference. Other format/parser candidates remain experiments. Device packaging
+checks live in `integration_test/mobi_native_test.dart`.
 
 ## Known Non-Production Contracts
 
@@ -773,7 +757,7 @@ make test
 
 `make verify` is the full local quality gate. It checks formatting without
 rewriting files, analyzes the root app and every active package, then runs all
-Dart, Flutter, and reader JavaScript tests.
+Dart and Flutter tests, vellum's included.
 
 `make test-ui-contracts` is a focused subset for shared components, accessibility,
 theme contrast, import/Display navigation and representative root layouts. It
@@ -785,9 +769,7 @@ remain in `component_library`, not in a parallel generated design system.
 Root UI flows in `test/ui/` mount the production root and router with real
 repositories, isolated SQLite/preferences, and deterministic external services.
 The same test-only composition serves `integration_test/`; it never invokes
-production dependency composition or reads API keys. Native tests additionally
-start the actual loopback reader server and load the bundled HTML/JS assets.
-Views keep their normal bloc/cubit contracts; test fixtures do not introduce a
+production dependency composition or reads API keys. Views keep their normal bloc/cubit contracts; test fixtures do not introduce a
 second production dependency path.
 
 `make test-ui` runs these root flows and exact golden comparisons using bundled
@@ -807,7 +789,7 @@ from root and package tests, excludes generated/third-party code, and lists
 unmeasured owned files explicitly. `COVERAGE=1 make test-device DEVICE=<id>`
 collects native Dart line coverage after interaction tests. Combining reports
 requires matching hashes of Dart sources, tests, pubspecs, lockfile, and SDK pin.
-Native Swift/Kotlin and JS execution are not represented as Dart coverage.
+Native Swift/Kotlin execution is not represented as Dart coverage.
 
 Performance regressions have structural tests in the normal suite: Library
 tile count stays bounded at 20,000 items and cached projections are reused;
@@ -816,11 +798,8 @@ keyboard frames rebuild no grid tile; bursty reader search bounds emissions
 and published result entries without losing matches. `make test-performance` records workload timing separately in
 `.local/performance/`. Timings are diagnostic, not machine-independent CI limits.
 
-Browser regressions use pinned Playwright Chromium and WebKit against the real
-bundled reader assets. Run `make reader-browser-setup` once after checkout (or
-after updating its npm lockfile); Node.js 20+ and the browser engines are
-required by `make test`. On Linux, install Playwright's host dependencies as
-described in `packages/reader_webview/README.md`.
+Node.js 20+ is needed only by `make coverage` (and by the scripts that
+generate vellum's data tables); `make test` needs no browser engines.
 
 Focused package changes can use package-level `flutter test` or `dart test`.
 Use broader checks when changing:
@@ -828,7 +807,7 @@ Use broader checks when changing:
 - shared contracts;
 - repository behavior;
 - package dependencies;
-- reader WebView, reader server, or import flow behavior;
+- reader, vellum, or import flow behavior;
 - app composition/routing.
 
 Performance-sensitive reader/import changes should also be validated with the

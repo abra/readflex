@@ -57,15 +57,10 @@ TextSelectionContext _withLiveReaderSelection(
 /// Reads selection from [ReaderSelectionCubit] and source info from
 /// [ReaderBloc] to show/hide the text-action context panel.
 class _ContextPanelDriver extends StatelessWidget {
-  const _ContextPanelDriver({
-    required this.textActions,
-    required this.surface,
-    required this.articleWebViewKey,
-  });
+  const _ContextPanelDriver({required this.textActions, required this.surface});
 
   final List<TextAction> textActions;
   final ReaderSurface surface;
-  final GlobalKey<ArticleHtmlReaderWebViewState> articleWebViewKey;
 
   @override
   Widget build(BuildContext context) {
@@ -131,10 +126,7 @@ class _ContextPanelDriver extends StatelessWidget {
     void dismissImageSelection() {
       setImageHighlightDraftRetained(false);
       imageSelectionCubit.deselect();
-      surface.clearImageAreaSelectionPreview(
-        allowNextTap: true,
-      );
-      surface.clearImageAreaSelectionControlsBounds();
+      surface.clearImageAreaSelectionPreview();
     }
 
     void showImageHighlightPreview(HighlightColor color) {
@@ -144,14 +136,9 @@ class _ContextPanelDriver extends StatelessWidget {
       surface.showImageAreaSelectionPreview(
         pageIndex: pageIndex,
         rect: rect,
-        color: readerHighlightCssColor(color, readerTheme),
+        color: readerHighlightColor(color, readerTheme),
         opacity: readerHighlightOpacity(readerTheme),
       );
-    }
-
-    void clearImageHighlightPreview() {
-      surface.clearImageAreaSelectionPreview();
-      surface.clearImageAreaSelectionControlsBounds();
     }
 
     if (!_selectionActionsVisible(sel.hasSelection)) {
@@ -174,10 +161,8 @@ class _ContextPanelDriver extends StatelessWidget {
             dividerColor: colors.outlineVariant,
             onPopupInteractionStarted: imageSelectionCubit.protectNextClear,
             onDraftRetentionChanged: setImageHighlightDraftRetained,
-            onControlsBoundsChanged:
-                surface.setImageAreaSelectionControlsBounds,
             onPreviewColorChanged: showImageHighlightPreview,
-            onPreviewCleared: clearImageHighlightPreview,
+            onPreviewCleared: surface.clearImageAreaSelectionPreview,
             onActionCompleted: () {
               dismissImageSelection();
               if (!bloc.isClosed) {
@@ -278,9 +263,7 @@ class _ContextPanelDriver extends StatelessWidget {
         .toList(growable: false);
 
     Future<TextSelectionContext> resolveCurrentSelection() async {
-      final live = sourceType == SourceType.article
-          ? await articleWebViewKey.currentState?.currentTextSelection()
-          : await surface.currentTextSelection();
+      final live = await surface.currentTextSelection();
       return _withLiveReaderSelection(selection, live);
     }
 
@@ -289,45 +272,21 @@ class _ContextPanelDriver extends StatelessWidget {
       // shares text with saved highlights.
       final cfiRange = sel.highlightMerge?.cfiRange ?? sel.cfiRange;
       if (cfiRange == null || cfiRange.isEmpty) return;
-      final cssColor = readerHighlightCssColor(color, readerTheme);
-      final opacity = readerHighlightOpacity(readerTheme);
-      final mixBlendMode = readerHighlightBlendMode(readerTheme);
-      final verticalOffset = readerHighlightVerticalOffset(readerTheme);
-      if (sourceType == SourceType.article) {
-        articleWebViewKey.currentState?.showSelectionHighlightPreview(
-          cfiRange: cfiRange,
-          color: cssColor,
-          opacity: opacity,
-          mixBlendMode: mixBlendMode,
-          verticalOffset: verticalOffset,
-        );
-      } else {
-        surface.showSelectionHighlightPreview(
-          cfiRange: cfiRange,
-          color: cssColor,
-          opacity: opacity,
-          mixBlendMode: mixBlendMode,
-          verticalOffset: verticalOffset,
-        );
-      }
+      surface.showSelectionHighlightPreview(
+        cfiRange: cfiRange,
+        color: readerHighlightColor(color, readerTheme),
+        opacity: readerHighlightOpacity(readerTheme),
+      );
     }
 
     void clearHighlightPreview() {
-      if (sourceType == SourceType.article) {
-        articleWebViewKey.currentState?.clearSelectionHighlightPreview();
-      } else {
-        surface.clearSelectionHighlightPreview();
-      }
+      surface.clearSelectionHighlightPreview();
     }
 
     void dismissSelection() {
       selectionCubit.deselect();
       highlightFocusCubit.clear();
-      if (sourceType == SourceType.article) {
-        articleWebViewKey.currentState?.clearSelectionAfterTextAction();
-      } else {
-        surface.clearSelectionAfterTextAction();
-      }
+      surface.clearSelectionAfterTextAction();
     }
 
     void completeHighlightAction() {
@@ -518,7 +477,6 @@ class _ImageHighlightSelectionPopup extends StatefulWidget {
     required this.dividerColor,
     required this.onPopupInteractionStarted,
     required this.onDraftRetentionChanged,
-    required this.onControlsBoundsChanged,
     required this.onPreviewColorChanged,
     required this.onPreviewCleared,
     required this.onActionCompleted,
@@ -542,7 +500,6 @@ class _ImageHighlightSelectionPopup extends StatefulWidget {
   final Color dividerColor;
   final VoidCallback onPopupInteractionStarted;
   final ValueChanged<bool> onDraftRetentionChanged;
-  final ValueChanged<ReaderSelectionPosition>? onControlsBoundsChanged;
   final ValueChanged<HighlightColor> onPreviewColorChanged;
   final VoidCallback onPreviewCleared;
   final VoidCallback onActionCompleted;
@@ -558,13 +515,6 @@ class _ImageHighlightSelectionPopupState
   HighlightColor _selectedColor = HighlightColor.yellow;
   bool _saving = false;
   bool _keepPreviewOnDispose = false;
-
-  void _sendControlsBounds(ReaderSelectionPosition bounds) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      widget.onControlsBoundsChanged?.call(bounds);
-    });
-  }
 
   @override
   void initState() {
@@ -590,7 +540,7 @@ class _ImageHighlightSelectionPopupState
 
   Future<void> _save() async {
     if (_saving) return;
-    // The WebView can clear the draft selection while the modal sheet is open,
+    // The page can clear the draft selection while the modal sheet is open,
     // so the save operation must not depend on this popup staying mounted.
     final sourceId = widget.sourceId;
     final sourceType = widget.sourceType;
@@ -699,21 +649,6 @@ class _ImageHighlightSelectionPopupState
           position: widget.selectionPosition,
           gap: _kImageHighlightPopupGap,
         );
-        if (constraints.maxWidth > 0 && constraints.maxHeight > 0) {
-          _sendControlsBounds(
-            ReaderSelectionPosition(
-              left: (left / constraints.maxWidth).clamp(0.0, 1.0).toDouble(),
-              top: (top / constraints.maxHeight).clamp(0.0, 1.0).toDouble(),
-              right: ((left + width) / constraints.maxWidth)
-                  .clamp(0.0, 1.0)
-                  .toDouble(),
-              bottom: ((top + _kHighlightPopupHeight) / constraints.maxHeight)
-                  .clamp(0.0, 1.0)
-                  .toDouble(),
-            ),
-          );
-        }
-
         return Stack(
           children: [
             Positioned(
@@ -861,7 +796,7 @@ class ReaderSavedHighlightPopup extends StatelessWidget {
   }
 }
 
-/// Compact floating highlight menu anchored to the active WebView selection.
+/// Compact floating highlight menu anchored to the active text selection.
 class _HighlightSelectionPopup extends StatefulWidget {
   const _HighlightSelectionPopup({
     required this.action,

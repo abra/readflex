@@ -2,7 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_position.dart';
 
 import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
@@ -48,22 +48,20 @@ void main() {
   group('ReaderBookPositionUpdated.fromBookPosition', () {
     test('maps a book relocation; books carry no estimate', () {
       final event = ReaderBookPositionUpdated.fromBookPosition(
-        BookPosition.fromMap({
-          'cfi': 'epubcfi(/6/4!/4/2)',
-          'percentage': 0.35,
-          'chapterTitle': 'Chapter 1',
-          'chapterCurrentPage': 5,
-          'chapterTotalPages': 20,
-          'bookCurrentPage': 84,
-          'bookTotalPages': 200,
-          'sizeTotal': 480000,
-          'pageProgressionDirection': 'rtl',
-          'atStart': false,
-          'atEnd': false,
-          // A former book payload key, now ignored.
-          'sectionMinutesLeft': 6.5,
-          'bookmark': {'exists': true, 'cfi': 'epubcfi(/6/4)', 'id': 'bm'},
-        }),
+        const BookPosition(
+          cfi: 'epubcfi(/6/4!/4/2)',
+          fraction: 0.35,
+          chapterTitle: 'Chapter 1',
+          chapterCurrentPage: 5,
+          chapterTotalPages: 20,
+          bookCurrentPage: 84,
+          bookTotalPages: 200,
+          sizeTotal: 480000,
+          pageProgressionRtl: true,
+          bookmarkExists: true,
+          bookmarkCfi: 'epubcfi(/6/4)',
+          bookmarkId: 'bm',
+        ),
       );
 
       expect(
@@ -87,16 +85,13 @@ void main() {
 
     test('maps an article position: minutes left, no page metrics', () {
       final event = ReaderBookPositionUpdated.fromBookPosition(
-        BookPosition.fromMap({
-          'cfi': 'readflex-html-position:abc',
-          'percentage': 0.4,
-          'chapterTitle': 'Intro',
-          'reason': 'scroll',
-          'atStart': false,
-          'atEnd': false,
-          'minutesLeft': 11.25,
-          'bookmark': {'exists': false},
-        }),
+        const BookPosition(
+          cfi: 'readflex-html-position:abc',
+          fraction: 0.4,
+          chapterTitle: 'Intro',
+          relocationReason: 'scroll',
+          minutesLeft: 11.25,
+        ),
       );
 
       expect(
@@ -108,17 +103,6 @@ void main() {
           minutesLeft: 11.25,
         ),
       );
-    });
-
-    test('an invalid estimate maps to null', () {
-      final event = ReaderBookPositionUpdated.fromBookPosition(
-        BookPosition.fromMap({
-          'cfi': 'epubcfi(/6/4)',
-          'percentage': 0.2,
-          'minutesLeft': -3,
-        }),
-      );
-      expect(event.minutesLeft, isNull);
     });
   });
 
@@ -206,11 +190,11 @@ void main() {
         await bloc.stream.firstWhere((s) => s.status == ReaderStatus.ready);
         bloc.add(
           ReaderBookPositionUpdated.fromBookPosition(
-            BookPosition.fromMap({
-              'cfi': 'readflex-html-position:abc',
-              'percentage': 0.4,
-              'minutesLeft': 9.5,
-            }),
+            const BookPosition(
+              cfi: 'readflex-html-position:abc',
+              fraction: 0.4,
+              minutesLeft: 9.5,
+            ),
           ),
         );
       },

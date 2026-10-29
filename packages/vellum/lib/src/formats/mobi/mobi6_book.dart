@@ -11,6 +11,7 @@ import 'package:html/parser.dart' as html;
 import 'package:meta/meta.dart';
 
 import '../book_navigation.dart';
+import 'mobi6_markup.dart';
 import 'mobi_container.dart';
 
 /// One section: a byte range of the text stream.
@@ -49,19 +50,9 @@ class Mobi6Book {
 
   /// Reads every text record of [container] and splits the stream.
   static Future<Mobi6Book> load(MobiContainer container) async {
-    final builder = BytesBuilder(copy: false);
-    for (var i = 0; i < container.headers.palmdoc.numTextRecords; i++) {
-      builder.add(await container.loadText(i));
-    }
-    final text = builder.toBytes();
-    // Byte offsets, not characters: `filepos` counts bytes, and the
-    // pagebreak tags are ASCII, so a Latin-1 view of the bytes keeps
-    // every offset.
-    final latin = String.fromCharCodes(text);
-    final starts = <int>[
-      0,
-      for (final m in _pagebreak.allMatches(latin)) m.start,
-    ];
+    final text = await container.loadAllText();
+    // Byte offsets, not characters: `filepos` counts bytes.
+    final starts = [0, ...mobiPagebreakStarts(text)];
     final sections = <Mobi6Section>[];
     for (var i = 0; i < starts.length; i++) {
       final end = i + 1 < starts.length ? starts[i + 1] : text.length;
@@ -71,9 +62,8 @@ class Mobi6Book {
     // the anchor ids repeat the string), in byte order.
     final seen = <String>{};
     final fileposList = <({String text, int number})>[
-      for (final m in _filepos.allMatches(latin))
-        if (seen.add(m.group(1)!))
-          (text: m.group(1)!, number: int.parse(m.group(1)!)),
+      for (final filepos in mobiFileposValues(text))
+        if (seen.add(filepos)) (text: filepos, number: int.parse(filepos)),
     ]..sort((a, b) => a.number.compareTo(b.number));
     final book = Mobi6Book._(container, text, sections, fileposList);
     await book._readNavigation();
@@ -84,10 +74,6 @@ class Mobi6Book {
     r'<\s*(?:mbp:)?pagebreak[^>]*>',
     caseSensitive: false,
   );
-  static final _filepos = RegExp(
-    r'''<[^<>]+filepos=['"]{0,1}(\d+)[^<>]*>''',
-    caseSensitive: false,
-  );
 
   final MobiContainer container;
   final Uint8List _text;
@@ -96,6 +82,12 @@ class Mobi6Book {
   /// Every `filepos` referenced in the book, ascending.
   final List<({String text, int number})> _fileposList;
   final _textCache = <int, String>{};
+  final _anchorsMoved = <int, int>{};
+
+  /// How many `filepos` anchors of section [index] fell inside a tag and
+  /// went before it ([mobiAnchorOffset]), once the section is loaded.
+  @visibleForTesting
+  int anchorsMovedOutOfTags(int index) => _anchorsMoved[index] ?? 0;
 
   List<BookNavItem>? toc;
   List<BookNavItem>? landmarks;
@@ -112,11 +104,18 @@ class Mobi6Book {
     if (cached != null) return cached;
     final section = sections[index];
     final raw = Uint8List.sublistView(_text, section.start, section.end);
-    final anchors = [
-      for (final filepos in _fileposList)
-        if (filepos.number >= section.start && filepos.number < section.end)
-          (text: filepos.text, offset: filepos.number - section.start),
-    ];
+    final anchors = <({String text, int offset})>[];
+    var moved = 0;
+    for (final filepos in _fileposList) {
+      if (filepos.number < section.start || filepos.number >= section.end) {
+        continue;
+      }
+      final offset = filepos.number - section.start;
+      final placed = mobiAnchorOffset(raw, offset);
+      if (placed != offset) moved++;
+      anchors.add((text: filepos.text, offset: placed));
+    }
+    _anchorsMoved[index] = moved;
     final Uint8List bytes;
     if (anchors.isEmpty) {
       bytes = raw;
@@ -147,9 +146,21 @@ class Mobi6Book {
   Mobi6HrefTarget resolveHref(String href) {
     final match = RegExp(r'filepos:(.*)').firstMatch(href);
     final filepos = match?.group(1) ?? '';
-    final number = int.tryParse(filepos) ?? -1;
-    final index = sections.indexWhere((s) => s.end > number);
+    final number = _jsNumber(filepos);
+    final index = number == null
+        ? -1
+        : sections.indexWhere((s) => s.end > number);
     return Mobi6HrefTarget(index: index, anchorId: 'filepos$filepos');
+  }
+
+  /// [text] as JavaScript's `Number` reads it (blank is 0), or null for
+  /// NaN: a guide reference without `filepos` gives `filepos:null`,
+  /// which `mobi.js` resolves to no section.
+  static num? _jsNumber(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return 0;
+    final number = int.tryParse(trimmed) ?? double.tryParse(trimmed);
+    return number == null || number.isNaN ? null : number;
   }
 
   /// Whether [uri] leaves the book: a scheme other than `filepos:`.

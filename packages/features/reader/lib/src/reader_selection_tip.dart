@@ -15,13 +15,13 @@ import 'reader_ui_cubit.dart';
 /// reader's content [Stack].
 ///
 /// The tip is due on a page of selectable text ([readerSupportsSelectionTip])
-/// once the WebView has painted it, with no controls, search navigation or
-/// selection on screen.
+/// once the page surface has painted it, with no controls, search navigation
+/// or selection on screen.
 class ReaderSelectionTipDriver extends StatelessWidget {
-  const ReaderSelectionTipDriver({required this.webViewReady, super.key});
+  const ReaderSelectionTipDriver({required this.surfaceReady, super.key});
 
-  /// Whether the WebView finished loading the current source.
-  final bool webViewReady;
+  /// Whether the page surface shows the current source.
+  final bool surfaceReady;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +52,7 @@ class ReaderSelectionTipDriver extends StatelessWidget {
       bottom: 0,
       child: ReaderSelectionTipScope(
         textPageVisible:
-            supported && webViewReady && !controlsVisible && !hasSelection,
+            supported && surfaceReady && !controlsVisible && !hasSelection,
         controlsVisible: controlsVisible,
         hasSelection: hasSelection,
         child: const ReaderSelectionTipOverlay(),

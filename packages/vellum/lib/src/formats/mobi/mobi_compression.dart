@@ -3,6 +3,7 @@
 /// implements them.
 library;
 
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'mobi_headers.dart';
@@ -59,13 +60,14 @@ Uint8List removeTrailingEntries(Uint8List record, int trailingFlags) {
   final multibyte = trailingFlags & 1 != 0;
   final entries = countBitsSet(trailingFlags >> 1);
   var bytes = record;
+  // A size past the start leaves nothing, as `subarray` clamps it.
+  Uint8List cut(int length) =>
+      Uint8List.sublistView(bytes, 0, max(0, bytes.length - length));
   for (var i = 0; i < entries; i++) {
-    final length = readVarLenFromEnd(bytes);
-    bytes = Uint8List.sublistView(bytes, 0, bytes.length - length);
+    bytes = cut(readVarLenFromEnd(bytes));
   }
   if (multibyte && bytes.isNotEmpty) {
-    final length = (bytes[bytes.length - 1] & 0x3) + 1;
-    bytes = Uint8List.sublistView(bytes, 0, bytes.length - length);
+    bytes = cut((bytes[bytes.length - 1] & 0x3) + 1);
   }
   return bytes;
 }

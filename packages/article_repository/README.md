@@ -34,7 +34,7 @@ articles/<article-id>/
 Remote article images referenced by extracted blocks are downloaded when
 available, rewritten to local paths, and stored next to `content.html`. Missing
 images retain their alt/caption but have no active `src`, so article import can
-still succeed without a later unguarded WebView retry. Downloads are keyed by
+still succeed and the reader never fetches them later, unguarded. Downloads are keyed by
 the exact structured block source; HTML is serialized once after download.
 Query variants and shared URL prefixes cannot overwrite each other's paths.
 Two workers download distinct resolved URLs within the shared deadline/byte

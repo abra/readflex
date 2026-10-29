@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 /// A [width]×[height] RGBA sample of [paper] grey with [ink] pixels
 /// painted black (or [inkValue]).

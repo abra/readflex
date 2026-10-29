@@ -31,7 +31,8 @@ class ImageDimensions {
 /// Reads an image's displayed size from its header without decoding it.
 ///
 /// Supports PNG, JPEG (with EXIF orientation: a rotated photo reports the
-/// size it is shown at), GIF, BMP and WebP (VP8, VP8L, VP8X). Returns null
+/// size it is shown at), GIF, BMP, WebP (VP8, VP8L, VP8X) and SVG (its
+/// root's `width` and `height`, or its `viewBox`). Returns null
 /// for other formats and for headers too short or damaged to trust, so a
 /// caller falls back to decoding. Used to plan spreads and page frames
 /// before the image bytes are decoded.
@@ -61,7 +62,83 @@ ImageDimensions? probeImageDimensions(Uint8List bytes) {
       bytes[11] == 0x50) {
     return _webp(data, bytes);
   }
+  if (isSvgImage(bytes)) return _svg(bytes);
   return null;
+}
+
+/// Whether [bytes] are an SVG document: an `<svg` root within the first
+/// kilobytes, after any XML declaration, comments and doctype.
+bool isSvgImage(Uint8List bytes) => _svgStartTag(bytes) != null;
+
+final _svgRoot = RegExp(r'<svg\b([^>]*)>', caseSensitive: false);
+final _svgAttribute = RegExp(r'''([\w:.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')''');
+
+/// The attributes of the `<svg>` start tag, or null when it is not one.
+String? _svgStartTag(Uint8List bytes) {
+  // A byte order mark and white space may come first.
+  var start = 0;
+  while (start < bytes.length &&
+      start < 64 &&
+      const {0xEF, 0xBB, 0xBF, 0x20, 0x09, 0x0A, 0x0D}.contains(bytes[start])) {
+    start++;
+  }
+  if (start >= bytes.length || bytes[start] != 0x3C) return null;
+  final head = String.fromCharCodes(
+    bytes,
+    start,
+    bytes.length < start + 8192 ? bytes.length : start + 8192,
+  );
+  final match = _svgRoot.firstMatch(head);
+  if (match == null) return null;
+  // Only markup before the root: a declaration, comments, a doctype.
+  final before = head.substring(0, match.start);
+  if (before.contains(RegExp(r'<(?![?!])'))) return null;
+  return match.group(1);
+}
+
+/// An SVG's size: `width` and `height` in px (or pt, in, cm, mm), one of
+/// them with the `viewBox` ratio, else the `viewBox`, else 300×150, the
+/// size CSS gives a replaced element without one.
+ImageDimensions? _svg(Uint8List bytes) {
+  final tag = _svgStartTag(bytes)!;
+  final attributes = {
+    for (final m in _svgAttribute.allMatches(tag))
+      m.group(1)!.toLowerCase(): m.group(2) ?? m.group(3)!,
+  };
+  double? length(String? value) {
+    if (value == null) return null;
+    final m = RegExp(
+      r'^\s*([0-9]*\.?[0-9]+)\s*(px|pt|in|cm|mm)?\s*$',
+    ).firstMatch(value);
+    if (m == null) return null;
+    final n = double.parse(m.group(1)!);
+    return switch (m.group(2)) {
+      'pt' => n * 4 / 3,
+      'in' => n * 96,
+      'cm' => n * 96 / 2.54,
+      'mm' => n * 96 / 25.4,
+      _ => n,
+    };
+  }
+
+  final box = attributes['viewbox']
+      ?.trim()
+      .split(RegExp(r'[\s,]+'))
+      .map(double.tryParse)
+      .toList();
+  final viewBox = box != null && box.length == 4 && !box.contains(null)
+      ? (width: box[2]!, height: box[3]!)
+      : null;
+  var width = length(attributes['width']);
+  var height = length(attributes['height']);
+  if (viewBox != null && viewBox.width > 0 && viewBox.height > 0) {
+    final ratio = viewBox.width / viewBox.height;
+    if (width != null && height == null) height = width / ratio;
+    if (height != null && width == null) width = height * ratio;
+    width ??= viewBox.width;
+    height ??= viewBox.height;
+  }
+  return _valid((width ?? 300).round(), (height ?? 150).round());
 }
 
 const _pngSignature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];

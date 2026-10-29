@@ -16,9 +16,7 @@ import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:preferences_service/preferences_service.dart';
-import 'package:reader_server/reader_server.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/resource_disposer.dart';
 import 'package:screen_control_service/screen_control_service.dart';
@@ -29,7 +27,6 @@ class DependenciesContainer {
     required this.logger,
     required this.config,
     required this.errorReporter,
-    required this.packageInfo,
     required this.preferencesService,
     required this.articleExtractionService,
     required this.articleRepository,
@@ -43,7 +40,6 @@ class DependenciesContainer {
     required this.systemDictionaryService,
     required this.dictionaryLookupService,
     required this.screenControlService,
-    required this.readerServer,
     required this.database,
     required ResourceDisposer resourceDisposer,
   }) : _resourceDisposer = resourceDisposer;
@@ -51,7 +47,6 @@ class DependenciesContainer {
   final Logger logger;
   final ApplicationConfig config;
   final ErrorReportingService errorReporter;
-  final PackageInfo packageInfo;
   final PreferencesService preferencesService;
   final ArticleExtractionService articleExtractionService;
   final ArticleRepository articleRepository;
@@ -65,7 +60,6 @@ class DependenciesContainer {
   final SystemDictionaryService systemDictionaryService;
   final DictionaryLookupService dictionaryLookupService;
   final ScreenControlService screenControlService;
-  final ReaderServer readerServer;
   final AppDatabase database;
   final ResourceDisposer _resourceDisposer;
 

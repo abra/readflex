@@ -13,8 +13,6 @@ import 'package:import_flow/import_flow.dart';
 import 'package:onboarding/onboarding.dart';
 import 'package:practice/practice.dart';
 import 'package:reader/reader.dart';
-import 'package:readflex/app/developer/reader_engine_sheet.dart';
-import 'package:readflex/app/native_reader_formats.dart';
 import 'package:readflex/app/reader_system_navigation_bar_mode.dart';
 import 'package:readflex/app/dependency_container.dart';
 import 'package:readflex/app/reader_link_opener.dart';
@@ -126,13 +124,6 @@ GoRoute _buildLibraryRoute(DependenciesContainer deps) => GoRoute(
             onImported: onImported,
           ),
       onPracticePressed: () => context.push<void>(AppRoutes.practice),
-      onDeveloperPressed: deps.config.isDev
-          ? () => showReaderEngineSheet(
-              context,
-              preferencesService: deps.preferencesService,
-              buildFormats: deps.config.nativeReaderFormats,
-            )
-          : null,
     );
   },
 );
@@ -250,11 +241,6 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
           sourceId: sourceId,
           initialSource: matchingSource,
           initialCfi: arguments.initialCfi,
-          nativeFormats: effectiveNativeReaderFormats(
-            config: deps.config,
-            preferences: deps.preferencesService.current,
-          ),
-          serverBaseUri: deps.readerServer.baseUri,
           bookRepository: deps.bookRepository,
           articleRepository: deps.articleRepository,
           highlightRepository: deps.highlightRepository,

@@ -11,9 +11,9 @@ boundaries, runtime containers, storage ownership, or integration points change.
 ## Level 1: System Context
 
 Readflex is a mobile reading app for imported books, saved web articles, and
-highlights. It runs on iOS and Android, stores user data locally, renders books
-through a local WebView reader runtime, and optionally calls remote article
-cleaning, contextual translation, and dictionary backends.
+highlights. It runs on iOS and Android, stores user data locally, draws books
+and articles with its own reader engine (`vellum`), and optionally calls
+remote article cleaning, contextual translation, and dictionary backends.
 
 ```mermaid
 flowchart LR
@@ -34,7 +34,7 @@ flowchart LR
   dictionary -->|"Requests monolingual structured definitions"| deepseek
   cleaner -->|"May fetch original article URL"| websites
   app -->|"Can fallback-download article HTML"| websites
-  app -->|"Files, WebView, brightness, wakelock, connectivity"| platform
+  app -->|"Files, PDF rendering, brightness, wakelock, connectivity"| platform
 ```
 
 ### External Systems
@@ -46,13 +46,13 @@ flowchart LR
 | Contextual Translation API | Resolves selected text using surrounding reading context. | `contextual_translation_service` via HTTP. |
 | Readflex Dictionary API | Returns validated, cached monolingual lexical definitions. | `dictionary_service` via HTTP after native lookup fallback. |
 | DeepSeek API | Produces contextual translations and structured monolingual definition candidates. | Called by the Readflex translation and dictionary backends; its credentials are never shipped in the app. |
-| iOS / Android platform services | Files, WebView, brightness, wakelock, connectivity, package info, native dictionary UI. | Flutter plugins, app runner channels, and local packages. |
+| iOS / Android platform services | Files, pdfium (bundled through `pdfrx`), image codecs, brightness, wakelock, connectivity, native dictionary UI. | Flutter plugins, app runner channels, and local packages. |
 
 ## Level 2: Containers
 
 Readflex is shipped as one Flutter mobile app, but internally it has clear
-runtime containers: the Flutter UI/runtime, a local Drift database, app-owned
-files, a local HTTP reader server, and WebView-based book/article readers.
+runtime containers: the Flutter UI/runtime with its reader engine, a local
+Drift database, and app-owned files.
 
 ```mermaid
 flowchart TB
@@ -63,9 +63,8 @@ flowchart TB
     features["Feature packages\nlibrary, import_flow, reader, highlight, translate, dictionary, onboarding"]
     repos["Repositories and services\ncontent, preferences, connectivity, translation, dictionary, screen control"]
     db["Drift SQLite database\nreadflex.db"]
-    files["App documents files\nbooks, articles, reader assets"]
-    server["Local ReaderServer\nlocalhost HTTP"]
-    webview["Reader WebView\nFoliate books / vertical article HTML"]
+    files["App documents files\nbooks, articles"]
+    engine["vellum reader engine\nbook formats, layout, pages"]
   end
 
   cleaner["Article Cleaner API"]
@@ -77,14 +76,12 @@ flowchart TB
   features --> repos
   repos --> db
   repos --> files
-  appShell --> server
-  server --> files
-  features --> webview
-  webview --> server
+  features --> engine
+  engine --> files
   repos --> cleaner
   repos --> remoteApis
   repos --> platform
-  webview --> platform
+  engine --> platform
 ```
 
 ### Container Responsibilities
@@ -95,9 +92,9 @@ flowchart TB
 | Feature packages | `packages/features/*` | User-facing flows and feature state management. |
 | Repositories/services | `packages/*_repository`, `packages/*_service`, specialized packages | Data source orchestration, platform/backend contracts, persistence boundaries. |
 | Local database | `packages/local_storage` | Drift schema, DAOs, migrations, storage rows. |
-| App files | App documents directory | Imported books, extracted article HTML and assets, reader assets. |
-| Local ReaderServer | `packages/reader_server` | Serves root-confined Foliate assets and source bytes through a token-scoped localhost URI, including range requests. |
-| Reader WebView | `packages/reader_webview` + book/article assets | Hosts Foliate books or the vertical article shell, JS bridge, metadata/search/highlight callbacks. |
+| App files | App documents directory | Imported books, extracted article HTML and assets. |
+| Reader engine | `packages/vellum` | Opens EPUB, FB2, MOBI/KF8, CBZ, PDF and saved articles from their files, lays them out and draws their pages; import metadata, search, selection, CFIs. |
+| MOBI text backend | `packages/vellum_mobi_native` | Vellum's Rust record I/O and PalmDOC/HUFF-CDIC decoder over FRB; lazy KF8 reads and batched MOBI 6 text, built through Native Assets. Headers, chapters, document parsing and UI remain in Dart. |
 
 ## Level 3: Components
 
@@ -127,8 +124,8 @@ flowchart TB
 | Component | Responsibility |
 |-----------|----------------|
 | `starter.dart` | Flutter binding, error zone, logging, bloc observer, tracing, app mounting and recovery screen. |
-| `app_bootstrap.dart` | Configuration validation, monitoring initialization/reuse, dependency creation, asset extraction, reader server startup and failed-attempt cleanup. |
-| `composition.dart` | Creates database, repositories, services, document directories, and the reader server. |
+| `app_bootstrap.dart` | Configuration validation, monitoring initialization/reuse, dependency creation and failed-attempt cleanup. |
+| `composition.dart` | Creates database, repositories, services and document directories. |
 | `dependency_container.dart` / `resource_disposer.dart` | Explicit dependency holder and reverse-order, idempotent cleanup; rollback retains monitoring for retry. |
 | `app_scopes.dart` / `readflex_app.dart` / `app_lifecycle.dart` | Root scopes, Material app, retained router, service lifecycle handling. |
 | `routing.dart` | Navigation table, entry redirects, feature wiring, app-level callbacks. |
@@ -152,8 +149,8 @@ flowchart LR
 | Feature | Entry point | State owner | Main dependencies |
 |---------|-------------|-------------|-------------------|
 | Library | `LibraryScreen` | `LibraryBloc`, layout/theme/selection cubits | Book, article, collection repositories, preferences, toast wrapper. |
-| Import Flow | `showImportFlowSheet` | `ImportFlowCubit` | File picker/import callbacks, article import callback, reader metadata extraction. |
-| Reader | `ReaderScreen` | `ReaderBloc` plus reader UI cubits | Book/article/highlight repositories, preferences, reader WebView, screen control, text actions. |
+| Import Flow | `showImportFlowSheet` | `ImportFlowCubit` | File picker/import callbacks, article import callback, vellum metadata extraction. |
+| Reader | `ReaderScreen` | `ReaderBloc` plus reader UI cubits | Book/article/highlight repositories, preferences, vellum, screen control, text actions. |
 | Highlight | `HighlightAction`, `HighlightSheet` | Immediate action plus `HighlightCubit` for the standalone sheet | Highlight repository, shared text action contract. |
 | Translate | `TranslateAction`, `TranslateSheet` | `TranslateCubit` | Contextual translation service, preferences, shared text action contract. |
 | Dictionary | `DictionaryAction`, `DictionarySheet` | `DictionaryCubit` | Native system dictionary bridge, remote dictionary service, shared text action contract. |
@@ -167,9 +164,9 @@ flowchart TB
   uiCubit["ReaderUiCubit\nchrome, drawers, overlays"]
   appearance["ReaderAppearanceCubit"]
   brightness["ReaderBrightnessCubit / KeepAwakeCubit"]
-  webviewBody["Reader WebView body"]
-  webviewPkg["reader_webview package"]
-  server["ReaderServer"]
+  pageBody["Page body\ntext, comic, PDF or article"]
+  surface["ReaderSurface\ncommands to the page"]
+  vellum["vellum package"]
   repos["Book / Article / Highlight repositories"]
   prefs["PreferencesService"]
   screenControl["ScreenControlService"]
@@ -178,9 +175,11 @@ flowchart TB
   readerScreen --> uiCubit
   readerScreen --> appearance
   readerScreen --> brightness
-  readerScreen --> webviewBody
-  webviewBody --> webviewPkg
-  webviewPkg --> server
+  readerScreen --> pageBody
+  readerScreen --> surface
+  surface --> vellum
+  pageBody --> vellum
+  pageBody -->|"positions, selections, taps"| readerBloc
   readerBloc --> repos
   appearance --> prefs
   brightness --> prefs
@@ -195,8 +194,10 @@ Reader-specific split:
 - `ReaderSearchCubit`, `ReaderSelectionCubit`, `ReaderImageSelectionCubit`,
   and `ReaderImageHighlightCubit` keep narrower UI/interaction concerns out of
   `ReaderBloc`.
-- `reader_webview` owns the Foliate bridge, search calls, annotation rendering,
-  and WebView callbacks.
+- The page bodies host vellum's views and translate their events into the
+  blocs and cubits; `ReaderSurface` carries the screen's commands to the
+  page. vellum owns formats, layout, search, selection and annotation
+  drawing.
 
 ## Level 4: Code-Level Slices
 
@@ -246,13 +247,13 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-  participant WebView
-  participant ReaderWebViewBody
+  participant Vellum as vellum controller
+  participant PageBody as Page body
   participant ReaderBloc
   participant Repository
 
-  WebView->>ReaderWebViewBody: onPositionChanged
-  ReaderWebViewBody->>ReaderBloc: ReaderBookPositionUpdated
+  Vellum->>PageBody: position changed
+  PageBody->>ReaderBloc: ReaderBookPositionUpdated
   ReaderBloc->>ReaderBloc: normalize article/book progress and emit state
   ReaderBloc->>ReaderBloc: debounce pending persistence
   ReaderBloc->>Repository: updateReadingPosition(id, cfi, progress)

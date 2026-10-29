@@ -4,11 +4,11 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 /// Parity with `epub.js` in Chromium: `test/fixtures/epub/expected.json`
-/// records what the browser made of each fixture directory (see
-/// `packages/reader_webview/test_browser/epub_fixtures.mjs`); the same
+/// records what the browser made of each fixture directory (recorded by
+/// `epub_fixtures.mjs` before the WebView reader went, R6); the same
 /// files must give the same spine, navigation, metadata, cover and
 /// resolutions here.
 void main() {
@@ -278,12 +278,36 @@ void main() {
         expect(book.sections[0].pageSpread, isNull, reason: 'not linear');
         expect(
           book.sections[1].pageSpread,
-          EpubPageSpread.left,
+          SpreadSide.left,
           reason: 'rtl opens on the left',
         );
-        expect(book.sections[2].pageSpread, EpubPageSpread.center);
+        expect(book.sections[2].pageSpread, SpreadSide.center);
       },
     );
+  });
+
+  test('a manifest href escaping a reserved character finds its file', () async {
+    // Calibre writes `%26` for a file named with `&`; decodeURI keeps the
+    // escape, so the href stays as written and the lookup decodes it.
+    final book = await EpubBook.load(
+      MemoryEpubFiles.text({
+        'META-INF/container.xml':
+            '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+        'OEBPS/content.opf':
+            '<package xmlns="http://www.idpf.org/2007/opf" version="2.0"><metadata/>'
+            '<manifest><item id="c" href="Text/Brian%20%26%20Kevin.html" media-type="application/xhtml+xml"/></manifest>'
+            '<spine><itemref idref="c"/></spine></package>',
+        'OEBPS/Text/Brian & Kevin.html':
+            '<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Paul</p></body></html>',
+      }),
+    );
+    expect(book.sections.single.href, 'OEBPS/Text/Brian %26 Kevin.html');
+    expect(book.sections.single.size, greaterThan(0));
+    expect(await book.readSectionText(0), contains('Paul'));
+    expect(fullyDecodedPath('a%26b'), 'a&b');
+    expect(fullyDecodedPath('plain'), isNull);
+    expect(fullyDecodedPath('bad%zz'), isNull);
+    expect(fullyDecodedPath('bad%ff'), isNull, reason: 'not UTF-8');
   });
 
   group('errors', () {

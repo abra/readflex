@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_bloc.dart';
+import 'package:vellum/all_formats.dart' show TextColumnPage, TextPagesView;
 
 import '../support/reading_fixture.dart';
-import '../support/reader_test_platform.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 
@@ -17,9 +17,34 @@ void main() {
   late UiTestApp app;
   setUp(() async {
     app = await UiTestApp.create();
-    await app.readerServer.start();
   });
   tearDown(() => app.dispose());
+
+  Future<void> waitForPages(WidgetTester tester) => waitForUi(
+    tester,
+    () => find.byType(TextColumnPage).evaluate().isNotEmpty,
+    description: 'the first page',
+    timeout: const Duration(seconds: 30),
+  );
+
+  ReaderBloc readerBloc(WidgetTester tester) =>
+      tester.element(find.byType(TextPagesView)).read<ReaderBloc>();
+
+  /// Turns to the next page and waits until the reader is past [progress].
+  Future<double> readPast(WidgetTester tester, double progress) async {
+    await tester.fling(
+      find.byType(TextPagesView),
+      const Offset(-300, 0),
+      1000,
+    );
+    await waitForUi(
+      tester,
+      () => readerBloc(tester).state.document!.readingProgress > progress,
+      description: 'the next page',
+      timeout: const Duration(seconds: 30),
+    );
+    return readerBloc(tester).state.document!.readingProgress;
+  }
 
   testWidgets('a book read for the first time is in Continue reading '
       'before the reader closes', (tester) async {
@@ -27,12 +52,6 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final previous = InAppWebViewPlatform.instance;
-    final platform = ReaderTestPlatform();
-    InAppWebViewPlatform.instance = platform;
-    addTearDown(() {
-      if (previous != null) InAppWebViewPlatform.instance = previous;
-    });
     final card = find.byKey(const ValueKey('libraryContinueReadingCard'));
     final offstageCard = find.byKey(
       const ValueKey('libraryContinueReadingCard'),
@@ -53,19 +72,9 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     await tapUi(tester, tile);
-    await waitForUi(
-      tester,
-      () =>
-          platform.views.isNotEmpty &&
-          platform.views.single.controller.handlers.containsKey('onLoadEnd'),
-      description: 'reader platform mounted',
-    );
-    final handlers = platform.views.single.controller.handlers;
-    handlers['onLoadEnd']!([]);
-    await tester.pump();
-    handlers['onRelocated']!([
-      {'cfi': 'epubcfi(/6/4!/4/2/1:0)', 'percentage': 0.3},
-    ]);
+    await waitForPages(tester);
+    final progress = await readPast(tester, 0);
+    final percent = '${(progress * 100).round()}%';
 
     // The Library behind the reader picks the book up while still covered.
     await waitForUi(
@@ -75,8 +84,7 @@ void main() {
     );
     expect(card, findsNothing, reason: 'the reader still covers the Library');
 
-    final readerContext = tester.element(find.byType(BookReaderWebView));
-    GoRouter.of(readerContext).pop();
+    GoRouter.of(tester.element(find.byType(TextPagesView))).pop();
     await tester.pump();
 
     // The first frame after closing already shows the book in the card.
@@ -85,10 +93,7 @@ void main() {
       find.descendant(of: card, matching: find.text(ReadingFixture.bookTitle)),
       findsOneWidget,
     );
-    expect(
-      find.descendant(of: card, matching: find.text('30%')),
-      findsOneWidget,
-    );
+    expect(find.descendant(of: card, matching: find.text(percent)), findsOne);
     expect(tile, findsNothing, reason: 'the card is the book\'s only place');
     final cardRect = tester.getRect(card);
 
@@ -103,10 +108,7 @@ void main() {
     await tester.pump();
     expect(card, findsOneWidget);
     expect(tester.getRect(card), cardRect);
-    expect(
-      find.descendant(of: card, matching: find.text('30%')),
-      findsOneWidget,
-    );
+    expect(find.descendant(of: card, matching: find.text(percent)), findsOne);
     expect(tester.takeException(), isNull);
   });
 
@@ -117,80 +119,66 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final previous = InAppWebViewPlatform.instance;
-    final platform = ReaderTestPlatform();
-    InAppWebViewPlatform.instance = platform;
-    addTearDown(() {
-      if (previous != null) InAppWebViewPlatform.instance = previous;
-    });
-    await tester.runAsync(() async {
-      await app.bookRepository.updateReadingPosition(
-        app.book!.id,
-        cfi: 'epubcfi(/6/4!/4/2/1:0)',
-        progress: 0.3,
-      );
-      await app.bookRepository.markOpened(app.book!.id, DateTime(2026, 10, 7));
-    });
     final card = find.byKey(const ValueKey('libraryContinueReadingCard'));
+    final offstageCard = find.byKey(
+      const ValueKey('libraryContinueReadingCard'),
+      skipOffstage: false,
+    );
     final track = find.byKey(const ValueKey('libraryContinueReadingProgress'));
     final fill = find.byKey(
       const ValueKey('libraryContinueReadingProgressFill'),
-    );
-    final offstagePercent = find.descendant(
-      of: find.byKey(
-        const ValueKey('libraryContinueReadingCard'),
-        skipOffstage: false,
-      ),
-      matching: find.text('60%', skipOffstage: false),
     );
     double fillFraction() =>
         tester.getSize(fill).width / tester.getSize(track).width;
 
     await tester.pumpWidget(app.widget);
+    final tile = find.byKey(ValueKey('library-grid-${app.book!.id}'));
     await waitForUi(
       tester,
-      () => card.evaluate().isNotEmpty,
-      description: 'Continue reading card',
+      () => tile.evaluate().isNotEmpty,
+      description: 'library tile',
     );
     await tester.pump(const Duration(seconds: 1));
-    expect(fillFraction(), closeTo(.3, .01));
+    // A first read puts the book in Continue reading.
+    await tapUi(tester, tile);
+    await waitForPages(tester);
+    final before = await readPast(tester, 0);
+    GoRouter.of(tester.element(find.byType(TextPagesView))).pop();
+    await tester.pumpAndSettle();
+    expect(fillFraction(), closeTo(before, .01));
 
     await tapUi(tester, card);
-    await waitForUi(
-      tester,
-      () =>
-          platform.views.isNotEmpty &&
-          platform.views.single.controller.handlers.containsKey('onLoadEnd'),
-      description: 'reader platform mounted',
-    );
-    final handlers = platform.views.single.controller.handlers;
-    handlers['onLoadEnd']!([]);
-    await tester.pump();
-    handlers['onRelocated']!([
-      {'cfi': 'epubcfi(/6/8!/4/2/1:0)', 'percentage': 0.6},
-    ]);
+    await waitForPages(tester);
     // A later save is debounced; the Library behind the reader shows it.
+    final after = await readPast(tester, before);
+    final percent = '${(after * 100).round()}%';
     await waitForUi(
       tester,
-      () => offstagePercent.evaluate().isNotEmpty,
+      () => find
+          .descendant(
+            of: offstageCard,
+            matching: find.text(percent, skipOffstage: false),
+          )
+          .evaluate()
+          .isNotEmpty,
       description: 'saved progress behind the reader',
     );
     // Keep reading well past the fill's duration before closing the book,
     // as a reader does: the change must still play on return.
     await tester.pump(const Duration(seconds: 2));
 
-    GoRouter.of(tester.element(find.byType(BookReaderWebView))).pop();
+    GoRouter.of(tester.element(find.byType(TextPagesView))).pop();
     await tester.pump();
     expect(
       fillFraction(),
-      closeTo(.3, .01),
+      closeTo(before, .01),
       reason: 'the fill waits for the Library to show',
     );
     await tester.pump(const Duration(milliseconds: 100));
-    expect(fillFraction(), greaterThan(.3));
-    expect(fillFraction(), lessThan(.6));
+    expect(fillFraction(), greaterThan(before));
+    expect(fillFraction(), lessThan(after));
     await tester.pump(const Duration(milliseconds: 200));
-    expect(fillFraction(), closeTo(.6, .01));
+    expect(fillFraction(), closeTo(after, .01));
 
     // The fallback refresh after the route returns leaves the fill in place.
     await tester.pump(const Duration(milliseconds: 100));
@@ -198,7 +186,7 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 100)),
     );
     await tester.pump(const Duration(milliseconds: 300));
-    expect(fillFraction(), closeTo(.6, .01));
+    expect(fillFraction(), closeTo(after, .01));
     expect(tester.takeException(), isNull);
   });
 }

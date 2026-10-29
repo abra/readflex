@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 /// The parser and the cascade must survive any input: real stylesheets
 /// are mutated at random (characters deleted, inserted, duplicated,

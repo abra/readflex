@@ -9,10 +9,6 @@ void main() {
       packagePath: 'lib/src/reader_screen_content.dart',
     );
 
-    expect(
-      screenSource,
-      contains('_kReaderWebViewRouteMountDelay = Duration.zero'),
-    );
     expect(screenSource, contains('_kReaderLoadingIconSize = 28.0'));
     expect(screenSource, isNot(contains('_kReaderLoadingScrimFadeDuration')));
     expect(
@@ -23,7 +19,7 @@ void main() {
     expect(contentSource, contains('class _ReaderLoadingMark'));
     expect(contentSource, contains('AppIcons.book'));
     expect(contentSource, contains('opacity: loadingVisible ? 1 : 0'));
-    expect(contentSource, contains('widget.onWebViewReady(sourceId)'));
+    expect(contentSource, contains('widget.onSurfaceReady(sourceId)'));
     expect(
       _occurrences(contentSource, '_ReaderLoadingScrim(theme:'),
       1,

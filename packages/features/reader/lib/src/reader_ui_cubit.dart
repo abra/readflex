@@ -21,7 +21,7 @@ class ReaderUiState extends Equatable {
   final bool searchHighlightVisible;
   final bool ignoreNextSearchRelocation;
 
-  /// Incremented when foliate-js search annotations must be cleared.
+  /// Incremented when the page's search marks must be cleared.
   final int clearSearchToken;
 
   final ReaderTapAxis? tapZoneHintAxis;

@@ -27,23 +27,19 @@ void main() {
 
   test('article reader uses compact vertical margins', () {
     final screenSource = _readSource(packagePath: 'lib/src/reader_screen.dart');
-    final contentSource = _readSource(
-      packagePath: 'lib/src/reader_screen_content.dart',
+    final bodySource = _readSource(
+      packagePath: 'lib/src/reader_screen_article_body.dart',
     );
 
     expect(screenSource, contains('_kArticleReaderTopMargin = 32.0'));
     expect(screenSource, contains('_kArticleReaderBottomMargin = 40.0'));
-    expect(contentSource, contains('double? topMargin'));
-    expect(contentSource, contains('double? bottomMargin'));
-    expect(contentSource, contains('topMargin: topMargin ?? layout.topMargin'));
     expect(
-      contentSource,
-      contains('bottomMargin: bottomMargin ?? layout.bottomMargin'),
+      bodySource,
+      contains('topMargin: _kArticleReaderTopMargin + padding.top'),
     );
-    expect(contentSource, contains('topMargin: _kArticleReaderTopMargin'));
     expect(
-      contentSource,
-      contains('bottomMargin: _kArticleReaderBottomMargin'),
+      bodySource,
+      contains('bottomMargin: _kArticleReaderBottomMargin + padding.bottom'),
     );
   });
 }

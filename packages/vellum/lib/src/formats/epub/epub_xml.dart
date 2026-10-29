@@ -5,6 +5,8 @@ library;
 
 import 'package:xml/xml.dart';
 
+import '../../text/whitespace.dart';
+
 /// EPUB namespaces.
 abstract final class EpubNamespace {
   static const container = 'urn:oasis:names:tc:opendocument:xmlns:container';
@@ -27,18 +29,6 @@ abstract final class EpubMediaType {
   static const svg = 'image/svg+xml';
   static const package = 'application/oebps-package+xml';
 }
-
-/// Strips and collapses ASCII whitespace (`normalizeWhitespace`), as the
-/// HTML spec defines it; null and empty come back empty.
-String normalizeWhitespace(String? text) {
-  if (text == null || text.isEmpty) return '';
-  return text
-      .replaceAll(_asciiWhitespace, ' ')
-      .replaceFirst(RegExp(r'^ '), '')
-      .replaceFirst(RegExp(r' $'), '');
-}
-
-final _asciiWhitespace = RegExp('[\t\n\f\r ]+');
 
 /// The text of [element] stripped and collapsed, or empty for null
 /// (`getElementText`).

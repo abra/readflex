@@ -15,6 +15,7 @@ void main() {
       final row = DictionaryTableData(
         id: 'd1',
         word: 'hello',
+        wordKey: 'hello',
         translation: 'привет',
         pronunciation: 'hɛˈloʊ',
         partOfSpeech: 'interjection',
@@ -43,6 +44,7 @@ void main() {
       final row = DictionaryTableData(
         id: 'd2',
         word: 'test',
+        wordKey: 'test',
         translation: 'тест',
         pronunciation: null,
         partOfSpeech: null,
@@ -67,6 +69,7 @@ void main() {
       final row = DictionaryTableData(
         id: 'd3',
         word: 'w',
+        wordKey: 'w',
         translation: 't',
         pronunciation: null,
         partOfSpeech: null,
@@ -139,6 +142,7 @@ void main() {
       final row = DictionaryTableData(
         id: companion.id.value,
         word: companion.word.value,
+        wordKey: companion.word.value.toLowerCase(),
         translation: companion.translation.value,
         pronunciation: companion.pronunciation.value,
         partOfSpeech: companion.partOfSpeech.value,

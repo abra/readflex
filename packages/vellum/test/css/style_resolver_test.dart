@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 /// The cascade, as a table: a stylesheet and a document, and what each
 /// element must compute to.
@@ -17,11 +17,12 @@ void main() {
     String author = '',
     String user = '',
     StyleResolverOptions options = const StyleResolverOptions(),
+    CssMediaEnvironment media = const CssMediaEnvironment(),
   }) {
     final doc = ContentDocument.parseXml(
       '<html xmlns="http://www.w3.org/1999/xhtml"><body>$body</body></html>',
     );
-    final resolver = StyleResolver([
+    final resolver = StyleResolver(media: media, [
       ua,
       if (user.isNotEmpty)
         CssSheetSource(CssStyleSheet.parse(user), CssOrigin.user),
@@ -575,6 +576,563 @@ void main() {
       expect(p.maxHeight, isNull);
       expect(p.minHeight, const CssLength.px(10));
       expect(p.minWidth, CssLength.zero);
+    });
+  });
+
+  group('background images', () {
+    test('url() is relative to its style sheet; size, repeat, position', () {
+      final doc = ContentDocument.parseXml(
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+        '<div id="a">a</div><div id="b" style="background-image: url(c.png)">'
+        'b</div></body></html>',
+      );
+      final styles = StyleResolver([
+        ua,
+        CssSheetSource(
+          CssStyleSheet.parse(
+            'div { background: url(../Images/info.png) no-repeat 0 center '
+            '/ 2em auto }',
+          ),
+          CssOrigin.author,
+          baseHref: 'OPS/Styles/book.css',
+        ),
+      ]).resolve(doc);
+      final a = styles[doc.elementIndexById('a')].backgroundImage!;
+      expect(a.source, '/OPS/Images/info.png');
+      expect(a.repeatX, isFalse);
+      expect(a.repeatY, isFalse);
+      expect(a.x, CssLength.zero);
+      expect(a.y, const CssLength.percent(50));
+      expect(a.width, const CssLength.px(32));
+      expect(a.height, isNull);
+      final b = styles[doc.elementIndexById('b')].backgroundImage!;
+      expect(b.source, 'c.png', reason: 'an inline style has no base');
+      expect(b.repeatX, isFalse, reason: 'the sheet\'s repeat still holds');
+    });
+
+    test('none, and not inherited', () {
+      const author = 'div { background-image: url(a.png) }';
+      expect(
+        style(
+          '<div><p id="x">a</p></div>',
+          'x',
+          author: author,
+        ).backgroundImage,
+        isNull,
+      );
+      expect(
+        style(
+          '<div id="x">a</div>',
+          'x',
+          author: '$author div { background-image: none }',
+        ).backgroundImage,
+        isNull,
+      );
+    });
+  });
+
+  group('custom properties', () {
+    test('var() takes an inherited custom property', () {
+      const author =
+          ':root { --text: #112233; --mono: "Code", monospace; '
+          '--pad: 3px } '
+          'p { color: var(--text) } code { font-family: var(--mono) } '
+          'em { padding-left: var(--pad) }';
+      const body = '<p id="p">a <code id="c">b</code> <em id="e">c</em></p>';
+      expect(style(body, 'p', author: author).color, 0xFF112233);
+      expect(style(body, 'c', author: author).fontFamily, [
+        'Code',
+        'monospace',
+      ]);
+      expect(
+        style(body, 'e', author: author).padding.left,
+        const CssLength.px(3),
+      );
+    });
+
+    test('an element\'s own value wins; its children inherit it', () {
+      const author =
+          ':root { --c: red } div { --c: blue } p { color: var(--c) }';
+      expect(
+        style('<div><p id="x">a</p></div>', 'x', author: author).color,
+        0xFF0000FF,
+      );
+      expect(style('<p id="x">a</p>', 'x', author: author).color, 0xFFFF0000);
+    });
+
+    test('a fallback stands in for what is missing', () {
+      expect(
+        style(
+          '<p id="x">a</p>',
+          'x',
+          author: 'p { color: var(--none, var(--neither, #00ff00)) }',
+        ).color,
+        0xFF00FF00,
+      );
+    });
+
+    test('nothing to substitute: the declaration is unset', () {
+      const author =
+          'div { color: #123456; margin-top: 7px } '
+          'p { color: var(--none); margin-top: var(--none) }';
+      final p = style('<div><p id="x">a</p></div>', 'x', author: author);
+      expect(p.color, 0xFF123456, reason: 'inherited');
+      expect(p.margin.top, CssLength.zero, reason: 'initial');
+      expect(
+        style(
+          '<p id="x">a</p>',
+          'x',
+          author: ':root { --w: red } p { margin-top: var(--w) }',
+        ).margin.top,
+        CssLength.zero,
+        reason: 'a value the property does not take',
+      );
+    });
+
+    test('a cycle makes its custom properties invalid', () {
+      expect(
+        style(
+          '<p id="x">a</p>',
+          'x',
+          author:
+              ':root { --a: var(--b); --b: var(--a) } '
+              'p { color: var(--a, #0000ff) }',
+        ).color,
+        0xFF0000FF,
+      );
+    });
+
+    test('custom properties refer to each other; initial drops one', () {
+      const author =
+          ':root { --base: 4px; --double: calc(var(--base) * 2); '
+          '--gone: 1px } div { --gone: initial } '
+          'p { padding-left: var(--double); padding-right: var(--gone, 9px) }';
+      final p = style('<div><p id="x">a</p></div>', 'x', author: author);
+      expect(p.padding.left, const CssLength.px(8));
+      expect(p.padding.right, const CssLength.px(9));
+    });
+
+    test('shorthands take their parts from the substituted value', () {
+      final p = style(
+        '<p id="x">a</p>',
+        'x',
+        author: ':root { --m: 1px 2px 3px } p { margin: var(--m) }',
+      );
+      expect(p.margin.top, const CssLength.px(1));
+      expect(p.margin.right, const CssLength.px(2));
+      expect(p.margin.bottom, const CssLength.px(3));
+      expect(p.margin.left, const CssLength.px(2));
+    });
+
+    test('inline styles use them too; equal sets compare equal', () {
+      final doc = ContentDocument.parseXml(
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+        '<p id="a" style="--x: 5px; padding-top: var(--x)">a</p>'
+        '<p id="b" style="--x: 5px; padding-top: var(--x)">b</p>'
+        '</body></html>',
+      );
+      final styles = StyleResolver([ua]).resolve(doc);
+      final a = styles[doc.elementIndexById('a')];
+      final b = styles[doc.elementIndexById('b')];
+      expect(a.padding.top, const CssLength.px(5));
+      expect(a.customProperties, b.customProperties);
+      expect(a.customProperties.hashCode, b.customProperties.hashCode);
+      expect(a, b);
+    });
+  });
+
+  group('style sharing', () {
+    test('siblings that match the same rules share one style object', () {
+      final doc = ContentDocument.parseXml(
+        '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+        '${List.filled(50, '<p class="a b">x</p>').join()}'
+        '<p class="b a">y</p><p class="a">z</p>'
+        '<p class="a b" style="color: red">w</p><p class="a b" align="center">v</p>'
+        '<div><p class="a b">nested</p></div></body></html>',
+      );
+      final styles = StyleResolver([
+        ua,
+        CssSheetSource(
+          CssStyleSheet.parse(
+            '.a { font-size: 20px } .b { color: blue } div .a { color: green }',
+          ),
+          CssOrigin.author,
+        ),
+      ]).resolve(doc);
+      final body = doc.firstChildOf(0);
+      final ps = doc.childrenOf(body).toList();
+      for (final p in ps.take(51)) {
+        expect(
+          styles[p],
+          same(styles[ps.first]),
+          reason: 'class order does not matter',
+        );
+      }
+      expect(styles[ps[51]].color, 0xFF000000);
+      expect(
+        styles[ps[52]].color,
+        0xFFFF0000,
+        reason: 'inline style is part of the key',
+      );
+      expect(
+        styles[ps[53]].textAlign,
+        CssTextAlign.center,
+        reason: 'so are presentational attributes',
+      );
+      final nested = doc.firstChildOf(ps[54]);
+      expect(styles[nested].color, 0xFF008000);
+      expect(styles[ps.first].color, 0xFF0000FF);
+      expect(styles[ps.first].fontSize, 20);
+    });
+
+    test('many inline declarations keep their order above author rules', () {
+      final declarations = [
+        for (var i = 0; i < 40; i++) 'margin-left: ${i}px',
+      ].join('; ');
+      final p = style(
+        '<p id="i" style="$declarations; color: red">a</p>',
+        'i',
+        author: '#i { color: blue; margin-left: 999px }',
+      );
+      expect(p.color, 0xFFFF0000);
+      expect(p.margin.left, const CssLength.px(39));
+    });
+  });
+
+  group('flow-relative properties', () {
+    const quote =
+        'blockquote { border-inline-start: 3px solid #f00; '
+        'padding-inline-start: 1em; margin-inline: 0 2px; '
+        'max-inline-size: 100%; }';
+
+    test('inline sides are left and right in left-to-right text', () {
+      final q = style('<blockquote id="x">a</blockquote>', 'x', author: quote);
+      expect(q.borderWidth.left, 3);
+      expect(q.borderStyle.left, CssBorderStyle.solid);
+      expect(q.borderColor.left, 0xFFFF0000);
+      expect(q.borderWidth.right, 0, reason: 'no border style');
+      expect(q.padding.left, const CssLength.px(16));
+      expect(q.padding.right, CssLength.zero);
+      expect(q.margin.left, CssLength.zero);
+      expect(q.margin.right, const CssLength.px(2));
+      expect(q.maxWidth, const CssLength.percent(100));
+    });
+
+    test('and right and left in right-to-left text, inherited or own', () {
+      final inherited = style(
+        '<div dir="rtl"><blockquote id="x">a</blockquote></div>',
+        'x',
+        author: quote,
+      );
+      expect(inherited.borderWidth.right, 3);
+      expect(inherited.padding.right, const CssLength.px(16));
+      expect(inherited.padding.left, CssLength.zero);
+      expect(inherited.margin.left, const CssLength.px(2));
+      final own = style(
+        '<p id="x">a</p>',
+        'x',
+        author: 'p { direction: rtl; padding-inline-end: 4px }',
+      );
+      expect(own.padding.left, const CssLength.px(4));
+    });
+
+    test('block sides are the top and the bottom', () {
+      final p = style(
+        '<p id="x">a</p>',
+        'x',
+        author: 'p { margin-block: 3px 5px; border-block-end: 1px solid }',
+      );
+      expect(p.margin.top, const CssLength.px(3));
+      expect(p.margin.bottom, const CssLength.px(5));
+      expect(p.borderWidth.bottom, 1);
+    });
+
+    test('the later of a logical and a physical declaration wins', () {
+      expect(
+        style(
+          '<p id="x">a</p>',
+          'x',
+          author: 'p { margin-left: 5px; margin-inline-start: 7px }',
+        ).margin.left,
+        const CssLength.px(7),
+      );
+      expect(
+        style(
+          '<p id="x">a</p>',
+          'x',
+          author: 'p { margin-inline-start: 7px; margin-left: 5px }',
+        ).margin.left,
+        const CssLength.px(5),
+      );
+    });
+  });
+
+  group('conditional rules', () {
+    int color(String author, {CssMediaEnvironment? media}) => style(
+      '<p id="x">a</p>',
+      'x',
+      author: author,
+      media: media ?? const CssMediaEnvironment(),
+    ).color;
+
+    test('@media queries are evaluated against the environment', () {
+      expect(
+        color('@media (max-device-width: 480px) { p { color: red } }'),
+        0xFFFF0000,
+      );
+      expect(
+        color(
+          '@media (max-device-width: 480px) { p { color: red } }',
+          media: const CssMediaEnvironment(deviceWidth: 820),
+        ),
+        0xFF000000,
+      );
+      expect(
+        color('@media (prefers-color-scheme: dark) { p { color: red } }'),
+        0xFF000000,
+      );
+      expect(
+        color(
+          '@media (prefers-color-scheme: dark) { p { color: red } }',
+          media: const CssMediaEnvironment(darkColorScheme: true),
+        ),
+        0xFFFF0000,
+      );
+    });
+
+    test('Kindle-only blocks do not apply', () {
+      expect(color('@media amzn-mobi { p { color: red } }'), 0xFF000000);
+      expect(color('@media amzn-kf8 { p { color: red } }'), 0xFF000000);
+      expect(color('@media not amzn-mobi { p { color: red } }'), 0xFFFF0000);
+    });
+
+    test('@supports applies what vellum supports, nested blocks too', () {
+      expect(
+        color('@supports (display: flex) { p { color: red } }'),
+        0xFFFF0000,
+      );
+      expect(
+        color('@supports (transform: none) { p { color: red } }'),
+        0xFF000000,
+      );
+      expect(
+        color(
+          '@supports not (transform: none) { @media screen { p { color: red } } }',
+        ),
+        0xFFFF0000,
+      );
+    });
+  });
+
+  group('tables, positioning and text layout', () {
+    test('writing-mode, with the SVG values, inherits', () {
+      expect(
+        style(
+          '<p id="x">a</p>',
+          'x',
+          author: 'body { writing-mode: tb-rl }',
+        ).writingMode,
+        CssWritingMode.verticalRl,
+      );
+      expect(
+        style(
+          '<p id="x">a</p>',
+          'x',
+          author: 'html { -epub-writing-mode: vertical-lr }',
+        ).writingMode,
+        CssWritingMode.verticalLr,
+      );
+      expect(
+        style('<p id="x">a</p>', 'x').writingMode,
+        CssWritingMode.horizontalTb,
+      );
+    });
+
+    test('table borders: collapse and spacing inherit, from the UA too', () {
+      final cell = style(
+        '<table><tr><td id="x">a</td></tr></table>',
+        'x',
+        author: 'table { border-collapse: collapse }',
+      );
+      expect(cell.borderCollapse, isTrue);
+      final separate = style('<table id="x"><tr><td>a</td></tr></table>', 'x');
+      expect(separate.borderCollapse, isFalse);
+      expect(separate.borderSpacingX, 2);
+      expect(separate.borderSpacingY, 2);
+      expect(separate.boxSizing, CssBoxSizing.borderBox);
+      final spaced = style(
+        '<table id="x"><tr><td>a</td></tr></table>',
+        'x',
+        author: 'table { border-spacing: 0.5em 0 }',
+      );
+      expect(spaced.borderSpacingX, 8);
+      expect(spaced.borderSpacingY, 0);
+      expect(
+        style(
+          '<table><caption id="x">c</caption></table>',
+          'x',
+          author: 'table { caption-side: bottom }',
+        ).captionSide,
+        CssCaptionSide.bottom,
+      );
+    });
+
+    test('overflow: one keyword for both axes or x then y; not inherited', () {
+      CssOverflow x(String css) => style(
+        '<table id="x"><tr><td>a</td></tr></table>',
+        'x',
+        author: 'table { $css }',
+      ).overflowX;
+      expect(x(''), CssOverflow.visible);
+      expect(x('overflow: auto'), CssOverflow.auto);
+      expect(x('overflow: hidden scroll'), CssOverflow.hidden);
+      expect(x('overflow-x: scroll'), CssOverflow.scroll);
+      expect(x('overflow: clip'), CssOverflow.clip);
+      expect(x('overflow: sideways'), CssOverflow.visible, reason: 'invalid');
+      expect(x('overflow: auto auto auto'), CssOverflow.visible);
+      expect(CssOverflow.auto.scrolls, isTrue);
+      expect(CssOverflow.scroll.scrolls, isTrue);
+      expect(CssOverflow.hidden.scrolls, isFalse);
+      expect(
+        style(
+          '<div style="overflow: auto"><p id="x">a</p></div>',
+          'x',
+        ).overflowX,
+        CssOverflow.visible,
+      );
+    });
+
+    test('width as an intrinsic size: no length, the keyword kept', () {
+      ComputedStyle table(String width) => style(
+        '<table id="x"><tr><td>a</td></tr></table>',
+        'x',
+        author: 'table { width: $width }',
+      );
+      final max = table('max-content');
+      expect(max.width, isNull);
+      expect(max.widthKeyword, CssSizeKeyword.maxContent);
+      expect(table('min-content').widthKeyword, CssSizeKeyword.minContent);
+      expect(table('fit-content').widthKeyword, CssSizeKeyword.fitContent);
+      final set = table('20px');
+      expect(set.width, const CssLength.px(20));
+      expect(set.widthKeyword, isNull);
+      expect(table('auto').widthKeyword, isNull);
+      // A later length wins over a keyword before it.
+      final later = style(
+        '<table id="x" style="width: 10%"><tr><td>a</td></tr></table>',
+        'x',
+        author: 'table { width: max-content }',
+      );
+      expect(later.width, const CssLength.percent(10));
+      expect(later.widthKeyword, isNull);
+    });
+
+    test('position and offsets: em in px, percentages kept, auto null', () {
+      final sup = style(
+        '<p><sup id="x">1</sup></p>',
+        'x',
+        author: 'sup { position: relative; top: -0.5em; left: 10% }',
+      );
+      expect(sup.position, CssPosition.relative);
+      // sup's font is `smaller`: 16px / 1.2.
+      expect(sup.offsets.top, const CssLength.px(-0.5 * 16 / 1.2));
+      expect(sup.offsets.left, const CssLength.percent(10));
+      expect(sup.offsets.right, isNull);
+      expect(sup.offsets.bottom, isNull);
+      // Offsets do not inherit.
+      expect(
+        style(
+          '<div style="position: relative; top: 2px"><p id="x">a</p></div>',
+          'x',
+        ).offsets.top,
+        isNull,
+      );
+    });
+
+    test('corner radii resolve em and keep percentages', () {
+      final box = style(
+        '<p id="x">a</p>',
+        'x',
+        author: 'p { border-radius: 0.5em 50% / 4px }',
+      );
+      expect(
+        box.borderRadius.topLeft,
+        const CssRadius(CssLength.px(8), CssLength.px(4)),
+      );
+      expect(
+        box.borderRadius.topRight,
+        const CssRadius(CssLength.percent(50), CssLength.px(4)),
+      );
+      expect(style('<p id="x">a</p>', 'x').borderRadius.topLeft.isZero, isTrue);
+    });
+
+    test('box-sizing, wrapping, quotes and list markers', () {
+      expect(
+        style(
+          '<p id="x">a</p>',
+          'x',
+          author: 'p { -moz-box-sizing: border-box }',
+        ).boxSizing,
+        CssBoxSizing.borderBox,
+      );
+      final wrapped = style(
+        '<p id="x">a</p>',
+        'x',
+        author: 'body { word-wrap: break-word; word-break: break-all }',
+      );
+      expect(wrapped.overflowWrap, CssOverflowWrap.breakWord);
+      expect(wrapped.wordBreak, CssWordBreak.breakAll);
+      expect(
+        style(
+          '<p><q id="x">a</q></p>',
+          'x',
+          author: 'q { quotes: none }',
+        ).quotes,
+        isEmpty,
+      );
+      expect(
+        style(
+          '<p><q id="x">a</q></p>',
+          'x',
+          author: 'p { quotes: "«" "»" }',
+        ).quotes,
+        ['«', '»'],
+      );
+      expect(style('<p><q id="x">a</q></p>', 'x').quotes, isNull);
+      expect(
+        style(
+          '<ul><li id="x">a</li></ul>',
+          'x',
+          author: 'ul { list-style: square inside }',
+        ).listStyleInside,
+        isTrue,
+      );
+    });
+
+    test('text-align: match-parent takes the parent alignment', () {
+      expect(
+        style(
+          '<div style="text-align: right"><p id="x">a</p></div>',
+          'x',
+          author: 'p { text-align: center; text-align: -webkit-match-parent }',
+        ).textAlign,
+        CssTextAlign.right,
+      );
+    });
+
+    test('viewport units resolve against the environment', () {
+      expect(
+        style(
+          '<p id="x">a</p>',
+          'x',
+          author: 'p { margin-left: 10vw; margin-top: 10vh }',
+          options: const StyleResolverOptions(
+            viewportWidth: 400,
+            viewportHeight: 800,
+          ),
+        ).margin.left,
+        const CssLength.px(40),
+      );
     });
   });
 

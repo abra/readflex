@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 void main() {
   group('ContentDocument.parseXml', () {
@@ -31,6 +31,31 @@ void main() {
       expect(doc.textOf(doc.childAt(p, 0)), 'a');
       expect(doc.textContentOf(p), 'abc');
       expect(doc.descendantsOf(body).length, 6, reason: 'body, p, a, b, b, c');
+      expect(doc.subtreeEndOf(body), doc.nodeCount);
+      expect(doc.subtreeEndOf(head), body);
+      expect(doc.subtreeEndOf(doc.childAt(p, 0)), doc.childAt(p, 0) + 1);
+      expect(doc.descendantsOf(head).map(doc.localNameOf).first, 'head');
+    });
+
+    test('knows previous siblings and element positions', () {
+      final doc = ContentDocument.parseXml(
+        '<r>t<a/>u<b/><c/>v</r>',
+      );
+      final children = doc.childrenOf(0).toList();
+      final [t, a, u, b, c, v] = children;
+      expect(doc.previousSiblingOf(t), ContentDocument.none);
+      expect(doc.previousSiblingOf(a), t);
+      expect(doc.previousSiblingOf(v), c);
+      expect(doc.previousElementSiblingOf(b), a);
+      expect(doc.previousElementSiblingOf(a), ContentDocument.none);
+      expect(doc.nextElementSiblingOf(a), b);
+      expect(doc.nextElementSiblingOf(c), ContentDocument.none);
+      expect(doc.elementIndexOf(0), 1);
+      expect([a, b, c].map(doc.elementIndexOf), [1, 2, 3]);
+      expect(doc.elementChildCountOf(0), 3);
+      expect(doc.elementChildCountOf(a), 0);
+      expect(doc.childCountOf(0), 6);
+      expect(doc.isText(u), isTrue);
     });
 
     test('keeps text split by comments and CDATA apart, as the DOM does', () {
@@ -59,7 +84,7 @@ void main() {
       final doc = ContentDocument.parseXml(
         '<p a="x&amp;y">a&amp;b&nbsp;c&mdash;d&#169;&#x41;</p>',
       );
-      expect(doc.textOf(doc.firstChildOf(0)), 'a&b c—d©A');
+      expect(doc.textOf(doc.firstChildOf(0)), 'a&b\u00A0c—d©A');
       expect(doc.attributeOf(0, 'a'), 'x&y');
     });
 
@@ -153,7 +178,7 @@ void main() {
         '<p title="a\nb">x&nbsp;y\r\nz&amp;</p>',
       );
       final p = doc.firstChildOf(doc.lastChildOf(0));
-      expect(doc.textOf(doc.firstChildOf(p)), 'x y\nz&');
+      expect(doc.textOf(doc.firstChildOf(p)), 'x\u00A0y\nz&');
       // HTML attribute values keep their line breaks.
       expect(doc.attributeOf(p, 'title'), 'a\nb');
     });

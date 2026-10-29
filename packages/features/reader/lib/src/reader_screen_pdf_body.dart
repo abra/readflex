@@ -1,9 +1,9 @@
 part of 'reader_screen.dart';
 
-/// Hosts the native PDF engine (`package:vellum`) and translates its
-/// events into the same reader bloc and cubit updates the WebView body
-/// produces: pages, position, bookmarks, outline, text selection, saved
-/// highlights, search marks, margin crops and page colours.
+/// Hosts the PDF engine (`package:vellum`) and translates its events into
+/// the reader bloc and cubit updates every page body produces: pages,
+/// position, bookmarks, outline, text selection, saved highlights, search
+/// marks, margin crops and page colours.
 class _ReaderPdfBody extends StatefulWidget {
   const _ReaderPdfBody({
     super.key,
@@ -103,11 +103,11 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     } catch (error, stackTrace) {
       if (!mounted || generation != _openGeneration) return;
       _debugTraceReader('_ReaderPdfBody open failed: $error');
-      context.read<ReaderBloc>().reportError(error, stackTrace);
       context.read<ReaderBloc>().add(
-        ReaderWebViewFailed(
+        ReaderSurfaceFailed(
           sourceId: document.id,
-          failure: const ReaderLoadFailure(ReaderLoadFailureKind.document),
+          error: error,
+          stackTrace: stackTrace,
         ),
       );
       return;
@@ -193,7 +193,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
             href: page == null ? '' : fakeCfiFromIndex(page),
             level: level,
             startPercentage: page == null ? null : page / book.pageCount,
-            startPage: page,
+            startPage: page == null ? null : page + 1,
           ),
         );
         add(entry.children, level + 1);
@@ -204,8 +204,8 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     return items;
   }
 
-  /// The first outline entry that opens each page, as the WebView matched
-  /// a page's chapter by its exact TOC href.
+  /// The first outline entry that opens each page: a page's chapter is the
+  /// entry whose href is exactly that page.
   static Map<int, String> _titlesByPage(List<PdfOutlineEntry> outline) {
     final titles = <int, String>{};
     void walk(List<PdfOutlineEntry> entries) {
@@ -629,7 +629,7 @@ SourceBookmark? _nativeBookmarkOnPage(
   return null;
 }
 
-/// The WebView shell drops titles longer than this.
+/// Longer titles are not chapter names; the chrome drops them.
 const _nativeChapterTitleMaxLength = 512;
 
 String? _nativeChapterTitle(String label) {

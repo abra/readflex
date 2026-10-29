@@ -96,7 +96,7 @@ class ReaderState extends Equatable {
   final List<ReaderTocItem> tocItems;
   final ReaderDocumentFeatures? documentFeatures;
 
-  /// Live chapter / page metrics surfaced by foliate-js on every page
+  /// Live chapter / page metrics the page surface reports on every page
   /// turn. Not persisted — they're recomputed on every reader open.
   final String? chapterTitle;
   final int? bookCurrentPage;
@@ -110,9 +110,9 @@ class ReaderState extends Equatable {
   final int? chapterCurrentPage;
   final int? chapterTotalPages;
 
-  /// Byte length of all linear sections in the open book — same quantity
-  /// foliate-js uses to compute [bookCurrentPage] / [bookTotalPages].
-  /// Constant per book; first `onRelocated` after open populates it.
+  /// Byte length of all linear sections in the open book, the quantity
+  /// [bookCurrentPage] / [bookTotalPages] count. Constant per book; the
+  /// first position after open populates it.
   final int? sizeTotal;
 
   final bool atStart;
@@ -123,7 +123,7 @@ class ReaderState extends Equatable {
   /// never persisted.
   final double? minutesLeft;
 
-  /// True when foliate-js reports that the visible page is already bookmarked.
+  /// True when the visible page is already bookmarked.
   final bool currentPageBookmarked;
   final String? currentPageBookmarkCfi;
   final String? currentPageBookmarkId;

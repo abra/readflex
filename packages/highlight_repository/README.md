@@ -20,6 +20,8 @@ wrapped into `StorageException` (from `domain_models`) before surfacing.
 | `updateHighlightColor(id, color)`                              | Atomically patch only the color         |
 | `updateHighlightNote(id, note)`                                | Atomically patch/clear only the note    |
 | `deleteHighlight(id)`                                         | Delete by id                           |
+| `deleteHighlightForUndo(id)`                                  | Delete and return a `HighlightDeletion` snapshot |
+| `restoreHighlight(deletion)`                                 | Restore the original highlight and review state atomically |
 | `deleteHighlightsBySource(sourceId)`                          | Cascade delete when a source is removed|
 
 The `cfiRange` field holds an EPUB CFI for books or a serialized
@@ -44,6 +46,14 @@ Editors should use the field-specific methods: one SQL UPDATE, no read/modify/
 write of stale fields and no schema change. Patches preserve anchors, metadata,
 and independent edits; a missing row raises `StorageException` instead of
 silently reporting success or recreating a deleted highlight.
+
+Reader Undo keeps the `HighlightDeletion` snapshot in memory until Contents
+closes. Deletion captures the highlight and its optional review row in one
+transaction; restoration preserves the ID, date, anchors and full FSRS state.
+Append-only review logs keep the same item ID. An absent review row stays
+absent, and image-area highlights do not enter the review queue. Restoration
+refuses a deleted source and never overwrites an already restored highlight
+or a newer review row.
 
 > The storage row also carries legacy `pageNumber` and `scrollOffset`
 > columns for old rows and tests. Current reader selections primarily use

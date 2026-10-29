@@ -16,14 +16,23 @@ sealed class MobiBook {
   /// with a KF8 part, a MOBI 6 book otherwise.
   static Future<MobiBook> open(String path) async {
     final pdb = await PdbFile.open(path);
+    MobiContainer? container;
     try {
       if (!pdb.isMobi) throw const VellumException('Not a MOBI file');
-      final container = await MobiContainer.open(pdb);
+      container = await MobiContainer.open(pdb);
       return container.isKf8
           ? MobiKf8(await Kf8Book.load(container))
           : MobiLegacy(await Mobi6Book.load(container));
     } catch (_) {
-      await pdb.close();
+      try {
+        if (container != null) {
+          await container.close();
+        } else {
+          await pdb.close();
+        }
+      } catch (_) {
+        // Preserve the opening error after attempting both resource releases.
+      }
       rethrow;
     }
   }

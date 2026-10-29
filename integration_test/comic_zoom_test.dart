@@ -1,119 +1,86 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:component_library/component_library.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:reader/src/reader_page_grid.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_ui_cubit.dart';
+import 'package:vellum/all_formats.dart';
 
 import '../test/support/comic_fixture.dart';
 import '../test/support/native_screenshots.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
+/// A comic on vellum in the real app: double-tap zoom keeps the page, edge
+/// taps turn pages and hide the chrome, and Contents previews the pages.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('comic zoom renders in the native WebView without page changes', (
-    tester,
-  ) async {
-    final app = await UiTestApp.create(withBook: false, nativeReader: true);
+  Future<void> screenshot(String name) async {
+    if (Platform.isAndroid) {
+      await captureAndroidScreenshot(name);
+    } else {
+      await binding.takeScreenshot(name);
+    }
+  }
+
+  testWidgets('comic zoom keeps the page; edge taps turn it', (tester) async {
+    final app = await UiTestApp.create(withBook: false);
     addTearDown(app.dispose);
     final book = await addComicFixture(app);
     tester.platformDispatcher.defaultRouteNameTestValue = '/';
     addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
     await tester.pumpWidget(app.widget);
     await tapUi(tester, find.byKey(ValueKey('library-grid-${book.id}')));
+    await waitForFixedPage(tester);
+
+    final pages = find.byType(FixedPagesView);
+    FixedPagesController controller() =>
+        tester.widget<FixedPagesView>(pages).controller;
+    Future<void> tapComic({double x = 0.5}) async {
+      final box = tester.getRect(pages);
+      await tester.tapAt(Offset(box.left + box.width * x, box.center.dy));
+    }
+
+    Future<void> doubleTap() async {
+      await tapComic();
+      await tester.pump(const Duration(milliseconds: 80));
+      await tapComic();
+      await tester.pump(const Duration(milliseconds: 450));
+    }
+
+    Future<void> waitForPage(int index) => waitForUi(
+      tester,
+      () => controller().page == index,
+      description: 'comic page $index',
+    );
+
+    expect(
+      controller().page,
+      0,
+      reason: 'Opening must not skip the first page',
+    );
+    await doubleTap();
     await waitForUi(
       tester,
-      () =>
-          find.byType(BookReaderWebView).evaluate().isNotEmpty &&
-          tester
-              .state<BookReaderWebViewState>(find.byType(BookReaderWebView))
-              .debugIsReady,
-      description: 'comic ready',
-      timeout: const Duration(seconds: 45),
+      () => controller().isZoomed,
+      description: 'zoomed page',
     );
-    final controller = tester
-        .state<BookReaderWebViewState>(find.byType(BookReaderWebView))
-        .debugController!;
-    await tester.pump(const Duration(milliseconds: 600));
-    await controller.evaluateJavascript(
-      source: '''
-      window.comicState = () => {
-        const r = reader.view.renderer;
-        const doc = r.getContents().find(x => x.index === r.index).doc;
-        const frame = doc.defaultView.frameElement;
-        return {index:r.index, width:frame.getBoundingClientRect().width};
-      };
-      window.comicTap = (x = 0.5) => {
-        const r = reader.view.renderer;
-        const doc = r.getContents().find(x => x.index === r.index).doc;
-        const frame = doc.defaultView.frameElement;
-        const rect = frame.getBoundingClientRect();
-        doc.body.dispatchEvent(new MouseEvent('click', {bubbles:true,
-          clientX:(innerWidth*x-rect.left)*frame.clientWidth/rect.width,
-          clientY:(innerHeight/2-rect.top)*frame.clientHeight/rect.height}));
-      };
-      true;
-    ''',
+    expect(controller().page, 0);
+    expect(controller().zoomScale, greaterThan(2));
+    await screenshot('comic-zoomed');
+    await doubleTap();
+    await waitForUi(
+      tester,
+      () => !controller().isZoomed,
+      description: 'page fit',
     );
-    Future<void> tapComic({double x = 0.5}) async {
-      if (Platform.isIOS) {
-        // Exercise the host adapter even when WebKit delivers no DOM touch.
-        final box = tester.getRect(find.byType(BookReaderWebView));
-        await tester.tapAt(Offset(box.left + box.width * x, box.center.dy));
-      } else {
-        await controller.evaluateJavascript(source: 'comicTap($x)');
-      }
-    }
+    expect(controller().page, 0);
 
-    Future<void> waitForPage(int index) async {
-      final deadline = DateTime.now().add(const Duration(seconds: 10));
-      while (true) {
-        final current = await controller.evaluateJavascript(
-          source: 'comicState().index',
-        );
-        if (current == index) return;
-        if (DateTime.now().isAfter(deadline)) {
-          fail('Expected comic page $index, got $current');
-        }
-        await tester.pump(const Duration(milliseconds: 50));
-      }
-    }
-
-    final before =
-        await controller.evaluateJavascript(source: 'comicState()') as Map;
-    expect(before['width'] as num, greaterThan(100));
-    expect(before['index'], 0, reason: 'Opening must not skip the first page');
-    await tapComic();
-    await tester.pump(const Duration(milliseconds: 80));
-    await tapComic();
-    await tester.pump(const Duration(milliseconds: 450));
-    final zoomed =
-        await controller.evaluateJavascript(source: 'comicState()') as Map;
-    expect(zoomed['index'], before['index']);
-    expect(zoomed['width'] as num, greaterThan((before['width'] as num) * 2));
-    if (Platform.isAndroid) {
-      await captureAndroidScreenshot('comic-zoomed');
-    } else {
-      await binding.takeScreenshot('comic-zoomed');
-    }
-    await tapComic();
-    await tester.pump(const Duration(milliseconds: 80));
-    await tapComic();
-    await tester.pump(const Duration(milliseconds: 450));
-    final reset =
-        await controller.evaluateJavascript(source: 'comicState()') as Map;
-    expect(reset['index'], before['index']);
-    expect(reset['width'] as num, closeTo(before['width'] as num, 1));
-
-    final uiCubit = tester
-        .element(find.byType(BookReaderWebView))
-        .read<ReaderUiCubit>();
+    final uiCubit = tester.element(pages).read<ReaderUiCubit>();
     await tapComic();
     await tester.pump(const Duration(milliseconds: 450));
     expect(uiCubit.state.chromeVisible, isTrue);
@@ -126,13 +93,9 @@ void main() {
     await tapComic(x: 0.1);
     await waitForPage(1);
     await tester.pump(const Duration(milliseconds: 250));
-    if (Platform.isAndroid) {
-      await captureAndroidScreenshot('comic-after-edge-turns');
-    } else {
-      await binding.takeScreenshot('comic-after-edge-turns');
-    }
+    await screenshot('comic-after-edge-turns');
     expect(tester.takeException(), isNull);
-    // Exercise the real native async JS bridge and decoded thumbnail widgets.
+
     uiCubit.showChrome();
     await tester.pump(const Duration(milliseconds: 350));
     await tapUi(tester, find.byIcon(AppIcons.toc));
@@ -141,27 +104,28 @@ void main() {
       () => find.byType(ReaderPageGrid).evaluate().isNotEmpty,
       description: 'comic Pages tab',
     );
+    final previews = find.descendant(
+      of: find.byType(ReaderPageGrid),
+      matching: find.byType(RawImage),
+    );
     await waitForUi(
       tester,
       () =>
-          find
-              .descendant(
-                of: find.byType(ReaderPageGrid),
-                matching: find.byType(Image),
-              )
+          previews
               .evaluate()
+              .where((e) => (e.widget as RawImage).image != null)
               .length >=
           2,
-      description: 'native thumbnails',
+      description: 'page previews',
     );
-    if (Platform.isAndroid) {
-      await captureAndroidScreenshot('comic-pages');
-    } else {
-      await binding.takeScreenshot('comic-pages');
-    }
+    await screenshot('comic-pages');
+    await tester.ensureVisible(find.text('Page 3'));
+    await tester.pump(const Duration(milliseconds: 350));
     await tapUi(tester, find.text('Page 3'));
     await waitForPage(2);
     expect(uiCubit.state.tocDrawerVisible, isFalse);
+    // The reader saves its place after a pause.
+    await tester.pump(const Duration(seconds: 1));
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }

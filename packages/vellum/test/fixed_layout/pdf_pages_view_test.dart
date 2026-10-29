@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 const fixtures = 'test/fixtures/pdf';
 const portrait = Size(390, 844);
@@ -37,15 +37,19 @@ void main() {
     VisibleRectOf? visibleRectOf,
     PageColors? pageColors,
     PageOverlayBuilder? overlay,
+    double devicePixelRatio = 1,
   }) async {
-    tester.view.physicalSize = portrait;
-    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = portrait * devicePixelRatio;
+    tester.view.devicePixelRatio = devicePixelRatio;
     addTearDown(tester.view.reset);
     controller = FixedPagesController(pageCount: book.pageCount, rtl: false);
     addTearDown(controller.dispose);
     await tester.pumpWidget(
       MediaQuery(
-        data: const MediaQueryData(size: portrait),
+        data: MediaQueryData(
+          size: portrait,
+          devicePixelRatio: devicePixelRatio,
+        ),
         child: Directionality(
           textDirection: TextDirection.ltr,
           child: RepaintBoundary(
@@ -177,6 +181,48 @@ void main() {
     expect(ink.r, lessThan(0.98));
   });
 
+  testWidgets('a crop measured later decodes the page denser', (
+    tester,
+  ) async {
+    // The reader measures margins after the page shows and rebuilds the
+    // view with the same function.
+    Rect? crop;
+    Rect? cropOf(int _) => crop;
+    tester.view.physicalSize = portrait;
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    controller = FixedPagesController(pageCount: book.pageCount, rtl: false);
+    addTearDown(controller.dispose);
+    final pages = PdfPages(book);
+    final rebuild = ValueNotifier(0);
+    addTearDown(rebuild.dispose);
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(size: portrait),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: ValueListenableBuilder(
+            valueListenable: rebuild,
+            builder: (_, _, _) => FixedPagesView(
+              pages: pages,
+              controller: controller,
+              visibleRectOf: cropOf,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await settle(tester);
+    expect(painter(tester).image.width, 390);
+
+    crop = const Rect.fromLTWH(0.1, 0.05, 0.8, 0.6);
+    rebuild.value++;
+    await settle(tester, until: (p) => p.image.width != 390);
+    expect(painter(tester).image.width, (390 / 0.8).ceil());
+    expect(painter(tester).visible, crop);
+  });
+
   testWidgets('theme colours recolour the paper', (tester) async {
     await pumpView(tester, pageColors: night);
     await settle(tester);
@@ -200,23 +246,60 @@ void main() {
     expect((after.b * 255).round(), closeTo(0x15, 3));
   });
 
+  testWidgets('a tile stays on its part of the page when the page decodes '
+      'denser', (tester) async {
+    await pumpView(tester);
+    await settle(tester);
+    await tester.tapAt(const Offset(195, 400));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tapAt(const Offset(195, 400));
+    await tester.pump();
+    // The zoom decodes the page again, denser, after the first tile.
+    await settle(tester, until: (painter) => painter.image.width > 390 * 2);
+    await settle(tester);
+    final painted = painter(tester);
+    final region = painted.tileRegion;
+    if (region != null) {
+      // Zoomed on the page's middle: the tile is there, in the pixels of
+      // the image it is drawn over.
+      final centre = (region.left + region.width / 2) / painted.image.width;
+      expect(centre, closeTo(0.5, 0.1));
+    }
+  });
+
   testWidgets('a double tap zooms and draws a sharp tile of the view', (
     tester,
   ) async {
-    await pumpView(tester);
+    // At 3 device pixels per point the zoomed page is past the pixel
+    // budget of one render: the page stops short of the screen's density
+    // and the view is drawn again as a tile.
+    await pumpView(tester, devicePixelRatio: 3);
     await settle(tester);
-    final before = FixedPagesView.debugTileRenders;
+    final fit = painter(tester).image.width;
     await tester.tapAt(const Offset(195, 400));
     await tester.pump(const Duration(milliseconds: 50));
     await tester.tapAt(const Offset(195, 400));
     await tester.pump();
     expect(controller.isZoomed, isTrue);
-    await settle(tester, until: (painter) => painter.tile != null);
-    expect(FixedPagesView.debugTileRenders, before + 1);
-    final tile = painter(tester).tile!;
-    final region = painter(tester).tileRegion!;
-    expect(region.density, closeTo(FixedPagesView.doubleTapScale, 0.01));
+    await settle(
+      tester,
+      until: (painter) => painter.image.width > fit && painter.tile != null,
+    );
+    final painted = painter(tester);
+    final tile = painted.tile!;
+    final region = painted.tileRegion!;
+    expect(
+      painted.image.width,
+      lessThan(390 * 3 * FixedPagesView.doubleTapScale),
+      reason: 'the budget caps the page',
+    );
+    expect(region.density, greaterThan(1.1));
     expect(tile.width, closeTo(region.width * region.density, 2));
+    // Zoomed on the page's middle, in the pixels of the image under it.
+    expect(
+      (region.left + region.width / 2) / painted.image.width,
+      closeTo(0.5, 0.1),
+    );
     expect(
       tile.width * tile.height,
       lessThanOrEqualTo(FixedPagesView.maxTilePixels),

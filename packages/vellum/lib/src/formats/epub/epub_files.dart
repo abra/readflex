@@ -7,8 +7,12 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../../container/zip_archive.dart';
+import '../../container/zip_entry.dart';
 
-/// Read access to the files of a container by path.
+/// Read access to the files of a container by path. A path is looked up
+/// as written, then with every escape decoded ([fullyDecodedPath]): some
+/// tools write `%26` in the manifest for a file named with `&`, which
+/// `decodeURI` leaves escaped and `epub.js` never finds.
 abstract interface class EpubFiles {
   /// The text of [path] as UTF-8 (a byte order mark dropped), or null
   /// when the container has no such file.
@@ -40,13 +44,20 @@ class ZipEpubFiles implements EpubFiles {
 
   @override
   Future<Uint8List?> readBytes(String path) {
-    final entry = archive.entry(path);
+    final entry = _entry(path);
     if (entry == null) return Future.value(null);
     return archive.read(entry);
   }
 
   @override
-  int? sizeOf(String path) => archive.entry(path)?.uncompressedSize;
+  int? sizeOf(String path) => _entry(path)?.uncompressedSize;
+
+  ZipEntry? _entry(String path) {
+    final entry = archive.entry(path);
+    if (entry != null) return entry;
+    final decoded = fullyDecodedPath(path);
+    return decoded == null ? null : archive.entry(decoded);
+  }
 
   @override
   Future<void> close() => archive.close();
@@ -70,18 +81,23 @@ class MemoryEpubFiles implements EpubFiles {
 
   @override
   Future<String?> readText(String path) async {
-    final bytes = _files[path];
+    final bytes = _file(path);
     return bytes == null ? null : decodeEpubText(bytes);
   }
 
   @override
   Future<Uint8List?> readBytes(String path) async {
-    final bytes = _files[path];
+    final bytes = _file(path);
     return bytes == null ? null : Uint8List.fromList(bytes);
   }
 
   @override
-  int? sizeOf(String path) => _files[path]?.length;
+  int? sizeOf(String path) => _file(path)?.length;
+
+  Uint8List? _file(String path) {
+    final decoded = fullyDecodedPath(path);
+    return _files[path] ?? (decoded == null ? null : _files[decoded]);
+  }
 
   @override
   Future<void> close() async {}
@@ -99,4 +115,17 @@ String decodeEpubText(Uint8List bytes) {
     hasBom ? Uint8List.sublistView(bytes, 3) : bytes,
     allowMalformed: true,
   );
+}
+
+/// [path] with every percent escape decoded, the reserved characters too;
+/// null when it has none or a malformed one.
+String? fullyDecodedPath(String path) {
+  if (!path.contains('%')) return null;
+  try {
+    return Uri.decodeComponent(path);
+  } on ArgumentError {
+    return null;
+  } on FormatException {
+    return null;
+  }
 }

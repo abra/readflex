@@ -31,6 +31,8 @@ class DictionaryTable extends Table {
 
   TextColumn get contextTranslation => text().nullable()();
 
+  TextColumn get wordKey => text().withDefault(const Constant(''))();
+
   @override
   Set<Column> get primaryKey => {id};
 }

@@ -6,8 +6,8 @@ import 'package:preferences_service/preferences_service.dart';
 /// tablets.
 const double kReaderMaxLineWidthEm = 32;
 
-/// Text columns per page (`0` lets foliate choose) and the longest line in
-/// ems, as `FoliateStyle` sends them.
+/// Text columns per page (`0` lets the window choose) and the longest line
+/// in ems.
 typedef ReaderTextColumns = ({int maxColumnCount, double? maxLineWidthEm});
 
 /// One column across the page: image pages, which keep their own layout.
@@ -16,7 +16,7 @@ const ReaderTextColumns kReaderFullWidthColumn = (
   maxLineWidthEm: null,
 );
 
-/// What the reader asks foliate for in one window.
+/// What the reader asks the page for in one window.
 ///
 /// Text keeps the measure in every window. Only a wide window gets the
 /// reader's [columns] choice; the Appearance row that sets it shows only

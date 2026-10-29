@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_pdf_surface.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_search_event.dart';
+import 'package:reader/src/reader_selection.dart';
+import 'package:vellum/all_formats.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
 
 const fixtures = '../../vellum/test/fixtures/pdf';
 
@@ -122,13 +123,14 @@ void main() {
 
     surface.showSelectionHighlightPreview(
       cfiRange: pdfTextCfi(0, const PdfTextRange(0, 4)),
-      color: '#ffe600',
+      color: const Color(0xFFFFE600),
       opacity: 0.5,
     );
     expect(selection.color, const Color(0xFFFFE600).withValues(alpha: 0.5));
     surface.showSelectionHighlightPreview(
       cfiRange: pdfTextCfi(3, const PdfTextRange(0, 4)),
-      color: '#00aaff',
+      color: const Color(0xFF00AAFF),
+      opacity: 0.5,
     );
     expect(selection.color.g, closeTo(0xE6 / 255, 1e-6), reason: 'other page');
     surface.clearSelectionHighlightPreview();
@@ -146,14 +148,11 @@ void main() {
     surface.showImageAreaSelectionPreview(
       pageIndex: 0,
       rect: const ReaderImageAreaRect(x: 0, y: 0, width: 1, height: 1),
-      color: '#ffffff',
+      color: const Color(0xFFFFFFFF),
+      opacity: 1,
     );
     surface.clearImageAreaSelectionPreview();
     surface.setImageAreaSelectionPreviewRetained(true);
-    surface.setImageAreaSelectionControlsBounds(
-      const ReaderSelectionPosition(left: 0, top: 0, right: 1, bottom: 1),
-    );
-    surface.clearImageAreaSelectionControlsBounds();
     expect(selection.isActive, isFalse);
   });
 

@@ -2,13 +2,6 @@ PODS:
   - device_screen_brightness (0.0.1):
     - Flutter
   - Flutter (1.0.0)
-  - flutter_inappwebview_ios (0.0.1):
-    - Flutter
-    - flutter_inappwebview_ios/Core (= 0.0.1)
-    - OrderedSet (~> 6.0.3)
-  - flutter_inappwebview_ios/Core (0.0.1):
-    - Flutter
-    - OrderedSet (~> 6.0.3)
   - google_mlkit_commons (0.12.0):
     - Flutter
     - MLKitVision (~> 10.0.0)
@@ -69,14 +62,12 @@ PODS:
     - nanopb/encode (= 3.30910.0)
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
-  - OrderedSet (6.0.3)
   - PromisesObjC (2.4.0)
   - SSZipArchive (2.6.0)
 
 DEPENDENCIES:
   - device_screen_brightness (from `.symlinks/plugins/device_screen_brightness/ios`)
   - Flutter (from `Flutter`)
-  - flutter_inappwebview_ios (from `.symlinks/plugins/flutter_inappwebview_ios/ios`)
   - google_mlkit_commons (from `.symlinks/plugins/google_mlkit_commons/ios`)
   - google_mlkit_translation (from `.symlinks/plugins/google_mlkit_translation/ios`)
 
@@ -93,7 +84,6 @@ SPEC REPOS:
     - MLKitTranslate
     - MLKitVision
     - nanopb
-    - OrderedSet
     - PromisesObjC
     - SSZipArchive
 
@@ -102,8 +92,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/device_screen_brightness/ios"
   Flutter:
     :path: Flutter
-  flutter_inappwebview_ios:
-    :path: ".symlinks/plugins/flutter_inappwebview_ios/ios"
   google_mlkit_commons:
     :path: ".symlinks/plugins/google_mlkit_commons/ios"
   google_mlkit_translation:
@@ -112,7 +100,6 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   device_screen_brightness: 6696426852c120e21d5de19b317de9b63dd02930
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_inappwebview_ios: 6f63631e2c62a7c350263b13fa5427aedefe81d4
   google_mlkit_commons: 75b2579ccf522fe01d42e689babda04c4510ba2f
   google_mlkit_translation: ff8aebb952f811e7773fa7258a64a5c342885241
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
@@ -126,7 +113,6 @@ SPEC CHECKSUMS:
   MLKitTranslate: fcb283a2cbaaa595e1cf1d3fedffcea2e97a1168
   MLKitVision: 39a5a812db83c4a0794445088e567f3631c11961
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
-  OrderedSet: e539b66b644ff081c73a262d24ad552a69be3a94
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   SSZipArchive: 8a6ee5677c8e304bebc109e39cf0da91ccef22ea
 

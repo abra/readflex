@@ -1,9 +1,9 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
-import 'package:reader_webview/reader_webview.dart';
 
 import 'reader_directional_layout.dart';
+import 'reader_search_event.dart';
 
 class ReaderSearchResultTile extends StatelessWidget {
   const ReaderSearchResultTile({

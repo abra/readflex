@@ -5,7 +5,7 @@ import 'package:toast_service/toast_service.dart';
 
 import 'reader_bloc.dart';
 
-/// Reports committed mutations without rebuilding the reader/WebView subtree.
+/// Reports committed mutations without rebuilding the reader's page subtree.
 class ReaderHighlightEffectListener extends StatelessWidget {
   const ReaderHighlightEffectListener({required this.child, super.key});
 

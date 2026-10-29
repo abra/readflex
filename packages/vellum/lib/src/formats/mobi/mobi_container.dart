@@ -11,9 +11,9 @@ import 'package:meta/meta.dart';
 import '../../text/charsets.dart';
 import '../../text/html_entities.dart';
 import '../../vellum_exception.dart';
-import 'mobi_compression.dart';
 import 'mobi_headers.dart';
 import 'mobi_index.dart';
+import 'mobi_text_reader.dart';
 import 'pdb.dart';
 
 /// What `mobi.js` reports as `book.metadata` for MOBI and KF8.
@@ -59,12 +59,16 @@ class MobiContainer {
     this.headers,
     this._start,
     this._resourceStart,
-    this._decompress,
+    this._useDartTextReader,
   );
 
   /// Opens [pdb]: reads record 0, switches to the KF8 part of a combined
   /// file when there is one, and sets up decompression.
-  static Future<MobiContainer> open(PdbFile pdb) async {
+  /// [useDartTextReader] retains the Dart reference for parity and benchmarks.
+  static Future<MobiContainer> open(
+    PdbFile pdb, {
+    bool useDartTextReader = const bool.fromEnvironment('VELLUM_MOBI_USE_DART'),
+  }) async {
     var headers = MobiHeaders.read(await pdb.readRecord(0));
     // Resources are counted from the first header's resource start even
     // when the KF8 part's header is used for everything else, as
@@ -87,22 +91,16 @@ class MobiContainer {
         }
       }
     }
-    final Uint8List Function(Uint8List) decompress;
-    switch (headers.palmdoc.compression) {
-      case 1:
-        decompress = (bytes) => bytes;
-      case 2:
-        decompress = decompressPalmDoc;
-      case 17480:
-        final decoder = await HuffCdicDecoder.load(
-          headers.mobi,
-          (index) => pdb.readRecord(start + index),
-        );
-        decompress = decoder.decompress;
-      default:
-        throw const VellumException('Unknown compression type');
+    if (![1, 2, 17480].contains(headers.palmdoc.compression)) {
+      throw const VellumException('Unknown compression type');
     }
-    return MobiContainer._(pdb, headers, start, resourceStart, decompress);
+    return MobiContainer._(
+      pdb,
+      headers,
+      start,
+      resourceStart,
+      useDartTextReader,
+    );
   }
 
   final PdbFile pdb;
@@ -113,7 +111,9 @@ class MobiContainer {
 
   /// The absolute record index of resource 0.
   final int _resourceStart;
-  final Uint8List Function(Uint8List) _decompress;
+  Future<MobiTextReader>? _textReader;
+  Future<void>? _closing;
+  final bool _useDartTextReader;
 
   bool get isKf8 => headers.mobi.version >= 8;
 
@@ -129,10 +129,21 @@ class MobiContainer {
 
   /// Text record [index], trailing entries stripped and decompressed.
   Future<Uint8List> loadText(int index) async {
-    final record = await loadRecord(index + 1);
-    return _decompress(
-      removeTrailingEntries(record, headers.mobi.trailingFlags),
-    );
+    final reader = await _reader();
+    return reader.readRecord(index);
+  }
+
+  /// MOBI 6 needs its full stream; KF8 keeps using individual records.
+  Future<Uint8List> loadAllText() async {
+    final reader = await _reader();
+    return reader.readAll();
+  }
+
+  Future<MobiTextReader> _reader() {
+    if (_closing != null) throw StateError('MOBI container is closed');
+    return _textReader ??= _useDartTextReader
+        ? MobiTextReader.openDart(pdb, headers, _start)
+        : MobiTextReader.open(pdb, headers, _start);
   }
 
   /// Resource [index] (counted from the resource start): fonts are
@@ -225,5 +236,22 @@ class MobiContainer {
     return MobiCover(await loadResource(offset));
   }
 
-  Future<void> close() => pdb.close();
+  Future<void> close() => _closing ??= _dispose();
+
+  Future<void> _dispose() async {
+    try {
+      final opening = _textReader;
+      if (opening != null) {
+        MobiTextReader? reader;
+        try {
+          reader = await opening;
+        } catch (_) {
+          // Failed initialization owns no native handle; close the PDB below.
+        }
+        await reader?.close();
+      }
+    } finally {
+      await pdb.close();
+    }
+  }
 }

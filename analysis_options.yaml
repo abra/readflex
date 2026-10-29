@@ -12,3 +12,5 @@ analyzer:
     - "**/generated/**"
     # Standalone tools are analyzed from their own package context.
     - "tool/**"
+    - "benchmarks/mobi_rust/**"
+    - "benchmarks/reader_native/**"

@@ -14,6 +14,7 @@ import 'daos/dictionary_dao.dart';
 import 'daos/flashcards_dao.dart';
 import 'daos/highlights_dao.dart';
 import 'daos/review_items_dao.dart';
+import 'dictionary_word_key.dart';
 import 'tables/articles_table.dart';
 import 'tables/books_table.dart';
 import 'tables/collections_table.dart';
@@ -72,7 +73,7 @@ class AppDatabase extends _$AppDatabase {
   final Future<Directory> Function() _documentsDirectoryProvider;
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -82,6 +83,7 @@ class AppDatabase extends _$AppDatabase {
       await _createArticlesIndexes();
       await _createIndexes();
       await _createDictionaryAnchorIndexes();
+      await _createDictionaryWordIndex();
       await _createCollectionIndexes();
     },
     onUpgrade: (migrator, from, to) async {
@@ -369,6 +371,24 @@ class AppDatabase extends _$AppDatabase {
       if (from < 26) {
         await _addDictionaryTranslationDetails();
       }
+      if (from < 27) {
+        await migrator.addColumn(dictionaryTable, dictionaryTable.wordKey);
+        final entries = await customSelect(
+          'SELECT id, word FROM dictionary_table',
+        ).get();
+        await batch((batch) {
+          for (final entry in entries) {
+            batch.customStatement(
+              'UPDATE dictionary_table SET word_key = ? WHERE id = ?',
+              [
+                dictionaryWordKey(entry.read<String>('word')),
+                entry.read<String>('id'),
+              ],
+            );
+          }
+        });
+        await _createDictionaryWordIndex();
+      }
     },
   );
 
@@ -648,6 +668,13 @@ class AppDatabase extends _$AppDatabase {
         'ALTER TABLE dictionary_table ADD COLUMN $column TEXT',
       );
     }
+  }
+
+  Future<void> _createDictionaryWordIndex() async {
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_dictionary_word_source
+      ON dictionary_table (word_key, source_id, added_at DESC)
+    ''');
   }
 
   Future<void> _addHighlightLocationMetadata() async {

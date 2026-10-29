@@ -15,6 +15,7 @@ class FakeHighlightRepository implements HighlightRepository {
   final List<Highlight> addedHighlights = [];
   final List<String> deletedHighlightIds = [];
   final List<Highlight> updatedHighlights = [];
+  final List<Highlight> restoredHighlights = [];
 
   void seedHighlights(String sourceId, List<Highlight> highlights) {
     highlightsBySourceId[sourceId] = highlights;
@@ -109,6 +110,28 @@ class FakeHighlightRepository implements HighlightRepository {
     for (final entry in highlightsBySourceId.entries) {
       entry.value.removeWhere((highlight) => highlight.id == id);
     }
+  }
+
+  @override
+  Future<HighlightDeletion?> deleteHighlightForUndo(String id) async {
+    final highlight = highlightsBySourceId.values
+        .expand((items) => items)
+        .where((h) => h.id == id)
+        .firstOrNull;
+    await deleteHighlight(id);
+    return highlight == null ? null : HighlightDeletion(highlight: highlight);
+  }
+
+  @override
+  Future<Highlight> restoreHighlight(HighlightDeletion deletion) async {
+    await addGate;
+    if (shouldThrow) throw Exception('restoreHighlight failed');
+    final highlight = deletion.highlight;
+    restoredHighlights.add(highlight);
+    highlightsBySourceId
+        .putIfAbsent(highlight.sourceId, () => [])
+        .add(highlight);
+    return highlight;
   }
 
   @override

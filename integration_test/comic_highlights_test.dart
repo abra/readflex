@@ -7,11 +7,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:reader/src/reader_page_thumbnail_cubit.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_image_highlight_preview.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:vellum/all_formats.dart' show FixedPagesView;
 
 import '../test/support/comic_fixture.dart';
 import '../test/support/native_screenshots.dart';
@@ -24,7 +23,7 @@ void main() {
   testWidgets(
     'comic bookmarks restore by icon and saved areas navigate without text actions',
     (tester) async {
-      final app = await UiTestApp.create(withBook: false, nativeReader: true);
+      final app = await UiTestApp.create(withBook: false);
       addTearDown(app.dispose);
       final comic = await addComicFixture(app);
       for (var index = 0; index < 3; index++) {
@@ -49,20 +48,9 @@ void main() {
       addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
       await tester.pumpWidget(app.widget);
       await tapUi(tester, find.byKey(ValueKey('library-grid-${comic.id}')));
-      await waitForUi(
-        tester,
-        () =>
-            find.byType(BookReaderWebView).evaluate().isNotEmpty &&
-            tester
-                .state<BookReaderWebViewState>(find.byType(BookReaderWebView))
-                .debugIsReady,
-        description: 'comic ready',
-        timeout: const Duration(seconds: 45),
-      );
-      final context = tester.element(find.byType(BookReaderWebView));
-      final reader = tester.state<BookReaderWebViewState>(
-        find.byType(BookReaderWebView),
-      );
+      await waitForFixedPage(tester);
+      final pages = find.byType(FixedPagesView);
+      final context = tester.element(pages);
       final ui = context.read<ReaderUiCubit>();
       final bloc = context.read<ReaderBloc>();
       ui.showChrome();
@@ -113,21 +101,23 @@ void main() {
       );
       expect(bloc.state.bookmarks.single, bookmark);
       await tapUi(tester, find.text('Highlights'));
-      await waitForUi(tester, () {
-        final previews = find.byType(ReaderImageHighlightPreview).evaluate();
-        return previews.length == 3 &&
-            previews.every((element) {
-              final page = (element.widget as ReaderImageHighlightPreview)
-                  .area
-                  .pageIndex;
-              return element.read<ReaderPageThumbnailCubit>().state[page] !=
-                  null;
-            });
-      }, description: 'native cropped previews');
+      // Rows past the sheet are not built, nor their previews loaded.
+      final previews = find.byType(ReaderImageHighlightPreview);
+      await waitForUi(
+        tester,
+        () =>
+            previews.evaluate().isNotEmpty &&
+            find
+                .descendant(of: previews, matching: find.byIcon(AppIcons.book))
+                .evaluate()
+                .isEmpty,
+        description: 'native cropped previews',
+      );
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('Page highlight'), findsNothing);
       final rows = find.byType(ReaderHighlightListTile);
-      expect(rows, findsNWidgets(3));
+      final shown = rows.evaluate().length;
+      expect(shown, greaterThan(1));
       for (final icon in [
         AppIcons.copy,
         AppIcons.arrowRight,
@@ -149,21 +139,18 @@ void main() {
       await tapUi(tester, find.text('Highlights'));
       expect(rows, findsOneWidget);
       await tapUi(tester, find.text('All'));
-      expect(rows, findsNWidgets(3));
+      expect(rows, findsNWidgets(shown));
       // A row tap uses the existing page anchor. It does not change the saved area
       // or automatically zoom, and works without the old standalone arrow.
+      await tester.ensureVisible(find.text('A quiet afternoon.'));
+      await tester.pump(const Duration(milliseconds: 350));
       await tapUi(tester, find.text('A quiet afternoon.'));
       expect(ui.state.tocDrawerVisible, isFalse);
-      final deadline = DateTime.now().add(const Duration(seconds: 10));
-      while (await reader.debugController!.evaluateJavascript(
-            source: 'reader.view.renderer.index',
-          ) !=
-          2) {
-        if (DateTime.now().isAfter(deadline)) {
-          fail('Saved area did not open page 3');
-        }
-        await tester.pump(const Duration(milliseconds: 50));
-      }
+      await waitForUi(
+        tester,
+        () => tester.widget<FixedPagesView>(pages).controller.page == 2,
+        description: 'the saved area\'s page 3',
+      );
       await tester.pump(const Duration(milliseconds: 400));
       if (Platform.isAndroid) {
         await captureAndroidScreenshot('comic-highlight-destination');
@@ -171,6 +158,8 @@ void main() {
         await binding.takeScreenshot('comic-highlight-destination');
       }
       expect(tester.takeException(), isNull);
+      // The reader saves its place after a pause.
+      await tester.pump(const Duration(seconds: 1));
       await unmountUi(tester);
     },
     timeout: const Timeout(Duration(minutes: 3)),

@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_search_cubit.dart';
+import 'package:reader/src/reader_search_event.dart';
 import 'package:reader/src/reader_search_navigation_bar.dart';
 import 'package:reader/src/reader_search_panel.dart';
-import 'package:reader_webview/reader_webview.dart';
 
 import 'golden_support.dart';
 

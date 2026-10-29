@@ -1,5 +1,4 @@
 import 'package:monitoring/monitoring.dart';
-import 'package:reader_webview/reader_webview.dart';
 import 'package:readflex/app/composition.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
@@ -19,17 +18,14 @@ class AppBootstrap {
     Future<ErrorReportingService> Function(ApplicationConfig) reporterFactory =
         createErrorReporter,
     DependenciesFactory dependenciesFactory = composeDependencies,
-    Future<void> Function(DependenciesContainer) prepareReader = _prepareReader,
   }) : _reporterFactory = reporterFactory,
-       _dependenciesFactory = dependenciesFactory,
-       _prepareReaderForApp = prepareReader;
+       _dependenciesFactory = dependenciesFactory;
 
   final ApplicationConfig config;
   final Logger logger;
   final Future<ErrorReportingService> Function(ApplicationConfig)
   _reporterFactory;
   final DependenciesFactory _dependenciesFactory;
-  final Future<void> Function(DependenciesContainer) _prepareReaderForApp;
   ErrorReportingService? _errorReporter;
 
   /// [onReady] takes ownership only after returning successfully. A failing
@@ -53,7 +49,6 @@ class AppBootstrap {
         errorReporter: reporter,
       );
       pendingDependencies = dependencies;
-      await _prepareReaderForApp(dependencies);
       onReady(dependencies);
     } on Object catch (error, stackTrace) {
       await pendingDependencies?.disposeAfterBootstrapFailure();
@@ -65,18 +60,4 @@ class AppBootstrap {
       onFailure(error, stackTrace);
     }
   }
-}
-
-Future<void> _prepareReader(DependenciesContainer dependencies) async {
-  final extractor = AssetExtractor(
-    targetDirectory: dependencies.readerServer.assetsDirectory,
-    logger: dependencies.logger,
-  );
-  final info = dependencies.packageInfo;
-  await extractor.extractAll(
-    version: '${info.version}+${info.buildNumber}',
-    // Pick up local asset edits without requiring a version bump.
-    force: dependencies.config.isDev,
-  );
-  await dependencies.readerServer.start();
 }

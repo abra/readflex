@@ -6,18 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
+import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_highlight_controls.dart';
 import 'package:reader/src/reader_image_selection_cubit.dart';
 import 'package:reader/src/reader_page_grid.dart';
 import 'package:reader/src/reader_screen.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:vellum/all_formats.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
 
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
@@ -84,13 +84,11 @@ void main() {
         supportedLocales: ReadflexLocalizations.supportedLocales,
         home: ReaderScreen(
           sourceId: comic.id,
-          serverBaseUri: Uri.parse('http://127.0.0.1:8080'),
           bookRepository: books,
           highlightRepository: highlights,
           preferencesService: preferences,
           screenControlService: _ScreenControlService(),
           textActions: const [],
-          nativeFormats: const {BookFormat.cbz},
         ),
       ),
     );
@@ -115,18 +113,24 @@ void main() {
     return control;
   }
 
-  testWidgets('opens a comic on the native engine, without a WebView', (
+  testWidgets('opens a comic on the native engine', (
     tester,
   ) async {
     await pumpReader(tester);
     expect(find.byType(FixedPagesView), findsOneWidget);
-    expect(find.byType(BookReaderWebView), findsNothing);
     expect(
       find.bySemanticsLabel(l10n(tester).readerPageNumber(1)),
       findsOneWidget,
     );
+    // One contents entry per page, each naming its page counted from 1.
+    final toc = tester
+        .element(find.byType(FixedPagesView))
+        .read<ReaderBloc>()
+        .state
+        .tocItems;
+    expect(toc.map((i) => i.startPage), [1, 2, 3, 4, 5]);
 
-    // The opening position is reported and persisted as the WebView's would be.
+    // The opening position is reported and persisted.
     await tester.pump(const Duration(milliseconds: 700));
     expect(books.updatedBook?.currentCfi, 'epubcfi(/6/2)');
     expect(books.updatedBook?.readingProgress, closeTo(0.2, 1e-9));

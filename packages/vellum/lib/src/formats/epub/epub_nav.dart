@@ -5,8 +5,8 @@ library;
 import 'package:meta/meta.dart';
 import 'package:xml/xml.dart';
 
+import '../../container/book_url.dart';
 import '../book_navigation.dart';
-import 'epub_url.dart';
 import 'epub_xml.dart';
 
 /// A `nav` the reader has no slot for (`others`), kept with its heading.
@@ -50,7 +50,7 @@ EpubNavigation parseEpubNav(
   // An empty href is no target, as `href ? … : null` reads in epub.js.
   String? resolveHref(String? href) => href == null || href.isEmpty
       ? null
-      : decodeEpubUri(resolve?.call(href) ?? href);
+      : decodeBookUri(resolve?.call(href) ?? href);
 
   List<BookNavItem>? parseList(XmlElement? ol, {bool withType = false}) {
     if (ol == null) return null;
@@ -133,7 +133,7 @@ EpubNavigation parseEpubNcx(
   // An empty href is no target, as `href ? … : null` reads in epub.js.
   String? resolveHref(String? href) => href == null || href.isEmpty
       ? null
-      : decodeEpubUri(resolve?.call(href) ?? href);
+      : decodeBookUri(resolve?.call(href) ?? href);
 
   String? firstNavigableHref(List<BookNavItem>? items) {
     if (items == null) return null;

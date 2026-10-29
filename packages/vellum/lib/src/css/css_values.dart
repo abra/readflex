@@ -6,6 +6,8 @@ library;
 import 'css_syntax.dart';
 import 'css_tokenizer.dart';
 
+part 'css_calc.dart';
+
 enum CssLengthUnit {
   px,
   em,
@@ -23,32 +25,68 @@ enum CssLengthUnit {
   vmin,
   vmax,
   percent,
+
+  /// A math function: [CssLength.calc] holds it.
+  calc,
 }
 
 /// A length or percentage. Absolute units convert to px at parse time;
 /// `em`, `rem`, `ex`, `ch` and the viewport units resolve when the style
 /// is computed; a percentage stays one, for the layout to resolve
-/// against whatever the property says.
+/// against whatever the property says. A math function ([calc]) does
+/// the same with each of its terms ([computedIn]).
 class CssLength {
-  const CssLength(this.value, this.unit);
+  const CssLength(this.value, this.unit) : calc = null;
 
-  const CssLength.px(this.value) : unit = CssLengthUnit.px;
+  const CssLength.px(this.value) : unit = CssLengthUnit.px, calc = null;
 
-  const CssLength.percent(this.value) : unit = CssLengthUnit.percent;
+  const CssLength.percent(this.value)
+    : unit = CssLengthUnit.percent,
+      calc = null;
+
+  const CssLength.calc(CssCalc this.calc)
+    : value = 0,
+      unit = CssLengthUnit.calc;
 
   static const zero = CssLength.px(0);
 
   final double value;
   final CssLengthUnit unit;
 
+  /// The math function of a [CssLengthUnit.calc] length.
+  final CssCalc? calc;
+
   bool get isPercent => unit == CssLengthUnit.percent;
+
+  /// Whether the length depends on what percentages are of: a
+  /// percentage, or a math function with one.
+  bool get hasPercent => isPercent || (calc?.hasPercent ?? false);
+
+  /// The computed length: relative units in px by [context], a
+  /// percentage kept, a math function with its terms computed (one with
+  /// no percentage left is a px length).
+  CssLength computedIn(CssLengthContext context) {
+    if (isPercent || isPx) return this;
+    final calc = this.calc;
+    if (calc == null) return CssLength.px(toPx(context));
+    final resolved = calc.resolve(context);
+    return resolved.hasPercent
+        ? CssLength.calc(resolved)
+        : CssLength.px(resolved.evaluate(null, 0));
+  }
 
   bool get isPx => unit == CssLengthUnit.px;
 
   bool get isZero => value == 0;
 
-  /// Parses a dimension, a percentage or a unitless 0. Null otherwise.
+  /// Parses a dimension, a percentage, a unitless 0 or a math function
+  /// (`calc()`, `min()`, `max()`, `clamp()`). Null otherwise.
   static CssLength? parse(CssComponentValue value, {bool allowPercent = true}) {
+    if (value is CssFunctionValue) {
+      final calc = CssCalc.parse(value);
+      if (calc == null || (!allowPercent && calc.hasPercent)) return null;
+      return CssLength.calc(calc);
+    }
     if (value is! CssTokenValue) return null;
     final t = value.token;
     switch (t.type) {
@@ -103,6 +141,7 @@ class CssLength {
                   : context.viewportHeight) /
               100,
         CssLengthUnit.percent => value * percentOf / 100,
+        CssLengthUnit.calc => calc!.evaluate(context, percentOf),
         // Absolute units were converted at parse time.
         CssLengthUnit.pt ||
         CssLengthUnit.pc ||
@@ -114,15 +153,19 @@ class CssLength {
 
   @override
   bool operator ==(Object other) =>
-      other is CssLength && other.value == value && other.unit == unit;
+      other is CssLength &&
+      other.value == value &&
+      other.unit == unit &&
+      other.calc == calc;
 
   @override
-  int get hashCode => Object.hash(value, unit);
+  int get hashCode => Object.hash(value, unit, calc);
 
   @override
   String toString() => switch (unit) {
     CssLengthUnit.percent => '$value%',
     CssLengthUnit.inch => '${value}in',
+    CssLengthUnit.calc => 'calc($calc)',
     _ => '$value${unit.name}',
   };
 }

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
-import '../../vellum.dart';
+import '../formats/comic/comic_page_source.dart';
+import '../vellum_exception.dart';
 
 /// In-memory pages for image-layer tests; counts reads and can fail.
 class FakeComicSource implements ComicPageSource {

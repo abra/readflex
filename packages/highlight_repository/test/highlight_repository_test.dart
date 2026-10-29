@@ -16,7 +16,143 @@ void main() {
 
   tearDown(() => db.close());
 
+  Future<void> seedBook() => db.booksDao.insertBook(
+    BooksTableCompanion.insert(
+      id: 's1',
+      title: 'Book',
+      filePath: 'book.epub',
+      format: 'epub',
+      addedAt: '2026-01-01',
+    ),
+  );
+
   group('HighlightRepository', () {
+    test('Undo restores the same highlight and complete review row', () async {
+      await seedBook();
+      final highlight = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'A quote',
+        note: 'Keep this',
+        cfiRange: 'epubcfi(/6/2)',
+        color: HighlightColor.green,
+        progress: .4,
+        chapterTitle: 'One',
+        pageNumber: 3,
+        scrollOffset: .2,
+      );
+      await db.reviewItemsDao.upsertItem(
+        ReviewItemsTableCompanion(
+          itemId: Value(highlight.id),
+          itemType: const Value('highlight'),
+          sourceId: const Value('s1'),
+          fsrsState: const Value('review'),
+          stability: const Value(12.3),
+          difficulty: const Value(4.5),
+          retrievability: const Value(.8),
+          reps: const Value(8),
+          lapses: const Value(2),
+          scheduledDays: const Value(14),
+          elapsedDays: const Value(10),
+          lastReviewAt: const Value('2026-01-01T12:00:00.000Z'),
+          nextReviewAt: const Value('2026-01-15T12:00:00.000Z'),
+        ),
+      );
+      final review = await db.reviewItemsDao.byItemId(highlight.id);
+      final deletion = (await repo.deleteHighlightForUndo(highlight.id))!;
+      expect(await repo.getHighlightById(highlight.id), isNull);
+      expect(await db.reviewItemsDao.byItemId(highlight.id), isNull);
+      expect(await repo.restoreHighlight(deletion), highlight);
+      expect(await repo.getHighlightById(highlight.id), highlight);
+      expect(await db.reviewItemsDao.byItemId(highlight.id), review);
+    });
+
+    test('Undo keeps an intentionally absent review row absent', () async {
+      await seedBook();
+      final highlight = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'A quote',
+      );
+      await db.reviewItemsDao.deleteItem(highlight.id);
+      final deletion = (await repo.deleteHighlightForUndo(highlight.id))!;
+      await repo.restoreHighlight(deletion);
+      expect(await db.reviewItemsDao.byItemId(highlight.id), isNull);
+    });
+
+    test(
+      'image-area Undo preserves identity and rectangle without review',
+      () async {
+        await seedBook();
+        final highlight = await repo.addImageAreaHighlight(
+          sourceId: 's1',
+          sourceType: SourceType.book,
+          pageIndex: 2,
+          x: .1,
+          y: .2,
+          width: .3,
+          height: .4,
+          note: 'Panel',
+        );
+        final deletion = (await repo.deleteHighlightForUndo(highlight.id))!;
+        expect(await repo.restoreHighlight(deletion), highlight);
+        expect(await repo.getHighlightById(highlight.id), highlight);
+        expect(await db.reviewItemsDao.byItemId(highlight.id), isNull);
+      },
+    );
+
+    test('Undo is idempotent and preserves a newer edit', () async {
+      await seedBook();
+      final highlight = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'A quote',
+      );
+      final deletion = (await repo.deleteHighlightForUndo(highlight.id))!;
+      await repo.restoreHighlight(deletion);
+      await repo.updateHighlightNote(highlight.id, 'Newer note');
+      expect((await repo.restoreHighlight(deletion)).note, 'Newer note');
+      expect(await repo.getHighlightsBySource('s1'), hasLength(1));
+    });
+
+    test('Undo refuses a deleted source', () async {
+      await seedBook();
+      final highlight = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'A quote',
+      );
+      final deletion = (await repo.deleteHighlightForUndo(highlight.id))!;
+      await db.booksDao.deleteBook('s1');
+      await expectLater(
+        repo.restoreHighlight(deletion),
+        throwsA(isA<StorageException>()),
+      );
+      expect(await repo.getHighlightById(highlight.id), isNull);
+      expect(await db.reviewItemsDao.byItemId(highlight.id), isNull);
+    });
+
+    test('failed review restoration rolls back the highlight too', () async {
+      await seedBook();
+      final highlight = await repo.addHighlight(
+        sourceId: 's1',
+        sourceType: SourceType.book,
+        text: 'A quote',
+      );
+      final deletion = (await repo.deleteHighlightForUndo(highlight.id))!;
+      await db.customStatement('''
+        CREATE TRIGGER reject_review_restore BEFORE INSERT ON review_items_table
+        BEGIN SELECT RAISE(ABORT, 'injected failure'); END
+      ''');
+      await expectLater(
+        repo.restoreHighlight(deletion),
+        throwsA(isA<StorageException>()),
+      );
+      expect(await repo.getHighlightById(highlight.id), isNull);
+      await db.customStatement('DROP TRIGGER reject_review_restore');
+      expect(await repo.restoreHighlight(deletion), highlight);
+    });
+
     test('addHighlight creates and returns highlight', () async {
       final h = await repo.addHighlight(
         sourceId: 's1',

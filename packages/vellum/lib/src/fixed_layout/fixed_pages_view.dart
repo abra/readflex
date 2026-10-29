@@ -749,6 +749,10 @@ class _PageFrameState extends State<_PageFrame> {
       widget.view.visibleRectOf?.call(widget.page) ??
       const Rect.fromLTWH(0, 0, 1, 1);
 
+  /// The visible part the image was asked for: a crop measured later
+  /// through the same [FixedPagesView.visibleRectOf] asks again.
+  Rect? _requestedVisible;
+
   /// Zoom re-decodes denser, up to the gesture's scale, so a zoomed page
   /// is sharp without holding full-resolution scans at fit; a crop asks
   /// for the whole page at the density its visible part is shown at.
@@ -774,7 +778,8 @@ class _PageFrameState extends State<_PageFrame> {
         oldWidget.zoomScale != widget.zoomScale ||
         oldWidget.page != widget.page ||
         oldWidget.view.pages != widget.view.pages ||
-        oldWidget.view.visibleRectOf != widget.view.visibleRectOf) {
+        oldWidget.view.visibleRectOf != widget.view.visibleRectOf ||
+        _visible != _requestedVisible) {
       _resolve();
     }
     if (oldWidget.gestureEpoch != widget.gestureEpoch ||
@@ -784,6 +789,7 @@ class _PageFrameState extends State<_PageFrame> {
   }
 
   void _resolve() {
+    _requestedVisible = _visible;
     final stream = _provider.resolve(createLocalImageConfiguration(context));
     if (stream.key == _stream?.key) return;
     _detach();
@@ -809,11 +815,21 @@ class _PageFrameState extends State<_PageFrame> {
       info.dispose();
       return;
     }
+    final resized =
+        previous != null &&
+        (previous.image.width != info.image.width ||
+            previous.image.height != info.image.height);
     setState(() {
       _info = info;
       _error = null;
     });
     previous?.dispose();
+    if (resized) {
+      // A tile is placed in the base image's pixels: plan it again over
+      // the new one.
+      _dropTile();
+      WidgetsBinding.instance.addPostFrameCallback((_) => _planTile());
+    }
     widget.onImageSize(widget.page, size);
     if (previous == null &&
         widget.view.controller.visiblePages.contains(widget.page)) {

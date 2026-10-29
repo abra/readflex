@@ -2,7 +2,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_document_features.dart';
 
 import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
@@ -22,20 +22,6 @@ void main() {
     totalLocations: 1000,
     currentLocation: 100,
     readingProgress: 0.1,
-  );
-
-  ReaderDocument articleDocumentFromBook(Book book) => ReaderDocument(
-    id: book.id,
-    sourceType: SourceType.article,
-    title: book.title,
-    author: book.author,
-    coverImagePath: book.coverImagePath,
-    filePath: '/articles/${book.id}/content.html',
-    currentCfi: book.currentCfi,
-    readingProgress: book.readingProgress,
-    addedAt: book.addedAt,
-    lastOpenedAt: book.lastOpenedAt,
-    isFinished: book.isFinished,
   );
 
   final testHighlight = Highlight(
@@ -404,7 +390,7 @@ void main() {
       );
 
       blocTest<ReaderBloc, ReaderState>(
-        'updates page progression direction from WebView position',
+        'updates page progression direction from the position',
         setUp: () => bookRepository.seedBook(testBook),
         build: buildBloc,
         seed: () => ReaderState(
@@ -537,17 +523,10 @@ void main() {
         },
       );
 
-      // foliate-js's paginator allows navigation onto two blank
-      // trailing columns past the actual content (`atEnd: page >=
-      // pages - 2`). On those it emits `progress=0` /
-      // `bookCurrentPage=0` — not because we're at the start, but
-      // because there's no real content under the viewport. Use
-      // the paginator-reported `atEnd` flag to override those
-      // bogus numbers with "100% / last page" — same trick readest
-      // uses. Without the override the slider would snap to 0%
-      // and the page counter would clear at the end of every book.
+      // On the last page the slider reads 100% and the counter the last
+      // page, whatever fraction the page starts at.
       blocTest<ReaderBloc, ReaderState>(
-        'atEnd phantom: overrides progress=0 with 1.0 and pins page to last',
+        'atEnd: the last page reads 1.0 and pins the page to the last',
         setUp: () =>
             bookRepository.seedBook(testBook.copyWith(readingProgress: 0.99)),
         build: buildBloc,
@@ -608,10 +587,9 @@ void main() {
         },
       );
 
-      // Defensive: if foliate-js reports atEnd but bookTotalPages is
-      // null (very early in the load before pagination settles), we
-      // can't compute "last page", so the override must NOT engage —
-      // the event passes through as-is.
+      // Defensive: with atEnd but no bookTotalPages there is no "last
+      // page" to pin, so the override must NOT engage — the event passes
+      // through as-is.
       blocTest<ReaderBloc, ReaderState>(
         'atEnd with null bookTotalPages does not engage override',
         setUp: () =>
@@ -666,157 +644,6 @@ void main() {
           expect(bloc.state.chapterTitle, 'Book IV');
           expect(bloc.state.bookCurrentPage, 84);
           expect(bloc.state.bookTotalPages, 200);
-        },
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'ignores unstable generated article zero-page bootstrap position',
-        build: buildBloc,
-        seed: () => ReaderState(
-          status: ReaderStatus.ready,
-          sourceType: SourceType.article,
-          title: testBook.title,
-          document: articleDocumentFromBook(
-            testBook.copyWith(readingProgress: 1),
-          ),
-        ),
-        act: (bloc) => bloc.add(
-          const ReaderBookPositionUpdated(
-            cfi: 'epubcfi(/6/2!/4)',
-            progress: 0,
-            bookTotalPages: 4,
-            chapterCurrentPage: 1,
-            chapterTotalPages: 0,
-            atStart: true,
-            atEnd: true,
-          ),
-        ),
-        wait: const Duration(milliseconds: 700),
-        expect: () => <ReaderState>[],
-        verify: (_) {
-          expect(bookRepository.updateCallCount, 0);
-        },
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'ignores unstable generated article overcounted chapter pages',
-        build: buildBloc,
-        seed: () => ReaderState(
-          status: ReaderStatus.ready,
-          sourceType: SourceType.article,
-          title: testBook.title,
-          document: articleDocumentFromBook(
-            testBook.copyWith(readingProgress: 1),
-          ),
-        ),
-        act: (bloc) => bloc.add(
-          const ReaderBookPositionUpdated(
-            cfi: 'epubcfi(/6/2!/4/2,/2,/12/1:39)',
-            progress: 0.09090909090909091,
-            bookCurrentPage: 0,
-            bookTotalPages: 4,
-            chapterCurrentPage: 1,
-            chapterTotalPages: 11,
-          ),
-        ),
-        wait: const Duration(milliseconds: 700),
-        expect: () => <ReaderState>[],
-        verify: (_) {
-          expect(bookRepository.updateCallCount, 0);
-        },
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'keeps stable generated article page metrics',
-        build: buildBloc,
-        seed: () => ReaderState(
-          status: ReaderStatus.ready,
-          sourceType: SourceType.article,
-          title: testBook.title,
-          document: articleDocumentFromBook(
-            testBook.copyWith(readingProgress: 0.6),
-          ),
-        ),
-        act: (bloc) => bloc.add(
-          const ReaderBookPositionUpdated(
-            cfi: 'epubcfi(/6/2!/4/2,/40/1:272,/46/1:57)',
-            progress: 1,
-            bookCurrentPage: 2,
-            bookTotalPages: 4,
-            chapterCurrentPage: 5,
-            chapterTotalPages: 5,
-            atEnd: true,
-          ),
-        ),
-        wait: const Duration(milliseconds: 700),
-        verify: (bloc) {
-          expect(bloc.state.document?.readingProgress, 1);
-          expect(bloc.state.chapterCurrentPage, 5);
-          expect(bloc.state.chapterTotalPages, 5);
-        },
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'uses pending article seek when Android reports zero progress '
-        'without useful page metrics',
-        build: buildBloc,
-        seed: () => ReaderState(
-          status: ReaderStatus.ready,
-          sourceType: SourceType.article,
-          title: testBook.title,
-          document: articleDocumentFromBook(testBook),
-        ),
-        act: (bloc) {
-          bloc
-            ..add(const ReaderSeekRequested(progress: 0.5))
-            ..add(
-              const ReaderBookPositionUpdated(
-                cfi: 'epubcfi(android-after-seek)',
-                progress: 0,
-                atStart: true,
-              ),
-            );
-        },
-        wait: const Duration(milliseconds: 50),
-        verify: (bloc) {
-          expect(
-            bloc.state.document?.currentCfi,
-            'epubcfi(android-after-seek)',
-          );
-          expect(bloc.state.document?.readingProgress, 0.5);
-        },
-      );
-
-      blocTest<ReaderBloc, ReaderState>(
-        'keeps valid article page metrics instead of pending seek target',
-        build: buildBloc,
-        seed: () => ReaderState(
-          status: ReaderStatus.ready,
-          sourceType: SourceType.article,
-          title: testBook.title,
-          document: articleDocumentFromBook(testBook),
-        ),
-        act: (bloc) {
-          bloc
-            ..add(const ReaderSeekRequested(progress: 0.5))
-            ..add(
-              const ReaderBookPositionUpdated(
-                cfi: 'epubcfi(valid-page-after-seek)',
-                progress: 0,
-                chapterCurrentPage: 3,
-                chapterTotalPages: 5,
-              ),
-            );
-        },
-        wait: const Duration(milliseconds: 50),
-        verify: (bloc) {
-          expect(
-            bloc.state.document?.currentCfi,
-            'epubcfi(valid-page-after-seek)',
-          );
-          expect(bloc.state.document?.readingProgress, 0.6);
-          expect(bloc.state.chapterCurrentPage, 3);
-          expect(bloc.state.chapterTotalPages, 5);
         },
       );
 
@@ -1070,94 +897,6 @@ void main() {
           expect(saved, isEmpty);
         });
       });
-
-      test(
-        'treats a single-page article as fully progressed after opening',
-        () async {
-          final articleRepository = FakeArticleRepository();
-          articleRepository.seedArticle(
-            Article(
-              id: 'article-1',
-              title: 'Saved Article',
-              url: 'https://example.com/article',
-              siteName: 'Example',
-              contentPath: '/articles/article-1/article.json',
-              addedAt: DateTime(2024, 1, 1),
-            ),
-          );
-          final bloc = ReaderBloc(
-            bookRepository: bookRepository,
-            articleRepository: articleRepository,
-            highlightRepository: highlightRepository,
-          );
-          addTearDown(bloc.close);
-
-          bloc.add(const ReaderSourceLoadRequested(sourceId: 'article-1'));
-          await bloc.stream.firstWhere(
-            (s) => s.status == ReaderStatus.ready,
-          );
-
-          bloc.add(
-            const ReaderBookPositionUpdated(
-              cfi: 'epubcfi(/6/2)',
-              progress: 0,
-              bookCurrentPage: 1,
-              bookTotalPages: 1,
-            ),
-          );
-          await bloc.stream.firstWhere(
-            (s) => s.document?.readingProgress == 1,
-          );
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-
-          expect(bloc.state.document?.readingProgress, 1);
-          expect(articleRepository.updatedArticle?.readingProgress, 1);
-        },
-      );
-
-      test(
-        'treats the first page of a multi-page article as visible progress',
-        () async {
-          final articleRepository = FakeArticleRepository();
-          articleRepository.seedArticle(
-            Article(
-              id: 'article-1',
-              title: 'Saved Article',
-              url: 'https://example.com/article',
-              siteName: 'Example',
-              contentPath: '/articles/article-1/article.json',
-              addedAt: DateTime(2024, 1, 1),
-            ),
-          );
-          final bloc = ReaderBloc(
-            bookRepository: bookRepository,
-            articleRepository: articleRepository,
-            highlightRepository: highlightRepository,
-          );
-          addTearDown(bloc.close);
-
-          bloc.add(const ReaderSourceLoadRequested(sourceId: 'article-1'));
-          await bloc.stream.firstWhere(
-            (s) => s.status == ReaderStatus.ready,
-          );
-
-          bloc.add(
-            const ReaderBookPositionUpdated(
-              cfi: 'epubcfi(/6/2)',
-              progress: 0,
-              bookCurrentPage: 0,
-              bookTotalPages: 4,
-            ),
-          );
-          await bloc.stream.firstWhere(
-            (s) => s.document?.readingProgress == 0.25,
-          );
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-
-          expect(bloc.state.document?.readingProgress, 0.25);
-          expect(articleRepository.updatedArticle?.readingProgress, 0.25);
-        },
-      );
     });
 
     group('ReaderHighlightsRefreshed', () {

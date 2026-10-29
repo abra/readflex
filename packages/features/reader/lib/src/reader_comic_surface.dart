@@ -1,7 +1,8 @@
 import 'package:flutter/painting.dart';
-import 'package:reader_webview/reader_webview.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/comic.dart';
 
+import 'reader_search_event.dart';
+import 'reader_selection.dart';
 import 'reader_surface.dart';
 
 /// What the comic body hands the surface while a comic is open.
@@ -26,10 +27,8 @@ class ReaderComicSession {
 ///
 /// Commands reach the session's `FixedPagesController` and image-area draft;
 /// without a session (before the archive opens, after it closes) they are
-/// dropped and queries answer null, as the WebView surface does before it
-/// mounts. Comics have no text, so search and text-selection commands are
-/// no-ops, and control bounds are not needed: Flutter hit-tests the app's
-/// chrome before the page.
+/// dropped and queries answer null. Comics have no text, so search and
+/// text-selection commands are no-ops.
 class ReaderComicSurface implements ReaderSurface {
   ReaderComicSession? _session;
 
@@ -160,10 +159,8 @@ class ReaderComicSurface implements ReaderSurface {
   @override
   void showSelectionHighlightPreview({
     required String cfiRange,
-    required String color,
-    double? opacity,
-    String? mixBlendMode,
-    double? verticalOffset,
+    required Color color,
+    required double opacity,
   }) {}
 
   @override
@@ -173,16 +170,16 @@ class ReaderComicSurface implements ReaderSurface {
   void showImageAreaSelectionPreview({
     required int pageIndex,
     required ReaderImageAreaRect rect,
-    required String color,
-    double? opacity,
+    required Color color,
+    required double opacity,
   }) {
     final draft = _session?.draft;
     if (draft == null || draft.page != pageIndex) return;
-    draft.setStyle(color: parseCssHexColor(color), opacity: opacity);
+    draft.setStyle(color: color, opacity: opacity);
   }
 
   @override
-  void clearImageAreaSelectionPreview({bool allowNextTap = false}) {
+  void clearImageAreaSelectionPreview() {
     _clearDraft();
   }
 
@@ -190,12 +187,6 @@ class ReaderComicSurface implements ReaderSurface {
   void setImageAreaSelectionPreviewRetained(bool retained) {
     _session?.draft.retain(retained);
   }
-
-  @override
-  void setImageAreaSelectionControlsBounds(ReaderSelectionPosition bounds) {}
-
-  @override
-  void clearImageAreaSelectionControlsBounds() {}
 
   @override
   Future<ImageProvider?> pageThumbnail(int index) {
@@ -219,24 +210,4 @@ class ReaderComicSurface implements ReaderSurface {
     session.draft.clear();
     session.controller.lockInput(false);
   }
-}
-
-/// A CSS hex colour (`#rgb`, `#rrggbb`, `#rrggbbaa`) as a [Color], or null
-/// for anything else. The reader hands the engine the same strings it
-/// hands the WebView's CSS.
-Color? parseCssHexColor(String value) {
-  final hex = value.trim();
-  if (!hex.startsWith('#')) return null;
-  final digits = hex.substring(1);
-  final expanded = switch (digits.length) {
-    3 => digits.split('').map((d) => '$d$d').join(),
-    6 || 8 => digits,
-    _ => null,
-  };
-  if (expanded == null) return null;
-  final parsed = int.tryParse(expanded, radix: 16);
-  if (parsed == null) return null;
-  if (expanded.length == 6) return Color(0xFF000000 | parsed);
-  // #rrggbbaa: alpha is last in CSS, first in Flutter.
-  return Color(((parsed & 0xFF) << 24) | (parsed >> 8));
 }

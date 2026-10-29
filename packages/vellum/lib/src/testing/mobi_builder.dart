@@ -49,6 +49,7 @@ class MobiBuilder {
     this.localeLanguage = 9,
     this.localeRegion = 4,
     this.exth = const [],
+    this.mobiHeaderLength = 264,
   });
 
   final String title;
@@ -64,6 +65,11 @@ class MobiBuilder {
   final int localeLanguage;
   final int localeRegion;
   final List<MobiExthRecord> exth;
+
+  /// The MOBI header's own length: 264 holds the KF8 fields; old MOBI 3
+  /// files end it at 208 (0xD0), before the trailing flags, and what
+  /// follows (EXTH, the title) sits where those fields would be.
+  final int mobiHeaderLength;
 
   final _textRecords = <Uint8List>[];
   final _resources = <Uint8List>[];
@@ -335,12 +341,13 @@ class MobiBuilder {
     out.add(_u16(recordSize));
     out.add(_u16(0)); // encryption
     out.add(_u16(0));
-    // MOBI header, 264 bytes long for KF8 fields.
+    // MOBI header, written 264 bytes long for KF8 fields and cut to
+    // [mobiHeaderLength].
     const mobiLength = 264;
     final mobi = Uint8List(mobiLength);
     final view = mobi.buffer.asByteData();
     mobi.setRange(0, 4, ascii.encode('MOBI'));
-    view.setUint32(4, mobiLength);
+    view.setUint32(4, mobiHeaderLength);
     view.setUint32(8, 2); // type: book
     view.setUint32(12, encoding);
     view.setUint32(16, uid);
@@ -351,7 +358,7 @@ class MobiBuilder {
     final titleBytes = utf8.encode(title);
     final exthBytes = _exth();
     // Title follows the EXTH block in record 0.
-    final titleOffset = 16 + mobiLength + exthBytes.length;
+    final titleOffset = 16 + mobiHeaderLength + exthBytes.length;
     view.setUint32(68, titleOffset); // title offset at header offset 84 - 16
     view.setUint32(72, titleBytes.length);
     view.setUint32(76, 0); // locale, with region/language bytes below
@@ -394,7 +401,7 @@ class MobiBuilder {
       244,
       _guideIndex == null ? 0xFFFFFFFF : indexStarts[_guideIndex!],
     ); // guide (260)
-    out.add(mobi);
+    out.add(Uint8List.sublistView(mobi, 0, mobiHeaderLength));
     out.add(exthBytes);
     out.add(titleBytes);
     out.add(Uint8List(8)); // padding

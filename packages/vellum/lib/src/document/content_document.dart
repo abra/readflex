@@ -21,7 +21,8 @@ import 'dart:typed_data';
 
 import 'package:html/dom.dart' as html_dom;
 import 'package:html/parser.dart' as html_parser;
-import 'package:xml/xml.dart' show XmlDefaultEntityMapping, XmlException;
+import 'package:xml/xml.dart'
+    show XmlDefaultEntityMapping, XmlException, XmlNullEntityMapping;
 import 'package:xml/xml_events.dart' as xml_events;
 
 import '../epubcfi/cfi_node.dart';
@@ -56,6 +57,7 @@ class ContentDocument implements CfiDocument {
     required Int32List firstChildren,
     required Int32List lastChildren,
     required Int32List nextSiblings,
+    required Int32List previousSiblings,
     required Int32List childCounts,
     required Int32List names,
     required Int32List attributeStarts,
@@ -71,6 +73,7 @@ class ContentDocument implements CfiDocument {
        _firstChildren = firstChildren,
        _lastChildren = lastChildren,
        _nextSiblings = nextSiblings,
+       _previousSiblings = previousSiblings,
        _childCounts = childCounts,
        _names = names,
        _attributeStarts = attributeStarts,
@@ -107,6 +110,13 @@ class ContentDocument implements CfiDocument {
   final Int32List _firstChildren;
   final Int32List _lastChildren;
   final Int32List _nextSiblings;
+  final Int32List _previousSiblings;
+
+  /// Each element's 1-based position among its parent's element
+  /// children, and each node's element child count: built on first use,
+  /// for structural selectors.
+  Int32List? _elementIndices;
+  Int32List? _elementChildCounts;
   final Int32List _childCounts;
 
   /// Elements: an index into [_qualifiedNames]; text: into [_texts].
@@ -141,6 +151,56 @@ class ContentDocument implements CfiDocument {
 
   int nextSiblingOf(int node) => _nextSiblings[node];
 
+  int previousSiblingOf(int node) => _previousSiblings[node];
+
+  /// The element sibling before [node], or [none].
+  int previousElementSiblingOf(int node) {
+    var s = _previousSiblings[node];
+    while (s != none && _kinds[s] != 0) {
+      s = _previousSiblings[s];
+    }
+    return s;
+  }
+
+  /// The element sibling after [node], or [none].
+  int nextElementSiblingOf(int node) {
+    var s = _nextSiblings[node];
+    while (s != none && _kinds[s] != 0) {
+      s = _nextSiblings[s];
+    }
+    return s;
+  }
+
+  /// [element]'s 1-based position among its parent's element children
+  /// (`:nth-child`); 1 for the root.
+  int elementIndexOf(int element) {
+    _indexElements();
+    return _elementIndices![element];
+  }
+
+  /// How many element children [node] has (`:nth-last-child`).
+  int elementChildCountOf(int node) {
+    _indexElements();
+    return _elementChildCounts![node];
+  }
+
+  void _indexElements() {
+    if (_elementIndices != null) return;
+    final indices = Int32List(_kinds.length);
+    final counts = Int32List(_kinds.length);
+    for (var n = 0; n < _kinds.length; n++) {
+      if (_kinds[n] != 0) continue;
+      final parent = _parents[n];
+      if (parent == none) {
+        indices[n] = 1;
+      } else {
+        indices[n] = ++counts[parent];
+      }
+    }
+    _elementIndices = indices;
+    _elementChildCounts = counts;
+  }
+
   int childCountOf(int node) => _childCounts[node];
 
   /// The [index]th child of [node]; a walk along the siblings.
@@ -160,11 +220,22 @@ class ContentDocument implements CfiDocument {
   }
 
   /// [node] and everything below it, in document order.
-  Iterable<int> descendantsOf(int node) sync* {
-    yield node;
-    for (var c = _firstChildren[node]; c != none; c = _nextSiblings[c]) {
-      yield* descendantsOf(c);
+  ///
+  /// Nodes are stored in document (pre-)order, so a subtree is the index
+  /// range from [node] to [subtreeEndOf]: no recursion, no allocation
+  /// per node.
+  Iterable<int> descendantsOf(int node) {
+    final end = subtreeEndOf(node);
+    return Iterable<int>.generate(end - node, (i) => node + i);
+  }
+
+  /// The index just past the last node of [node]'s subtree.
+  int subtreeEndOf(int node) {
+    var last = node;
+    for (var c = _lastChildren[last]; c != none; c = _lastChildren[last]) {
+      last = c;
     }
+    return last + 1;
   }
 
   /// The element's name as written, with its prefix (`svg:rect`).
@@ -179,8 +250,13 @@ class ContentDocument implements CfiDocument {
   int attributeCountOf(int node) => _attributeCounts[node];
 
   /// The element's attribute [name] (qualified, as written: `epub:type`),
-  /// or null when absent or on text.
+  /// or null when absent or on text. Attributes the reader added
+  /// ([addClass], [addAttributeIfAbsent]) count.
   String? attributeOf(int node, String name) {
+    if (_added.isNotEmpty) {
+      final added = _added[node]?[name];
+      if (added != null) return added;
+    }
     final start = _attributeStarts[node];
     final end = start + _attributeCounts[node];
     for (var i = start; i < end; i++) {
@@ -189,13 +265,51 @@ class ContentDocument implements CfiDocument {
     return null;
   }
 
-  /// The element's attributes in document order.
+  /// The element's attributes in document order, then those the reader
+  /// added.
   Iterable<(String name, String value)> attributesOf(int node) sync* {
+    final added = _added.isEmpty ? null : _added[node];
     final start = _attributeStarts[node];
     final end = start + _attributeCounts[node];
     for (var i = start; i < end; i++) {
-      yield (_attributeNames[i], _attributeValues[i]);
+      final name = _attributeNames[i];
+      yield (name, added?[name] ?? _attributeValues[i]);
     }
+    if (added == null) return;
+    for (final MapEntry(:key, :value) in added.entries) {
+      if (!_hasOwnAttribute(node, key)) yield (key, value);
+    }
+  }
+
+  /// What the reader adds for presentation, as the WebView reader's
+  /// normalizer does to a loaded section: a class, the book's language
+  /// and direction. Never part of the text, ids or CFIs.
+  final _added = <int, Map<String, String>>{};
+
+  bool _hasOwnAttribute(int node, String name) {
+    final start = _attributeStarts[node];
+    final end = start + _attributeCounts[node];
+    for (var i = start; i < end; i++) {
+      if (_attributeNames[i] == name) return true;
+    }
+    return false;
+  }
+
+  /// Adds class [name] to [element]'s classes.
+  void addClass(int element, String name) {
+    final classes = attributeOf(element, 'class');
+    if (classes != null && classes.split(RegExp(r'\s+')).contains(name)) {
+      return;
+    }
+    (_added[element] ??= {})['class'] = classes == null || classes.isEmpty
+        ? name
+        : '$classes $name';
+  }
+
+  /// Gives [element] attribute [name] unless it has one.
+  void addAttributeIfAbsent(int element, String name, String value) {
+    if (attributeOf(element, name) != null) return;
+    (_added[element] ??= {})[name] = value;
   }
 
   String? idOf(int node) => attributeOf(node, 'id');

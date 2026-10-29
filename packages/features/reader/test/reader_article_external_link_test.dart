@@ -2,28 +2,17 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// The article WebView cannot be pumped without a platform WebView, so the
-/// wiring from the link sheet down to `ArticleHtmlReaderWebView.onExternalLink`
-/// is asserted at source level; `reader_external_link_prompt_test.dart` covers
-/// the sheet between a reported link and `ReaderScreen.onOpenExternalLink`.
+/// Wiring checked at source level; the article body's own link taps
+/// are pumped in `reader_screen_article_test.dart`, and the sheet between
+/// a reported link and `ReaderScreen.onOpenExternalLink` in
+/// `reader_external_link_prompt_test.dart`.
 void main() {
-  test('article body forwards onExternalLink to the article WebView', () {
+  test('article body forwards onExternalLink to the reader view', () {
     final source = _readSource('lib/src/reader_screen_content.dart');
-    final articleBody = source.substring(
-      source.indexOf('class _ReaderArticleHtmlBody extends StatefulWidget'),
-    );
-
-    expect(
-      articleBody,
-      contains('final ValueChanged<String>? onExternalLink;'),
-    );
-    expect(articleBody, contains('onExternalLink: widget.onExternalLink,'));
+    final start = source.indexOf('_PageKind.article => _ReaderArticleBody(');
     final construction = source.substring(
-      source.indexOf('? _ReaderArticleHtmlBody('),
-      source.indexOf(
-        'onLoading: () {',
-        source.indexOf('? _ReaderArticleHtmlBody('),
-      ),
+      start,
+      source.indexOf('_PageKind.pdf =>', start),
     );
     expect(construction, contains('onExternalLink: widget.onExternalLink,'));
   });

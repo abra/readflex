@@ -2,13 +2,12 @@ import 'package:component_library/component_library.dart';
 
 import 'reader_color_utils.dart';
 
-/// Builds unified CSS overlayed on top of foliate-js defaults and EPUB
-/// publisher CSS. Controls typography scale, link/blockquote/code treatment
-/// and dark-theme text normalization.
-///
-/// Injected via `FoliateStyle.customCSS` + `customCSSEnabled: true`.
+/// Builds the reader's style sheet, read after the book's own CSS. Controls
+/// typography scale, link/blockquote/code treatment and dark-theme text
+/// normalization; [sizes] are in px.
 String buildBookCustomCSS({
   required ReaderThemeData theme,
+  required BookCustomCssSizes sizes,
 }) {
   final accent = colorToHex(theme.accentColor);
   final divider = colorToHex(theme.dividerColor);
@@ -16,23 +15,18 @@ String buildBookCustomCSS({
   final primaryText = colorToHex(theme.primaryTextColor);
   final secondaryText = colorToHex(theme.secondaryTextColor);
   final isDark = theme.backgroundColor.computeLuminance() < 0.5;
-  const proseFontSize = 'var(--readflex-prose-font-size, 1em)';
-  const inlineCodeFontSize = 'var(--readflex-inline-code-font-size, 0.9em)';
-  const kbdFontSize = 'var(--readflex-kbd-font-size, 0.85em)';
-  const codeBlockFontSize = 'var(--readflex-code-block-font-size, 0.875em)';
+  final proseFontSize = sizes._px(sizes.prose);
+  final inlineCodeFontSize = sizes._px(sizes.inlineCode);
+  final kbdFontSize = sizes._px(sizes.kbd);
+  final codeBlockFontSize = sizes._px(sizes.codeBlock);
+  final lineHeight = sizes.lineHeight.toString();
+  String proseTimes(double factor) => sizes._px(sizes.prose * factor);
   const codeFontFamily =
       'ui-monospace, Menlo, monospace, "${AppTypography.fontFamilySymbols}"';
 
   final buffer = StringBuffer();
-  // No `text-rendering: optimizeLegibility` — it re-measures kerning when
-  // web fonts finish loading, which on Android Chromium feeds back into
-  // foliate-js's paginator ResizeObserver and traps layout in a loop.
-  // Default `auto` already enables ligatures/kerning at body sizes.
-  buffer.writeln(
-    'html, body { -webkit-text-size-adjust: 100% !important; '
-    'text-size-adjust: 100% !important; '
-    'text-rendering: auto !important; }',
-  );
+  // `:not(.readflex-wide-table)` matches every div; it keeps the specificity
+  // these rules were tuned with against publisher `!important` rules.
   buffer.writeln(
     'body, p, li, blockquote, figcaption, div:not(.readflex-wide-table) { '
     'white-space: normal !important; overflow-wrap: anywhere !important; '
@@ -57,7 +51,7 @@ String buildBookCustomCSS({
   );
   if (isDark) {
     // Inherit semantic colors from links/quotes instead of painting every
-    // descendant with primaryText. Book background normalization lives in JS.
+    // descendant with primaryText.
     buffer.writeln(
       'html, body { color-scheme: dark; color: $primaryText !important; }',
     );
@@ -83,7 +77,7 @@ String buildBookCustomCSS({
     'blockquote { border-inline-start: 3px solid $divider !important; '
     'padding-inline-start: 1em !important; margin-inline: 0 !important; '
     'text-indent: 0 !important; text-align: start !important; '
-    'line-height: var(--readflex-line-height) !important; '
+    'line-height: $lineHeight !important; '
     'font-style: italic; }',
   );
   // Inline code: thin bordered pill, slightly smaller than prose so the
@@ -116,9 +110,7 @@ String buildBookCustomCSS({
     'font-family: $codeFontFamily !important; '
     'font-size: $kbdFontSize !important; font-weight: 600; }',
   );
-  // Code blocks must wrap instead of becoming inner scroll containers: iOS
-  // WebKit can crash or paginate into blank columns when a <pre> scrolls
-  // inside foliate's column layout.
+  // Code blocks wrap instead of scrolling: a page has no inner scrolling.
   buffer.writeln(
     'pre, .readflex-code-block, .ProgramCode, .ParaTypeProgramcode { '
     'background: $panel !important; border: 1px solid $divider !important; '
@@ -174,41 +166,20 @@ String buildBookCustomCSS({
     '.readflex-code-block .LineGroup + .LineGroup, '
     '.ProgramCode .LineGroup + .LineGroup { margin-top: 0 !important; }',
   );
-  // Wide tables: the JS reader wraps every table in this div on section load.
-  // `overflow` on the table itself is unreliable in CSS table layout,
-  // especially inside paginated WebKit columns, so the wrapper owns scroll.
+  // Tables keep their content's width up to 40em, wider than a phone's
+  // column, and scroll sideways in it, as the WebView reader's wrapper
+  // did; their words never break (the rules above break them anywhere).
   buffer.writeln(
-    '.readflex-wide-table { max-width: 100%; overflow-x: auto; '
-    'overflow-y: hidden; -webkit-overflow-scrolling: touch; '
-    'overscroll-behavior-inline: contain; touch-action: pan-x pan-y; '
-    'box-sizing: border-box; break-inside: avoid; }',
-  );
-  // Keep the existing semantic overlay for article tables too.
-  buffer.writeln(
-    'table { width: max-content; max-width: none; display: table !important; '
+    'table { width: max-content; max-width: max(100%, 40em); '
+    'overflow-x: auto; display: table !important; '
     'text-indent: 0 !important; text-align: start !important; '
     'font-size: 0.95em; }',
   );
-  // Override publisher percentages without making prose rows unbounded.
-  // A table's minimum content width can still exceed this preferred cap.
-  // We deliberately omit the Readest pattern of
-  // "table:has(> colgroup) { table-layout: fixed; }" because that combo
-  // (the :has() selector + a forced table-layout switch) crashes
-  // WKWebView's multi-column line layout (TextOnlySimpleLineBuilder
-  // RELEASE_ASSERT) when foliate-js is paginating. Bisect on iOS 18.7
-  // sim isolated this exact rule as the trigger.
   buffer.writeln(
-    '.readflex-wide-table > table { width: max-content !important; '
-    'max-width: max(100%, 40em) !important; '
-    'inline-size: max-content !important; '
-    'max-inline-size: max(100%, 40em) !important; '
-    'table-layout: auto !important; }',
-  );
-  // Prose's emergency word breaking reduces table minimum widths to a glyph.
-  // Include nested paragraphs/links: their explicit rules beat cell inheritance.
-  buffer.writeln(
-    '.readflex-wide-table table, .readflex-wide-table table * { '
-    'overflow-wrap: normal !important; word-break: normal !important; }',
+    'table, table *, table div:not(.readflex-wide-table), '
+    'table :not(pre) > code, table :not(pre) > kbd, '
+    'table :not(pre) > samp { overflow-wrap: normal !important; '
+    'word-break: normal !important; }',
   );
   buffer.writeln(
     'table img, table svg, table canvas { max-inline-size: 100% !important; '
@@ -233,19 +204,41 @@ String buildBookCustomCSS({
     'color: $primaryText !important; font-style: normal !important; }',
   );
   buffer.writeln(
-    'h1 { font-size: calc($proseFontSize * 1.8) !important; }',
+    'h1 { font-size: ${proseTimes(1.8)} !important; }',
   );
   buffer.writeln(
-    'h2 { font-size: calc($proseFontSize * 1.5) !important; }',
+    'h2 { font-size: ${proseTimes(1.5)} !important; }',
   );
   buffer.writeln(
-    'h3 { font-size: calc($proseFontSize * 1.3) !important; }',
+    'h3 { font-size: ${proseTimes(1.3)} !important; }',
   );
   buffer.writeln(
-    'h4, h5, h6 { font-size: calc($proseFontSize * 1.1) !important; }',
+    'h4, h5, h6 { font-size: ${proseTimes(1.1)} !important; }',
   );
   buffer.writeln(
     'h1, h2, h3, h4, h5, h6 { line-height: 1.12 !important; }',
   );
   return buffer.toString();
+}
+
+/// Sizes of the reader's style sheet: the root size is 16px × the reader's
+/// font size; prose takes the text scale on top.
+class BookCustomCssSizes {
+  const BookCustomCssSizes({
+    required this.rootFontSize,
+    required this.textScale,
+    required this.lineHeight,
+  });
+
+  /// In px: 16 × the layout's font size × the device's.
+  final double rootFontSize;
+  final double textScale;
+  final double lineHeight;
+
+  double get prose => rootFontSize * textScale;
+  double get inlineCode => rootFontSize * 0.9;
+  double get kbd => rootFontSize * 0.85;
+  double get codeBlock => rootFontSize * 0.875;
+
+  String _px(double value) => '${value.toStringAsFixed(2)}px';
 }

@@ -1,7 +1,8 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 import 'package:vellum/testing.dart';
 
@@ -88,6 +89,63 @@ Uint8List _webp(String chunk, List<int> payload) {
 }
 
 void main() {
+  group('svg', () {
+    ImageDimensions? svg(String text) =>
+        probeImageDimensions(Uint8List.fromList(text.codeUnits));
+
+    test('width and height, in px or other units', () {
+      expect(
+        svg(
+          '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80"/>',
+        ),
+        const ImageDimensions(120, 80),
+      );
+      expect(
+        svg('<svg width="30pt" height="1in" viewBox="0 0 1 1"></svg>'),
+        const ImageDimensions(40, 96),
+      );
+    });
+
+    test('the viewBox gives the ratio, or the size', () {
+      expect(
+        svg('<svg viewBox="0 0 400 200" width="100"></svg>'),
+        const ImageDimensions(100, 50),
+      );
+      expect(
+        svg("<svg viewBox='0,0,64,48'></svg>"),
+        const ImageDimensions(64, 48),
+      );
+      expect(
+        svg('<svg width="100%" height="100%" viewBox="0 0 10 20"></svg>'),
+        const ImageDimensions(10, 20),
+      );
+      expect(
+        svg('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
+        const ImageDimensions(300, 150),
+      );
+    });
+
+    test('after a declaration, comments, a doctype and a BOM', () {
+      final text =
+          '\uFEFF<?xml version="1.0"?>\n<!-- made by hand -->\n'
+          '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "x.dtd">\n'
+          '<svg width="10" height="20"/>';
+      expect(
+        probeImageDimensions(
+          Uint8List.fromList(const Utf8Encoder().convert(text)),
+        ),
+        const ImageDimensions(10, 20),
+      );
+      expect(
+        isSvgImage(Uint8List.fromList('<html><svg/></html>'.codeUnits)),
+        isFalse,
+      );
+      expect(
+        svg('<html><body><svg width="1" height="1"/></body></html>'),
+        isNull,
+      );
+    });
+  });
   group('probeImageDimensions', () {
     test('reads PNG IHDR', () {
       expect(

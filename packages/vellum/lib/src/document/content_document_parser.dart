@@ -5,12 +5,17 @@ final _lineBreaks = RegExp(r'\r\n?');
 /// XML line-end normalization: CRLF and a lone CR become LF.
 String _foldLineBreaks(String text) => text.replaceAll(_lineBreaks, '\n');
 
-final _attributeWhitespace = RegExp(r'\r\n|[\r\n\t]');
+const _entities = XmlDefaultEntityMapping.html5();
 
-/// XML attribute-value normalization: line breaks and tabs become
-/// spaces (a CRLF became one LF first, so one space).
-String _foldAttributeWhitespace(String value) =>
-    value.replaceAll(_attributeWhitespace, ' ');
+final _attributeWhitespace = RegExp('[\n\t]');
+
+/// XML attribute-value normalization (XML 1.0 §3.3.3) of a value as
+/// written: its line breaks (a CRLF one LF first) and tabs become
+/// spaces, then references are decoded, so `&#xD;&#xA;` keeps its two
+/// characters, as browsers keep them.
+String _attributeValue(String raw) => _entities.decode(
+  _foldLineBreaks(raw).replaceAll(_attributeWhitespace, ' '),
+);
 
 bool _isNamespaceDeclaration(String name) =>
     name == 'xmlns' || name.startsWith('xmlns:');
@@ -18,9 +23,11 @@ bool _isNamespaceDeclaration(String name) =>
 ContentDocument _parseXml(String source) {
   final builder = _ContentDocumentBuilder();
   try {
+    // Values come raw: attribute values are normalized before their
+    // references are decoded, text after.
     for (final event in xml_events.parseEvents(
       source,
-      entityMapping: const XmlDefaultEntityMapping.html5(),
+      entityMapping: const XmlNullEntityMapping(),
       validateNesting: true,
     )) {
       switch (event) {
@@ -33,13 +40,13 @@ ContentDocument _parseXml(String source) {
           builder.startElement(event.name, [
             for (final a in event.attributes)
               if (!_isNamespaceDeclaration(a.name))
-                (a.name, _foldAttributeWhitespace(_foldLineBreaks(a.value))),
+                (a.name, _attributeValue(a.value)),
           ]);
           if (event.isSelfClosing) builder.endElement();
         case xml_events.XmlEndElementEvent():
           builder.endElement();
         case xml_events.XmlTextEvent():
-          builder.text(_foldLineBreaks(event.value));
+          builder.text(_foldLineBreaks(_entities.decode(event.value)));
         case xml_events.XmlCDATAEvent():
           builder.text(_foldLineBreaks(event.value), cdata: true);
         default:

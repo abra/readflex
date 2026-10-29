@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 void main() {
   final doc = ContentDocument.parseXml('''
@@ -102,7 +102,32 @@ void main() {
     expect(matching('p::first-letter'), isEmpty);
     expect(matching('p:first-line'), isEmpty);
     expect(matching('a:hover'), isEmpty);
-    expect(matching('a:link, h1'), ['h1:Title'], reason: 'the list survives');
+    expect(matching('a:visited, h1'), [
+      'h1:Title',
+    ], reason: 'the list survives');
+  });
+
+  test('every link is unvisited: :link and :any-link match an href', () {
+    // A browser where nothing has been visited, as the WebView reader is.
+    expect(matching('a:link'), ['a:link']);
+    expect(matching(':any-link'), ['a:link']);
+    expect(matching('a:link, a:visited'), ['a:link']);
+    expect(matching('p:link'), isEmpty);
+    final anchors = ContentDocument.parseXml(
+      '<html xmlns="http://www.w3.org/1999/xhtml"><body>'
+      '<a id="target">no href</a><a href="#target">to it</a>'
+      '</body></html>',
+    );
+    final list = CssSelectorList.parseText('a:link')!;
+    expect(
+      [
+        for (final n in anchors.descendantsOf(ContentDocument.rootIndex))
+          if (anchors.isElement(n) &&
+              list.selectors.any((s) => s.matches(anchors, n)))
+            anchors.textContentOf(n),
+      ],
+      ['to it'],
+    );
   });
 
   test('invalid selectors drop the whole list', () {
@@ -118,13 +143,77 @@ void main() {
       'p[',
       'p[a=]',
       'p[a=b c]',
-      ':not(p > a)',
       'p %',
-      'ns|p',
       'p::',
+      'p::before span',
+      ':not(p, %)',
+      ':has()',
+      ':has(p::before)',
     ]) {
       expect(matching(selector), ['<invalid>'], reason: selector);
     }
+  });
+
+  test('of-type positions', () {
+    expect(matching('p:nth-of-type(2)'), ['p']);
+    expect(matching('section > p:nth-of-type(odd)'), ['p:one', 'p:trois']);
+    expect(matching('section > p:nth-last-of-type(1)'), ['p:trois']);
+    expect(matching('div > p:only-of-type'), ['p:nested']);
+    expect(matching('section > p:only-of-type'), isEmpty);
+    expect(matching('img:only-of-type'), ['img']);
+  });
+
+  test('namespace prefixes: types by local name, attributes as written', () {
+    expect(matching('ns|h1'), ['h1:Title']);
+    expect(matching('*|h1'), ['h1:Title']);
+    expect(matching('|h1'), ['h1:Title']);
+    expect(matching('svg|*'), hasLength(13));
+    expect(matching('[epub|type~="chapter"]'), ['section#ch1']);
+    expect(matching('[*|type="chapter"]'), ['section#ch1']);
+    expect(matching('[|type="chapter"]'), isEmpty);
+    expect(matching('[epub|type="Chapter" i]'), ['section#ch1']);
+    expect(matching('[epub|type="Chapter"]'), isEmpty);
+  });
+
+  test(':not, :is and :where take selector lists', () {
+    expect(matching('section > :not(p, h1, div)'), ['blockquote']);
+    expect(matching(':not(section p)'), isNot(contains('p:one')));
+    expect(matching(':is(h1, blockquote)'), ['h1:Title', 'blockquote']);
+    expect(matching('div :where(p, img)'), ['p:nested', 'img']);
+    // Forgiving: one bad selector does not spoil the list.
+    expect(matching(':is(h1, %)'), ['h1:Title']);
+  });
+
+  test(':has: descendants, children and siblings', () {
+    expect(matching('section:has(em)'), ['section#ch1']);
+    expect(matching('p:has(> em)'), ['p']);
+    expect(matching('div:has(> p + img)'), ['div:nested']);
+    expect(matching('div:has(> img:only-child)'), isEmpty);
+    expect(matching('h1:has(+ p.first-para)'), ['h1:Title']);
+    expect(matching('h1:has(~ blockquote)'), ['h1:Title']);
+    expect(matching('p:has(~ h1)'), isEmpty);
+    // foliate-js's prose test: a div of nothing but phrasing.
+    expect(
+      matching('div:not(:has(*:not(b, a, em, i, strong, u, span)))'),
+      isEmpty,
+      reason: 'the div holds a p and an img',
+    );
+  });
+
+  test('pseudo-elements style themselves, not the element', () {
+    final selector = CssSelectorList.parseText(
+      'p.first-para::before',
+    )!.selectors.single;
+    expect(selector.pseudoElement, 'before');
+    final p = doc
+        .descendantsOf(ContentDocument.rootIndex)
+        .firstWhere((n) => doc.attributeOf(n, 'class') == 'first-para');
+    expect(selector.matches(doc, p), isFalse);
+    expect(selector.matchesOriginating(doc, p), isTrue);
+    expect(
+      CssSelectorList.parseText('q:after')!.selectors.single.pseudoElement,
+      'after',
+    );
   });
 
   test('specificity', () {
@@ -143,6 +232,11 @@ void main() {
     expect(specificity('p::before'), 2);
     expect(specificity('a:hover'), 1001);
     expect(specificity(':nth-child(2n)'), 1000);
+    expect(specificity(':nth-of-type(2n)'), 1000);
+    expect(specificity(':is(p, #x)'), 1000000);
+    expect(specificity(':where(p, #x)'), 0);
+    expect(specificity(':not(p, .a)'), 1000);
+    expect(specificity('div:has(> p)'), 2);
   });
 
   test('prints back', () {

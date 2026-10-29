@@ -37,7 +37,7 @@ Future<ImportFlowResult?> showImportFlowSheet(
   first page), `readPdfMetadata` (Info title, or the file name; the first
   page), `readEpubMetadata`, `readFb2Metadata` and `readMobiMetadata` (the
   book's own metadata, authors joined with `, `, the declared cover image,
-  the file name when there is no title). No WebView is involved. A file the
+  the file name when there is no title). A file the
   engine rejects, including a password-protected PDF, fails with
   `BookImportException` carrying the engine's reason. The routing adapter
   then calls `deletePickedBookFile(...)` in a `finally`, after success and
@@ -238,7 +238,7 @@ and live extraction require separate device checks.
 ## Dependencies
 
 - `book_repository` — persistence
-- `vellum` — `read*Metadata` and `VellumException`
+- `vellum` — `read*Metadata` and `VellumException` (`package:vellum/all_formats.dart`)
 - `domain_models` — `BookFormat`
 - `component_library` — `showAppBottomSheet`, `BottomSheetHeader`,
   `ActionBottomSheetLayout`, `AppDrillInRow`, `AppPlainIconButton`,

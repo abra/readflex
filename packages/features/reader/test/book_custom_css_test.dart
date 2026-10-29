@@ -35,14 +35,23 @@ void main() {
       highlightPurple: Color(0xFF472B64),
     );
 
+    // 16px root, the reader at 100%.
+    const sizes = BookCustomCssSizes(
+      rootFontSize: 16,
+      textScale: 1,
+      lineHeight: 1.5,
+    );
+    String buildCss(ReaderThemeData theme) =>
+        buildBookCustomCSS(theme: theme, sizes: sizes);
+
     test('emits accent link color from theme', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(css, contains('a:link, a:visited'));
       expect(css, contains('#b86a2d'));
     });
 
     test('removes publisher link underline decorations', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(css, contains('text-decoration: none !important'));
       expect(css, contains('text-decoration-line: none !important'));
       expect(css, contains('border-bottom: 0 !important'));
@@ -50,7 +59,7 @@ void main() {
     });
 
     test('forces readable text colors in dark themes', () {
-      final css = buildBookCustomCSS(theme: darkTheme);
+      final css = buildCss(darkTheme);
       expect(
         css,
         contains(
@@ -69,7 +78,7 @@ void main() {
     });
 
     test('does not force dark text normalization in light themes', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(css, isNot(contains('color-scheme: dark')));
       expect(
         css,
@@ -82,7 +91,7 @@ void main() {
     });
 
     test('emits blockquote rule with divider color', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(css, contains('blockquote'));
       expect(css, contains('#d9cab4'));
       expect(css, contains('text-indent: 0 !important'));
@@ -90,7 +99,7 @@ void main() {
     });
 
     test('emits semantic code/pre rules with panel color', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(css, contains('code {'));
       expect(css, contains('kbd {'));
       expect(css, contains('samp {'));
@@ -120,20 +129,9 @@ void main() {
       expect(css, contains('margin-inline: 0 !important'));
       expect(css, contains('overflow-wrap: break-word !important'));
       expect(css, contains('word-break: normal !important'));
-      expect(
-        css,
-        contains('font-size: var(--readflex-inline-code-font-size, 0.9em)'),
-      );
-      expect(
-        css,
-        contains('font-size: var(--readflex-kbd-font-size, 0.85em)'),
-      );
-      expect(
-        css,
-        contains(
-          'font-size: var(--readflex-code-block-font-size, 0.875em)',
-        ),
-      );
+      expect(css, contains('font-size: 14.40px !important; letter-spacing'));
+      expect(css, contains('font-size: 13.60px !important; font-weight'));
+      expect(css, contains('font-size: 14.00px !important; line-height'));
       expect(css, contains('line-height: 1.45 !important'));
       expect(css, contains('break-inside: auto !important'));
       expect(css, contains('.readflex-code-block *'));
@@ -145,11 +143,9 @@ void main() {
     });
 
     test('emits safe prose wrapping and whitespace-wrapped pre blocks', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
-      expect(css, contains('-webkit-text-size-adjust: 100% !important'));
-      expect(css, contains('text-rendering: auto !important'));
+      final css = buildCss(lightTheme);
       expect(css, contains('body, p, li, blockquote, figcaption'));
-      expect(css, contains('var(--readflex-prose-font-size, 1em)'));
+      expect(css, contains('font-size: 16.00px !important'));
       expect(css, contains('white-space: normal !important'));
       expect(css, contains('overflow-wrap: anywhere !important'));
       expect(css, contains('word-break: break-word !important'));
@@ -162,24 +158,22 @@ void main() {
     });
 
     test('emits table and figure rules outside prose layout', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(css, contains('table {'));
-      expect(css, contains('.readflex-wide-table'));
-      expect(css, contains('touch-action: pan-x pan-y'));
       expect(css, contains('figure {'));
       expect(css, contains('figcaption {'));
       expect(css, contains('break-inside: avoid'));
     });
 
     test('emits wide math/media containment rules', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(css, contains('table img, table svg, table canvas'));
       expect(css, contains('math, mjx-container'));
       expect(css, contains('overflow-x: auto'));
     });
 
     test('emits heading size rules', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(
         css,
         contains(
@@ -188,30 +182,10 @@ void main() {
       );
       expect(css, contains('color: #2a221b !important;'));
       expect(css, contains('font-style: normal !important;'));
-      expect(
-        css,
-        contains(
-          'h1 { font-size: calc(var(--readflex-prose-font-size, 1em) * 1.8) !important; }',
-        ),
-      );
-      expect(
-        css,
-        contains(
-          'h2 { font-size: calc(var(--readflex-prose-font-size, 1em) * 1.5) !important; }',
-        ),
-      );
-      expect(
-        css,
-        contains(
-          'h3 { font-size: calc(var(--readflex-prose-font-size, 1em) * 1.3) !important; }',
-        ),
-      );
-      expect(
-        css,
-        contains(
-          'h4, h5, h6 { font-size: calc(var(--readflex-prose-font-size, 1em) * 1.1) !important; }',
-        ),
-      );
+      expect(css, contains('h1 { font-size: 28.80px !important; }'));
+      expect(css, contains('h2 { font-size: 24.00px !important; }'));
+      expect(css, contains('h3 { font-size: 20.80px !important; }'));
+      expect(css, contains('h4, h5, h6 { font-size: 17.60px !important; }'));
       expect(
         css,
         contains('h1, h2, h3, h4, h5, h6 { line-height: 1.12 !important; }'),
@@ -219,12 +193,12 @@ void main() {
     });
 
     test('does not emit image inversion in dark themes', () {
-      final css = buildBookCustomCSS(theme: darkTheme);
+      final css = buildCss(darkTheme);
       expect(css, isNot(contains('filter: invert')));
     });
 
     test('base rules are emitted without image inversion', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(css, contains('a:link, a:visited'));
       expect(css, contains('blockquote'));
       expect(css, contains('code {'));
@@ -236,21 +210,34 @@ void main() {
     });
 
     test('uses !important to win over publisher CSS', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect('!important'.allMatches(css).length, greaterThan(5));
     });
 
-    test(
-      'does not emit optimizeLegibility (traps Android Chromium in a '
-      'paginator ResizeObserver loop on web-font load)',
-      () {
-        final css = buildBookCustomCSS(theme: lightTheme);
-        expect(css, isNot(contains('optimizeLegibility')));
-      },
-    );
+    test('sizes are plain px; prose and headings take the text scale', () {
+      // 16px × 1.12 font size, the reader at 125%.
+      const scaled = BookCustomCssSizes(
+        rootFontSize: 17.92,
+        textScale: 1.25,
+        lineHeight: 1.6,
+      );
+      final css = buildBookCustomCSS(theme: lightTheme, sizes: scaled);
+      expect(css, isNot(contains('var(')));
+      expect(css, isNot(contains('calc(')));
+      // Prose at 17.92 × 1.25; headings scale with it.
+      expect(css, contains('font-size: 22.40px !important'));
+      expect(css, contains('h1 { font-size: 40.32px !important; }'));
+      expect(css, contains('h2 { font-size: 33.60px !important; }'));
+      expect(css, contains('h3 { font-size: 29.12px !important; }'));
+      expect(css, contains('h4, h5, h6 { font-size: 24.64px !important; }'));
+      // Code keeps the root size, without the text scale.
+      expect(css, contains('font-size: 16.13px !important; letter-spacing'));
+      expect(css, contains('font-size: 15.68px !important; '));
+      expect(css, contains('line-height: 1.6 !important'));
+    });
 
     test('keeps pre descendants on the block wrapping contract', () {
-      final css = buildBookCustomCSS(theme: lightTheme);
+      final css = buildCss(lightTheme);
       expect(css, contains('pre code, pre kbd, pre samp'));
       expect(css, contains('white-space: inherit !important'));
       expect(css, contains('overflow-wrap: inherit !important'));

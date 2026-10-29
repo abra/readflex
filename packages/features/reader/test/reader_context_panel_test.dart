@@ -11,22 +11,11 @@ void main() {
       packagePath: 'lib/src/reader_screen_content.dart',
     );
 
-    expect(contentSource, contains('webViewKey: _webViewKey'));
     expect(contentSource, contains('surface: _surface'));
-    expect(contentSource, contains('articleWebViewKey: _articleWebViewKey'));
-    expect(contentSource, contains('highlights: highlights'));
-    expect(contentSource, contains('cfiRange: selection.cfiRange'));
-    expect(contentSource, contains('onHighlightTapped: (tap)'));
     expect(contextPanelSource, contains('selectionCubit.deselect();'));
     expect(
       contextPanelSource,
       contains('surface.clearSelectionAfterTextAction();'),
-    );
-    expect(
-      contextPanelSource,
-      contains(
-        'articleWebViewKey.currentState?.clearSelectionAfterTextAction();',
-      ),
     );
     expect(
       contextPanelSource,
@@ -61,46 +50,15 @@ void main() {
       contains('_kHighlightPopupHorizontalPadding * 2'),
     );
     // The saved-highlight barrier consumes its dismissing tap; no popup
-    // lets a page tap fall through to the WebView.
+    // lets a page tap fall through to the page.
     expect(contextPanelSource, isNot(contains('HitTestBehavior.translucent')));
     expect(contextPanelSource, contains('AppShadows.popover'));
     expect(
       contextPanelSource,
       contains('ReaderHighlightControls('),
     );
-    expect(
-      contentSource,
-      contains('color: readerHighlightCssColor(h.color, theme)'),
-    );
-    expect(contentSource, contains('opacity: readerHighlightOpacity(theme)'));
-    expect(
-      contentSource,
-      contains('mixBlendMode: readerHighlightBlendMode(theme)'),
-    );
-    expect(
-      contentSource,
-      contains('verticalOffset: readerHighlightVerticalOffset(theme)'),
-    );
-    expect(contentSource, contains('final currentState = bloc.state;'));
-    expect(
-      contentSource,
-      contains('progress: currentState.document?.readingProgress'),
-    );
-    expect(contentSource, contains('chapterTitle: currentState.chapterTitle'));
-    // Image-area selections never carry the comic's archive file name.
-    expect(
-      contentSource,
-      contains('''
-        imageSelectionCubit.select(
-          pageIndex: selection.pageIndex,
-          rect: selection.rect,
-          position: selection.position,
-          progress: currentState.document?.readingProgress,
-          chapterTitle: null,
-        );'''),
-    );
     // Saving merges overlapping highlights; the colour preview shows that
-    // merged range, and the bridge list is in paint order (newest on top).
+    // merged range.
     expect(
       contextPanelSource,
       contains(
@@ -111,49 +69,17 @@ void main() {
       contextPanelSource,
       contains('highlightMerge: highlightMergeTargetFor(live.highlightMerge)'),
     );
-    expect(
-      contentSource,
-      contains(
-        'highlightMerge: highlightMergeTargetFor(selection.highlightMerge)',
-      ),
-    );
-    expect(
-      contentSource,
-      contains('..sort((a, b) => a.createdAt.compareTo(b.createdAt));'),
-    );
-    expect(contentSource, contains('for (final h in ordered)'));
     expect(contextPanelSource, contains('showSelectionHighlightPreview'));
     expect(
       contextPanelSource,
-      contains(
-        'articleWebViewKey.currentState?.showSelectionHighlightPreview(',
-      ),
+      contains('opacity: readerHighlightOpacity(readerTheme)'),
     );
-    expect(
-      contextPanelSource,
-      contains('final opacity = readerHighlightOpacity(readerTheme);'),
-    );
-    expect(
-      contextPanelSource,
-      contains(
-        'final mixBlendMode = readerHighlightBlendMode(readerTheme);',
-      ),
-    );
-    expect(
-      contextPanelSource,
-      contains(
-        'final verticalOffset = readerHighlightVerticalOffset(readerTheme);',
-      ),
-    );
-    expect(contextPanelSource, contains('opacity: opacity'));
-    expect(contextPanelSource, contains('mixBlendMode: mixBlendMode'));
-    expect(contextPanelSource, contains('verticalOffset: verticalOffset'));
     expect(contextPanelSource, contains('clearSelectionHighlightPreview'));
     expect(contextPanelSource, contains('onPreviewColorChanged'));
     expect(contextPanelSource, contains('onPreviewCleared'));
     expect(
       contextPanelSource,
-      contains('currentState?.currentTextSelection()'),
+      contains('await surface.currentTextSelection()'),
     );
     expect(
       contextPanelSource,
@@ -270,18 +196,7 @@ void main() {
       contextPanelSource,
       contains('setImageAreaSelectionPreviewRetained(retained)'),
     );
-    expect(contextPanelSource, contains('onControlsBoundsChanged'));
     expect(contextPanelSource, contains('_kImageHighlightPopupGap'));
-    expect(
-      contextPanelSource,
-      contains('setImageAreaSelectionControlsBounds'),
-    );
-    expect(
-      contextPanelSource,
-      contains('clearImageAreaSelectionControlsBounds'),
-    );
-    expect(contextPanelSource, contains('allowNextTap: true'));
-    expect(contentSource, contains('consumeProtectedClear()'));
     expect(contextPanelSource, contains('icon: AppIcons.delete'));
     expect(contextPanelSource, contains('icon: AppIcons.highlight'));
     expect(contextPanelSource, contains('bool get _busy =>'));
@@ -331,8 +246,6 @@ void main() {
     );
     expect(contextPanelSource, isNot(contains('return IconButton(')));
     expect(contextPanelSource, contains('return AppPlainIconButton('));
-    expect(contentSource, contains('onHighlightTapped: (tap)'));
-    expect(contentSource, contains('highlightFocusCubit.focus(tap)'));
   });
 }
 

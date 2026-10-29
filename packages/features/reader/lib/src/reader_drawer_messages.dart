@@ -1,6 +1,7 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
-import 'package:reader_webview/reader_webview.dart';
+
+import 'reader_document_features.dart';
 
 String readerTocEmptyMessage({
   required ReadflexLocalizations l10n,

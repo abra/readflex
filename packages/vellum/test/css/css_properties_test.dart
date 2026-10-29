@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 void main() {
   /// `name: value` → the longhands it yields, as `name=value` strings.
@@ -153,12 +153,76 @@ void main() {
     expect(expand('font: 12px/ serif'), isEmpty);
   });
 
-  test('background, text-decoration and list-style shorthands', () {
-    expect(expand('background: #eee'), ['background-color=#ffeeeeee']);
-    expect(expand('background: url(x.png) no-repeat red'), [
-      'background-color=#ffff0000',
+  test('background images: source, size, repeat and position', () {
+    expect(expand('background-image: url(a.png)'), [
+      'background-image=url(a.png)',
     ]);
-    expect(expand('background: url(x.png)'), ['background-color=#00000000']);
+    expect(expand('background-image: url("b c.png")'), [
+      'background-image=url(b c.png)',
+    ]);
+    expect(expand('background-image: none'), ['background-image=none']);
+    expect(
+      expand('background-image: linear-gradient(red, blue)'),
+      isEmpty,
+      reason: 'gradients are not drawn',
+    );
+    expect(expand('background-size: cover'), ['background-size=cover']);
+    expect(expand('background-size: 90px auto'), [
+      'background-size=90.0px auto',
+    ]);
+    expect(expand('background-size: auto 50%'), [
+      'background-size=auto 50.0%',
+    ]);
+    expect(expand('background-size: auto'), ['background-size=auto']);
+    expect(expand('background-size: -1px'), isEmpty);
+    expect(expand('background-repeat: no-repeat'), [
+      'background-repeat=no-repeat',
+    ]);
+    expect(expand('background-repeat: repeat no-repeat'), [
+      'background-repeat=repeat-x',
+    ]);
+    expect(expand('background-repeat: round'), ['background-repeat=repeat']);
+    expect(expand('background-repeat: sideways'), isEmpty);
+    expect(expand('background-position: center'), [
+      'background-position=50.0% 50.0%',
+    ]);
+    expect(expand('background-position: top'), [
+      'background-position=50.0% 0.0%',
+    ]);
+    expect(expand('background-position: top right'), [
+      'background-position=100.0% 0.0%',
+    ]);
+    expect(expand('background-position: 0px center'), [
+      'background-position=0.0px 50.0%',
+    ]);
+    expect(expand('background-position: left right'), isEmpty);
+  });
+
+  test('background, text-decoration and list-style shorthands', () {
+    expect(expand('background: #eee'), [
+      'background-color=#ffeeeeee',
+      'background-image=none',
+      'background-repeat=repeat',
+      'background-position=0.0% 0.0%',
+      'background-size=auto',
+    ]);
+    expect(expand('background: url(x.png) no-repeat right top / 20px red'), [
+      'background-color=#ffff0000',
+      'background-image=url(x.png)',
+      'background-repeat=no-repeat',
+      'background-position=100.0% 0.0%',
+      'background-size=20.0px auto',
+    ]);
+    expect(expand('background: url(x.png)').take(2), [
+      'background-color=#00000000',
+      'background-image=url(x.png)',
+    ]);
+    expect(
+      expand('background: url("a.png") repeat-y fixed padding-box')[2],
+      'background-repeat=repeat-y',
+    );
+    expect(expand('background: url(x.png) / 20px'), isEmpty);
+    expect(expand('background: url(x.png) wobble'), isEmpty);
     expect(expand('text-decoration: none'), ['text-decoration-line=']);
     expect(expand('text-decoration: underline line-through'), [
       'text-decoration-line=underline line-through',
@@ -167,9 +231,106 @@ void main() {
       'text-decoration-line=underline',
     ]);
     expect(expand('text-decoration: sideways'), isEmpty);
-    expect(expand('list-style: square inside'), ['list-style-type=square']);
-    expect(expand('list-style: none'), ['list-style-type=none']);
-    expect(expand('list-style: url(b.png) circle'), ['list-style-type=circle']);
+    expect(expand('list-style: square inside'), [
+      'list-style-type=square',
+      'list-style-position=inside',
+    ]);
+    expect(expand('list-style: none'), [
+      'list-style-type=none',
+      'list-style-position=outside',
+    ]);
+    expect(expand('list-style: url(b.png) circle'), [
+      'list-style-type=circle',
+      'list-style-position=outside',
+    ]);
+  });
+
+  test('prefixed and legacy names set the property browsers read', () {
+    expect(expand('-webkit-hyphens: auto'), ['hyphens=auto']);
+    expect(expand('-epub-hyphens: none'), ['hyphens=none']);
+    expect(expand('-moz-hyphens: auto'), ['hyphens=auto']);
+    expect(expand('word-wrap: break-word'), ['overflow-wrap=break-word']);
+    expect(expand('-ms-word-break: break-all'), ['word-break=break-all']);
+    expect(expand('-epub-writing-mode: vertical-rl'), [
+      'writing-mode=vertical-rl',
+    ]);
+    expect(expand('-webkit-box-sizing: border-box'), [
+      'box-sizing=border-box',
+    ]);
+    expect(expand('-webkit-border-radius: 5px'), hasLength(4));
+    // An alias still checks the value.
+    expect(expand('-webkit-hyphens: sometimes'), isEmpty);
+    // Not every prefix is an alias.
+    expect(expand('-webkit-tap-highlight-color: transparent'), isEmpty);
+  });
+
+  test('text layout, tables and positioning longhands', () {
+    expect(expand('writing-mode: tb-rl'), ['writing-mode=tb-rl']);
+    expect(expand('writing-mode: diagonal'), isEmpty);
+    expect(expand('overflow-wrap: anywhere'), ['overflow-wrap=anywhere']);
+    expect(expand('word-break: keep-all'), ['word-break=keep-all']);
+    expect(expand('border-collapse: collapse'), ['border-collapse=collapse']);
+    expect(expand('border-spacing: 2px'), ['border-spacing=2.0px 2.0px']);
+    expect(expand('border-spacing: 0 4px'), ['border-spacing=0.0px 4.0px']);
+    expect(expand('border-spacing: 10%'), isEmpty);
+    expect(expand('border-spacing: -1px'), isEmpty);
+    expect(expand('caption-side: bottom'), ['caption-side=bottom']);
+    expect(expand('position: relative'), ['position=relative']);
+    expect(expand('position: floating'), isEmpty);
+    expect(expand('top: -0.5em'), ['top=-0.5em']);
+    expect(expand('left: 50%'), ['left=50.0%']);
+    expect(expand('bottom: auto'), ['bottom=auto']);
+    expect(expand('box-sizing: border-box'), ['box-sizing=border-box']);
+    expect(expand('list-style-position: inside'), [
+      'list-style-position=inside',
+    ]);
+    expect(expand('text-align: -webkit-match-parent'), ['text-align=inherit']);
+    expect(expand('text-align: match-parent'), ['text-align=inherit']);
+  });
+
+  test('quotes: none, auto or pairs of strings', () {
+    expect(expand('quotes: none'), ['quotes=none']);
+    expect(expand('quotes: auto'), ['quotes=auto']);
+    expect(expand('quotes: "«" "»" "„" "“"'), [
+      'quotes="«" "»" "„" "“"',
+    ]);
+    expect(expand('quotes: "«"'), isEmpty);
+    expect(expand('quotes: "«" auto'), isEmpty);
+  });
+
+  test('border-radius: corners clockwise, vertical radii after a slash', () {
+    expect(expand('border-radius: 4px'), [
+      'border-top-left-radius=4.0px 4.0px',
+      'border-top-right-radius=4.0px 4.0px',
+      'border-bottom-right-radius=4.0px 4.0px',
+      'border-bottom-left-radius=4.0px 4.0px',
+    ]);
+    expect(expand('border-radius: 1px 2px 3px'), [
+      'border-top-left-radius=1.0px 1.0px',
+      'border-top-right-radius=2.0px 2.0px',
+      'border-bottom-right-radius=3.0px 3.0px',
+      'border-bottom-left-radius=2.0px 2.0px',
+    ]);
+    expect(expand('border-radius: 50% / 10px'), [
+      'border-top-left-radius=50.0% 10.0px',
+      'border-top-right-radius=50.0% 10.0px',
+      'border-bottom-right-radius=50.0% 10.0px',
+      'border-bottom-left-radius=50.0% 10.0px',
+    ]);
+    expect(expand('border-top-left-radius: 2px 6px'), [
+      'border-top-left-radius=2.0px 6.0px',
+    ]);
+    expect(expand('border-radius: -1px'), isEmpty);
+    expect(expand('border-radius: 1px 2px 3px 4px 5px'), isEmpty);
+  });
+
+  test('inset sets the four offsets as margin does', () {
+    expect(expand('inset: 1px auto'), [
+      'top=1.0px',
+      'right=auto',
+      'bottom=1.0px',
+      'left=auto',
+    ]);
   });
 
   test('whitespace and case do not matter', () {

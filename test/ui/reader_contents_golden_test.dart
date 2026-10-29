@@ -2,16 +2,14 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/reader.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:vellum/all_formats.dart' show TextColumnPage, TextPagesView;
 
-import '../support/reader_test_platform.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
@@ -24,12 +22,6 @@ void main() {
     ) async {
       final app = (await tester.runAsync(UiTestApp.create))!;
       addTearDown(app.dispose);
-      final previous = InAppWebViewPlatform.instance;
-      final platform = ReaderTestPlatform();
-      InAppWebViewPlatform.instance = platform;
-      addTearDown(() {
-        if (previous != null) InAppWebViewPlatform.instance = previous;
-      });
       final quote = List.filled(
         6,
         'A passage connects what we read with what we already know.',
@@ -68,13 +60,14 @@ void main() {
         profile,
         (_) => ReaderScreen(
           sourceId: app.book!.id,
-          serverBaseUri: Uri.parse('http://127.0.0.1:49152'),
           bookRepository: app.bookRepository,
           highlightRepository: app.highlightRepository,
           preferencesService: app.preferencesService,
           screenControlService: app.screenControlService,
           textActions: const [],
           initialSource: app.book,
+          // The second chapter is the one being read.
+          initialCfi: 'epubcfi(/6/4)',
         ),
         surfaceSize: profile == VisualProfile.tabletRtl
             ? const Size(390, 844)
@@ -82,50 +75,23 @@ void main() {
       );
       await waitForUi(
         tester,
-        () => platform.views.any(
-          (view) =>
-              view.created && view.controller.handlers.containsKey('onLoadEnd'),
-        ),
-        description: 'WebView bridge',
+        () => find.byType(TextColumnPage).evaluate().isNotEmpty,
+        description: 'the first page',
+        timeout: const Duration(seconds: 30),
       );
-      platform.views
-          .firstWhere((view) => view.created)
-          .controller
-          .handlers['onLoadEnd']!([]);
-      final readerContext = tester.element(find.byType(BookReaderWebView));
+      final readerContext = tester.element(find.byType(TextPagesView));
       final bloc = readerContext.read<ReaderBloc>();
       await waitForUi(
         tester,
         () =>
             bloc.state.bookmarks.length == 3 &&
-            bloc.state.highlights.length == 2,
-        description: 'saved annotations',
+            bloc.state.highlights.length == 2 &&
+            bloc.state.chapterTitle == 'Chapter 2',
+        description: 'saved annotations at the second chapter',
+        timeout: const Duration(seconds: 30),
       );
       final ui = readerContext.read<ReaderUiCubit>();
       final l10n = readerContext.l10n;
-      bloc.add(
-        ReaderTocUpdated(
-          items: [
-            const ReaderTocItem(
-              label: 'Chapter 1',
-              href: 'chapter-1',
-              level: 1,
-            ),
-            const ReaderTocItem(
-              label: 'Chapter 2',
-              href: 'chapter-2',
-              level: 1,
-            ),
-          ],
-        ),
-      );
-      bloc.add(
-        const ReaderBookPositionUpdated(
-          cfi: 'epubcfi(/6/4)',
-          progress: .28,
-          chapterTitle: 'Chapter 2',
-        ),
-      );
       ui.openTocDrawer();
       await tester.pumpAndSettle();
       final activeTile = find
@@ -240,12 +206,16 @@ void main() {
       expect(tile.highlight.color, HighlightColor.blue);
       await tapUi(tester, find.text('A short blue quote.'));
       expect(ui.state.tocDrawerVisible, isFalse);
-      await tester.pumpAndSettle();
-      expect(
-        platform.views.firstWhere((view) => view.created).controller.scripts,
-        contains(contains('goToCfi("epubcfi(/6/6)")')),
+      await waitForUi(
+        tester,
+        () => bloc.state.chapterTitle == 'Chapter 3',
+        description: 'the highlight\'s chapter',
+        timeout: const Duration(seconds: 30),
       );
+      await tester.pumpAndSettle();
       expect(bloc.state.bookmarkEdits.removed, isEmpty);
+      // The reader saves its place after a pause.
+      await tester.pump(const Duration(seconds: 1));
       await unmountUi(tester);
     }, tags: ['golden']);
   }

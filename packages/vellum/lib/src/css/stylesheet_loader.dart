@@ -6,7 +6,8 @@
 library;
 
 import '../document/content_document.dart';
-import '../formats/epub/epub_url.dart';
+import '../container/book_url.dart';
+import 'css_media.dart';
 import 'css_syntax.dart';
 import 'css_tokenizer.dart';
 import 'css_values.dart';
@@ -31,17 +32,24 @@ class StyleSheetCache {
 }
 
 /// Loads the sheets [document] links to and embeds, relative to
-/// [documentHref]. Imports nest up to [maxImportDepth]; a sheet already
-/// seen on the way down is not loaded twice. With a [cache], external
-/// sheets are parsed once per book.
+/// [documentHref], whose `media` matches [media]. Imports nest up to
+/// [maxImportDepth]; a sheet already seen on the way down is not loaded
+/// twice. With a [cache], external sheets are parsed once per book.
+/// [baseHrefs], when given, receives the href each sheet's URLs resolve
+/// against, in the same order. [transform] rewrites `<style>` text before
+/// it is parsed ([read] serves sheets as they are to be parsed).
 Future<List<CssStyleSheet>> loadDocumentStyleSheets(
   ContentDocument document, {
   required String documentHref,
   required StyleSheetReader read,
   StyleSheetCache? cache,
   int maxImportDepth = 8,
+  List<String>? baseHrefs,
+  CssMediaEnvironment media = const CssMediaEnvironment(),
+  String Function(String css)? transform,
 }) async {
   final out = <CssStyleSheet>[];
+  final bases = baseHrefs ?? <String>[];
   final seen = <String>{};
   final sheets = cache ?? StyleSheetCache();
   for (final node in document.descendantsOf(ContentDocument.rootIndex)) {
@@ -53,26 +61,43 @@ Future<List<CssStyleSheet>> loadDocumentStyleSheets(
         if (href == null || !rel.split(RegExp(r'\s+')).contains('stylesheet')) {
           continue;
         }
-        if (!_isScreenMedia(document.attributeOf(node, 'media'))) continue;
+        if (!cssMediaTextMatches(document.attributeOf(node, 'media'), media)) {
+          continue;
+        }
         final type = document.attributeOf(node, 'type')?.toLowerCase();
         if (type != null && type.isNotEmpty && type != 'text/css') continue;
-        final resolved = resolveEpubUrl(href, documentHref);
-        await _loadInto(out, resolved, read, sheets, seen, maxImportDepth);
+        final resolved = resolveBookUrl(href, documentHref);
+        await _loadInto(
+          out,
+          bases,
+          resolved,
+          read,
+          sheets,
+          seen,
+          maxImportDepth,
+          media,
+        );
       case 'style':
         final type = document.attributeOf(node, 'type')?.toLowerCase();
         if (type != null && type.isNotEmpty && type != 'text/css') continue;
-        if (!_isScreenMedia(document.attributeOf(node, 'media'))) continue;
-        final sheet = CssStyleSheet.parse(document.textContentOf(node));
+        if (!cssMediaTextMatches(document.attributeOf(node, 'media'), media)) {
+          continue;
+        }
+        final text = document.textContentOf(node);
+        final sheet = CssStyleSheet.parse(transform?.call(text) ?? text);
         await _inlineImports(
           out,
+          bases,
           sheet,
           documentHref,
           read,
           sheets,
           seen,
           maxImportDepth,
+          media,
         );
         out.add(sheet);
+        bases.add(documentHref);
     }
   }
   return out;
@@ -80,43 +105,63 @@ Future<List<CssStyleSheet>> loadDocumentStyleSheets(
 
 Future<void> _loadInto(
   List<CssStyleSheet> out,
+  List<String> bases,
   String href,
   StyleSheetReader read,
   StyleSheetCache sheets,
   Set<String> seen,
   int depth,
+  CssMediaEnvironment media,
 ) async {
   if (depth < 0 || !seen.add(href)) return;
   final sheet = await sheets._load(href, read);
   if (sheet == null) return;
-  await _inlineImports(out, sheet, href, read, sheets, seen, depth);
+  await _inlineImports(
+    out,
+    bases,
+    sheet,
+    href,
+    read,
+    sheets,
+    seen,
+    depth,
+    media,
+  );
   out.add(sheet);
+  bases.add(href);
 }
 
 Future<void> _inlineImports(
   List<CssStyleSheet> out,
+  List<String> bases,
   CssStyleSheet sheet,
   String baseHref,
   StyleSheetReader read,
   StyleSheetCache sheets,
   Set<String> seen,
   int depth,
+  CssMediaEnvironment media,
 ) async {
-  for (final import in cssImportsOf(sheet)) {
+  for (final import in cssImportsOf(sheet, media: media)) {
     await _loadInto(
       out,
-      resolveEpubUrl(import, baseHref),
+      bases,
+      resolveBookUrl(import, baseHref),
       read,
       sheets,
       seen,
       depth - 1,
+      media,
     );
   }
 }
 
-/// The URLs of a sheet's leading `@import` rules whose media is not
-/// print only, as written.
-List<String> cssImportsOf(CssStyleSheet sheet) {
+/// The URLs of a sheet's leading `@import` rules whose media matches
+/// [media], as written.
+List<String> cssImportsOf(
+  CssStyleSheet sheet, {
+  CssMediaEnvironment media = const CssMediaEnvironment(),
+}) {
   final out = <String>[];
   for (final rule in sheet.rules) {
     // Imports are only valid before other rules; `@charset` and
@@ -142,17 +187,17 @@ List<String> cssImportsOf(CssStyleSheet sheet) {
       _ => null,
     };
     if (url == null) continue;
-    final media = [
-      for (final v in values.skip(1))
-        if (v is CssTokenValue && v.token.type == CssTokenType.ident)
-          v.token.value.toLowerCase(),
-    ];
-    if (media.contains('print') &&
-        !media.contains('not') &&
-        !media.contains('screen') &&
-        !media.contains('all')) {
-      continue;
-    }
+    // `layer(…)` and `supports(…)` conditions come before the media.
+    final rest = values
+        .skip(1)
+        .where(
+          (v) =>
+              !(v is CssFunctionValue &&
+                  (v.name.toLowerCase() == 'layer' ||
+                      v.name.toLowerCase() == 'supports')),
+        )
+        .toList();
+    if (!cssMediaQueryListMatches(rest, media)) continue;
     out.add(url);
   }
   return out;
@@ -235,11 +280,13 @@ List<CssFontFace> cssFontFacesOf(CssStyleSheet sheet) {
   return out;
 }
 
-bool _isScreenMedia(String? media) {
-  if (media == null || media.trim().isEmpty) return true;
-  final words = media.toLowerCase().split(RegExp(r'[\s,()]+'));
-  if (!words.contains('print')) return true;
-  return words.contains('not') ||
-      words.contains('screen') ||
-      words.contains('all');
+/// An image `url()` of a style sheet at [base] as a section's images are
+/// written: its container path from the root (`/OPS/i.png`), or the
+/// address as is when it has a scheme or no base.
+String cssImageSource(String url, String? base) {
+  if (base == null) return url;
+  final resolved = resolveBookUrl(url, base);
+  return _scheme.hasMatch(resolved) ? resolved : '/$resolved';
 }
+
+final _scheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:');

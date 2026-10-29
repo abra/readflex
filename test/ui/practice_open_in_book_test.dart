@@ -1,13 +1,14 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:practice/practice.dart';
 import 'package:reader/reader.dart';
+import 'package:reader/src/reader_bloc.dart';
 import 'package:readflex/app/routing.dart';
+import 'package:vellum/all_formats.dart' show TextColumnPage, TextPagesView;
 
-import '../support/reader_test_platform.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 
@@ -16,21 +17,14 @@ import '../support/ui_test_driver.dart';
 /// is ready, and leaving the reader lands back on the Vocabulary list.
 void main() {
   late UiTestApp app;
-  late ReaderTestPlatform platform;
 
   setUp(() async {
     app = await UiTestApp.create();
-    await app.readerServer.start();
-    final previous = InAppWebViewPlatform.instance;
-    platform = ReaderTestPlatform();
-    InAppWebViewPlatform.instance = platform;
-    addTearDown(() {
-      if (previous != null) InAppWebViewPlatform.instance = previous;
-    });
   });
   tearDown(() async => app.dispose());
 
-  const anchor = 'epubcfi(/6/2!/4/2,/1:0,/1:5)';
+  // The fixture's third chapter.
+  const anchor = 'epubcfi(/6/6)';
 
   testWidgets('a saved word opens its book at the anchor', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -52,31 +46,22 @@ void main() {
     final word = find.byKey(ValueKey('practiceWord-${entry!.id}'));
     await tapUi(tester, word);
     await tapUi(tester, find.text('Open in book'));
+    String? chapter() => tester
+        .element(find.byType(TextPagesView))
+        .read<ReaderBloc>()
+        .state
+        .chapterTitle;
     await waitForUi(
       tester,
-      () => platform.views.any(
-        (view) =>
-            view.created && view.controller.handlers.containsKey('onLoadEnd'),
-      ),
-      description: 'WebView bridge',
-    );
-    final controller = platform.views
-        .firstWhere((view) => view.created)
-        .controller;
-    expect(
-      controller.scripts.any((script) => script.contains('goToCfi(')),
-      isFalse,
-      reason: 'the anchor waits for the document',
-    );
-    controller.handlers['onLoadEnd']!([]);
-    await waitForUi(
-      tester,
-      () => controller.scripts.any(
-        (script) => script.contains('goToCfi("$anchor")'),
-      ),
+      () =>
+          find.byType(TextColumnPage).evaluate().isNotEmpty &&
+          chapter() == 'Chapter 3',
       description: 'reader at the word anchor',
+      timeout: const Duration(seconds: 30),
     );
     expect(find.byType(ReaderScreen), findsOneWidget);
+    // The reader saves its place after a pause.
+    await tester.pump(const Duration(seconds: 1));
 
     // Leaving the reader lands on the Vocabulary list it was opened from.
     GoRouter.of(tester.element(find.byType(ReaderScreen))).pop();

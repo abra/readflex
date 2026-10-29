@@ -179,7 +179,7 @@ void main() {
   testWidgets('native library controls preserve staged edits and preferences', (
     tester,
   ) async {
-    final app = await UiTestApp.create(nativeReader: true);
+    final app = await UiTestApp.create();
     addTearDown(app.dispose);
     tester.platformDispatcher.defaultRouteNameTestValue = '/';
     addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);

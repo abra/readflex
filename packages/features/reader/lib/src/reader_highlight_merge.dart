@@ -1,7 +1,8 @@
-import 'package:reader_webview/reader_webview.dart';
 import 'package:shared/shared.dart';
 
-/// Maps the WebView's merge plan onto the text-action contract.
+import 'reader_selection.dart';
+
+/// Maps a selection's merge plan onto the text-action contract.
 HighlightMergeTarget? highlightMergeTargetFor(ReaderHighlightMerge? merge) =>
     merge == null
     ? null

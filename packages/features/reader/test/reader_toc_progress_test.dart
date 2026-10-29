@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:reader/src/reader_toc_item.dart';
 import 'package:reader/src/reader_toc_progress.dart';
-import 'package:reader_webview/reader_webview.dart';
 
 void main() {
   ReaderTocItem item(

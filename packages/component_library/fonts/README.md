@@ -10,11 +10,9 @@ This is not a subset tailored to a particular sentence. At about 181 KiB
 uncompressed, it avoids bundling unused variable-weight data.
 
 The app's common fallback chain uses it only when the primary UI font lacks
-a glyph. The book WebView separately exposes the same asset through the local
-reader server and declares it after the selected reading font. The reader's
-monospace code stack also uses it for missing symbols. Flutter font
-registration alone does not make fonts available inside a WebView. Text contents
-are not changed. The font provides monochrome symbols, not complete emoji or
+a glyph. Book pages (vellum) fall back to it after the selected reading font,
+and the reader's monospace code stack uses it for missing symbols. Text
+contents are not changed. The font provides monochrome symbols, not complete emoji or
 Unicode coverage.
 
 The font is declared in both the app and component-library pubspecs; the app

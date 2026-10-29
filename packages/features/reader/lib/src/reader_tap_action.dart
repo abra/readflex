@@ -1,5 +1,3 @@
-import 'package:reader_webview/reader_webview.dart';
-
 enum ReaderTapAction {
   leftPage,
   rightPage,
@@ -19,8 +17,9 @@ enum ReaderTapAxis {
   vertical,
 }
 
-const readerLeftTapZoneEnd = readerPageTapZoneFraction;
-const readerRightTapZoneStart = 1 - readerPageTapZoneFraction;
+/// Each page-turn edge takes this fraction of the page width.
+const readerLeftTapZoneEnd = 0.30;
+const readerRightTapZoneStart = 1 - readerLeftTapZoneEnd;
 
 ReaderTapAction readerTapActionFor({
   required double x,

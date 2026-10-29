@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';

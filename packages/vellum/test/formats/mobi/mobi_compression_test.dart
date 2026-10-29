@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 void main() {
   group('variable-length integers', () {
@@ -49,6 +49,13 @@ void main() {
       // goes first, then the overlap.
       final stripped = removeTrailingEntries(record, 3);
       expect(String.fromCharCodes(stripped), 'text');
+    });
+
+    test('a size past the start leaves nothing, as subarray clamps', () {
+      // A two-byte record whose trailing size reads 0x41 (65).
+      final record = Uint8List.fromList([0x61, 0xC1]);
+      expect(removeTrailingEntries(record, 2), isEmpty);
+      expect(removeTrailingEntries(Uint8List(0), 3), isEmpty);
     });
 
     test('no flags leaves the record alone', () {

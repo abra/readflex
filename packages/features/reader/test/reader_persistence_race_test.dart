@@ -4,7 +4,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_document_features.dart';
 
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
@@ -446,10 +446,7 @@ void main() {
       (s) => s.status == ReaderStatus.failure,
     );
     bloc.add(
-      const ReaderWebViewFailed(
-        sourceId: 'book',
-        failure: ReaderLoadFailure(ReaderLoadFailureKind.document),
-      ),
+      ReaderSurfaceFailed(sourceId: 'book', error: StateError('layout')),
     );
     await failed;
     repo.shouldThrow = true;
@@ -465,7 +462,7 @@ void main() {
     await ready;
   });
 
-  test('a pending source load cannot clear a WebView failure', () async {
+  test('a pending source load cannot clear a surface failure', () async {
     final repo = _DelayedLoadRepository()..seedBook(_book());
     final bloc = ReaderBloc(
       bookRepository: repo,
@@ -479,10 +476,7 @@ void main() {
       (s) => s.status == ReaderStatus.failure,
     );
     bloc.add(
-      const ReaderWebViewFailed(
-        sourceId: 'book',
-        failure: ReaderLoadFailure(ReaderLoadFailureKind.rendererTerminated),
-      ),
+      ReaderSurfaceFailed(sourceId: 'book', error: StateError('open')),
     );
     await failed;
     repo.gate.complete();

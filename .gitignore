@@ -66,6 +66,17 @@ AGENTS.md
 tool/
 tools/
 
+# Host-only Rust benchmark build products.
+/benchmarks/mobi_rust/rust/target/
+!/benchmarks/mobi_rust/pubspec.lock
+!/benchmarks/mobi_rust/rust/Cargo.lock
+/benchmarks/reader_native/rust/target/
+!/benchmarks/reader_native/pubspec.lock
+!/benchmarks/reader_native/rust/Cargo.lock
+/packages/vellum_mobi_native/rust/target/
+!/packages/vellum_mobi_native/pubspec.lock
+!/packages/vellum_mobi_native/rust/Cargo.lock
+
 # FVM Version Cache
 .fvm/
 

@@ -6,14 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_drawer_layout.dart';
 import 'package:reader/src/reader_drawer_messages.dart';
 import 'package:reader/src/reader_search_cubit.dart';
+import 'package:reader/src/reader_search_event.dart';
 import 'package:reader/src/reader_search_navigation_bar.dart';
 import 'package:reader/src/reader_search_panel.dart';
 import 'package:reader/src/reader_search_result_tile.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 void main() {
   testWidgets('retry repeats the failed query without discarding history', (

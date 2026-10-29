@@ -59,7 +59,6 @@ void main() {
               required logger,
               required errorReporter,
             }) async => dependencies,
-        prepareReader: (_) async {},
       );
       await bootstrap.run(
         onReady: (_) => fail('First attempt must fail'),
@@ -79,7 +78,7 @@ void main() {
   );
 
   test(
-    'preparation rollback retains monitoring; successful app owns final disposal',
+    'mount rollback retains monitoring; successful app owns final disposal',
     () async {
       final logger = Logger();
       final reporter = _Reporter();
@@ -104,16 +103,10 @@ void main() {
               attempts.add(dependencies);
               return dependencies;
             },
-        prepareReader: (_) async {
-          stages.add('prepare');
-          if (attempts.length == 1) {
-            throw StateError('Reader preparation failed');
-          }
-        },
       );
 
       await bootstrap.run(
-        onReady: (_) => fail('First attempt must fail'),
+        onReady: (_) => throw StateError('Mount failed'),
         onFailure: (error, _) => errors.add(error),
       );
       expect(attempts.single.ownedDisposals, 1);
@@ -129,7 +122,7 @@ void main() {
         onFailure: (error, _) => fail('$error'),
       );
 
-      expect(stages, ['compose', 'prepare', 'compose', 'prepare', 'ready']);
+      expect(stages, ['compose', 'compose', 'ready']);
       expect(errors.single, isStateError);
       expect(reporterCreations, 1);
       expect(attempts.last.ownedDisposals, 0);
@@ -148,13 +141,13 @@ void main() {
   );
 
   test(
-    'dependency factory failure skips preparation and retains monitoring for retry',
+    'dependency factory failure retains monitoring for retry',
     () async {
       final logger = Logger();
       final reporter = _Reporter();
       var reporterCreations = 0;
       var factoryCalls = 0;
-      var preparationCalls = 0;
+      var readyCalls = 0;
       final dependencies = _Dependencies(logger, reporter);
       final errors = <Object>[];
       final bootstrap = AppBootstrap(
@@ -169,22 +162,18 @@ void main() {
               if (++factoryCalls == 1) throw StateError('Composition failed');
               return dependencies;
             },
-        prepareReader: (_) async {
-          preparationCalls++;
-        },
       );
       await bootstrap.run(
         onReady: (_) => fail('Must fail'),
         onFailure: (error, _) => errors.add(error),
       );
-      expect(preparationCalls, 0);
       await bootstrap.run(
-        onReady: (_) {},
+        onReady: (_) => readyCalls++,
         onFailure: (error, _) => fail('$error'),
       );
       expect(errors.single, isStateError);
       expect(reporterCreations, 1);
-      expect(preparationCalls, 1);
+      expect(readyCalls, 1);
       await dependencies.dispose();
     },
   );
@@ -200,7 +189,6 @@ void main() {
       dependenciesFactory:
           ({required config, required logger, required errorReporter}) async =>
               dependencies,
-      prepareReader: (_) async {},
     );
     final errors = <Object>[];
     await bootstrap.run(

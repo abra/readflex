@@ -421,10 +421,5 @@
   "libraryThemeLight": "فاتح",
   "libraryThemeLightDescription": "استخدام المظهر الفاتح",
   "libraryThemeDark": "داكن",
-  "libraryThemeDarkDescription": "استخدام المظهر الداكن",
-  "developerReaderEngineTitle": "محرّك القارئ",
-  "developerReaderEngineHint": "أي محرّك يفتح كل صيغة. يسري على الكتاب التالي الذي يُفتح أو يُستورد.",
-  "developerReaderEngineWebView": "WebView",
-  "developerReaderEngineNative": "أصلي",
-  "developerReaderEngineReset": "استخدام إعدادات البناء"
+  "libraryThemeDarkDescription": "استخدام المظهر الداكن"
 }

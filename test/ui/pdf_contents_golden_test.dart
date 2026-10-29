@@ -1,19 +1,14 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/reader.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_page_grid.dart';
-import 'package:reader/src/reader_page_thumbnail_cubit.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:vellum/all_formats.dart' show FixedPagesView;
 
 import '../support/pdf_fixture.dart';
-import '../support/reader_test_platform.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
@@ -28,36 +23,37 @@ void main() {
         () => UiTestApp.create(withBook: false),
       ))!;
       addTearDown(app.dispose);
-      final book = (await tester.runAsync(() => addPdfFixture(app)))!;
-      final thumbnails = (await tester.runAsync(
-        () => Future.wait([
-          for (var i = 0; i < 4; i++) pdfPageThumbnailFixture(i),
-        ]),
-      ))!;
-      final previous = InAppWebViewPlatform.instance;
-      final platform = ReaderTestPlatform(
-        onAsyncJavaScript: (body, args) async => CallAsyncJavaScriptResult(
-          value:
-              'data:image/jpeg;base64,'
-              '${base64Encode(thumbnails[(args['index'] as int) % 4])}',
+      // Margin crops are measured off the fake clock; whole pages keep the
+      // page under the sheet the same in every run.
+      await tester.runAsync(
+        () => app.preferencesService.update(
+          (p) => p.copyWith(readerTrimPageMargins: false),
         ),
       );
-      InAppWebViewPlatform.instance = platform;
-      addTearDown(() {
-        if (previous != null) InAppWebViewPlatform.instance = previous;
-      });
+      final book = (await tester.runAsync(
+        () => addPdfFixture(
+          app,
+          pages: 40,
+          outline: const [
+            ('Introduction', 0),
+            ('Getting started', 1),
+            ('Solution lifecycle', 2),
+          ],
+        ),
+      ))!;
       await pumpGoldenSurface(
         tester,
         profile,
         (_) => ReaderScreen(
           sourceId: book.id,
-          serverBaseUri: Uri.parse('http://127.0.0.1:49152'),
           bookRepository: app.bookRepository,
           highlightRepository: app.highlightRepository,
           preferencesService: app.preferencesService,
           screenControlService: app.screenControlService,
           textActions: const [],
           initialSource: book,
+          // The third page is the one being read.
+          initialCfi: 'epubcfi(/6/6)',
         ),
         surfaceSize: profile == VisualProfile.tabletRtl
             ? const Size(390, 844)
@@ -65,42 +61,22 @@ void main() {
       );
       await waitForUi(
         tester,
-        () => platform.views.any(
-          (v) => v.created && v.controller.handlers.containsKey('onLoadEnd'),
-        ),
-        description: 'reader bridge',
+        () => find.byType(FixedPagesView).evaluate().isNotEmpty,
+        description: 'PDF pages',
+        timeout: const Duration(seconds: 30),
       );
-      final bridge = platform.views.firstWhere((v) => v.created).controller;
-      bridge.handlers['onLoadEnd']!([]);
-      bridge.handlers['onDocumentFeatures']!([
-        {'format': 'pdf', 'hasToc': true, 'pageCount': 40},
-      ]);
-      bridge.handlers['onRelocated']!([
-        {
-          'cfi': 'epubcfi(/6/6!)',
-          'percentage': 0.05,
-          'chapterCurrentPage': 2,
-          'chapterTotalPages': 40,
-        },
-      ]);
-      final context = tester.element(find.byType(BookReaderWebView));
+      final context = tester.element(find.byType(FixedPagesView));
       final bloc = context.read<ReaderBloc>();
-      bloc.add(
-        const ReaderTocUpdated(
-          items: [
-            ReaderTocItem(label: 'Introduction', href: '[1]', level: 1),
-            ReaderTocItem(label: 'Getting started', href: '[2]', level: 1),
-            ReaderTocItem(label: 'Solution lifecycle', href: '[3]', level: 1),
-          ],
-        ),
-      );
       await waitForUi(
         tester,
         () =>
             bloc.state.tocItems.length == 3 &&
-            bloc.state.documentFeatures?.pageCount == 40,
-        description: 'outline and page count',
+            bloc.state.documentFeatures?.pageCount == 40 &&
+            bloc.state.document?.currentCfi == 'epubcfi(/6/6)',
+        description: 'outline, page count and the third page',
+        timeout: const Duration(seconds: 30),
       );
+      await waitForFixedPage(tester);
       final ui = context.read<ReaderUiCubit>();
       final l10n = context.l10n;
       ui.openTocDrawer();
@@ -109,27 +85,20 @@ void main() {
 
       await tester.ensureVisible(find.text(l10n.readerPages));
       await tapUi(tester, find.text(l10n.readerPages));
-      await tester.pumpAndSettle();
       final grid = find.byType(ReaderPageGrid);
       expect(grid, findsOneWidget);
-      final cubit = tester
-          .element(find.descendant(of: grid, matching: find.byType(GridView)))
-          .read<ReaderPageThumbnailCubit>();
+      // pdfium renders the previews off the fake clock.
+      final images = find.descendant(of: grid, matching: find.byType(RawImage));
       await waitForUi(
         tester,
-        () => cubit.state.values.whereType<ImageProvider>().isNotEmpty,
-        description: 'thumbnails',
+        () =>
+            images.evaluate().isNotEmpty &&
+            images.evaluate().every(
+              (e) => (e.widget as RawImage).image != null,
+            ),
+        description: 'page previews',
+        timeout: const Duration(seconds: 30),
       );
-      // The bridge decodes base64 into new byte identities; precache the
-      // providers the cubit holds.
-      await tester.runAsync(() async {
-        for (final image in cubit.state.values) {
-          if (image != null) {
-            await precacheImage(image, tester.element(grid));
-          }
-        }
-      });
-      await tester.pumpAndSettle();
       // The page on screen is scrolled into view; its label may sit below a
       // short large-text sheet, so check the tile itself.
       final currentTile = find.ancestor(
@@ -139,6 +108,8 @@ void main() {
       expect(currentTile.first.hitTestable(), findsOneWidget);
       await expectUiGolden(tester, profile, 'pdf-contents-pages');
       expect(tester.takeException(), isNull);
+      // The reader saves its place after a pause.
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpWidget(const SizedBox.shrink());
     }, tags: ['golden']);
   }

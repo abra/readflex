@@ -63,6 +63,7 @@ ins, u { text-decoration: underline; }
 del, s, strike { text-decoration: line-through; }
 q::before { content: open-quote; }
 q::after { content: close-quote; }
+math[display="block" i] { display: block; text-align: center; margin: 1em 0; }
 
 h1 { font-size: 2.00em; font-weight: bold; margin: 0.67em 0; }
 h2 { font-size: 1.50em; font-weight: bold; margin: 0.83em 0; }
@@ -72,6 +73,7 @@ h5 { font-size: 0.83em; font-weight: bold; margin: 1.67em 0; }
 h6 { font-size: 0.67em; font-weight: bold; margin: 2.33em 0; }
 article h1, aside h1, nav h1, section h1 { font-size: 1.50em; margin: 0.83em 0; }
 
+table { box-sizing: border-box; border-spacing: 2px; border-collapse: separate; text-indent: initial; }
 table { border-color: gray; }
 thead, tbody, tfoot, table > tr { vertical-align: middle; }
 tr, td, th { vertical-align: inherit; }

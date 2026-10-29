@@ -14,6 +14,8 @@ import 'dart:typed_data';
 import 'package:meta/meta.dart';
 import 'package:xml/xml.dart';
 
+import '../../fixed_layout/spread_layout.dart' show SpreadSide;
+import '../../container/book_url.dart';
 import '../../epubcfi/cfi.dart';
 import '../../vellum_exception.dart';
 import '../book_navigation.dart';
@@ -24,9 +26,6 @@ import 'epub_nav.dart';
 import 'epub_resources.dart';
 import 'epub_url.dart';
 import 'epub_xml.dart';
-
-/// Which page of a spread a fixed-layout section takes.
-enum EpubPageSpread { left, right, center }
 
 /// One spine item as the reader sees it.
 @immutable
@@ -57,11 +56,11 @@ class EpubSection {
   /// `linear="no"` marks auxiliary content.
   bool get isLinear => spineItem.isLinear;
 
-  final EpubPageSpread? pageSpread;
+  final SpreadSide? pageSpread;
   final EpubManifestItem? mediaOverlay;
 
   /// A link in this section as a container path (`resolveHref`).
-  String resolveHref(String href) => resolveEpubUrl(href, item.href);
+  String resolveHref(String href) => resolveBookUrl(href, item.href);
 
   @override
   String toString() => 'EpubSection($index, $href, $size bytes)';
@@ -144,7 +143,7 @@ class EpubBook {
     final opfDir = opfPath;
     final resources = EpubResources.parse(
       opf,
-      resolveHref: (href) => resolveEpubUrl(href, opfDir),
+      resolveHref: (href) => resolveBookUrl(href, opfDir),
     );
 
     final sections = <EpubSection>[];
@@ -176,7 +175,7 @@ class EpubBook {
       if (nav != null) {
         final parsed = parseEpubNav(
           nav,
-          resolve: (href) => resolveEpubUrl(href, navPath),
+          resolve: (href) => resolveBookUrl(href, navPath),
         );
         toc = parsed.toc;
         pageList = parsed.pageList;
@@ -189,7 +188,7 @@ class EpubBook {
       if (ncx != null) {
         final parsed = parseEpubNcx(
           ncx,
-          resolve: (href) => resolveEpubUrl(href, ncxPath),
+          resolve: (href) => resolveBookUrl(href, ncxPath),
         );
         toc = parsed.toc;
         pageList = parsed.pageList;
@@ -234,9 +233,7 @@ class EpubBook {
             spineItem: first.spineItem,
             size: first.size,
             cfi: first.cfi,
-            pageSpread: dir == 'rtl'
-                ? EpubPageSpread.left
-                : EpubPageSpread.right,
+            pageSpread: dir == 'rtl' ? SpreadSide.left : SpreadSide.right,
             mediaOverlay: first.mediaOverlay,
           );
         }
@@ -311,7 +308,7 @@ class EpubBook {
     final hash = href.indexOf('#');
     final path = hash < 0 ? href : href.substring(0, hash);
     final fragment = hash < 0 ? null : href.substring(hash + 1);
-    final item = resources.itemByHref(decodeEpubUri(path));
+    final item = resources.itemByHref(decodeBookUri(path));
     if (item == null) return null;
     final index = sections.indexWhere((s) => identical(s.item, item));
     if (index < 0) return null;
@@ -335,7 +332,7 @@ class EpubBook {
       if (text != null) {
         final src = _coverImageSource(text);
         if (src != null) {
-          final image = resources.itemByHref(resolveEpubUrl(src, cover.href));
+          final image = resources.itemByHref(resolveBookUrl(src, cover.href));
           if (image != null &&
               (image.mediaType?.startsWith('image/') ?? false)) {
             final bytes = await readResource(image.href);
@@ -370,16 +367,16 @@ class EpubBook {
     }
   }
 
-  static EpubPageSpread? _pageSpread(List<String>? properties) {
+  static SpreadSide? _pageSpread(List<String>? properties) {
     if (properties == null) return null;
     for (final property in properties) {
       switch (property) {
         case 'page-spread-left' || 'rendition:page-spread-left':
-          return EpubPageSpread.left;
+          return SpreadSide.left;
         case 'page-spread-right' || 'rendition:page-spread-right':
-          return EpubPageSpread.right;
+          return SpreadSide.right;
         case 'rendition:page-spread-center':
-          return EpubPageSpread.center;
+          return SpreadSide.center;
       }
     }
     return null;

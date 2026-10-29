@@ -165,7 +165,7 @@ background fill, quote text in `onSurface`. The rule follows the source text
 direction, so Arabic quotes use the right edge even in an English interface.
 Only optional explanation and alternatives are collapsed by default
 under **Meaning & alternatives**. Expanding them is local widget state: it
-neither sends a request nor rebuilds the Reader WebView. A new result resets
+neither sends a request nor rebuilds the reader's page. A new result resets
 the expansion. Source context and sentence translation stay outside this fold.
 A lemma equal to the already visible selection is omitted from the header.
 
@@ -211,7 +211,7 @@ shared translation icon; the globe remains available for other language UI.
 The primary result has a Copy command. `TranslateSheet` supplies the clipboard
 callback; the View never accesses a service for copying. Success/error feedback
 is local to `AppCopyButton` and does not trigger another translation or rebuild
-the Reader WebView. The full source context and sentence translation remain
+the reader's page. The full source context and sentence translation remain
 visible in the existing scrollable body.
 Answer rows use `AppSheetActionRow`: the Copy glyph follows the header's 24dp
 content edge, with a 48dp tap target reaching the section outline, centered on
@@ -249,8 +249,8 @@ previews keep the quote.
 Root `make test-ui` adds modal
 goldens in five visual profiles, including words, complete text, language menus
 and collapsed/expanded lexical details.
-`make test-device DEVICE=<id>` exercises the reader-to-translation flow in a
-native WebView using deterministic services, including equality between the
+`make test-device DEVICE=<id>` exercises the reader-to-translation flow on the
+reader's vellum pages using deterministic services, including equality between the
 book's source sentence, the request context and the visible Sentence text.
 It does not test live providers.
 

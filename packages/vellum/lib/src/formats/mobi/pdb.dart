@@ -65,6 +65,9 @@ class PdbFile {
 
   int get numRecords => _offsets.length - 1;
 
+  /// A snapshot for the native text reader; includes the final file boundary.
+  Int64List get recordOffsets => Int64List.fromList(_offsets);
+
   bool get isMobi => type == 'BOOK' && creator == 'MOBI';
 
   /// Record [index] as bytes.

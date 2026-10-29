@@ -4,13 +4,13 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 import 'package:xml/xml.dart';
 
 /// Parity with `fb2.js` in Chromium: `test/fixtures/fb2/expected.json`
 /// holds the converted XHTML, metadata, sizes, table of contents and
-/// link resolutions the browser produced for the fixtures (see
-/// `packages/reader_webview/test_browser/fb2_fixtures.mjs`).
+/// link resolutions the browser produced for the fixtures (recorded by
+/// `fb2_fixtures.mjs` before the WebView reader went, R6).
 void main() {
   const root = 'test/fixtures/fb2';
   final expected =

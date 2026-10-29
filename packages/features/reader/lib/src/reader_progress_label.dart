@@ -58,8 +58,8 @@ bool isImagePageFormat(BookFormat? format) {
   return format == BookFormat.cbz;
 }
 
-/// Comic and PDF pages are page images in the WebView: they pinch and
-/// double-tap zoom and have page previews. Unlike [isImagePageFormat], PDF
+/// Comic and PDF pages are page images: they pinch and double-tap zoom and
+/// have page previews. Unlike [isImagePageFormat], PDF
 /// keeps text-book progress, selection and chrome taps.
 bool readerHasZoomablePages(BookFormat? format) {
   return format == BookFormat.cbz || format == BookFormat.pdf;

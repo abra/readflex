@@ -7,14 +7,20 @@ sealed class ReaderEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-final class ReaderWebViewFailed extends ReaderEvent {
-  const ReaderWebViewFailed({required this.sourceId, required this.failure});
+/// The page surface could not open or lay out the source.
+final class ReaderSurfaceFailed extends ReaderEvent {
+  const ReaderSurfaceFailed({
+    required this.sourceId,
+    required this.error,
+    this.stackTrace,
+  });
 
   final String sourceId;
-  final ReaderLoadFailure failure;
+  final Object error;
+  final StackTrace? stackTrace;
 
   @override
-  List<Object?> get props => [sourceId, failure];
+  List<Object?> get props => [sourceId, error, stackTrace];
 }
 
 /// Fired once when [ReaderScreen] mounts — resolves the source and loads
@@ -28,14 +34,12 @@ final class ReaderSourceLoadRequested extends ReaderEvent {
   List<Object?> get props => [sourceId];
 }
 
-/// foliate-js reports a new reading position. Persisted to the book's
+/// The page surface reports a new reading position. Persisted to the book's
 /// `currentCfi` + `readingProgress`. Optional chapter/page fields are
 /// only stored on the in-memory state for overlays/debug UI, not persisted.
 ///
-/// [atEnd] is `true` when foliate-js's paginator reports we're on its
-/// trailing blank-buffer pages past the actual content. On those pages
-/// foliate-js still emits `progress=0` / `bookCurrentPage=0`; the bloc
-/// uses [atEnd] to override those bogus numbers with "100% / last page".
+/// [atEnd] is `true` on the last page; the bloc pins progress to "100% /
+/// last page" there.
 final class ReaderBookPositionUpdated extends ReaderEvent {
   const ReaderBookPositionUpdated({
     required this.cfi,
@@ -94,8 +98,8 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   /// for the full rationale.
   final int? sizeTotal;
 
-  /// True when foliate-js reports right-to-left page progression. Null means
-  /// this event does not know and the current state should be preserved.
+  /// True when the book's pages progress right to left. Null means this
+  /// event does not know and the current state should be preserved.
   final bool? pageProgressionRtl;
 
   final bool atStart;
@@ -128,22 +132,6 @@ final class ReaderBookPositionUpdated extends ReaderEvent {
   ];
 }
 
-/// User released the bottom progress slider at [progress].
-///
-/// The WebView still performs the actual navigation, then reports the final
-/// location through [ReaderBookPositionUpdated]. The bloc keeps this target
-/// briefly so Android WebView article relocations that bounce back to 0% right
-/// after a programmatic seek cannot reset the reader state to the beginning.
-final class ReaderSeekRequested extends ReaderEvent {
-  const ReaderSeekRequested({required this.progress});
-
-  final double progress;
-
-  @override
-  List<Object?> get props => [progress];
-}
-
-/// Annotation operations share ordering, independently of position events.
 sealed class ReaderHighlightEvent extends ReaderEvent {
   const ReaderHighlightEvent();
 }
@@ -208,7 +196,7 @@ final class ReaderHighlightNoteChangeRequested extends ReaderHighlightEvent {
   List<Object?> get props => [highlightId, note];
 }
 
-/// foliate-js parsed the book table of contents.
+/// The page surface read the book's table of contents.
 final class ReaderTocUpdated extends ReaderEvent {
   const ReaderTocUpdated({required this.items});
 
@@ -218,8 +206,8 @@ final class ReaderTocUpdated extends ReaderEvent {
   List<Object?> get props => [items];
 }
 
-/// foliate-js reported optional document capabilities such as embedded TOC or
-/// searchable OCR/text layer availability.
+/// The page surface reported optional document capabilities such as an
+/// embedded table of contents or a searchable text layer.
 final class ReaderDocumentFeaturesUpdated extends ReaderEvent {
   const ReaderDocumentFeaturesUpdated({required this.features});
 
@@ -253,7 +241,7 @@ final class ReaderBookmarkUndoDismissed extends ReaderBookmarkEvent {
   const ReaderBookmarkUndoDismissed();
 }
 
-/// foliate-js requested adding/removing a bookmark at the current page.
+/// The page surface added or removed a bookmark at the current page.
 final class ReaderBookmarkChanged extends ReaderBookmarkEvent {
   const ReaderBookmarkChanged({
     required this.remove,

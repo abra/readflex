@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 void main() {
   final files = <String, String>{
@@ -115,6 +115,60 @@ void main() {
       @import "late.css";
     ''');
     expect(cssImportsOf(sheet), ['a.css', 'b.css', 'd.css']);
+  });
+
+  test('media on links, styles and imports is evaluated', () async {
+    final media = {
+      'kf8.css': 'p { color: red }',
+      'phone.css': 'p { color: green }',
+      'tablet.css': 'p { color: blue }',
+      'main.css':
+          '@import url(phone.css) screen and (max-device-width: 480px);'
+          '@import url(tablet.css) (min-device-width: 768px);'
+          '@import url(layered.css) layer(base) supports(display: grid) screen;',
+      'layered.css': 'em { color: gray }',
+    };
+    final doc = ContentDocument.parseXml('''
+<html xmlns="http://www.w3.org/1999/xhtml"><head>
+  <link rel="stylesheet" href="kf8.css" media="amzn-kf8"/>
+  <link rel="stylesheet" href="main.css" media="all"/>
+  <style media="(prefers-color-scheme: dark)">h1 { color: white }</style>
+</head><body/></html>''');
+    Future<List<String>> load(CssMediaEnvironment environment) async {
+      final loaded = <String>[];
+      await loadDocumentStyleSheets(
+        doc,
+        documentHref: 'ch.xhtml',
+        read: (href) async {
+          loaded.add(href);
+          return media[href];
+        },
+        media: environment,
+      );
+      return loaded;
+    }
+
+    expect(await load(const CssMediaEnvironment()), [
+      'main.css',
+      'phone.css',
+      'layered.css',
+    ]);
+    expect(
+      await load(
+        const CssMediaEnvironment(deviceWidth: 820, deviceHeight: 1180),
+      ),
+      ['main.css', 'tablet.css', 'layered.css'],
+    );
+    final dark = await loadDocumentStyleSheets(
+      doc,
+      documentHref: 'ch.xhtml',
+      read: (href) async => media[href],
+      media: const CssMediaEnvironment(darkColorScheme: true),
+    );
+    expect(
+      dark.last.rules.whereType<CssQualifiedRule>().single.prelude.join(),
+      'h1',
+    );
   });
 
   test('cssFontFacesOf reads families, sources, weight and style', () {

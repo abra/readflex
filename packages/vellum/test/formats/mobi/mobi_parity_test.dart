@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:html/dom.dart' as dom;
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 import 'package:xml/xml.dart';
 
 /// Parity with `mobi.js` in Chromium: `test/fixtures/mobi/expected.json`
-/// records what the browser made of the fixture books (see
-/// `packages/reader_webview/test_browser/mobi_fixtures.mjs`): metadata,
+/// records what the browser made of the fixture books (recorded by
+/// `mobi_fixtures.mjs` before the WebView reader went, R6): metadata,
 /// every section's parsed document, sizes, navigation and resolutions.
 void main() {
   const dir = 'test/fixtures/mobi';

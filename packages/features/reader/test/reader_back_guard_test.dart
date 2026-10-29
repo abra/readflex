@@ -7,8 +7,9 @@ import 'package:reader/src/reader_back_guard.dart';
 import 'package:reader/src/reader_back_navigation.dart';
 import 'package:reader/src/reader_highlight_focus_cubit.dart';
 import 'package:reader/src/reader_search_cubit.dart';
+import 'package:reader/src/reader_search_event.dart';
+import 'package:reader/src/reader_selection.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:reader_webview/reader_webview.dart';
 
 void main() {
   group('readerBackTargetFor', () {

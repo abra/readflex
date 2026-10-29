@@ -1,13 +1,11 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/reader.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:reader/src/reader_selection_tip.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:vellum/all_formats.dart' show TextColumnPage, TextPagesView;
 
-import '../support/reader_test_platform.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
@@ -20,10 +18,8 @@ void main() {
 
   final tip = find.byType(ReaderSelectionTipCard);
 
-  Future<
-    ({UiTestApp app, Map<String, dynamic Function(List<dynamic>)> handlers})
-  >
-  openBook(
+  /// Mounts the reader on the fixture book; its page is still loading.
+  Future<UiTestApp> openBook(
     WidgetTester tester, {
     VisualProfile profile = VisualProfile.phone,
     bool tipDismissed = false,
@@ -32,19 +28,11 @@ void main() {
       () => UiTestApp.create(readerSelectionTipDismissed: tipDismissed),
     ))!;
     addTearDown(app.dispose);
-    final previous = InAppWebViewPlatform.instance;
-    final platform = ReaderTestPlatform();
-    InAppWebViewPlatform.instance = platform;
-    addTearDown(() {
-      if (previous != null) InAppWebViewPlatform.instance = previous;
-    });
-
     await pumpGoldenSurface(
       tester,
       profile,
       (_) => ReaderScreen(
         sourceId: app.book!.id,
-        serverBaseUri: Uri.parse('http://127.0.0.1:49152'),
         bookRepository: app.bookRepository,
         highlightRepository: app.highlightRepository,
         preferencesService: app.preferencesService,
@@ -53,73 +41,78 @@ void main() {
         initialSource: app.book,
       ),
     );
+    return app;
+  }
+
+  /// Waits for the reader's first page.
+  Future<void> pagePainted(WidgetTester tester) async {
     await waitForUi(
       tester,
-      () => platform.views.any(
-        (view) =>
-            view.created && view.controller.handlers.containsKey('onLoadEnd'),
-      ),
-      description: 'WebView bridge',
+      () => find.byType(TextColumnPage).evaluate().isNotEmpty,
+      description: 'the first page',
+      timeout: const Duration(seconds: 30),
     );
-    final handlers = platform.views
-        .firstWhere((view) => view.created)
-        .controller
-        .handlers;
-    return (app: app, handlers: handlers);
+    await tester.pumpAndSettle();
+  }
+
+  /// The reader saves its place after a pause; let it before unmounting.
+  Future<void> leave(WidgetTester tester) async {
+    await tester.pump(const Duration(seconds: 1));
+    await unmountUi(tester);
   }
 
   testWidgets('waits for the painted page, then a page turn hides it', (
     tester,
   ) async {
-    final (:app, :handlers) = await openBook(tester);
+    final app = await openBook(tester);
     expect(tip, findsNothing, reason: 'the page is still loading');
 
-    handlers['onLoadEnd']!([]);
-    await tester.pumpAndSettle();
+    await pagePainted(tester);
     expect(tip, findsOneWidget);
     final l10n = ReadflexLocalizations.of(tester.element(tip))!;
     expect(find.text(l10n.readerSelectionTipTitle), findsOneWidget);
     expect(app.preferencesService.current.readerSelectionTipShowCount, 1);
 
-    // Restoring a position is not a page turn; turning one is.
-    handlers['onRelocated']!([
-      {'cfi': 'epubcfi(/6/2!/4/2/1:0)', 'percentage': 0, 'reason': 'anchor'},
-    ]);
+    // Opening on a position is not a page turn; turning one is.
+    await tester.fling(
+      find.byType(TextPagesView),
+      const Offset(-300, 0),
+      1000,
+    );
+    await waitForUi(
+      tester,
+      () => tip.evaluate().isEmpty,
+      description: 'the tip hidden by a page turn',
+    );
     await tester.pumpAndSettle();
-    expect(tip, findsOneWidget);
-
-    handlers['onRelocated']!([
-      {'cfi': 'epubcfi(/6/4!/4/2/1:0)', 'percentage': 0.1, 'reason': 'page'},
-    ]);
-    await tester.pumpAndSettle();
-    expect(tip, findsNothing);
     expect(app.preferencesService.current.readerSelectionTipDismissed, isFalse);
     expect(tester.takeException(), isNull);
+    await leave(tester);
   });
 
   testWidgets('a text selection ends the tip for good', (tester) async {
-    final (:app, :handlers) = await openBook(tester);
-    handlers['onLoadEnd']!([]);
-    await tester.pumpAndSettle();
+    final app = await openBook(tester);
+    await pagePainted(tester);
     expect(tip, findsOneWidget);
 
     tester
-        .element(find.byType(BookReaderWebView))
+        .element(find.byType(TextPagesView))
         .read<ReaderSelectionCubit>()
         .select(text: 'weightless');
     await tester.pumpAndSettle();
 
     expect(tip, findsNothing);
     expect(app.preferencesService.current.readerSelectionTipDismissed, isTrue);
+    await leave(tester);
   });
 
   testWidgets('a returning reader never sees it', (tester) async {
-    final (:app, :handlers) = await openBook(tester, tipDismissed: true);
-    handlers['onLoadEnd']!([]);
-    await tester.pumpAndSettle();
+    final app = await openBook(tester, tipDismissed: true);
+    await pagePainted(tester);
 
     expect(tip, findsNothing);
     expect(app.preferencesService.current.readerSelectionTipShowCount, 0);
+    await leave(tester);
   });
 
   for (final profile in [
@@ -128,11 +121,11 @@ void main() {
     VisualProfile.largeText,
   ]) {
     testWidgets('reader selection tip ${profile.name}', (tester) async {
-      final (app: _, :handlers) = await openBook(tester, profile: profile);
-      handlers['onLoadEnd']!([]);
-      await tester.pumpAndSettle();
+      await openBook(tester, profile: profile);
+      await pagePainted(tester);
       expect(tip, findsOneWidget);
       await expectUiGolden(tester, profile, 'reader-selection-tip');
+      await leave(tester);
     }, tags: ['golden']);
   }
 }

@@ -1,52 +1,38 @@
 /// Vellum: the native reader engine, the Flutter analogue of foliate-js.
 ///
-/// Modules mirror foliate-js one to one (see README): containers and
-/// formats open a file and hand out sections and bytes; the document model,
-/// layout and paginator draw them; `ReaderView` is the one widget the app
-/// embeds. Nothing here knows about the app's domain models or storage.
+/// This library is the core every format shares: ZIP containers, the
+/// document model, CSS, layout, the text and fixed-layout page views,
+/// CFIs, search, progress and the library's cover thumbnails. Formats
+/// have libraries of their own, each exporting this one: `epub.dart`,
+/// `fb2.dart`, `mobi.dart`, `comic.dart`, `pdf.dart` and `article.dart`;
+/// `all_formats.dart` exports them all. An app imports the formats it
+/// reads, and the others stay out of its build. Nothing here knows about
+/// the app's domain models or storage.
 library;
 
 export 'src/container/zip_archive.dart';
 export 'src/container/zip_entry.dart';
 export 'src/vellum_exception.dart';
-export 'src/formats/comic_page_order.dart'
-    show
-        NaturalSortKey,
-        currentComicPageOrderVersion,
-        naturalFilenameCompare,
-        selectComicPages;
-export 'src/formats/comic_book.dart';
-export 'src/formats/comic_page.dart';
+export 'src/fonts/book_font_face.dart';
+export 'src/fonts/book_font_loader.dart';
+export 'src/fonts/font_data.dart';
+export 'src/fonts/font_ink.dart';
 export 'src/formats/book_navigation.dart';
-export 'src/formats/epub/epub_book.dart';
-export 'src/formats/epub/epub_encryption.dart';
-export 'src/formats/epub/epub_files.dart';
-export 'src/formats/epub/epub_metadata.dart';
-export 'src/formats/epub/epub_nav.dart';
-export 'src/formats/epub/epub_resources.dart';
-export 'src/formats/epub/epub_url.dart';
-export 'src/formats/epub/epub_xml.dart'
-    show EpubMediaType, EpubNamespace, normalizeWhitespace;
-export 'src/formats/fb2/fb2_book.dart';
-export 'src/formats/mobi/kf8_book.dart';
-export 'src/formats/mobi/mobi6_book.dart';
-export 'src/formats/mobi/mobi_book.dart';
-export 'src/formats/mobi/mobi_compression.dart';
-export 'src/formats/mobi/mobi_container.dart';
-export 'src/formats/mobi/mobi_headers.dart';
-export 'src/formats/mobi/mobi_index.dart';
-export 'src/formats/mobi/pdb.dart';
-export 'src/formats/pdf_book.dart';
-export 'src/formats/pdf_text_layer.dart';
-export 'src/formats/pdf_text_layer_cache.dart';
-export 'src/search/pdf_book_search.dart';
+export 'src/search/text_node_search.dart';
 export 'src/search/text_search.dart';
 export 'src/text/charsets.dart';
 export 'src/text/html_entities.dart';
-export 'src/pdf/pdf_engine.dart';
+export 'src/text/hyphenation_patterns.dart'
+    show HyphenationPatterns, hyphenationPatternsFor;
+export 'src/text/hyphenator.dart';
+export 'src/text/selection_normalizer.dart';
+export 'src/text/sentence_breaks.dart';
+export 'src/text/whitespace.dart';
 export 'src/image/image_dimensions.dart';
 export 'src/image/page_content.dart';
 export 'src/css/computed_style.dart';
+export 'src/css/css_custom_properties.dart' show CssCustomProperties;
+export 'src/css/css_media.dart';
 export 'src/css/css_properties.dart';
 export 'src/css/css_selector.dart';
 export 'src/css/css_syntax.dart';
@@ -56,31 +42,53 @@ export 'src/css/style_resolver.dart';
 export 'src/css/stylesheet_loader.dart';
 export 'src/css/ua_stylesheet.dart';
 export 'src/document/content_document.dart';
+export 'src/document/text_point.dart';
+export 'src/layout/book_fonts.dart';
+export 'src/layout/book_image_cache.dart';
+export 'src/layout/book_style.dart';
+export 'src/layout/box_builder.dart';
+export 'src/layout/box_tree.dart';
+export 'src/layout/column_layout.dart';
+export 'src/layout/column_pages.dart';
+export 'src/layout/inline_styler.dart';
+export 'src/layout/list_markers.dart';
+export 'src/layout/paragraph_layout.dart';
+export 'src/layout/text_fragment_view.dart';
+export 'src/layout/text_page.dart';
+export 'src/layout/text_page_highlights.dart';
+export 'src/layout/text_page_selection.dart';
+export 'src/layout/text_source_map.dart';
+export 'src/progress/section_progress.dart';
+export 'src/progress/toc_progress.dart';
+export 'src/text_book/footnotes.dart';
+export 'src/text_book/highlight_merge.dart';
+export 'src/text_book/section_preparer.dart';
+export 'src/text_book/selection_context.dart';
+export 'src/text_book/text_anchor.dart';
+export 'src/text_book/text_book_search.dart';
+export 'src/text_book/text_locator.dart';
+export 'src/text_book/text_page_geometry.dart';
+export 'src/text_book/text_pages_controller.dart';
+export 'src/text_book/text_pages_view.dart';
+export 'src/text_book/text_scroll_controller.dart';
+export 'src/text_book/text_scroll_view.dart';
+export 'src/text_book/text_selection_details.dart';
+export 'src/text_book/text_book_layout.dart';
+export 'src/text_book/text_book_support.dart';
+export 'src/text_book/text_book_source.dart';
+export 'src/text_book/text_links.dart';
 export 'src/epubcfi/cfi.dart';
 export 'src/epubcfi/cfi_node.dart';
 export 'src/epubcfi/cfi_resolve.dart';
 export 'src/epubcfi/fake_cfi.dart';
 export 'src/epubcfi/xml_cfi_document.dart';
-export 'src/epubcfi/pdf_anchor.dart';
 export 'src/metadata/book_metadata.dart';
-export 'src/metadata/comic_metadata.dart';
 export 'src/metadata/cover_thumbnail.dart';
-export 'src/metadata/pdf_metadata.dart';
-export 'src/metadata/text_book_metadata.dart';
-export 'src/fixed_layout/comic_page_image.dart';
 export 'src/fixed_layout/spread_layout.dart';
-export 'src/formats/comic_page_source.dart';
 export 'src/fixed_layout/fixed_pages_controller.dart';
 export 'src/fixed_layout/fixed_page_source.dart';
 export 'src/fixed_layout/fixed_pages_view.dart';
 export 'src/fixed_layout/comic_image_area.dart';
 export 'src/fixed_layout/comic_image_area_layer.dart';
-export 'src/fixed_layout/comic_page_thumbnail.dart';
 export 'src/fixed_layout/page_colors.dart';
-export 'src/fixed_layout/pdf_page_content.dart';
-export 'src/fixed_layout/pdf_page_image.dart';
-export 'src/fixed_layout/pdf_pages.dart';
-export 'src/fixed_layout/pdf_text_overlay.dart';
-export 'src/fixed_layout/pdf_text_selection.dart';
 export 'src/fixed_layout/zoom_tiles.dart';
-export 'src/fixed_layout/pdf_page_thumbnail.dart';

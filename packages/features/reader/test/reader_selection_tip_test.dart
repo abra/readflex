@@ -6,14 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_bloc.dart';
+import 'package:reader/src/reader_document_features.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:reader/src/reader_selection_tip.dart';
 import 'package:reader/src/reader_selection_tip_cubit.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:toast_service/toast_service.dart';
@@ -506,7 +506,7 @@ void main() {
       );
     }
 
-    Future<void> pumpDriver(WidgetTester tester, {bool webViewReady = true}) =>
+    Future<void> pumpDriver(WidgetTester tester, {bool surfaceReady = true}) =>
         pumpHost(
           tester,
           MultiBlocProvider(
@@ -517,7 +517,7 @@ void main() {
               BlocProvider.value(value: selection),
             ],
             child: Stack(
-              children: [ReaderSelectionTipDriver(webViewReady: webViewReady)],
+              children: [ReaderSelectionTipDriver(surfaceReady: surfaceReady)],
             ),
           ),
         );
@@ -526,9 +526,9 @@ void main() {
       tester,
     ) async {
       emitReady(epub);
-      await pumpDriver(tester, webViewReady: false);
+      await pumpDriver(tester, surfaceReady: false);
       await tester.pump();
-      expect(card, findsNothing, reason: 'the WebView has not painted yet');
+      expect(card, findsNothing, reason: 'the page has not painted yet');
 
       await pumpDriver(tester);
       await tester.pump();

@@ -27,6 +27,11 @@ wrapped into `StorageException` (from `domain_models`) before surfacing.
 Entries carry optional `sourceId` + `sourceType` so they can be filtered by
 the reading session that produced them (see `features/practice`).
 
+`findEntry` uses an indexed Unicode lowercase key maintained by `DictionaryDao`
+on insert and word edits. It recognizes capitalized Cyrillic and accented words,
+keeps the original spelling, and returns the newest match within the optional
+source scope. Schema v27 backfills keys for already saved entries.
+
 `changes` exists for cross-feature freshness. For example, the translate sheet
 can save an entry while the Dictionary tab is already mounted; the tab listens
 to this stream and reloads without depending on the translate feature.

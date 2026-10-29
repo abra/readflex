@@ -23,7 +23,7 @@ double _returnRowHeight(BuildContext context) =>
     math.max(48, _lineHeight(context, context.text.labelLarge) * 2 + 16);
 
 /// Overlay extent, including large text and bottom system insets. Used to
-/// describe the covered band to the WebView, never to resize its content.
+/// describe the covered band to the page, never to resize its content.
 double readerSearchNavigationHeight(
   BuildContext context, {
   required bool canReturn,

@@ -5,7 +5,9 @@ import 'package:uuid/uuid.dart' show Uuid;
 
 import 'mappers/highlight_to_domain.dart';
 import 'mappers/highlight_to_storage.dart';
+import 'mappers/review_item_snapshot.dart';
 import 'merge_highlight_notes.dart';
+import 'highlight_deletion.dart';
 
 const _uuid = Uuid();
 
@@ -264,6 +266,49 @@ class HighlightRepository {
       await _db.transaction(() async {
         await _db.reviewItemsDao.deleteItemsByIds([id]);
         await _dao.deleteHighlight(id);
+      });
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  /// Captures the highlight and its review state in the deletion transaction.
+  Future<HighlightDeletion?> deleteHighlightForUndo(String id) async {
+    try {
+      return await _db.transaction(() async {
+        final row = await _dao.highlightById(id);
+        final review = await _db.reviewItemsDao.byItemId(id);
+        await _db.reviewItemsDao.deleteItemsByIds([id]);
+        await _dao.deleteHighlight(id);
+        return row == null
+            ? null
+            : HighlightDeletion(
+                highlight: row.toDomainModel(),
+                reviewItem: review?.toReviewItem(),
+              );
+      });
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  /// Restores the original identity and schedule without overwriting newer rows.
+  Future<Highlight> restoreHighlight(HighlightDeletion deletion) async {
+    try {
+      return await _db.transaction(() async {
+        final highlight = deletion.highlight;
+        final sourceExists = highlight.sourceType == SourceType.book
+            ? await _db.booksDao.bookById(highlight.sourceId) != null
+            : await _db.articlesDao.articleById(highlight.sourceId) != null;
+        if (!sourceExists) throw StateError('Reading source no longer exists');
+        final existing = await _dao.highlightById(highlight.id);
+        if (existing != null) return existing.toDomainModel();
+        await _dao.insertHighlight(highlight.toStorageModel());
+        final review = deletion.reviewItem;
+        if (review != null) {
+          await _db.reviewItemsDao.ensureItem(review.toReviewRow());
+        }
+        return highlight;
       });
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);

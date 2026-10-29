@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vellum/vellum.dart' show FixedPagePainter;
 
 /// Bounded condition wait, including real SQLite/platform work outside the
 /// widget test's fake clock. Avoid pumpAndSettle while a spinner is active.
@@ -24,6 +25,20 @@ Future<void> waitForUi(
   }
   await tester.pump();
 }
+
+/// Waits until a fixed-layout page (comic, PDF) paints its image: the
+/// engine decodes it off the fake clock.
+Future<void> waitForFixedPage(WidgetTester tester) => waitForUi(
+  tester,
+  () => find
+      .byWidgetPredicate(
+        (widget) => widget is CustomPaint && widget.painter is FixedPagePainter,
+      )
+      .evaluate()
+      .isNotEmpty,
+  description: 'a painted page',
+  timeout: const Duration(seconds: 30),
+);
 
 Future<void> tapUi(WidgetTester tester, Finder target) async {
   await waitForUi(

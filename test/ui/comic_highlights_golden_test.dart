@@ -1,10 +1,7 @@
-import 'dart:convert';
-
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/reader.dart';
@@ -13,10 +10,9 @@ import 'package:reader/src/reader_page_thumbnail_cubit.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_image_highlight_preview.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:vellum/all_formats.dart' show FixedPagesView;
 
 import '../support/comic_fixture.dart';
-import '../support/reader_test_platform.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
@@ -24,23 +20,19 @@ import 'golden_support.dart';
 void main() {
   setUpAll(loadUiFonts);
 
+  /// Waits until every mounted preview paints its crop, on the real event
+  /// loop: the engine reads and decodes pages from the archive.
   Future<void> decodeVisiblePreviews(WidgetTester tester) async {
-    await tester.pumpAndSettle();
     final previews = find.byType(ReaderImageHighlightPreview);
-    final context = tester.element(previews.first);
-    final cache = context.read<ReaderPageThumbnailCubit>().state;
-    // The bridge decodes base64 into new byte identities. Precache the
-    // providers the cubit holds, not the fixture bytes, before capturing
-    // painted crops.
-    await tester.runAsync(() async {
-      for (final image in cache.values) {
-        if (image != null) await precacheImage(image, context);
-      }
-    });
-    await tester.pumpAndSettle();
-    expect(
-      find.descendant(of: previews, matching: find.byIcon(AppIcons.book)),
-      findsNothing,
+    final placeholders = find.descendant(
+      of: previews,
+      matching: find.byIcon(AppIcons.book),
+    );
+    await waitForUi(
+      tester,
+      () => previews.evaluate().isNotEmpty && placeholders.evaluate().isEmpty,
+      description: 'decoded previews',
+      timeout: const Duration(seconds: 30),
     );
   }
 
@@ -53,34 +45,13 @@ void main() {
         ))!;
         addTearDown(app.dispose);
         final comic = (await tester.runAsync(() => addComicFixture(app)))!;
-        final bytes = (await tester.runAsync(
-          () => comicPageFixture(2, size: const Size(240, 360)),
-        ))!;
-        final previous = InAppWebViewPlatform.instance;
-        final requests = <int>[];
-        var failPreview = false;
-        final platform = ReaderTestPlatform(
-          onAsyncJavaScript: (body, args) async {
-            expect(body, contains('readflexPageThumbnail'));
-            requests.add(args['index'] as int);
-            return CallAsyncJavaScriptResult(
-              value: failPreview
-                  ? null
-                  : 'data:image/jpeg;base64,${base64Encode(bytes)}',
-            );
-          },
-        );
-        InAppWebViewPlatform.instance = platform;
-        addTearDown(() {
-          if (previous != null) InAppWebViewPlatform.instance = previous;
-        });
         final note = List.filled(
           8,
           'The two panels tell the story from different perspectives.',
         ).join(' ');
         await tester.runAsync(() async {
-          // More entries than fit in any viewport. Shared pages must not start
-          // duplicate bridge work, nor should offscreen rows request thumbnails.
+          // More entries than fit in any viewport. Offscreen rows must not
+          // request thumbnails.
           for (var index = 0; index < 100; index++) {
             await app.highlightRepository.addImageAreaHighlight(
               sourceId: comic.id,
@@ -107,7 +78,6 @@ void main() {
           profile,
           (_) => ReaderScreen(
             sourceId: comic.id,
-            serverBaseUri: Uri.parse('http://127.0.0.1:49152'),
             bookRepository: app.bookRepository,
             highlightRepository: app.highlightRepository,
             preferencesService: app.preferencesService,
@@ -121,26 +91,22 @@ void main() {
         );
         await waitForUi(
           tester,
-          () => platform.views.any(
-            (v) => v.created && v.controller.handlers.containsKey('onLoadEnd'),
-          ),
-          description: 'reader bridge',
+          () => find.byType(FixedPagesView).evaluate().isNotEmpty,
+          description: 'comic pages',
+          timeout: const Duration(seconds: 30),
         );
-        final bridge = platform.views.firstWhere((v) => v.created).controller;
-        bridge.handlers['onLoadEnd']!([]);
-        final context = tester.element(find.byType(BookReaderWebView));
+        final context = tester.element(find.byType(FixedPagesView));
         final bloc = context.read<ReaderBloc>();
         await waitForUi(
           tester,
           () => bloc.state.highlights.length == 100,
           description: 'saved areas',
         );
+        await waitForFixedPage(tester);
         final ui = context.read<ReaderUiCubit>();
         final l10n = context.l10n;
-        // No TOC is sent: isolate Highlights from the separately tested Pages grid.
         ui.openTocDrawer();
         await tester.pumpAndSettle();
-        expect(requests, isEmpty);
         await tester.ensureVisible(find.text(l10n.readerHighlights));
         await tapUi(tester, find.text(l10n.readerHighlights));
         await decodeVisiblePreviews(tester);
@@ -153,8 +119,14 @@ void main() {
             )
             .toSet();
         expect(mounted, isNotEmpty);
-        expect(requests.toSet(), mounted);
-        expect(requests.length, mounted.length);
+        final thumbnails = tester
+            .element(previews.first)
+            .read<ReaderPageThumbnailCubit>();
+        expect(
+          thumbnails.state.keys.toSet(),
+          mounted,
+          reason: 'only mounted rows load their pages',
+        );
         expect(
           find.byType(ReaderHighlightListTile).evaluate().length,
           lessThan(10),
@@ -162,14 +134,8 @@ void main() {
         expect(find.text('Page highlight'), findsNothing);
         expect(find.byTooltip(l10n.commonCopy), findsNothing);
         await expectUiGolden(tester, profile, 'comic-highlights');
-        final thumbnails = tester
-            .element(previews.first)
-            .read<ReaderPageThumbnailCubit>();
         await tapUi(tester, find.text(l10n.readerBookmarks));
         expect(thumbnails.isClosed, isTrue);
-        final count = requests.length;
-        await tester.pump(const Duration(seconds: 1));
-        expect(requests.length, count);
 
         if (profile == VisualProfile.phone) {
           await tapUi(tester, find.text(l10n.readerHighlights));
@@ -190,38 +156,15 @@ void main() {
           );
           await tapUi(tester, find.text('A quiet afternoon.'));
           expect(ui.state.tocDrawerVisible, isFalse);
-          expect(
-            bridge.scripts.any((s) => s.contains('goToSectionIndex(4)')),
-            isTrue,
-          );
-          final beforeOpen = requests.length;
-          await tester.pumpAndSettle();
-          expect(requests.length, beforeOpen);
-
-          failPreview = true;
-          ui.openTocDrawer();
-          await tester.pumpAndSettle();
-          // Tab selection may be restored or reset by the host; choose it explicitly.
-          await tapUi(tester, find.text(l10n.readerHighlights));
-          await tester.pumpAndSettle();
-          expect(find.byTooltip(l10n.commonRetry), findsWidgets);
-          await expectUiGolden(
+          await waitForUi(
             tester,
-            profile,
-            'comic-highlights-preview-error',
+            () => bloc.state.document?.currentCfi == 'epubcfi(/6/10)',
+            description: 'the area\'s page',
           );
-          failPreview = false;
-          // The retained list may leave a row's preview partly below the
-          // sheet; retry the first one in view.
-          await tapUi(
-            tester,
-            find.byTooltip(l10n.commonRetry).hitTestable().first,
-          );
-          await decodeVisiblePreviews(tester);
-          await tester.pumpAndSettle();
-          expect(find.byTooltip(l10n.commonRetry), findsNothing);
-          expect(ui.state.tocDrawerVisible, isTrue);
+          await tester.pump(const Duration(milliseconds: 350));
         }
+        // The reader saves its place after a pause.
+        await tester.pump(const Duration(seconds: 1));
         await unmountUi(tester);
       },
       tags: ['golden'],

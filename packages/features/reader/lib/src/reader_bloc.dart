@@ -7,9 +7,11 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
-import 'package:reader_webview/reader_webview.dart';
 
+import 'reader_document_features.dart';
+import 'reader_position.dart';
 import 'reader_progress_label.dart';
+import 'reader_toc_item.dart';
 
 part 'reader_event.dart';
 
@@ -53,7 +55,7 @@ String? _normalizedHighlightNote(String? note) {
 ///   * resolve a [sourceId] into a reader document on load and bump its
 ///     `lastOpenedAt` timestamp;
 ///   * persist position updates (CFI + progress fraction) coming from the
-///     WebView back to the repository, reporting each saved write through
+///     page surface back to the repository, reporting each saved write through
 ///     `onReadingPositionSaved`;
 ///   * refresh highlights when a TextAction (e.g. "Highlight") completes.
 ///
@@ -85,14 +87,13 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
                ),
        ) {
     on<ReaderSourceLoadRequested>(_onSourceLoadRequested);
-    on<ReaderWebViewFailed>((event, emit) {
+    on<ReaderSurfaceFailed>((event, emit) {
       if (event.sourceId != state.sourceId) return;
       _loadGeneration++;
-      addError(event.failure, StackTrace.current);
+      addError(event.error, event.stackTrace ?? StackTrace.current);
       emit(state.copyWith(status: ReaderStatus.failure));
     });
     on<ReaderBookPositionUpdated>(_onBookPositionUpdated);
-    on<ReaderSeekRequested>(_onSeekRequested);
     on<ReaderHighlightEvent>(
       _onHighlightEvent,
       transformer: (events, mapper) => events.asyncExpand(mapper),
@@ -114,10 +115,10 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   /// update while the reader still covers it.
   final ValueChanged<double>? _onReadingPositionSaved;
 
-  /// Pending document to persist to the repository. foliate-js can emit frequent
-  /// `ReaderBookPositionUpdated` events during navigation, so the actual
-  /// repository write is debounced and SQLite is not hit on every
-  /// `onRelocated`. State is still emitted on every event so UI stays in sync.
+  /// Pending document to persist to the repository. Surfaces report every
+  /// move (`ReaderBookPositionUpdated`), so the actual repository write is
+  /// debounced and SQLite is not hit on every page turn. State is still
+  /// emitted on every event so UI stays in sync.
   ReaderDocument? _pendingPersist;
   Timer? _persistTimer;
   Future<void>? _persistenceTail;
@@ -128,11 +129,8 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   int _positionRevision = 0;
   int _highlightEffectVersion = 0;
   String? _livePositionSourceId;
-  double? _pendingArticleSeekProgress;
-  Timer? _pendingArticleSeekTimer;
+  final _highlightDeletions = <String, HighlightDeletion>{};
   static const _persistDebounce = Duration(milliseconds: 500);
-  static const _pendingArticleSeekTimeout = Duration(seconds: 5);
-  static const _articleSeekBounceThreshold = 0.02;
 
   @override
   Future<void> close() {
@@ -144,34 +142,13 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
 
   Future<void> _finishClose(Future<void> closing) async {
     await closing;
+    _highlightDeletions.clear();
     _persistTimer?.cancel();
     _persistTimer = null;
-    _clearPendingArticleSeek();
     await _flushPersist();
     // A timer may already have consumed the pending value; drain its write too.
     final activeWrite = _persistenceTail;
     if (activeWrite != null) await activeWrite;
-  }
-
-  void _onSeekRequested(
-    ReaderSeekRequested event,
-    Emitter<ReaderState> emit,
-  ) {
-    _clearPendingArticleSeek();
-    if (state.sourceType != SourceType.article) return;
-
-    final progress = _clampProgress(event.progress);
-    if (progress <= 0) return;
-
-    _pendingArticleSeekProgress = progress;
-    _pendingArticleSeekTimer = Timer(
-      _pendingArticleSeekTimeout,
-      _clearPendingArticleSeek,
-    );
-    _debugTraceReaderBloc(
-      'ReaderSeekRequested pending article seek '
-      'progress=${progress.toStringAsFixed(3)}',
-    );
   }
 
   Future<void> _onSourceLoadRequested(
@@ -182,6 +159,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     final highlightRevision = _highlightRevision;
     final bookmarkRevision = _bookmarkRevision;
     final hasInitialSource = state.document?.id == event.sourceId;
+    if (!hasInitialSource) _highlightDeletions.clear();
     final hasUsableSource =
         hasInitialSource && state.status == ReaderStatus.ready;
     if (!hasUsableSource) {
@@ -301,75 +279,20 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     );
   }
 
-  /// Persists a CFI + progress fraction emitted by the WebView for the
-  /// currently-open reader document.
-  ///
-  /// foliate-js can occasionally report a fraction slightly above 1.0
-  /// (overshoot at end-of-content / re-entry); we clamp to `[0, 1]` so
-  /// the library cover's progress pill stays sensible.
+  /// Persists a CFI + progress fraction the page surface reported for the
+  /// currently-open reader document, clamped to `[0, 1]` so the library
+  /// cover's progress pill stays sensible.
   Future<void> _onBookPositionUpdated(
     ReaderBookPositionUpdated event,
     Emitter<ReaderState> emit,
   ) async {
     final document = state.document;
     if (document == null) return;
-    final pendingArticleSeekProgress = _pendingArticleSeekProgress;
-    final seekProgressOverride = _articleSeekProgressOverride(
-      event: event,
-      pendingProgress: pendingArticleSeekProgress,
-    );
-    if (_isUnstableArticlePosition(
-          sourceType: state.sourceType,
-          event: event,
-        ) &&
-        seekProgressOverride == null) {
-      _debugTraceReaderBloc(
-        'ReaderBookPositionUpdated skip unstable article position '
-        'progress=${event.progress.toStringAsFixed(3)} '
-        'bookPage=${event.bookCurrentPage}/${event.bookTotalPages} '
-        'chapterPage=${event.chapterCurrentPage}/${event.chapterTotalPages}',
-      );
-      return;
-    }
-    if (seekProgressOverride != null) {
-      _debugTraceReaderBloc(
-        'ReaderBookPositionUpdated use pending article seek '
-        'target=${seekProgressOverride.toStringAsFixed(3)} '
-        'reported=${event.progress.toStringAsFixed(3)} '
-        'bookPage=${event.bookCurrentPage}/${event.bookTotalPages} '
-        'chapterPage=${event.chapterCurrentPage}/${event.chapterTotalPages}',
-      );
-    } else if (state.sourceType == SourceType.article &&
-        pendingArticleSeekProgress != null &&
-        event.progress > 0) {
-      _clearPendingArticleSeek();
-    }
-
-    // foliate-js's paginator allows navigation onto two blank trailing
-    // columns past the actual content (`atEnd: page >= pages - 2`).
-    // On those pages it reports `progress=0` / `bookCurrentPage=0` —
-    // not because we're at the start, but because there's no real
-    // content under the viewport. Use the paginator-reported `atEnd`
-    // signal to override the bogus numbers with the canonical
-    // "we're at the very end" values, the same trick readest uses.
+    // The last page reads 100%: its fraction is where the page starts.
     final total = event.bookTotalPages;
-    final isPhantomEnd = event.atEnd && total != null && total > 0;
-    final isSinglePageArticle =
-        state.sourceType == SourceType.article && total == 1;
-    final clampedProgress = _clampProgress(
-      seekProgressOverride ?? event.progress,
-    );
-    final progress = isPhantomEnd || isSinglePageArticle
-        ? 1.0
-        : _articleVisiblePageProgress(
-            sourceType: state.sourceType,
-            progress: clampedProgress,
-            bookCurrentPage: event.bookCurrentPage,
-            bookTotalPages: event.bookTotalPages,
-            chapterCurrentPage: event.chapterCurrentPage,
-            chapterTotalPages: event.chapterTotalPages,
-          );
-    final bookCurrentPage = isPhantomEnd ? total - 1 : event.bookCurrentPage;
+    final atLastPage = event.atEnd && total != null && total > 0;
+    final progress = atLastPage ? 1.0 : _clampProgress(event.progress);
+    final bookCurrentPage = atLastPage ? total - 1 : event.bookCurrentPage;
 
     final updated = document.copyWith(
       currentCfi: event.cfi,
@@ -397,7 +320,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     _positionRevision++;
     _livePositionSourceId = document.id;
 
-    // Emit immediately so chrome stays in sync with the WebView.
+    // Emit immediately so chrome stays in sync with the page.
     // `sizeTotal` is constant per book; cache the first non-null value and
     // never overwrite it back to null on subsequent emits.
     emit(
@@ -478,36 +401,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
     return operation;
   }
 
-  void _clearPendingArticleSeek() {
-    _pendingArticleSeekTimer?.cancel();
-    _pendingArticleSeekTimer = null;
-    _pendingArticleSeekProgress = null;
-  }
-
-  double? _articleSeekProgressOverride({
-    required ReaderBookPositionUpdated event,
-    required double? pendingProgress,
-  }) {
-    if (state.sourceType != SourceType.article || pendingProgress == null) {
-      return null;
-    }
-    if (pendingProgress <= 0 || event.atEnd) return null;
-
-    final reportedProgress = _clampProgress(event.progress);
-    if (reportedProgress > _articleSeekBounceThreshold) return null;
-
-    final chapterTotalPages = _positivePageTotal(event.chapterTotalPages);
-    final chapterCurrentPage = _visibleArticlePage(event.chapterCurrentPage);
-    final hasUsefulChapterPosition =
-        chapterTotalPages != null &&
-        chapterTotalPages > 1 &&
-        chapterCurrentPage != null &&
-        chapterCurrentPage > 1;
-    if (hasUsefulChapterPosition) return null;
-
-    return pendingProgress;
-  }
-
   Future<void> _persistReaderDocument(ReaderDocument document) async {
     if (document.sourceType == SourceType.article) {
       final articleRepository = _articleRepository;
@@ -538,6 +431,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ) async {
     final sourceId = state.sourceId;
     if (sourceId == null) return;
+    bool isCurrent() => !emit.isDone && state.sourceId == sourceId;
     final operation = switch (event) {
       ReaderHighlightsRefreshed() ||
       ReaderHighlightRestored() ||
@@ -552,6 +446,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       case ReaderHighlightsRefreshed():
         break;
       case ReaderHighlightUndoDismissed():
+        _highlightDeletions.clear();
         emit(state.copyWith(highlightEdits: const ReaderHighlightEdits()));
         return;
       case ReaderHighlightRestored(:final highlightId):
@@ -576,11 +471,17 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
             _highlightRepository.updateHighlightNote(highlightId, normalized);
       case ReaderHighlightDeleteRequested(:final highlightId):
         // Unknown ids are still deleted; only a known row gets an Undo entry.
-        undoHighlight = _highlightById(state.highlights, highlightId);
-        write = () => _highlightRepository.deleteHighlight(highlightId);
+        write = () async {
+          final deletion = await _highlightRepository.deleteHighlightForUndo(
+            highlightId,
+          );
+          if (deletion != null && isCurrent()) {
+            _highlightDeletions[highlightId] = deletion;
+            undoHighlight = deletion.highlight;
+          }
+        };
     }
 
-    bool isCurrent() => !emit.isDone && state.sourceId == sourceId;
     ReaderHighlightEffect? effect(bool success) => operation == null
         ? null
         : ReaderHighlightEffect(
@@ -600,17 +501,18 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       _debugTraceReaderHighlightBloc(
         'refresh-success source=$sourceId count=${highlights.length}',
       );
+      final deletedHighlight = undoHighlight;
       emit(
         state.copyWith(
           highlights: highlights,
           highlightEffect: effect(true),
-          highlightEdits: undoHighlight == null
+          highlightEdits: deletedHighlight == null
               ? state.highlightEdits
               : ReaderHighlightEdits(
                   removed: [
                     for (final h in state.highlightEdits.removed)
-                      if (h.id != undoHighlight.id) h,
-                    undoHighlight,
+                      if (h.id != deletedHighlight.id) h,
+                    deletedHighlight,
                   ],
                   busyId: state.highlightEdits.busyId,
                   failedId: state.highlightEdits.failedId,
@@ -744,60 +646,11 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   }
 }
 
-double _articleVisiblePageProgress({
-  required SourceType sourceType,
-  required double progress,
-  required int? bookCurrentPage,
-  required int? bookTotalPages,
-  required int? chapterCurrentPage,
-  required int? chapterTotalPages,
-}) {
-  if (sourceType != SourceType.article || progress > 0) return progress;
-
-  final totalPages =
-      _positivePageTotal(bookTotalPages) ??
-      _positivePageTotal(chapterTotalPages);
-  if (totalPages == null || totalPages <= 1) return progress;
-
-  final currentPage =
-      _visibleArticlePage(bookCurrentPage) ??
-      _visibleArticlePage(chapterCurrentPage) ??
-      1;
-  return (currentPage / totalPages).clamp(0.0, 1.0).toDouble();
-}
-
-int? _positivePageTotal(int? value) {
-  if (value == null || value <= 0) return null;
-  return value;
-}
-
-int? _visibleArticlePage(int? value) {
-  if (value == null) return null;
-  return value < 1 ? 1 : value;
-}
-
 double _clampProgress(double progress) {
   if (!progress.isFinite) return 0;
   if (progress < 0) return 0;
   if (progress > 1) return 1;
   return progress;
-}
-
-bool _isUnstableArticlePosition({
-  required SourceType sourceType,
-  required ReaderBookPositionUpdated event,
-}) {
-  if (sourceType != SourceType.article) return false;
-
-  final chapterTotal = event.chapterTotalPages;
-  if (chapterTotal == 0) return true;
-
-  final bookTotal = event.bookTotalPages;
-  if (bookTotal == null || bookTotal <= 0 || chapterTotal == null) {
-    return false;
-  }
-
-  return chapterTotal > bookTotal + 1;
 }
 
 bool _inferredBookPageProgressionRtl(Book book) {

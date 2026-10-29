@@ -2,10 +2,10 @@ import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_highlight_controls.dart';
 import 'package:reader/src/reader_screen.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_selection.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 void main() {
   testWidgets('tapping the page dismisses the popup without reaching it', (
@@ -22,7 +22,7 @@ void main() {
         home: Scaffold(
           body: Stack(
             children: [
-              // Stands in for the WebView page: a page tap would toggle
+              // Stands in for the page: a page tap would toggle
               // chrome or turn the page.
               Positioned.fill(
                 child: GestureDetector(

@@ -577,8 +577,8 @@ dismissal, system Back, exit completion, and both transparent/animated barriers.
 check adaptive choices, disabled states, viewport gutters and fixed context.
 Root `test/ui/settings_consistency_test.dart` compares Display and Appearance
 directly; goldens cover the resulting compositions in light/dark, large text,
-landscape and RTL. Native Library/Reader flows verify persistence and WebView
-identity, rather than treating a matching screenshot as functional proof.
+landscape and RTL. Native Library/Reader flows verify persistence and the
+reader page's identity, rather than treating a matching screenshot as functional proof.
 
 `test/control_accessibility_contract_test.dart` checks named tap targets against
 the iOS/Android policies, selected/disabled choice semantics and busy-action

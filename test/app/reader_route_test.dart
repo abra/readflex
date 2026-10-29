@@ -15,7 +15,6 @@ void main() {
 
   setUp(() async {
     app = await UiTestApp.create();
-    await app.readerServer.start();
     router = buildRouter(deps: app.dependencies);
   });
   tearDown(() async {
@@ -107,7 +106,6 @@ void main() {
             .whereType<DictionaryAction>()
             .single;
         expect(translate.onDefine, dictionary.onExecute);
-        expect(reader.serverBaseUri, app.readerServer.baseUri);
       },
     );
   }

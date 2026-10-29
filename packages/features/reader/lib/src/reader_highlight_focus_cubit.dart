@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:reader_webview/reader_webview.dart';
+
+import 'reader_selection.dart';
 
 /// Transient UI state for a tapped saved highlight.
 ///

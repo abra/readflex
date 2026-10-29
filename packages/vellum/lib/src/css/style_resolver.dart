@@ -20,30 +20,45 @@ import 'dart:collection';
 
 import '../document/content_document.dart';
 import 'computed_style.dart';
+import 'css_custom_properties.dart';
+import 'css_media.dart';
 import 'css_properties.dart';
 import 'css_selector.dart';
 import 'css_syntax.dart';
-import 'css_tokenizer.dart';
 import 'css_values.dart';
+import 'stylesheet_loader.dart' show cssImageSource;
 
 enum CssOrigin { userAgent, user, author }
 
-/// A stylesheet with the origin it came from.
+/// A stylesheet with the origin it came from and, for URLs in it, its
+/// address.
 class CssSheetSource {
-  const CssSheetSource(this.sheet, this.origin);
+  const CssSheetSource(this.sheet, this.origin, {this.baseHref});
 
   final CssStyleSheet sheet;
   final CssOrigin origin;
+
+  /// What the sheet's `url()`s are relative to; null leaves them as
+  /// written.
+  final String? baseHref;
 }
 
 /// The computed styles of one document, by element index. Text nodes
 /// take their parent's style.
 class ComputedStyles {
-  ComputedStyles._(this.document, this._styles, this.rootFontSize);
+  ComputedStyles._(
+    this.document,
+    this._styles,
+    this.rootFontSize,
+    this._before,
+    this._after,
+  );
 
   final ContentDocument document;
   final List<ComputedStyle?> _styles;
   final double rootFontSize;
+  final Map<int, ComputedStyle> _before;
+  final Map<int, ComputedStyle> _after;
 
   ComputedStyle operator [](int node) {
     var n = node;
@@ -52,6 +67,12 @@ class ComputedStyles {
     }
     return _styles[n]!;
   }
+
+  /// The style of [element]'s `::before`, when it has content.
+  ComputedStyle? before(int element) => _before[element];
+
+  /// The style of [element]'s `::after`, when it has content.
+  ComputedStyle? after(int element) => _after[element];
 
   /// How many distinct style objects the document needed.
   int get distinctStyleCount =>
@@ -65,31 +86,51 @@ class StyleResolverOptions {
     this.rootFontSize = 16,
     this.viewportWidth = 0,
     this.viewportHeight = 0,
+    this.inlineStyleTransform,
   });
 
   /// The size `medium` and `1rem` mean, in px.
   final double rootFontSize;
   final double viewportWidth;
   final double viewportHeight;
+
+  /// Rewrites `style` attributes before they are parsed.
+  final String Function(String css)? inlineStyleTransform;
 }
 
 class StyleResolver {
   /// Builds the rule index for [sheets], in the order given within each
-  /// origin. `@media` blocks are included unless they name `print` only;
+  /// origin. `@media` blocks are included when their query matches
+  /// [media], `@supports` blocks when vellum supports their condition;
   /// other at-rules are ignored here (`@import` is the loader's job).
-  StyleResolver(List<CssSheetSource> sheets) {
+  StyleResolver(
+    List<CssSheetSource> sheets, {
+    CssMediaEnvironment media = const CssMediaEnvironment(),
+  }) : _media = media {
     var order = 0;
     for (final source in sheets) {
-      order = _index(source.sheet.rules, source.origin, order);
+      order = _index(
+        source.sheet.rules,
+        source.origin,
+        order,
+        source.baseHref,
+      );
     }
   }
 
-  final _byId = <String, List<_IndexedRule>>{};
-  final _byClass = <String, List<_IndexedRule>>{};
-  final _byType = <String, List<_IndexedRule>>{};
-  final _universal = <_IndexedRule>[];
+  final CssMediaEnvironment _media;
 
-  int _index(List<CssRule> rules, CssOrigin origin, int order) {
+  /// Rules for elements, and for their `::before` and `::after`.
+  final _rules = _RuleIndex();
+  final _beforeRules = _RuleIndex();
+  final _afterRules = _RuleIndex();
+
+  int _index(
+    List<CssRule> rules,
+    CssOrigin origin,
+    int order,
+    String? baseHref,
+  ) {
     var next = order;
     for (final rule in rules) {
       switch (rule) {
@@ -97,32 +138,30 @@ class StyleResolver {
           final selectors = CssSelectorList.parse(rule.prelude);
           if (selectors == null) continue;
           final declarations = [
-            for (final d in rule.declarations) ...parseCssDeclaration(d),
+            for (final d in rule.declarations)
+              for (final parsed in parseCssDeclaration(d))
+                _withBase(parsed, baseHref),
           ];
           if (declarations.isEmpty) continue;
           for (final selector in selectors.selectors) {
             if (selector.neverMatches) continue;
-            final indexed = _IndexedRule(
-              selector,
-              declarations,
-              origin,
-              next++,
-            );
-            final last = selector.compounds.last;
-            final id = last.simples.whereType<CssIdSelector>().firstOrNull;
-            final cls = last.simples.whereType<CssClassSelector>().firstOrNull;
-            if (id != null) {
-              _byId.putIfAbsent(id.id, () => []).add(indexed);
-            } else if (cls != null) {
-              _byClass.putIfAbsent(cls.name, () => []).add(indexed);
-            } else if (last.type != null) {
-              _byType.putIfAbsent(last.type!, () => []).add(indexed);
-            } else {
-              _universal.add(indexed);
-            }
+            final index = switch (selector.pseudoElement) {
+              null => _rules,
+              'before' => _beforeRules,
+              'after' => _afterRules,
+              // `::first-letter`, `::marker` …: not drawn.
+              _ => null,
+            };
+            index?.add(_IndexedRule(selector, declarations, origin, next++));
           }
         case CssAtRule(name: 'media', :final rules?):
-          if (_mediaApplies(rule.prelude)) next = _index(rules, origin, next);
+          if (cssMediaQueryListMatches(rule.prelude, _media)) {
+            next = _index(rules, origin, next, baseHref);
+          }
+        case CssAtRule(name: 'supports', :final rules?):
+          if (cssSupportsConditionHolds(rule.prelude)) {
+            next = _index(rules, origin, next, baseHref);
+          }
         case CssAtRule():
           break;
       }
@@ -130,28 +169,35 @@ class StyleResolver {
     return next;
   }
 
-  /// A media query list applies unless it is `print` alone (or with
-  /// `only`); `not print`, `screen`, `all` and feature queries apply.
-  static bool _mediaApplies(List<CssComponentValue> prelude) {
-    final idents = [
-      for (final v in prelude)
-        if (v is CssTokenValue && v.token.type == CssTokenType.ident)
-          v.token.value.toLowerCase(),
-    ];
-    final queries = cssSplitOnCommas(prelude);
-    if (idents.isEmpty) return true;
-    for (final query in queries) {
-      final words = [
-        for (final v in query)
-          if (v is CssTokenValue && v.token.type == CssTokenType.ident)
-            v.token.value.toLowerCase(),
-      ];
-      final negated = words.contains('not');
-      final print = words.contains('print');
-      final other = words.any((w) => w == 'screen' || w == 'all');
-      if (negated ? print || !other : !print || other) return true;
+  /// [declaration] with its `content` and background image URLs
+  /// relative to [baseHref].
+  static CssParsedDeclaration _withBase(
+    CssParsedDeclaration declaration,
+    String? baseHref,
+  ) {
+    final value = declaration.value;
+    if (baseHref != null && value is CssImageUrlValue) {
+      return CssParsedDeclaration(
+        declaration.property,
+        CssImageUrlValue(value.url, base: baseHref),
+        isImportant: declaration.isImportant,
+      );
     }
-    return false;
+    if (baseHref == null ||
+        value is! CssContentValue ||
+        !value.items.any((i) => i is CssContentUrl)) {
+      return declaration;
+    }
+    return CssParsedDeclaration(
+      declaration.property,
+      CssContentValue([
+        for (final item in value.items)
+          item is CssContentUrl
+              ? CssContentUrl(item.url, base: baseHref)
+              : item,
+      ]),
+      isImportant: declaration.isImportant,
+    );
   }
 
   /// Resolves every element of [document].
@@ -160,71 +206,143 @@ class StyleResolver {
     StyleResolverOptions options = const StyleResolverOptions(),
   }) {
     final styles = List<ComputedStyle?>.filled(document.nodeCount, null);
-    final intern = HashMap<ComputedStyle, ComputedStyle>();
+    final before = <int, ComputedStyle>{};
+    final after = <int, ComputedStyle>{};
+    final run = _ResolveRun(document, options);
     for (var n = 0; n < document.nodeCount; n++) {
       if (!document.isElement(n)) continue;
       final parent = document.parentOf(n);
       final parentStyle = parent == ContentDocument.none
           ? null
           : styles[parent];
-      final computed = _compute(document, n, parentStyle, options);
-      styles[n] = intern.putIfAbsent(computed, () => computed);
+      final style = styles[n] = _compute(run, n, parentStyle);
+      if (style.display == CssDisplay.none) continue;
+      if (_pseudo(run, n, _beforeRules, style) case final b?) before[n] = b;
+      if (_pseudo(run, n, _afterRules, style) case final a?) after[n] = a;
     }
-    return ComputedStyles._(document, styles, options.rootFontSize);
+    return ComputedStyles._(
+      document,
+      styles,
+      options.rootFontSize,
+      before,
+      after,
+    );
   }
 
-  ComputedStyle _compute(
-    ContentDocument doc,
+  /// The style of [element]'s pseudo-element from [rules], inheriting
+  /// from the element's [style]; null when no rule gives it content.
+  ComputedStyle? _pseudo(
+    _ResolveRun run,
     int element,
-    ComputedStyle? parent,
-    StyleResolverOptions options,
+    _RuleIndex rules,
+    ComputedStyle style,
   ) {
-    final candidates = <_Candidate>[];
-    void collect(List<_IndexedRule>? rules) {
-      if (rules == null) return;
-      for (final rule in rules) {
-        if (rule.selector.matches(doc, element)) {
-          for (final d in rule.declarations) {
-            candidates.add(
-              _Candidate(
-                d,
-                _level(rule.origin, d.isImportant),
-                rule.selector.specificity,
-                rule.order,
-              ),
-            );
-          }
-        }
+    if (rules.isEmpty) return null;
+    final matched = <_IndexedRule>[];
+    rules.collect(
+      run.document,
+      element,
+      (rule) => rule.selector.matchesOriginating(run.document, element),
+      matched,
+    );
+    if (matched.isEmpty) return null;
+    final orders = [for (final rule in matched) rule.order]..sort();
+    final key = _ShareKey(style, orders, null, null);
+    final shared = run.sharedPseudo[key];
+    if (shared != null) return shared.content == null ? null : shared;
+    final candidates = [
+      for (final rule in matched)
+        for (final d in rule.declarations)
+          _Candidate(
+            d,
+            _level(rule.origin, d.isImportant),
+            rule.selector.specificity,
+            rule.order,
+          ),
+    ]..sort();
+    // Flow-relative properties land on the physical ones, as for elements.
+    final rtl = _isRtl(candidates, style);
+    final specified = <String, CssValue>{};
+    for (final c in candidates) {
+      final property = c.declaration.property;
+      specified[property.physicalName?.call(rtl: rtl) ?? property.name] =
+          c.declaration.value;
+    }
+    final computed = _ComputedStyleBuilder(
+      specified,
+      style,
+      run.options,
+      _customProperties(specified, style),
+    ).build();
+    final interned = run.intern.putIfAbsent(computed, () => computed);
+    run.sharedPseudo[key] = interned;
+    return interned.content == null ? null : interned;
+  }
+
+  /// The custom properties an element with [specified] values and a
+  /// [parent] style has: its own over the parent's.
+  static CssCustomProperties _customProperties(
+    Map<String, CssValue> specified,
+    ComputedStyle? parent,
+  ) {
+    final inherited = parent?.customProperties ?? CssCustomProperties.empty;
+    Map<String, List<CssComponentValue>>? own;
+    for (final MapEntry(:key, :value) in specified.entries) {
+      if (value is CssCustomPropertyValue) {
+        (own ??= {})[key] = value.values;
       }
     }
+    return own == null ? inherited : CssCustomProperties.of(inherited, own);
+  }
 
-    final id = doc.idOf(element);
-    if (id != null) collect(_byId[id]);
-    final classes = doc.attributeOf(element, 'class');
-    if (classes != null) {
-      for (final cls in classes.split(RegExp(r'\s+'))) {
-        if (cls.isNotEmpty) collect(_byClass[cls]);
-      }
-    }
-    collect(_byType[doc.localNameOf(element).toLowerCase()]);
-    collect(_universal);
+  /// The style of [element]: shared with an earlier element when both
+  /// have the same parent style, matched rules, presentational attributes
+  /// and inline style, which is most of a book's elements; computed and
+  /// interned otherwise.
+  ComputedStyle _compute(_ResolveRun run, int element, ComputedStyle? parent) {
+    final doc = run.document;
+    final matched = run.matched..clear();
+    _rules.collect(
+      doc,
+      element,
+      (rule) => rule.selector.matches(doc, element),
+      matched,
+    );
 
-    // Presentational hints: author origin, below every author rule.
-    for (final d in _presentationalHints(doc, element)) {
-      candidates.add(_Candidate(d, _level(CssOrigin.author, false), -1, -1));
-    }
-    // The style attribute: author origin, above every author rule.
     final inline = doc.attributeOf(element, 'style');
+    final hints = _hintSignature(doc, element);
+    final orders = List<int>.generate(matched.length, (i) => matched[i].order)
+      ..sort();
+    final key = _ShareKey(parent, orders, hints, inline);
+    final shared = run.shared[key];
+    if (shared != null) return shared;
+
+    final candidates = <_Candidate>[
+      for (final rule in matched)
+        for (final d in rule.declarations)
+          _Candidate(
+            d,
+            _level(rule.origin, d.isImportant),
+            rule.selector.specificity,
+            rule.order,
+          ),
+      // Presentational hints: author origin, below every author rule.
+      if (hints != null)
+        for (final d in _presentationalHints(doc, element))
+          _Candidate(d, _level(CssOrigin.author, false), -1, -1),
+    ];
+    // The style attribute: author origin, above every author rule.
     if (inline != null) {
       var order = 0;
-      for (final declaration in parseCssDeclarations(inline)) {
+      final css = run.options.inlineStyleTransform?.call(inline) ?? inline;
+      for (final declaration in parseCssDeclarations(css)) {
         for (final d in parseCssDeclaration(declaration)) {
           candidates.add(
             _Candidate(
               d,
               _level(CssOrigin.author, d.isImportant),
-              1 << 40,
-              1 << 40 + order++,
+              _inlineSpecificity,
+              _inlineOrder + order++,
             ),
           );
         }
@@ -232,12 +350,97 @@ class StyleResolver {
     }
     candidates.sort();
 
+    // Flow-relative properties land on the physical ones for this
+    // element's direction, in cascade order: the later declaration wins.
+    final rtl = _isRtl(candidates, parent);
     final specified = <String, CssValue>{};
     for (final c in candidates) {
-      specified[c.declaration.property.name] = c.declaration.value;
+      final property = c.declaration.property;
+      final name = property.physicalName?.call(rtl: rtl) ?? property.name;
+      specified[name] = c.declaration.value;
     }
-    return _ComputedStyleBuilder(specified, parent, options).build();
+    final computed = _ComputedStyleBuilder(
+      specified,
+      parent,
+      run.options,
+      _customProperties(specified, parent),
+    ).build();
+    final interned = run.intern.putIfAbsent(computed, () => computed);
+    run.shared[key] = interned;
+    return interned;
   }
+
+  /// The element's computed direction from its sorted [candidates]: the
+  /// last `direction` declared, else the parent's (it inherits).
+  static bool _isRtl(List<_Candidate> candidates, ComputedStyle? parent) {
+    for (final c in candidates.reversed) {
+      if (c.declaration.property.name != 'direction') continue;
+      return switch (c.declaration.value) {
+        CssKeyword(name: 'rtl') => true,
+        CssKeyword(name: 'ltr' || 'initial') => false,
+        _ => parent?.direction == CssDirection.rtl,
+      };
+    }
+    return parent?.direction == CssDirection.rtl;
+  }
+
+  /// Above every selector's specificity and source order.
+  static const _inlineSpecificity = 1 << 40;
+  static const _inlineOrder = 1 << 40;
+
+  /// Calls [visit] with each class of a `class` attribute, split on
+  /// ASCII whitespace without a regular expression.
+  static void _forEachClass(String classes, void Function(String) visit) {
+    var start = 0;
+    final n = classes.length;
+    while (start < n) {
+      while (start < n && _isClassSpace(classes.codeUnitAt(start))) {
+        start++;
+      }
+      var end = start;
+      while (end < n && !_isClassSpace(classes.codeUnitAt(end))) {
+        end++;
+      }
+      if (end > start) visit(classes.substring(start, end));
+      start = end;
+    }
+  }
+
+  static bool _isClassSpace(int c) =>
+      c == 0x20 || c == 0x09 || c == 0x0A || c == 0x0D || c == 0x0C;
+
+  /// The element's presentational attributes as a string, or null when
+  /// it has none: part of the style-sharing key.
+  static String? _hintSignature(ContentDocument doc, int element) {
+    StringBuffer? buffer;
+    for (final (name, value) in doc.attributesOf(element)) {
+      if (!_hintAttributes.contains(name.toLowerCase())) continue;
+      (buffer ??= StringBuffer(doc.localNameOf(element).toLowerCase()))
+        ..write('\u0000')
+        ..write(name)
+        ..write('=')
+        ..write(value);
+    }
+    return buffer?.toString();
+  }
+
+  static const _hintAttributes = {
+    'align',
+    'width',
+    'height',
+    'bgcolor',
+    'color',
+    'face',
+    'size',
+    'text',
+    'dir',
+    'nowrap',
+    'hidden',
+    'hspace',
+    'vspace',
+    'border',
+    'valign',
+  };
 
   /// Cascade precedence: higher wins.
   static int _level(CssOrigin origin, bool important) =>
@@ -358,6 +561,118 @@ class StyleResolver {
   }
 }
 
+/// The state of one [StyleResolver.resolve] call.
+class _ResolveRun {
+  _ResolveRun(this.document, this.options);
+
+  final ContentDocument document;
+  final StyleResolverOptions options;
+
+  /// Styles by value, so equal styles are one object.
+  final intern = HashMap<ComputedStyle, ComputedStyle>();
+
+  /// Styles by what they were computed from.
+  final shared = HashMap<_ShareKey, ComputedStyle>();
+
+  /// Pseudo-element styles by their element's style and their rules.
+  final sharedPseudo = HashMap<_ShareKey, ComputedStyle>();
+
+  /// Scratch list of the rules an element matches.
+  final matched = <_IndexedRule>[];
+}
+
+/// What an element's computed style depends on: its parent's style (by
+/// identity: styles are interned), the rules it matches, its
+/// presentational attributes and its inline style.
+class _ShareKey {
+  _ShareKey(this.parent, this.rules, this.hints, this.inline)
+    : hashCode = Object.hash(
+        identityHashCode(parent),
+        Object.hashAll(rules),
+        hints,
+        inline,
+      );
+
+  final ComputedStyle? parent;
+  final List<int> rules;
+  final String? hints;
+  final String? inline;
+
+  @override
+  final int hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    if (other is! _ShareKey ||
+        other.hashCode != hashCode ||
+        !identical(other.parent, parent) ||
+        other.hints != hints ||
+        other.inline != inline ||
+        other.rules.length != rules.length) {
+      return false;
+    }
+    for (var i = 0; i < rules.length; i++) {
+      if (other.rules[i] != rules[i]) return false;
+    }
+    return true;
+  }
+}
+
+/// Rules bucketed by the rightmost compound of their selector (id, else
+/// class, else type, else universal), so an element only tests the rules
+/// that could match it.
+class _RuleIndex {
+  final _byId = <String, List<_IndexedRule>>{};
+  final _byClass = <String, List<_IndexedRule>>{};
+  final _byType = <String, List<_IndexedRule>>{};
+  final _universal = <_IndexedRule>[];
+
+  bool get isEmpty =>
+      _byId.isEmpty &&
+      _byClass.isEmpty &&
+      _byType.isEmpty &&
+      _universal.isEmpty;
+
+  void add(_IndexedRule rule) {
+    final last = rule.selector.compounds.last;
+    final id = last.simples.whereType<CssIdSelector>().firstOrNull;
+    final cls = last.simples.whereType<CssClassSelector>().firstOrNull;
+    if (id != null) {
+      _byId.putIfAbsent(id.id, () => []).add(rule);
+    } else if (cls != null) {
+      _byClass.putIfAbsent(cls.name, () => []).add(rule);
+    } else if (last.type != null) {
+      _byType.putIfAbsent(last.type!, () => []).add(rule);
+    } else {
+      _universal.add(rule);
+    }
+  }
+
+  /// Adds to [out] the rules for [element] that [matches] accepts.
+  void collect(
+    ContentDocument doc,
+    int element,
+    bool Function(_IndexedRule) matches,
+    List<_IndexedRule> out,
+  ) {
+    void from(List<_IndexedRule>? rules) {
+      if (rules == null) return;
+      for (final rule in rules) {
+        if (matches(rule)) out.add(rule);
+      }
+    }
+
+    final id = doc.idOf(element);
+    if (id != null) from(_byId[id]);
+    final classes = doc.attributeOf(element, 'class');
+    if (classes != null) {
+      StyleResolver._forEachClass(classes, (cls) => from(_byClass[cls]));
+    }
+    from(_byType[doc.localNameOf(element).toLowerCase()]);
+    from(_universal);
+  }
+}
+
 class _IndexedRule {
   const _IndexedRule(this.selector, this.declarations, this.origin, this.order);
 
@@ -388,18 +703,27 @@ class _Candidate implements Comparable<_Candidate> {
 /// Turns the cascaded specified values of one element into its computed
 /// style: inheritance, initial values, `em` and keyword resolution.
 class _ComputedStyleBuilder {
-  _ComputedStyleBuilder(this.specified, this.parent, this.options);
+  _ComputedStyleBuilder(
+    this.specified,
+    this.parent,
+    this.options,
+    this.customProperties,
+  );
 
   final Map<String, CssValue> specified;
   final ComputedStyle? parent;
   final StyleResolverOptions options;
+  final CssCustomProperties customProperties;
 
   /// The specified value after the CSS-wide keywords: null means "take
   /// the parent's computed value", whether the property inherits by
   /// default or `inherit`/`unset` asked for it.
   CssValue? _value(String name) {
     final property = cssProperties[name]!;
-    final value = specified[name];
+    var value = specified[name];
+    if (value is CssPendingValue) {
+      value = resolveCssPendingValue(value, name, customProperties);
+    }
     if (value == null) {
       return property.inherited && parent != null ? null : property.initial;
     }
@@ -456,6 +780,63 @@ class _ComputedStyleBuilder {
     }
   }
 
+  /// The background image, its size, repeat and position computed;
+  /// null without one.
+  CssBackgroundImage? _backgroundImage() {
+    final source = switch (_value('background-image')) {
+      null => parent?.backgroundImage?.source,
+      CssImageUrlValue(:final url, :final base) => cssImageSource(url, base),
+      _ => null,
+    };
+    if (source == null) return null;
+    final inherited = parent?.backgroundImage;
+    var fit = CssBackgroundFit.auto;
+    CssLength? width;
+    CssLength? height;
+    switch (_value('background-size')) {
+      case null:
+        fit = inherited?.fit ?? fit;
+        width = inherited?.width;
+        height = inherited?.height;
+      case CssKeyword(name: 'cover'):
+        fit = CssBackgroundFit.cover;
+      case CssKeyword(name: 'contain'):
+        fit = CssBackgroundFit.contain;
+      case CssBackgroundSizeValue(width: final w, height: final h):
+        width = w?.computedIn(lengths);
+        height = h?.computedIn(lengths);
+      default:
+        break;
+    }
+    final repeat = switch (_value('background-repeat')) {
+      CssBackgroundRepeatValue(:final x, :final y) => (x: x, y: y),
+      _ => (
+        x: inherited?.repeatX ?? true,
+        y: inherited?.repeatY ?? true,
+      ),
+    };
+    final position = switch (_value('background-position')) {
+      CssBackgroundPositionValue(:final x, :final y) => (
+        x: x.computedIn(lengths),
+        y: y.computedIn(lengths),
+      ),
+      _ => (
+        x: inherited?.x ?? const CssLength.percent(0),
+        y: inherited?.y ?? const CssLength.percent(0),
+      ),
+    };
+    return CssBackgroundImage(
+      source,
+      fit: fit,
+      width: width,
+      height: height,
+      repeatX: repeat.x,
+      repeatY: repeat.y,
+      x: position.x,
+      y: position.y,
+    );
+  }
+
   T _keyword<T extends Enum>(
     String name,
     List<T> values,
@@ -477,8 +858,7 @@ class _ComputedStyleBuilder {
     final value = _value(name);
     if (value == null) return inherited(parent!);
     return switch (value) {
-      CssLengthValue(:final length) =>
-        length.isPercent ? length : CssLength.px(length.toPx(lengths)),
+      CssLengthValue(:final length) => length.computedIn(lengths),
       CssKeyword(:final name) when name == nullKeyword => null,
       _ => CssLength.zero,
     };
@@ -516,6 +896,11 @@ class _ComputedStyleBuilder {
       null => parent!.smallCaps,
       CssKeyword(name: 'small-caps') => true,
       _ => false,
+    };
+    final opticalSizing = switch (_value('font-optical-sizing')) {
+      null => parent!.opticalSizing,
+      CssKeyword(name: 'none') => false,
+      _ => true,
     };
     final color = _color(
       'color',
@@ -577,6 +962,10 @@ class _ComputedStyleBuilder {
             'dashed' => CssBorderStyle.dashed,
             'dotted' => CssBorderStyle.dotted,
             'double' => CssBorderStyle.double,
+            'groove' => CssBorderStyle.groove,
+            'ridge' => CssBorderStyle.ridge,
+            'inset' => CssBorderStyle.inset,
+            'outset' => CssBorderStyle.outset,
             'none' => CssBorderStyle.none,
             _ => CssBorderStyle.solid,
           },
@@ -645,7 +1034,7 @@ class _ComputedStyleBuilder {
       null => (parent!.verticalAlign, parent!.verticalAlignLength),
       CssLengthValue(:final length) => (
         CssVerticalAlign.length,
-        length.isPercent ? length : CssLength.px(length.toPx(lengths)),
+        length.computedIn(lengths),
       ),
       CssKeyword(:final name) => (
         switch (name) {
@@ -695,14 +1084,24 @@ class _ComputedStyleBuilder {
       CssNumberValue(:final value) => value.toInt(),
       _ => fallback,
     };
+    final (spacingX, spacingY) = _borderSpacing();
+    final widthKeyword = switch (_value('width')) {
+      null => parent!.widthKeyword,
+      CssKeyword(name: 'min-content') => CssSizeKeyword.minContent,
+      CssKeyword(name: 'max-content') => CssSizeKeyword.maxContent,
+      CssKeyword(name: 'fit-content') => CssSizeKeyword.fitContent,
+      _ => null,
+    };
     return ComputedStyle(
       fontFamily: fontFamily,
       fontSize: fontSize,
       fontStyle: fontStyle,
       fontWeight: fontWeight,
       smallCaps: smallCaps,
+      opticalSizing: opticalSizing,
       color: color,
       backgroundColor: backgroundColor,
+      backgroundImage: _backgroundImage(),
       textAlign: _keyword(
         'text-align',
         CssTextAlign.values,
@@ -729,7 +1128,10 @@ class _ComputedStyleBuilder {
       pageBreakBefore: pageBreak('page-break-before'),
       pageBreakAfter: pageBreak('page-break-after'),
       avoidPageBreakInside: avoidInside,
-      width: _length('width', nullKeyword: 'auto', inherited: (p) => p.width),
+      width: widthKeyword == null
+          ? _length('width', nullKeyword: 'auto', inherited: (p) => p.width)
+          : null,
+      widthKeyword: widthKeyword,
       height: _length(
         'height',
         nullKeyword: 'auto',
@@ -847,8 +1249,156 @@ class _ComputedStyleBuilder {
       },
       widows: integer('widows', (p) => p.widows, 2),
       orphans: integer('orphans', (p) => p.orphans, 2),
+      writingMode: _keyword(
+        'writing-mode',
+        CssWritingMode.values,
+        (k) => switch (k) {
+          'vertical-rl' ||
+          'sideways-rl' ||
+          'tb' ||
+          'tb-rl' => CssWritingMode.verticalRl,
+          'vertical-lr' || 'sideways-lr' => CssWritingMode.verticalLr,
+          _ => CssWritingMode.horizontalTb,
+        },
+        inherited: (p) => p.writingMode,
+      ),
+      overflowWrap: _keyword(
+        'overflow-wrap',
+        CssOverflowWrap.values,
+        (k) => switch (k) {
+          'break-word' => CssOverflowWrap.breakWord,
+          'anywhere' => CssOverflowWrap.anywhere,
+          _ => CssOverflowWrap.normal,
+        },
+        inherited: (p) => p.overflowWrap,
+      ),
+      wordBreak: wordBreak,
+      borderCollapse: switch (_value('border-collapse')) {
+        null => parent!.borderCollapse,
+        CssKeyword(:final name) => name == 'collapse',
+        _ => false,
+      },
+      borderSpacingX: spacingX,
+      borderSpacingY: spacingY,
+      captionSide: _keyword(
+        'caption-side',
+        CssCaptionSide.values,
+        (k) => k == 'bottom' || k == 'block-end'
+            ? CssCaptionSide.bottom
+            : CssCaptionSide.top,
+        inherited: (p) => p.captionSide,
+      ),
+      overflowX: _keyword(
+        'overflow-x',
+        CssOverflow.values,
+        (k) => switch (k) {
+          'hidden' => CssOverflow.hidden,
+          'clip' => CssOverflow.clip,
+          'scroll' => CssOverflow.scroll,
+          'auto' => CssOverflow.auto,
+          _ => CssOverflow.visible,
+        },
+        inherited: (p) => p.overflowX,
+      ),
+      position: _keyword(
+        'position',
+        CssPosition.values,
+        (k) => switch (k) {
+          'relative' => CssPosition.relative,
+          'absolute' => CssPosition.absolute,
+          'fixed' => CssPosition.fixed,
+          'sticky' => CssPosition.sticky,
+          _ => CssPosition.static,
+        },
+        inherited: (p) => p.position,
+      ),
+      offsets: CssEdges(
+        _length('top', nullKeyword: 'auto', inherited: (p) => p.offsets.top),
+        _length(
+          'right',
+          nullKeyword: 'auto',
+          inherited: (p) => p.offsets.right,
+        ),
+        _length(
+          'bottom',
+          nullKeyword: 'auto',
+          inherited: (p) => p.offsets.bottom,
+        ),
+        _length('left', nullKeyword: 'auto', inherited: (p) => p.offsets.left),
+      ),
+      borderRadius: CssCorners(
+        radius('top-left', (p) => p.borderRadius.topLeft),
+        radius('top-right', (p) => p.borderRadius.topRight),
+        radius('bottom-right', (p) => p.borderRadius.bottomRight),
+        radius('bottom-left', (p) => p.borderRadius.bottomLeft),
+      ),
+      boxSizing: _keyword(
+        'box-sizing',
+        CssBoxSizing.values,
+        (k) => k == 'border-box'
+            ? CssBoxSizing.borderBox
+            : CssBoxSizing.contentBox,
+        inherited: (p) => p.boxSizing,
+      ),
+      quotes: switch (_value('quotes')) {
+        null => parent!.quotes,
+        CssQuotesValue(:final marks) => marks,
+        CssKeyword(name: 'none') => const [],
+        _ => null,
+      },
+      listStyleInside: switch (_value('list-style-position')) {
+        null => parent!.listStyleInside,
+        CssKeyword(:final name) => name == 'inside',
+        _ => false,
+      },
+      content: switch (_value('content')) {
+        CssContentValue(:final items) => items,
+        _ => null,
+      },
+      counterReset: _countersOf('counter-reset'),
+      counterIncrement: _countersOf('counter-increment'),
+      counterSet: _countersOf('counter-set'),
+      customProperties: customProperties,
     );
   }
+
+  List<(String, int)> _countersOf(String name) => switch (_value(name)) {
+    CssCountersValue(:final counters) => counters,
+    _ => const [],
+  };
+
+  /// A corner's radii in px, or percentages kept for the layout.
+  CssRadius radius(String corner, CssRadius Function(ComputedStyle) inherited) {
+    final value = _value('border-$corner-radius');
+    if (value == null) return inherited(parent!);
+    if (value is! CssLengthPairValue) return CssRadius.zero;
+    CssLength resolve(CssLength length) => length.computedIn(lengths);
+    return CssRadius(resolve(value.first), resolve(value.second));
+  }
+
+  /// `word-break: break-word` is `overflow-wrap: anywhere` with `normal`
+  /// breaking (CSS Text 3); it computes to `normal` here and the wrap
+  /// side is the layout's, which breaks long words anyway.
+  CssWordBreak get wordBreak => _keyword(
+    'word-break',
+    CssWordBreak.values,
+    (k) => switch (k) {
+      'break-all' => CssWordBreak.breakAll,
+      'keep-all' => CssWordBreak.keepAll,
+      _ => CssWordBreak.normal,
+    },
+    inherited: (p) => p.wordBreak,
+  );
+
+  /// `border-spacing` in px, horizontal and vertical.
+  (double, double) _borderSpacing() => switch (_value('border-spacing')) {
+    null => (parent!.borderSpacingX, parent!.borderSpacingY),
+    CssLengthPairValue(:final first, :final second) => (
+      first.toPx(lengths),
+      second.toPx(lengths),
+    ),
+    _ => (0, 0),
+  };
 
   static T _parentEdge<T>(CssEdges<T> edges, String edge) => switch (edge) {
     'top' => edges.top,

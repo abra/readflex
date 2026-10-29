@@ -6,19 +6,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_highlight_controls.dart';
+import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:vellum/all_formats.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
 
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
@@ -92,13 +91,11 @@ void main() {
         supportedLocales: ReadflexLocalizations.supportedLocales,
         home: ReaderScreen(
           sourceId: pdf.id,
-          serverBaseUri: Uri.parse('http://127.0.0.1:8080'),
           bookRepository: books,
           highlightRepository: highlights,
           preferencesService: preferences,
           screenControlService: _ScreenControlService(),
           textActions: [_FakeHighlightAction()],
-          nativeFormats: const {BookFormat.pdf},
         ),
       ),
     );
@@ -126,7 +123,6 @@ void main() {
   ) async {
     await pumpReader(tester);
     expect(find.byType(FixedPagesView), findsOneWidget);
-    expect(find.byType(BookReaderWebView), findsNothing);
     expect(
       find.bySemanticsLabel(l10n(tester).readerPageNumber(1)),
       findsOneWidget,
@@ -139,6 +135,8 @@ void main() {
     ]);
     expect(bloc.state.tocItems[1].level, 1);
     expect(bloc.state.tocItems[1].href, fakeCfiFromIndex(1));
+    // Rows name the page each entry opens, counted from 1.
+    expect(bloc.state.tocItems.map((i) => i.startPage), [1, 2, 3]);
     expect(bloc.state.documentFeatures?.format, 'pdf');
     expect(bloc.state.documentFeatures?.pageCount, 3);
     expect(bloc.state.documentFeatures?.hasSearchableText, isTrue);

@@ -1,16 +1,17 @@
 import 'package:flutter/painting.dart';
-import 'package:reader_webview/reader_webview.dart';
 
-/// Commands the reader screen sends to whatever draws a book.
+import 'reader_search_event.dart';
+import 'reader_selection.dart';
+
+/// Commands the reader screen sends to whatever draws a book or an article.
 ///
-/// Extracted from what the screen asks of `BookReaderWebViewState`, so a
-/// native engine can take the WebView's place behind the same calls. Every
-/// command is safe before the surface is mounted: navigation and previews
-/// are dropped, queries answer null. The screen's events (positions,
-/// selections, taps, annotations) travel the other way as widget callbacks
-/// of the surface widget, which stay where the surface is built.
-///
-/// Articles keep their own WebView and are not behind this contract yet.
+/// One implementation per kind of page: `ReaderTextSurface` (EPUB, FB2,
+/// MOBI), `ReaderComicSurface`, `ReaderPdfSurface` and
+/// `ReaderArticleSurface`, which scrolls. Every command is safe before the
+/// surface is mounted: navigation and previews are dropped, queries answer
+/// null. The screen's events (positions, selections, taps, annotations)
+/// travel the other way as widget callbacks of the body that draws the
+/// page.
 abstract interface class ReaderSurface {
   // Navigation.
 
@@ -57,12 +58,12 @@ abstract interface class ReaderSurface {
 
   Future<ReaderSelection?> currentTextSelection();
 
+  /// Paints the selection at [cfiRange] as a highlight of [color] at
+  /// [opacity] would look, while the user picks a color.
   void showSelectionHighlightPreview({
     required String cfiRange,
-    required String color,
-    double? opacity,
-    String? mixBlendMode,
-    double? verticalOffset,
+    required Color color,
+    required double opacity,
   });
 
   void clearSelectionHighlightPreview();
@@ -72,17 +73,13 @@ abstract interface class ReaderSurface {
   void showImageAreaSelectionPreview({
     required int pageIndex,
     required ReaderImageAreaRect rect,
-    required String color,
-    double? opacity,
+    required Color color,
+    required double opacity,
   });
 
-  void clearImageAreaSelectionPreview({bool allowNextTap = false});
+  void clearImageAreaSelectionPreview();
 
   void setImageAreaSelectionPreviewRetained(bool retained);
-
-  void setImageAreaSelectionControlsBounds(ReaderSelectionPosition bounds);
-
-  void clearImageAreaSelectionControlsBounds();
 
   // Previews.
 

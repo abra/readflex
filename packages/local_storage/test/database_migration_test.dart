@@ -38,11 +38,48 @@ void main() {
     return result;
   }
 
+  Future<AppDatabase> createV26Database() async {
+    final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
+    await current.customSelect('SELECT 1').getSingle();
+    await current.customStatement('DROP INDEX idx_dictionary_word_source');
+    await current.customStatement(
+      'ALTER TABLE dictionary_table DROP COLUMN word_key',
+    );
+    return current;
+  }
+
+  test('v26 words gain Unicode lookup keys without losing saved data', () async {
+    final current = await createV26Database();
+    await current.customStatement('''
+      INSERT INTO dictionary_table
+        (id, word, translation, added_at, source_id, lemma)
+      VALUES ('russian', 'Слово', 'word', '2026-01-01', 'book', 'слово'),
+             ('german', 'ÜBER', 'above', '2026-01-02', NULL, NULL)
+    ''');
+    await current.customStatement('PRAGMA user_version = 26');
+    await current.close();
+    final migrated = await openMigratedDatabase();
+    final russian = await migrated.dictionaryDao.entryByWord(
+      ' СЛОВО ',
+      sourceId: 'book',
+    );
+    expect(russian?.id, 'russian');
+    expect(russian?.word, 'Слово');
+    expect(russian?.translation, 'word');
+    expect(russian?.lemma, 'слово');
+    expect((await migrated.dictionaryDao.entryByWord('über'))?.id, 'german');
+    final index = await migrated
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_dictionary_word_source'",
+        )
+        .getSingle();
+    expect(index.read<String>('name'), 'idx_dictionary_word_source');
+  });
+
   test(
     'v22 comics keep legacy indexing and saved anchors after upgrade',
     () async {
-      final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
-      await current.customSelect('SELECT 1').getSingle();
+      final current = await createV26Database();
       for (final column in [
         'lemma',
         'base_translation',
@@ -71,8 +108,7 @@ void main() {
   );
 
   test('v25 dictionary entries gain empty translation details', () async {
-    final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
-    await current.customSelect('SELECT 1').getSingle();
+    final current = await createV26Database();
     for (final column in ['lemma', 'base_translation', 'context_translation']) {
       await current.customStatement(
         'ALTER TABLE dictionary_table DROP COLUMN $column',
@@ -94,8 +130,7 @@ void main() {
   });
 
   test('v24 bookmarks gain an empty anchor version', () async {
-    final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
-    await current.customSelect('SELECT 1').getSingle();
+    final current = await createV26Database();
     for (final column in ['lemma', 'base_translation', 'context_translation']) {
       await current.customStatement(
         'ALTER TABLE dictionary_table DROP COLUMN $column',
@@ -137,8 +172,7 @@ void main() {
   });
 
   test('v23 articles move their text after every other column', () async {
-    final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
-    await current.customSelect('SELECT 1').getSingle();
+    final current = await createV26Database();
     for (final column in ['lemma', 'base_translation', 'context_translation']) {
       await current.customStatement(
         'ALTER TABLE dictionary_table DROP COLUMN $column',
@@ -463,7 +497,11 @@ void _createSharedLegacyTables(sqlite.Database database) {
     'CREATE TABLE flashcards_table (id TEXT PRIMARY KEY, deck_id TEXT)',
   );
   database.execute(
-    'CREATE TABLE dictionary_table (id TEXT PRIMARY KEY, source_id TEXT)',
+    '''CREATE TABLE dictionary_table (
+      id TEXT PRIMARY KEY, word TEXT NOT NULL DEFAULT '',
+      translation TEXT NOT NULL DEFAULT '', added_at TEXT NOT NULL DEFAULT '',
+      source_id TEXT
+    )''',
   );
   database.execute('''
     CREATE TABLE review_items_table (

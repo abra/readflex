@@ -660,13 +660,13 @@ void main() {
       // Dragging shows the preview percent without the page counter.
       final dragging = tester.widget<Text>(find.byKey(_pageLabelKey)).data!;
       expect(dragging, isNot(contains('·')));
-      expect(seeks, isEmpty, reason: 'no JS call per drag tick');
+      expect(seeks, isEmpty, reason: 'no seek per drag tick');
       await gesture.up();
       await tester.pump();
       expect(seeks, hasLength(1));
       expect(seeks.single, greaterThan(0.4));
       expect(seeks.single, lessThanOrEqualTo(1));
-      // The preview survives until the WebView reports the new location.
+      // The preview survives until the surface reports the new location.
       expect(
         tester.widget<Text>(find.byKey(_pageLabelKey)).data,
         isNot(contains('·')),

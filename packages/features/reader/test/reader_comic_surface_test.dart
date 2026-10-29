@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_comic_surface.dart';
-import 'package:reader_webview/reader_webview.dart';
+import 'package:reader/src/reader_selection.dart';
+import 'package:vellum/all_formats.dart';
 import 'package:vellum/testing.dart';
-import 'package:vellum/vellum.dart';
 
 void main() {
   late Directory tempDir;
@@ -111,12 +111,12 @@ void main() {
     expect(surface.searchBookStream('sea'), isNull);
     surface.clearSearch();
     expect(await surface.currentTextSelection(), isNull);
-    surface.showSelectionHighlightPreview(cfiRange: 'x', color: '#ffffff');
-    surface.clearSelectionHighlightPreview();
-    surface.setImageAreaSelectionControlsBounds(
-      const ReaderSelectionPosition(left: 0, top: 0, right: 1, bottom: 1),
+    surface.showSelectionHighlightPreview(
+      cfiRange: 'x',
+      color: const Color(0xFFFFFFFF),
+      opacity: 1,
     );
-    surface.clearImageAreaSelectionControlsBounds();
+    surface.clearSelectionHighlightPreview();
   });
 
   test('image-area previews style, retain and clear the draft', () {
@@ -125,21 +125,21 @@ void main() {
     surface.showImageAreaSelectionPreview(
       pageIndex: 3,
       rect: const ReaderImageAreaRect(x: 0, y: 0, width: 1, height: 1),
-      color: '#00aaff',
+      color: const Color(0xFF00AAFF),
       opacity: 0.5,
     );
     expect(draft.color, isNot(const Color(0xFF00AAFF)), reason: 'other page');
     surface.showImageAreaSelectionPreview(
       pageIndex: 2,
       rect: const ReaderImageAreaRect(x: 0, y: 0, width: 1, height: 1),
-      color: '#00aaff',
+      color: const Color(0xFF00AAFF),
       opacity: 0.5,
     );
     expect(draft.color, const Color(0xFF00AAFF));
     expect(draft.opacity, 0.5);
     surface.setImageAreaSelectionPreviewRetained(true);
     expect(draft.retained, isTrue);
-    surface.clearImageAreaSelectionPreview(allowNextTap: true);
+    surface.clearImageAreaSelectionPreview();
     expect(draft.isActive, isFalse);
     expect(controller.inputLocked, isFalse);
 
@@ -198,21 +198,5 @@ void main() {
     // Detaching another session leaves the current one in place.
     surface.detach(session);
     expect(surface.isAttached, isTrue);
-  });
-
-  group('parseCssHexColor', () {
-    test('reads the forms the reader writes', () {
-      expect(parseCssHexColor('#ffe600'), const Color(0xFFFFE600));
-      expect(parseCssHexColor('#FFE600'), const Color(0xFFFFE600));
-      expect(parseCssHexColor(' #abc '), const Color(0xFFAABBCC));
-      expect(parseCssHexColor('#ffe60080'), const Color(0x80FFE600));
-    });
-
-    test('rejects anything else', () {
-      expect(parseCssHexColor('ffe600'), isNull);
-      expect(parseCssHexColor('#ffe6'), isNull);
-      expect(parseCssHexColor('#gggggg'), isNull);
-      expect(parseCssHexColor('rgb(1, 2, 3)'), isNull);
-    });
   });
 }

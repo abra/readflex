@@ -30,7 +30,6 @@ void main() {
         supportedLocales: ReadflexLocalizations.supportedLocales,
         home: ReaderScreen(
           sourceId: 'book-1',
-          serverBaseUri: Uri.parse('http://127.0.0.1:8080'),
           bookRepository: books,
           highlightRepository: FakeHighlightRepository(),
           preferencesService: preferences,
@@ -75,7 +74,6 @@ void main() {
                 MaterialPageRoute<void>(
                   builder: (_) => ReaderScreen(
                     sourceId: 'book-1',
-                    serverBaseUri: Uri.parse('http://127.0.0.1:8080'),
                     bookRepository: books,
                     highlightRepository: FakeHighlightRepository(),
                     preferencesService: preferences,

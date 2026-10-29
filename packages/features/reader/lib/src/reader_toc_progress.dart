@@ -1,4 +1,4 @@
-import 'package:reader_webview/reader_webview.dart';
+import 'reader_toc_item.dart';
 
 /// Where a chapter row stands relative to the chapter being read.
 enum ReaderTocReadingState { read, active, upcoming }
@@ -30,10 +30,8 @@ List<ReaderTocReadingState> readerTocReadingStates(
   return states;
 }
 
-/// Estimated page the chapter starts on, when the renderer reports one.
-///
-/// The renderer rounds the chapter's start fraction up, so the opening
-/// chapter can report page 0; it is shown as page 1.
+/// The page the chapter starts on, counted from 1, when the surface
+/// reports one; page 0 reads as the first.
 int? readerTocStartPage(ReaderTocItem item) {
   final page = item.startPage;
   if (page == null || page < 0) return null;

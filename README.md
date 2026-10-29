@@ -31,7 +31,8 @@ Start here:
 | `packages/local_storage` | Drift database, DAOs, migrations, storage mappers |
 | `packages/domain_models` | Pure domain models, enums, and exceptions |
 | `packages/component_library` | Theme, design tokens, and reusable widgets |
-| `packages/reader_server` / `packages/reader_webview` | Local reader server and Foliate WebView bridge |
+| `packages/vellum` | The reader engine: book formats, layout, pages, CFIs, search |
+| `packages/vellum_mobi_native` | Rust MOBI/KF8 text-record I/O and decompression, private to Vellum |
 
 ## Development
 
@@ -40,23 +41,28 @@ Use the Flutter SDK pinned in `.fvmrc` through FVM. Install dependencies:
 ```sh
 fvm install
 make get
-make reader-browser-setup
 ```
 
-Browser tests require Node.js 20+ and the pinned Playwright engines. Android
-builds also need the project's JDK/SDK setup; iOS builds need Xcode and CocoaPods.
+The coverage report needs Node.js 20+. Android builds also need the project's
+JDK/SDK setup; iOS builds need Xcode and CocoaPods.
+MOBI text processing uses Rust through FRB. Install rustup; the compiler and
+targets are pinned in `packages/vellum_mobi_native/rust/rust-toolchain.toml`.
+Flutter/Dart build hooks compile and bundle the library automatically. See the
+[native package README](packages/vellum_mobi_native/README.md) for setup and checks.
 
 ### Versioned Configuration
 
 Keep `.fvmrc`, the application `pubspec.lock`, `ios/Podfile.lock`, the existing
-SwiftPM `Package.resolved` files, and the reader's `package-lock.json` in version
+SwiftPM `Package.resolved` files in version
 control. They pin the SDK and resolved dependencies; update them deliberately
 and review their diffs. Use `pod install`, not `pod update`, when restoring iOS
 dependencies. Root and platform `.gitignore` files are shared too, so a fresh
 checkout does not depend on a developer's global ignore settings.
 
 The independent library packages under `packages/` and `third_party/` keep
-their own test-environment `pubspec.lock` files local. The root lockfile pins
+their own test-environment `pubspec.lock` files local, except the pinned
+`vellum_mobi_native` bridge/build environment. Its Cargo lockfile is tracked too.
+The root lockfile pins
 the application graph, not every library's standalone dev dependencies.
 
 Do not commit `.local/run-defines.json`, `.env` files, `android/key.properties`,

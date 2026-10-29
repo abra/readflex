@@ -90,7 +90,7 @@ void main() {
   });
 
   test(
-    'undo re-adds a text highlight with its fields and original date',
+    'undo restores a text highlight with its original identity and fields',
     () async {
       await send(
         const ReaderHighlightDeleteRequested(highlightId: 'text'),
@@ -103,14 +103,15 @@ void main() {
       final restored = bloc.state.highlights.firstWhere(
         (h) => h.id != image.id,
       );
-      expect(restored.id, isNot('text'));
+      expect(restored.id, text.id);
       expect(restored.text, text.text);
       expect(restored.note, text.note);
       expect(restored.cfiRange, text.cfiRange);
       expect(restored.progress, text.progress);
       expect(restored.chapterTitle, text.chapterTitle);
       expect(restored.color, text.color);
-      expect(repository.updatedHighlights.single.createdAt, text.createdAt);
+      expect(restored.createdAt, text.createdAt);
+      expect(repository.restoredHighlights.single, text);
       expect(bloc.state.highlightEdits, const ReaderHighlightEdits());
       // Undo is not a user-visible mutation; no new toast effect.
       expect(
@@ -129,7 +130,8 @@ void main() {
       const ReaderHighlightRestored(highlightId: 'image'),
       (s) => s.highlights.length == 2,
     );
-    final restored = repository.imageAreaHighlights.single;
+    final restored = repository.restoredHighlights.single;
+    expect(restored.id, image.id);
     expect(restored.imageArea, image.imageArea);
     expect(restored.color, image.color);
     expect(bloc.state.highlights.map((h) => h.id), contains(restored.id));

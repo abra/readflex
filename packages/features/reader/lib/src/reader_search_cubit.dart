@@ -4,7 +4,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:reader_webview/reader_webview.dart';
+
+import 'reader_search_event.dart';
 
 typedef ReaderBookSearch = Stream<ReaderSearchEvent> Function(String query);
 
@@ -43,7 +44,7 @@ class ReaderSearchState extends Equatable {
   final String? errorMessage;
   final ReaderSearchErrorCode? errorCode;
 
-  /// Incremented when an already-rendered foliate-js search needs clearing.
+  /// Incremented when the page's search marks need clearing.
   final int clearSearchToken;
   final int? activeResultIndex;
   final ReaderSearchLocation? returnLocation;

@@ -4,7 +4,7 @@ import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:vellum/vellum.dart'
+import 'package:vellum/all_formats.dart'
     show
         BookMetadata,
         VellumException,

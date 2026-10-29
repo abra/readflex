@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 /// How long `ContentDocument` takes to build from XHTML chapters of
 /// typical and large sizes, and how many nodes they hold. Host/JIT
@@ -46,6 +46,63 @@ void main() {
         if (run > 0) styleSamples.add(stopwatch.elapsedMicroseconds);
       }
       styleSamples.sort();
+      final boxSamples = <int>[];
+      late SectionBoxes boxes;
+      for (var run = 0; run < 4; run++) {
+        final stopwatch = Stopwatch()..start();
+        boxes = buildSectionBoxes(document, styles);
+        stopwatch.stop();
+        if (run > 0) boxSamples.add(stopwatch.elapsedMicroseconds);
+      }
+      boxSamples.sort();
+      // Hyphenation: soft hyphens in the boxes (`hyphens: auto` on English
+      // prose; the per-isolate hyphenator built in the first run) and the
+      // column laid out with and without them.
+      final hyphenatedStyles = StyleResolver([
+        CssSheetSource(
+          CssStyleSheet.parse(cssUserAgentStyleSheet),
+          CssOrigin.userAgent,
+        ),
+        CssSheetSource(
+          CssStyleSheet.parse('$_authorCss p { hyphens: auto }'),
+          CssOrigin.author,
+        ),
+      ]).resolve(document);
+      final hyphenBoxSamples = <int>[];
+      late SectionBoxes hyphenated;
+      for (var run = 0; run < 4; run++) {
+        final stopwatch = Stopwatch()..start();
+        hyphenated = buildSectionBoxes(document, hyphenatedStyles);
+        stopwatch.stop();
+        if (run > 0) hyphenBoxSamples.add(stopwatch.elapsedMicroseconds);
+      }
+      hyphenBoxSamples.sort();
+      int layoutMedian(SectionBoxes boxes) {
+        final environment = TextLayoutEnvironment(
+          styler: InlineStyler(
+            bookStyle: const BookStyle(useBookLayout: false),
+            fonts: const BookFonts(),
+          ),
+          imageSize: (_) => null,
+          maxImageHeight: 800,
+        );
+        final samples = <int>[];
+        for (var run = 0; run < 4; run++) {
+          final stopwatch = Stopwatch()..start();
+          ColumnLayout.layout(
+            boxes,
+            width: 360,
+            pageHeight: 700,
+            text: environment,
+            bookStyle: const BookStyle(useBookLayout: false),
+          ).dispose();
+          stopwatch.stop();
+          if (run > 0) samples.add(stopwatch.elapsedMicroseconds);
+        }
+        samples.sort();
+        return samples[1];
+      }
+
       measurements.add({
         'paragraphs': paragraphs,
         'sourceBytes': sizeBytes,
@@ -57,6 +114,16 @@ void main() {
         'styleMedianMicroseconds': styleSamples[1],
         'styleSamplesMicroseconds': styleSamples,
         'distinctStyles': styles.distinctStyleCount,
+        'boxMedianMicroseconds': boxSamples[1],
+        'boxSamplesMicroseconds': boxSamples,
+        'paragraphBoxes': boxes.paragraphs.length,
+        'hyphenatedBoxMedianMicroseconds': hyphenBoxSamples[1],
+        'softHyphens': hyphenated.paragraphs.fold<int>(
+          0,
+          (n, p) => n + softHyphen.allMatches(p.text).length,
+        ),
+        'layoutMedianMicroseconds': layoutMedian(boxes),
+        'hyphenatedLayoutMedianMicroseconds': layoutMedian(hyphenated),
       });
     }
     final out = File('.local/performance/vellum-document.json');
@@ -95,7 +162,7 @@ section > p:nth-child(odd) { background-color: transparent; }
 String _chapter(int paragraphs) {
   final buffer = StringBuffer(
     '<?xml version="1.0" encoding="utf-8"?>\n'
-    '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">\n'
+    '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en">\n'
     '<head><title>Chapter</title><link rel="stylesheet" href="style.css"/></head>\n'
     '<body><section epub:type="chapter" id="ch1"><h1>Chapter One</h1>\n',
   );

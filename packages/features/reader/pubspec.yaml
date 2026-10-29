@@ -31,8 +31,6 @@ dependencies:
     path: ../../highlight_repository
   component_library:
     path: ../../component_library
-  reader_webview:
-    path: ../../reader_webview
   screen_control_service:
     path: ../../screen_control_service
   toast_service:

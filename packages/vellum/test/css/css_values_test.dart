@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart';
+import 'package:vellum/all_formats.dart';
 
 void main() {
   CssComponentValue single(String css) =>
@@ -55,6 +55,84 @@ void main() {
       expect(px('10vmax'), 80);
       expect(px('25%', percentOf: 200), 50);
       expect(px('3px'), 3);
+    });
+  });
+
+  group('math functions', () {
+    const context = CssLengthContext(
+      fontSize: 10,
+      rootFontSize: 16,
+      viewportWidth: 400,
+      viewportHeight: 800,
+    );
+    CssLength? parse(String css) => CssLength.parse(single(css));
+    double px(String css, {double percentOf = 0}) =>
+        InlineStyler.px(parse(css)!.computedIn(context), percentOf);
+
+    test('calc() adds, subtracts, multiplies and divides lengths', () {
+      expect(px('calc(10px + 2em)'), 30);
+      expect(px('calc(1rem - 6px)'), 10);
+      expect(px('calc(2 * 3px + 1vw)'), 10);
+      expect(px('calc(10px * 3 / 2)'), 15);
+      expect(px('calc((1em + 5px) * 2)'), 30);
+      expect(px('calc(0.35em + 1vw)'), closeTo(7.5, 1e-9));
+      expect(px('calc(-1 * 4px)'), -4);
+    });
+
+    test('percentages wait for the layout, which says what they are of', () {
+      final length = parse('calc(100% - 20px + 1em)')!.computedIn(context);
+      expect(length.hasPercent, isTrue);
+      expect(length.isPercent, isFalse);
+      expect(InlineStyler.px(length, 200), 190);
+      expect(InlineStyler.px(length, 100), 90);
+      expect(
+        parse('calc(10px + 1em)')!.computedIn(context),
+        const CssLength.px(20),
+        reason: 'no percentage left: a px length',
+      );
+    });
+
+    test('min(), max() and clamp(), percentages too', () {
+      expect(px('min(10px, 2em, 50px)'), 10);
+      expect(px('max(10px, 2em)'), 20);
+      expect(px('clamp(10px, 5vw, 30px)'), 20);
+      expect(px('clamp(10px, 1vw, 30px)'), 10);
+      expect(px('clamp(10px, 10vw, 30px)'), 30);
+      expect(px('min(50%, 300px)', percentOf: 400), 200);
+      expect(px('min(50%, 300px)', percentOf: 800), 300);
+      expect(px('calc(min(10px, 5%) * 2)', percentOf: 100), 10);
+    });
+
+    test('what is not a length is no length', () {
+      for (final css in [
+        'calc(1px + 2)',
+        'calc(1px * 2px)',
+        'calc(2 / 1px)',
+        'calc(1px / 0)',
+        'calc(1 + 2)',
+        'calc(1px -2px)',
+        'calc(1px +)',
+        'calc()',
+        'min(1px, 2)',
+        'clamp(1px, 2px)',
+        'calc(1px foo)',
+        'attr(x)',
+      ]) {
+        expect(parse(css), isNull, reason: css);
+      }
+      expect(
+        CssLength.parse(single('calc(10% + 1px)'), allowPercent: false),
+        isNull,
+      );
+    });
+
+    test('equal math functions are equal lengths', () {
+      expect(parse('calc(1px + 2em)'), parse('calc(1px + 2em)'));
+      expect(parse('calc(1px + 2em)'), isNot(parse('calc(2em + 1px)')));
+      expect(
+        parse('calc(1px + 2em)').hashCode,
+        parse('calc(1px + 2em)').hashCode,
+      );
     });
   });
 
