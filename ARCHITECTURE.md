@@ -442,6 +442,9 @@ Flutter package depends only on the stable Readflex dictionary HTTP contract.
 Reader-specific UI state is split by responsibility:
 
 - `ReaderBloc` loads the source and persists reader position/highlight data.
+- `ReaderArticleProgressCubit` holds the live article scroll fraction once per
+  frame. The article host updates it independently of throttled position
+  reports, so the progress line follows scrolling without extra storage work.
 - `ReaderUiCubit` owns chrome, Contents/Search sheet visibility (in-place `AppInlineSheet`s, retained while hidden), tap-zone, and search-highlight UI state.
 - `ReaderSearchCubit` owns in-reader search state and recent query callbacks.
   Streamed results/progress are batched at 16ms intervals, with an immediate

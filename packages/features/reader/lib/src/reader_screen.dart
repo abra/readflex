@@ -22,6 +22,7 @@ import 'package:vellum/all_formats.dart';
 import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';
 import 'reader_appearance_sheet.dart';
+import 'reader_article_progress_cubit.dart';
 import 'reader_article_surface.dart';
 import 'reader_back_guard.dart';
 import 'reader_bloc.dart';
@@ -242,6 +243,7 @@ class ReaderScreen extends StatelessWidget {
           )..add(ReaderSourceLoadRequested(sourceId: sourceId)),
         ),
         BlocProvider(create: (_) => ReaderUiCubit()),
+        BlocProvider(create: (_) => ReaderArticleProgressCubit()),
         BlocProvider(
           create: (_) => ReaderSearchCubit(
             initialRecentQueries: initialSearchHistory,

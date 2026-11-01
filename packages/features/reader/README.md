@@ -330,6 +330,15 @@ resolves:
   0.4% move, an edge, a bookmark change), the place it settles on after.
   An article left at its start or end reopens there; otherwise at its
   sentence, centred; otherwise at its share.
+- **Progress line** — a passive 3dp track below the top title shows the
+  live scroll share from `ReaderArticleProgressCubit`, updated once per
+  frame by the article host. It stays visible at the safe top edge
+  when the title is hidden, follows the reader's colours, and lets page
+  gestures pass through. Only the indicator rebuilds on progress updates;
+  the fill tracks the actual position directly, including small moves
+  between the throttled position reports to `ReaderBloc`. Opening or closing
+  an article clears its live progress. Its accessibility label announces
+  the localized percentage read.
 - **Contents** — headings with an id by depth, else up to twelve blocks
   of 48 characters or more by their first words; each with the share of
   the scroll where it starts once the article is laid out.

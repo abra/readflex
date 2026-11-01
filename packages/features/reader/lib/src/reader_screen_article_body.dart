@@ -38,6 +38,7 @@ class _ReaderArticleBody extends StatefulWidget {
 }
 
 class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
+  late final ReaderArticleProgressCubit _progressCubit;
   ArticleTextSource? _source;
   TextScrollController? _controller;
   BookImageCache? _images;
@@ -88,6 +89,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
   @override
   void initState() {
     super.initState();
+    _progressCubit = context.read<ReaderArticleProgressCubit>();
     _notifyLoading();
     unawaited(_open());
   }
@@ -131,6 +133,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
   // Opening.
 
   Future<void> _open() async {
+    _progressCubit.reset();
     final generation = ++_openGeneration;
     final document = widget.document;
     final ArticleTextSource source;
@@ -223,6 +226,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
   }
 
   void _closeArticle() {
+    _progressCubit.reset();
     _openGeneration++;
     _pendingReport?.cancel();
     _pendingReport = null;
@@ -396,7 +400,9 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
         );
       }
     }
-    if (controller.position != null) {
+    final position = controller.position;
+    if (position != null) {
+      _progressCubit.update(position.fraction);
       _reportPosition();
       if (!_ready) {
         _ready = true;

@@ -636,6 +636,8 @@ class _ReadyContentState extends State<_ReadyContent> {
                           readerTheme: readerTheme,
                           onArticleTitlePressed: widget.onArticleTitlePressed,
                         ),
+                        if (surfaceReady)
+                          ReaderArticleProgressDriver(readerTheme: readerTheme),
                         const ReaderPageBookmarkIndicatorDriver(),
                         const ReaderBrightnessChromeDriver(),
                         if (!searchNavigation.active)

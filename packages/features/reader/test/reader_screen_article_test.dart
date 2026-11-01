@@ -11,6 +11,7 @@ import 'package:reader/src/reader_highlight_focus_cubit.dart';
 import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
+import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';
@@ -192,6 +193,14 @@ void main() {
     await pumpReader(tester);
     expect(find.byType(TextScrollView), findsOneWidget);
     final state = bloc(tester).state;
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            find.byKey(const ValueKey('readerArticleProgress')),
+          )
+          .value,
+      0,
+    );
     expect(state.documentFeatures?.format, 'html');
     expect(state.documentFeatures?.hasSearchableText, isTrue);
     expect(state.tocItems.map((i) => (i.label, i.href, i.level)), [
@@ -220,9 +229,18 @@ void main() {
     );
     await tester.pumpAndSettle();
     await settle(tester, () => bloc(tester).state.chapterTitle == 'Part Two');
+    await tester.pumpAndSettle();
     final state = bloc(tester).state;
     expect(state.document!.currentCfi, isNot(first));
     expect(state.document!.readingProgress, greaterThan(0.3));
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            find.byKey(const ValueKey('readerArticleProgress')),
+          )
+          .value,
+      controller(tester).position!.fraction,
+    );
     // Saved after a pause, as books are.
     await tester.pump(const Duration(seconds: 2));
     await tester.runAsync(
@@ -231,6 +249,109 @@ void main() {
     expect(articles.updatedArticle?.currentCfi, state.document!.currentCfi);
     await close(tester);
   });
+
+  testWidgets(
+    'the persistent progress line passes drags through to the article',
+    (
+      tester,
+    ) async {
+      await pumpReader(tester);
+      tester
+          .element(find.byType(TextScrollView))
+          .read<ReaderUiCubit>()
+          .hideChrome();
+      await tester.pumpAndSettle();
+      final line = find.byKey(const ValueKey('readerArticleProgress'));
+      final scroll = controller(tester);
+      final before = scroll.scroll.offset;
+      await tester.dragFrom(tester.getCenter(line), const Offset(0, -300));
+      await tester.pumpAndSettle();
+      expect(scroll.scroll.offset, greaterThan(before));
+      await settle(
+        tester,
+        () => bloc(tester).state.document!.readingProgress > 0,
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<LinearProgressIndicator>(line).value,
+        greaterThan(0),
+      );
+
+      await tester.runAsync(() => scroll.goToFraction(1));
+      await tester.pump();
+      await settle(tester, () => bloc(tester).state.atEnd);
+      await tester.pumpAndSettle();
+      expect(tester.widget<LinearProgressIndicator>(line).value, 1);
+      await close(tester);
+    },
+  );
+
+  testWidgets('a short article shows complete progress without scrolling', (
+    tester,
+  ) async {
+    File('${tempDir.path}/content.html').writeAsStringSync(
+      '<p id="block-0" data-rf-block-id="block-0">'
+      '<span id="block-0-s0" data-rf-sentence="0">A short article with enough '
+      'words to appear in the contents list.</span></p>',
+    );
+    await pumpReader(tester);
+    expect(controller(tester).maxScroll, 0);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            find.byKey(const ValueKey('readerArticleProgress')),
+          )
+          .value,
+      1,
+    );
+    await close(tester);
+  });
+
+  testWidgets(
+    'slow scrolling updates the line each frame between position reports',
+    (
+      tester,
+    ) async {
+      await pumpReader(tester);
+      final articleController = controller(tester);
+      await settle(tester, () => articleController.section!.isComplete);
+      final document = articleController.section!.prepared.document;
+      await tester.runAsync(
+        () => articleController.goToPoint(
+          TextPoint(document.elementIndexById('block-20-s0'), 0),
+        ),
+      );
+      // Start inside a line, so these small moves stay in the same sentence.
+      articleController.scroll.jumpTo(articleController.scroll.offset + 5);
+      await tester.pump();
+      await settle(
+        tester,
+        () =>
+            (bloc(tester).state.document!.readingProgress -
+                    articleController.position!.fraction)
+                .abs() <
+            1e-9,
+      );
+      await tester.pumpAndSettle();
+      final reported = bloc(tester).state.document!.readingProgress;
+      final start = articleController.scroll.offset;
+      final line = find.byKey(const ValueKey('readerArticleProgress'));
+      for (var frame = 1; frame <= 8; frame++) {
+        articleController.scroll.jumpTo(start + frame);
+        await tester.pump(const Duration(milliseconds: 16));
+        final fraction = articleController.position!.fraction;
+        expect((fraction - reported).abs(), lessThan(0.004));
+        expect(bloc(tester).state.document!.readingProgress, reported);
+        expect(
+          tester.widget<LinearProgressIndicator>(line).value,
+          closeTo(fraction, 1e-9),
+          reason: 'the line must follow the scroll in frame $frame',
+        );
+      }
+      await close(tester);
+    },
+  );
 
   testWidgets('reopens at the saved sentence, centred', (tester) async {
     final doc = ContentDocument.parseHtml(
@@ -251,6 +372,15 @@ void main() {
     // The shell's anchor names the sentence's own id as its block.
     expect(anchor?.blockId, 'block-60-s0');
     expect(controller(tester).scroll.offset, greaterThan(0));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<LinearProgressIndicator>(
+            find.byKey(const ValueKey('readerArticleProgress')),
+          )
+          .value,
+      controller(tester).position!.fraction,
+    );
     await close(tester);
   });
 

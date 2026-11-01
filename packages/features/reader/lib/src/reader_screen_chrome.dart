@@ -596,6 +596,65 @@ const _kReaderBottomChromeMaxWidth = 560.0;
 
 /// Labels sit inside the capsule's rounded ends: the 16dp gutter plus 12dp.
 const _kReaderProgressRowInset = AppSpacing.lg + AppSpacing.md;
+const _kReaderProgressTrackHeight = 3.0;
+
+/// Keeps article progress visible below the title, or at the safe top edge
+/// when the title is hidden. Position updates rebuild only this indicator.
+@visibleForTesting
+class ReaderArticleProgressDriver extends StatelessWidget {
+  const ReaderArticleProgressDriver({required this.readerTheme, super.key});
+
+  final ReaderThemeData readerTheme;
+
+  @override
+  Widget build(BuildContext context) {
+    final document = context.select<ReaderBloc, (bool, bool)>(
+      (b) => (
+        b.state.sourceType == SourceType.article,
+        b.state.pageProgressionRtl,
+      ),
+    );
+    if (!document.$1) return const SizedBox.shrink();
+    final progress = context.select<ReaderArticleProgressCubit, double?>(
+      (c) => c.state,
+    );
+    if (progress == null) return const SizedBox.shrink();
+    final chromeVisible = context.select<ReaderUiCubit, bool>(
+      (c) => c.state.chromeVisible,
+    );
+    final hasSelection = context.select<ReaderSelectionCubit, bool>(
+      (c) => c.state.hasSelection,
+    );
+    final titleVisible = chromeVisible && !hasSelection;
+    final padding = MediaQuery.paddingOf(context);
+
+    return AnimatedPositioned(
+      left: padding.left,
+      right: padding.right,
+      top: padding.top + (titleVisible ? _kReaderTopChromeLineHeight : 0),
+      duration: context.motion(AppMotion.short),
+      curve: titleVisible ? _kChromeAnimCurve : _kChromeHideAnimCurve,
+      child: IgnorePointer(
+        child: Directionality(
+          textDirection: document.$2 ? TextDirection.rtl : TextDirection.ltr,
+          child: LinearProgressIndicator(
+            key: const ValueKey('readerArticleProgress'),
+            value: progress,
+            minHeight: _kReaderProgressTrackHeight,
+            color: readerChromeInkColor(readerTheme),
+            backgroundColor: readerChromeTrackColor(readerTheme),
+            borderRadius: BorderRadius.zero,
+            stopIndicatorRadius: 0,
+            trackGap: 0,
+            semanticsLabel: context.l10n.librarySourcePercentRead(
+              (progress * 100).round(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 /// Pulls title, chapter and chrome visibility for the top chrome line.
 @visibleForTesting
@@ -1308,7 +1367,6 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
   Timer? _dragReleaseTimer;
 
   static const double _dragSettleEpsilon = 0.005;
-  static const double _progressTrackHeight = 3;
   static const double _progressThumbRadius = 6;
 
   @override
@@ -1408,7 +1466,7 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
     final progressTrack = showProgressSlider
         ? SliderTheme(
             data: SliderThemeData(
-              trackHeight: _progressTrackHeight,
+              trackHeight: _kReaderProgressTrackHeight,
               activeTrackColor: widget.inkColor,
               inactiveTrackColor: widget.trackColor,
               thumbColor: widget.inkColor,
@@ -1440,12 +1498,12 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
             child: Center(
               child: SizedBox(
                 width: double.infinity,
-                height: _progressTrackHeight,
+                height: _kReaderProgressTrackHeight,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     color: widget.inkColor,
                     borderRadius: BorderRadius.circular(
-                      _progressTrackHeight / 2,
+                      _kReaderProgressTrackHeight / 2,
                     ),
                   ),
                 ),

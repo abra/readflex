@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:reader/src/reader_article_progress_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_chrome_colors.dart';
 import 'package:reader/src/reader_screen.dart';
@@ -20,6 +21,7 @@ import 'helpers/fake_highlight_repository.dart';
 
 const _lineKey = ValueKey('readerTopChromeLine');
 const _titleButtonKey = ValueKey('readerArticleTitleButton');
+const _progressKey = ValueKey('readerArticleProgress');
 
 double _contrast(Color a, Color b) {
   final la = a.computeLuminance();
@@ -54,6 +56,7 @@ void main() {
   );
   late ReaderUiCubit uiCubit;
   late ReaderSelectionCubit selectionCubit;
+  late ReaderArticleProgressCubit articleProgressCubit;
   final blocs = <ReaderBloc>[];
 
   Future<ReaderBloc> loadBloc({
@@ -102,6 +105,7 @@ void main() {
   setUp(() {
     uiCubit = ReaderUiCubit()..showChrome();
     selectionCubit = ReaderSelectionCubit();
+    articleProgressCubit = ReaderArticleProgressCubit();
   });
 
   tearDown(() async {
@@ -111,6 +115,7 @@ void main() {
     blocs.clear();
     await uiCubit.close();
     await selectionCubit.close();
+    await articleProgressCubit.close();
   });
 
   Future<void> pump(
@@ -123,12 +128,19 @@ void main() {
     double textScale = 1,
     double topInset = 0,
     Size size = const Size(390, 844),
+    Locale locale = const Locale('en'),
+    VoidCallback? onPageTap,
+    bool settleAnimations = true,
   }) async {
+    if (bloc.state.sourceType == SourceType.article) {
+      articleProgressCubit.update(bloc.state.document!.readingProgress);
+    }
     tester.view.physicalSize = size * tester.view.devicePixelRatio;
     addTearDown(tester.view.resetPhysicalSize);
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
+        locale: locale,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         builder: (context, child) => MediaQuery(
@@ -148,26 +160,270 @@ void main() {
             BlocProvider.value(value: bloc),
             BlocProvider.value(value: uiCubit),
             BlocProvider.value(value: selectionCubit),
+            BlocProvider.value(value: articleProgressCubit),
           ],
           child: Scaffold(
             body: Stack(
               children: [
+                if (onPageTap != null)
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onPageTap,
+                    ),
+                  ),
                 ReaderTopChromeDriver(
                   readerTheme: theme.data,
                   onArticleTitlePressed: onArticleTitlePressed,
                 ),
+                ReaderArticleProgressDriver(readerTheme: theme.data),
               ],
             ),
           ),
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    if (settleAnimations) await tester.pumpAndSettle();
   }
 
   Finder topChrome() => find.ancestor(
     of: find.byKey(_lineKey),
     matching: find.byType(AnimatedSlide),
+  );
+
+  Future<void> reportProgress(
+    WidgetTester tester,
+    ReaderBloc bloc,
+    double progress, {
+    bool pageProgressionRtl = false,
+    bool settleAnimations = true,
+  }) async {
+    await tester.runAsync(() async {
+      final updated = bloc.stream.firstWhere(
+        (state) =>
+            state.document?.readingProgress == progress &&
+            state.pageProgressionRtl == pageProgressionRtl,
+      );
+      bloc.add(
+        ReaderBookPositionUpdated(
+          cfi: 'article-progress:$progress',
+          progress: progress,
+          pageProgressionRtl: pageProgressionRtl,
+        ),
+      );
+      await updated.timeout(const Duration(seconds: 3));
+    });
+    articleProgressCubit.update(progress);
+    if (settleAnimations) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump();
+    }
+  }
+
+  testWidgets('article progress follows reading from start to end', (
+    tester,
+  ) async {
+    final bloc = await tester.runAsync(loadBloc) as ReaderBloc;
+    await pump(tester, bloc: bloc);
+    for (final progress in [0.0, 0.42, 1.0]) {
+      await reportProgress(tester, bloc, progress, pageProgressionRtl: true);
+      expect(
+        tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+        progress,
+      );
+    }
+    expect(
+      Directionality.of(tester.element(find.byKey(_progressKey))),
+      TextDirection.rtl,
+      reason: 'progress follows the document even in an LTR app',
+    );
+  });
+
+  testWidgets(
+    'article progress follows each small movement before its position is saved',
+    (tester) async {
+      final bloc = await tester.runAsync(loadBloc) as ReaderBloc;
+      await pump(tester, bloc: bloc);
+      final reported = bloc.state.document!;
+      for (final progress in [0.0005, 0.001, 0.0015, 0.002, 0.001]) {
+        articleProgressCubit.update(progress);
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(
+          tester
+              .widget<LinearProgressIndicator>(find.byKey(_progressKey))
+              .value,
+          progress,
+        );
+        expect(bloc.state.document!.readingProgress, reported.readingProgress);
+        expect(bloc.state.document!.currentCfi, reported.currentCfi);
+      }
+      expect(tester.hasRunningAnimations, isFalse);
+    },
+  );
+
+  testWidgets('article progress reset removes the previous reading position', (
+    tester,
+  ) async {
+    await pump(tester, bloc: await tester.runAsync(loadBloc) as ReaderBloc);
+    articleProgressCubit.update(0.8);
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(
+      tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+      0.8,
+    );
+
+    articleProgressCubit.reset();
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(find.byKey(_progressKey), findsNothing);
+
+    articleProgressCubit.update(0.1);
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(
+      tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+      0.1,
+    );
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('article progress updates immediately under reduced motion', (
+    tester,
+  ) async {
+    final bloc = await tester.runAsync(loadBloc) as ReaderBloc;
+    await pump(tester, bloc: bloc, disableAnimations: true);
+    await reportProgress(tester, bloc, 0.8, settleAnimations: false);
+    expect(
+      tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+      0.8,
+    );
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('article progress opens directly at its saved fraction', (
+    tester,
+  ) async {
+    final bloc =
+        await tester.runAsync(
+              () => loadBloc(
+                savedArticle: article.copyWith(readingProgress: 0.65),
+              ),
+            )
+            as ReaderBloc;
+    await pump(tester, bloc: bloc, settleAnimations: false);
+    expect(
+      tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+      0.65,
+    );
+    expect(tester.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets('books and comics have no persistent article progress line', (
+    tester,
+  ) async {
+    articleProgressCubit.update(0.8);
+    for (final source in [book, comic]) {
+      final bloc =
+          await tester.runAsync(() => loadBloc(source: source)) as ReaderBloc;
+      await pump(tester, bloc: bloc);
+      expect(find.byKey(_progressKey), findsNothing);
+    }
+  });
+
+  for (final reducedMotion in [false, true]) {
+    testWidgets(
+      'article progress remains at the safe top when chrome hides '
+      'reducedMotion=$reducedMotion',
+      (tester) async {
+        await pump(
+          tester,
+          bloc: await tester.runAsync(loadBloc) as ReaderBloc,
+          topInset: 47,
+          disableAnimations: reducedMotion,
+          onArticleTitlePressed: (_, _) {},
+        );
+        final progress = find.byKey(_progressKey);
+        expect(
+          tester.getTopLeft(progress).dy,
+          tester.getBottomRight(find.byKey(_titleButtonKey)).dy,
+        );
+        expect(tester.getSize(progress).height, 3);
+
+        uiCubit.hideChrome();
+        if (reducedMotion) {
+          await tester.pump();
+          await tester.pump();
+          expect(tester.hasRunningAnimations, isFalse);
+        } else {
+          await tester.pumpAndSettle();
+        }
+        expect(progress, findsOneWidget);
+        expect(tester.getTopLeft(progress).dy, 47);
+
+        uiCubit.showChrome();
+        selectionCubit.select(text: 'Selected text');
+        await tester.pumpAndSettle();
+        expect(tester.getTopLeft(progress).dy, 47);
+        selectionCubit.deselect();
+        await tester.pumpAndSettle();
+        expect(tester.getTopLeft(progress).dy, 47 + 48);
+      },
+    );
+  }
+
+  testWidgets('article progress fits a small RTL phone in every reader theme', (
+    tester,
+  ) async {
+    final bloc = await tester.runAsync(loadBloc) as ReaderBloc;
+    for (final theme in ReaderThemePreset.values) {
+      await pump(
+        tester,
+        bloc: bloc,
+        theme: theme,
+        rtl: true,
+        textScale: 2,
+        size: const Size(320, 640),
+      );
+      final progress = find.byKey(_progressKey);
+      final indicator = tester.widget<LinearProgressIndicator>(progress);
+      expect(indicator.color, readerChromeInkColor(theme.data));
+      expect(indicator.backgroundColor, readerChromeTrackColor(theme.data));
+      expect(tester.getSize(progress), const Size(320, 3));
+      expect(
+        Directionality.of(tester.element(progress)),
+        TextDirection.ltr,
+        reason: 'the article direction is independent of the app locale',
+      );
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets(
+    'article progress has localized semantics and passes taps through',
+    (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      final bloc = await tester.runAsync(loadBloc) as ReaderBloc;
+      var pageTaps = 0;
+      await pump(
+        tester,
+        bloc: bloc,
+        locale: const Locale('ru'),
+        onPageTap: () => pageTaps++,
+      );
+      await reportProgress(tester, bloc, 0.42);
+      final l10n = tester.element(find.byType(Scaffold)).l10n;
+      expect(l10n.localeName, 'ru');
+      final node = tester.getSemantics(
+        find.bySemanticsLabel(l10n.librarySourcePercentRead(42)),
+      );
+      expect(node.value, '42');
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isFalse);
+      await tester.tapAt(tester.getCenter(find.byKey(_progressKey)));
+      await tester.pump();
+      expect(pageTaps, 1);
+      semantics.dispose();
+    },
   );
 
   testWidgets('article title is an accessible ink button', (tester) async {
