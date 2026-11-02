@@ -9,7 +9,6 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:shared/shared.dart';
 
 import 'translation_selection_mode.dart';
-import 'word_save_status.dart';
 
 enum TranslateSheetStatus {
   initial,

@@ -1,12 +1,14 @@
 # shared
 
-Cross-feature contracts. Currently hosts the `TextAction` plugin contract
-that lets the reader surface Highlight, Translate, and Define without knowing
-anything about their persistence or service implementations.
+Cross-feature UI and action contracts, including their payloads and presentation
+statuses. The `TextAction` plugin contract lets the reader surface Highlight,
+Translate, and Define without knowing their persistence or service implementations.
+`WordSaveStatus` gives Translate and Dictionary the same saved-word states.
 
 These cross-feature contracts intentionally depend on Flutter:
 `TextAction.icon` is an `IconData`, and actions are executed with a
-`BuildContext`. Domain data without UI dependencies belongs in `domain_models`.
+`BuildContext`. Domain entities belong in `domain_models`; service interfaces
+remain in the packages that own those services.
 
 ---
 
@@ -18,6 +20,10 @@ These cross-feature contracts intentionally depend on Flutter:
 | `ColorHighlightTextAction`  | abstract class | Highlight action contract with caller-selected color            |
 | `TextSelectionContext`      | data class     | Payload passed to an action when the user selects text           |
 | `HighlightMergeTarget`      | data class     | Merged range and saved highlight ids absorbed by a highlight action |
+| `WordSaveStatus`            | enum           | Saved-word presentation states shared by Translate and Dictionary |
+
+`WordSaveStatus` contains `notSaved`, `saving`, `saved`, and `failure`.
+Both feature libraries re-export this shared type for their public state APIs.
 
 ### TextAction
 
@@ -114,15 +120,17 @@ purely from the list — it never imports a feature package.
 shared → domain_models, flutter (widgets)
 features/reader       → shared   (consumes TextAction list)
 features/highlight    → shared   (implements TextAction)
-features/translate    → shared   (implements TextAction)
-features/dictionary   → shared   (implements TextAction)
+features/translate    → shared   (TextAction, WordSaveStatus)
+features/dictionary   → shared   (TextAction, WordSaveStatus)
 ```
 
 ---
 
 ## Rules
 
-- Only cross-feature contracts live here. Models go in `domain_models`.
+- Only cross-feature contracts, their payloads, and shared presentation statuses
+  live here. Domain entities go in `domain_models`; service contracts stay with
+  their owning service packages.
 - Keep the surface tiny. Anything used by a single feature stays inside
   that feature.
 - Flutter is allowed here because contracts may reference UI types

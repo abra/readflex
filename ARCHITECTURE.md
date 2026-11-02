@@ -51,8 +51,10 @@ Preferred package shapes:
 
 Do not create a broad `common` package. If code is reusable, name the actual
 responsibility. The existing `packages/shared` package is intentionally narrow:
-it currently contains only cross-feature contracts for reader text actions. Do
-not add unrelated helpers, widgets, or business logic there.
+it contains cross-feature UI and action contracts, their payloads, and shared
+presentation statuses such as `WordSaveStatus`. Domain entities stay in
+`domain_models`, and service interfaces stay with their owning service packages.
+Do not add unrelated helpers, widgets, or business logic there.
 
 ## Root App Package
 
@@ -259,7 +261,7 @@ When adding or renaming a localized key:
 | `local_storage` | Single Drift database (`readflex.db`, write-ahead log), tables, DAOs, migrations, storage rows. | none |
 | `component_library` | Design tokens, theme extensions, reusable UI components, bottom-sheet shell, shared visual primitives. | none |
 | `readflex_localizations` | Generated Flutter localizations, ARB files, supported locale metadata, and `BuildContext` localization helpers. | none |
-| `shared` | Narrow cross-feature contracts. Currently reader text-action and selection contracts. | `domain_models` |
+| `shared` | Narrow cross-feature UI/action contracts, selection payloads, and saved-word presentation status (`WordSaveStatus`). | `domain_models` |
 
 Domain models are the neutral contract between repositories, services, blocs,
 and UI. Storage rows and DAO types should remain behind repositories.
@@ -371,7 +373,7 @@ The reader is intentionally split across several packages:
 |---------|----------------|
 | `pagecraft` | The engine: `ComicBook` over its own ZIP reader, `FixedPagesView` (PageView spreads, pinch and double-tap zoom, tap arbitration), `ComicImageAreaLayer`, `ComicPageImage`/`ComicPageThumbnail`; PDF; reflowable books through `TextPagesView` (EPUB, FB2, MOBI); articles through `TextScrollView`. |
 | `features/reader` | Reader screen, reader bloc/cubits, chrome, Contents and Search sheets, appearance, search, selection, brightness, keep-awake, and the page's types (`BookPosition`, `ReaderTocItem`, search events, selections). Commands to the page go through `ReaderSurface`: `ReaderTextSurface` (EPUB, FB2, MOBI on pagecraft's `TextPagesView`), `ReaderComicSurface`, `ReaderPdfSurface` and `ReaderArticleSurface` (articles on pagecraft's `TextScrollView`); the source type and format pick the body and surface. |
-| `shared` | `TextAction` plugin contract used by reader context-panel actions. |
+| `shared` | `TextAction` and its selection payloads; `WordSaveStatus` used by Translate and Dictionary. |
 | `features/highlight` | Implements `HighlightAction`. |
 | `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
 | `features/dictionary` | Implements `DictionaryAction` and owns the remote definition sheet/cubit. |

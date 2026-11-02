@@ -14,7 +14,6 @@ import 'translation_language_direction.dart';
 import 'translate_sheet_outcome.dart';
 import 'translation_selection_mode.dart';
 import 'translation_text_direction.dart';
-import 'word_save_status.dart';
 
 part 'translation_answer_style.dart';
 part 'translation_details.dart';

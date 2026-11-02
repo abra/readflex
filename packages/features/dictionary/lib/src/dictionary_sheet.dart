@@ -10,7 +10,6 @@ import 'package:toast_service/toast_service.dart';
 import 'package:shared/shared.dart';
 
 import 'dictionary_cubit.dart';
-import 'word_save_status.dart';
 
 Future<void> showDictionarySheet(
   BuildContext context, {

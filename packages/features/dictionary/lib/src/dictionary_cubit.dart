@@ -7,8 +7,6 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared/shared.dart';
 
-import 'word_save_status.dart';
-
 enum DictionarySheetStatus {
   initial,
   loading,

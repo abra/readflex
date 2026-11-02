@@ -29,6 +29,9 @@ word's own definition becomes the base meaning). A tap that saves shows the
 "Saved for review" toast; removing is quiet. The native definition UI, shown
 first where available, has no Save.
 
+`DictionarySheetState.saveStatus` uses `WordSaveStatus` from `shared`, the same
+presentation contract as Translate. The feature library re-exports this type.
+
 ## Architecture
 
 - `DictionaryAction` owns system-first orchestration and opens the sheet only
