@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_language_sheet.dart';
 import 'package:local_storage/local_storage.dart';
+import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import '../support/reading_fixture.dart';
@@ -115,11 +116,14 @@ void main() {
       await unmountUi(tester);
     }, tags: ['golden']);
   }
-  for (final profile in VisualProfile.values) {
-    testWidgets('library and display ${profile.name}', (tester) async {
+  for (final (profile, surfaceSize, suffix) in [
+    for (final profile in VisualProfile.values) (profile, profile.size, ''),
+    (VisualProfile.tabletRtl, VisualProfile.phone.size, '-phone-rtl'),
+  ]) {
+    testWidgets('library and display ${profile.name}$suffix', (tester) async {
       final app = await tester.runAsync(() => UiTestApp.create());
       addTearDown(app!.dispose);
-      tester.view.physicalSize = profile.size;
+      tester.view.physicalSize = surfaceSize;
       tester.view.devicePixelRatio = 1;
       tester.platformDispatcher.textScaleFactorTestValue = profile.scale;
       addTearDown(tester.view.resetPhysicalSize);
@@ -142,7 +146,7 @@ void main() {
         description: 'library ready for snapshot',
       );
       await tester.pumpAndSettle();
-      await expectUiGolden(tester, profile, 'library-grid');
+      await expectUiGolden(tester, profile, 'library-grid$suffix');
       final strings = ReadflexLocalizations.of(
         tester.element(find.byType(LibraryScreen)),
       )!;
@@ -153,17 +157,39 @@ void main() {
       );
       await tester.longPressAt(tester.getTopLeft(tile) + const Offset(30, 30));
       await tester.pumpAndSettle();
-      await expectUiGolden(tester, profile, 'library-selection');
+      await expectUiGolden(tester, profile, 'library-selection$suffix');
       await tapUi(tester, find.byTooltip(strings.libraryCancelSelection));
       final displayPress = await tester.startGesture(
         tester.getCenter(find.byTooltip(strings.libraryDisplayOptions)),
       );
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
-      await expectUiGolden(tester, profile, 'library-display-pressed');
+      await expectUiGolden(tester, profile, 'library-display-pressed$suffix');
       await displayPress.up();
       await tester.pumpAndSettle();
-      await expectUiGolden(tester, profile, 'library-display');
+      await expectUiGolden(tester, profile, 'library-display$suffix');
+      final animation = find.byKey(
+        const ValueKey('library-page-animation-control'),
+      );
+      await tester.ensureVisible(animation);
+      await tester.pumpAndSettle();
+      await tapUi(
+        tester,
+        find.byKey(const ValueKey('library-page-animation-slide')),
+      );
+      expect(
+        app.preferencesService.current.readerPageAnimation,
+        ReaderPageAnimation.slide,
+      );
+      await expectUiGolden(tester, profile, 'library-animation-slide$suffix');
+      await tapUi(
+        tester,
+        find.byKey(const ValueKey('library-page-animation-cover')),
+      );
+      expect(
+        app.preferencesService.current.readerPageAnimation,
+        ReaderPageAnimation.cover,
+      );
       final displayRect = tester.getRect(find.byType(BottomSheet));
       final picker = find.byKey(const ValueKey('libraryLanguagePicker'));
       await tester.ensureVisible(picker);
@@ -220,7 +246,11 @@ void main() {
         closeTo(AppSpacing.sm, 1),
       );
       if (profile.scale > 1) {
-        await expectUiGolden(tester, profile, 'library-display-language');
+        await expectUiGolden(
+          tester,
+          profile,
+          'library-display-language$suffix',
+        );
       }
       await tapUi(tester, picker);
       expect(find.byType(BottomSheet), findsOneWidget);
@@ -257,7 +287,7 @@ void main() {
         expect(tester.getRect(text).left, greaterThanOrEqualTo(rect.left));
         expect(tester.getRect(text).right, lessThanOrEqualTo(rect.right));
       }
-      await expectUiGolden(tester, profile, 'library-language-picker');
+      await expectUiGolden(tester, profile, 'library-language-picker$suffix');
       final position = tester
           .state<ScrollableState>(
             find.descendant(of: sheet, matching: find.byType(Scrollable)),
@@ -272,7 +302,7 @@ void main() {
         await expectUiGolden(
           tester,
           profile,
-          'library-language-picker-scrolled',
+          'library-language-picker-scrolled$suffix',
         );
       }
       for (final option in options) {
@@ -287,13 +317,17 @@ void main() {
       expect(find.byType(BottomSheet), findsNothing);
       await tester.enterText(find.byType(TextField), 'no matching title');
       await tester.pumpAndSettle(const Duration(milliseconds: 400));
-      await expectUiGolden(tester, profile, 'library-no-results');
+      await expectUiGolden(tester, profile, 'library-no-results$suffix');
       final clearPress = await tester.startGesture(
         tester.getCenter(find.byTooltip(strings.commonClearSearch)),
       );
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
-      await expectUiGolden(tester, profile, 'library-search-clear-pressed');
+      await expectUiGolden(
+        tester,
+        profile,
+        'library-search-clear-pressed$suffix',
+      );
       await clearPress.up();
       await tester.pumpAndSettle(const Duration(milliseconds: 400));
       expect(find.text(ReadingFixture.bookTitle), findsOneWidget);

@@ -138,7 +138,11 @@ calls. The glyph segments are icon-only `AppChoiceControl`s with
 `AppChoiceOption.glyph` and `reselectable`, so tapping the preset shown as the
 nearest match applies its exact value. Alignment offers labeled Normal (start)
 and Justified choices; a legacy stored `end` reads back as start. Page turn (books only)
-offers labeled Horizontal and Vertical paging. The compact rows come first and
+offers labeled Horizontal and Vertical paging. Page animation (Slide/Cover)
+is global and selected from Library's top-right Display action. It is not a
+per-book control, and Reader Reset leaves it unchanged. Cover is the default;
+older preferences and unknown global IDs retain it. Legacy source animation
+keys are ignored while other source settings are preserved. The compact rows come first and
 together, 8dp apart: Font, then Font size, Line spacing and Page margins, whose
 controls fill exactly the end half of the column so they start on the split
 of the two-option choices below. All three move under captions, as full-width
@@ -157,8 +161,8 @@ controls in LTR/RTL, en/ru/de fit, Reset beside the title and whole theme names
 at 320dp with the bundled faces; `test/reader_theme_swatches_test.dart` covers
 the five, three and scrolling layouts and the opening position.
 Root goldens cover portrait, landscape, 2x text and RTL, including access to
-the final page-turn control and font sample. Native reader flows check equal
-step heights, manual return, DOM style updates,
+the page-turn controls and font sample. Native reader flows check equal
+step heights, manual return, engine style updates,
 persistence across reopening and reset to inherited settings.
 
 ```dart
@@ -191,6 +195,14 @@ There is no WebView: until R6 (2026-10-30) the WebView reader with
 foliate-js drew books behind the same contract; the last revision with it
 is `fb4b4e5c`. Saved positions, highlights and bookmarks keep the forms it
 wrote.
+
+Paginated books, PDFs and comics observe the global `ReaderPageAnimation`
+through appearance state and map it to Vellum's `PageTurnAnimation`.
+Animation and the horizontal/vertical
+axis are independent. Changing the effect preserves the controller, current
+CFI, text layout, selection and fixed-page zoom; it does not reopen the book.
+An animation already in progress finishes with its original effect. The
+engine owns presentation; preferences and Cubit remain outside Vellum.
 
 ### Comics (`_ReaderComicBody`, `ReaderComicSurface`)
 

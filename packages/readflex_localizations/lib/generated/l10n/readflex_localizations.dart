@@ -1635,6 +1635,24 @@ abstract class ReadflexLocalizations {
   /// **'Page turn'**
   String get readerPageTurn;
 
+  /// Heading for the visual page transition, separate from its horizontal or vertical direction.
+  ///
+  /// In en, this message translates to:
+  /// **'Page animation'**
+  String get readerPageAnimation;
+
+  /// Page animation option: the current and incoming pages slide together.
+  ///
+  /// In en, this message translates to:
+  /// **'Slide'**
+  String get readerPageAnimationSlide;
+
+  /// Page animation option: the incoming page covers the stationary current page.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get readerPageAnimationCover;
+
   /// No description provided for @readerResetTextSize.
   ///
   /// In en, this message translates to:

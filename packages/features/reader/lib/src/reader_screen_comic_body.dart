@@ -10,6 +10,7 @@ class _ReaderComicBody extends StatefulWidget {
     required this.readerTheme,
     required this.surface,
     required this.pageTurnStyle,
+    required this.pageAnimation,
     this.onPositionChanged,
     this.onReady,
     this.onLoading,
@@ -19,6 +20,7 @@ class _ReaderComicBody extends StatefulWidget {
   final ReaderThemeData readerTheme;
   final ReaderComicSurface surface;
   final ReaderPageTurnStyle pageTurnStyle;
+  final ReaderPageAnimation pageAnimation;
   final ValueChanged<BookPosition>? onPositionChanged;
   final VoidCallback? onReady;
   final VoidCallback? onLoading;
@@ -394,6 +396,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
       controller: controller,
       backgroundColor: widget.readerTheme.backgroundColor,
       axis: _nativePageAxis(widget.pageTurnStyle),
+      pageTurnAnimation: _nativePageTurnAnimation(widget.pageAnimation),
       onTap: (point) => _dispatchReaderTap(
         context,
         x: point.dx,

@@ -18,6 +18,7 @@ through a dedicated secure-storage backed service.
 | `ReaderAppearanceOverride`      | data class       | Optional per-source reader appearance override                    |
 | `ReaderTextAlignment`           | enum             | Reader text alignment (`start`, `end`, `justify`)                 |
 | `ReaderPageTurnStyle`           | enum             | Reader page-turn mode (`horizontal`, `vertical`)                  |
+| `ReaderPageAnimation`           | enum             | Page transition (`slide`, `cover`), independent of the turn axis |
 | `ReaderPageColors`              | enum             | PDF page colors (`theme`, `original`)                             |
 | `PreferencesService`            | concrete         | Loads, streams, and persists `Preferences`                         |
 | `PreferencesStorage`            | concrete         | Thin `SharedPreferencesAsync` wrapper                              |
@@ -47,6 +48,7 @@ repository loading resolves the device locale to a supported language.
 | `readerOverrideColor`      | `bool`      | `true`      |
 | `readerUseBookLayout`      | `bool`      | `true`      |
 | `readerPageTurnStyle`      | `ReaderPageTurnStyle` | `horizontal` |
+| `readerPageAnimation`      | `ReaderPageAnimation` | `cover` |
 | `readerTrimPageMargins`    | `bool`      | `true`      |
 | `readerPageColors`         | `ReaderPageColors` | `theme` |
 | `readerColumns`            | `ReaderColumns` | `auto` |
@@ -70,6 +72,14 @@ change them per book from the reader's Appearance sheet, which stores a
 window only; the reader keeps one column across a narrow window whatever it
 says. Readers change it per book from Appearance, like the other rows; an
 unknown stored ID reads back as Auto.
+
+`readerPageAnimation` selects Slide or Cover for all paginated books, PDFs and
+comics from the Library menu. It is independent of `readerPageTurnStyle`,
+which still selects the horizontal or vertical axis per source. Missing or
+unknown global animation IDs use Cover, so existing preferences retain the
+current animation. Source appearance overrides do not store animation; any
+legacy `pageAnimation` key is ignored while other source traits are retained.
+The additive global field needs no schema migration.
 
 The two `readerSelectionTip*` fields back the reader's one-time "Press and
 hold a word" tip. Storage only records what happened; the show limit and

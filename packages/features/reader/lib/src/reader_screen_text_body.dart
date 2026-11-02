@@ -816,6 +816,9 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
     final pages = TextPagesView(
       controller: controller,
       axis: _nativePageAxis(pageTurnStyle),
+      pageTurnAnimation: _nativePageTurnAnimation(
+        widget.appearance.pageAnimation,
+      ),
       backgroundColor: theme.backgroundColor,
       highlightsOf: (section) => _highlightsOf(section, highlights),
       onTap: (point) => _dispatchReaderTap(

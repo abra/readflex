@@ -881,6 +881,15 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get readerPageTurn => 'Page turn';
 
   @override
+  String get readerPageAnimation => 'Page animation';
+
+  @override
+  String get readerPageAnimationSlide => 'Slide';
+
+  @override
+  String get readerPageAnimationCover => 'Cover';
+
+  @override
   String get readerResetTextSize => 'Reset text size';
 
   @override

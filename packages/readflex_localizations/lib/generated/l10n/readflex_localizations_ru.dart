@@ -895,6 +895,15 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get readerPageTurn => 'Листание';
 
   @override
+  String get readerPageAnimation => 'Анимация страниц';
+
+  @override
+  String get readerPageAnimationSlide => 'Сдвиг';
+
+  @override
+  String get readerPageAnimationCover => 'Перекрытие';
+
+  @override
   String get readerResetTextSize => 'Сбросить размер текста';
 
   @override

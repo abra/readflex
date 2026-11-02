@@ -32,7 +32,11 @@ class ReaderAppearanceState extends Equatable {
   bool get hasOverride => !sourceOverride.isEmpty;
 
   bool get isFactoryDefault =>
-      effectiveAppearance == ReaderAppearancePreferences.defaults;
+      effectiveAppearance.copyWith(
+        // Library owns this global choice; the source reset leaves it alone.
+        pageAnimation: ReaderAppearancePreferences.defaults.pageAnimation,
+      ) ==
+      ReaderAppearancePreferences.defaults;
 
   @override
   List<Object?> get props => [

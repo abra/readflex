@@ -461,6 +461,18 @@
   "readerTextAlignment": "Text alignment",
   "readerPageMargins": "Page margins",
   "readerPageTurn": "Page turn",
+  "readerPageAnimation": "Page animation",
+  "@readerPageAnimation": {
+    "description": "Heading for the visual page transition, separate from its horizontal or vertical direction."
+  },
+  "readerPageAnimationSlide": "Slide",
+  "@readerPageAnimationSlide": {
+    "description": "Page animation option: the current and incoming pages slide together."
+  },
+  "readerPageAnimationCover": "Cover",
+  "@readerPageAnimationCover": {
+    "description": "Page animation option: the incoming page covers the stationary current page."
+  },
   "readerResetTextSize": "Reset text size",
   "readerTextSize": "Text size",
   "readerDecreaseTextSize": "Decrease text size",

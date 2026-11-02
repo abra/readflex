@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_language_sheet.dart';
 import 'library_layout_cubit.dart';
 import 'library_locale_cubit.dart';
+import 'library_page_animation_cubit.dart';
 import 'library_theme_cubit.dart';
 
 Future<void> showLibraryDisplaySheet({
@@ -15,6 +17,7 @@ Future<void> showLibraryDisplaySheet({
   required LibraryLayoutCubit layoutCubit,
   required LibraryLocaleCubit localeCubit,
   required LibraryThemeCubit themeCubit,
+  required LibraryPageAnimationCubit pageAnimationCubit,
 }) => showAppBottomSheet<void>(
   context,
   scrimClosesFlow: true,
@@ -23,6 +26,7 @@ Future<void> showLibraryDisplaySheet({
       BlocProvider.value(value: layoutCubit),
       BlocProvider.value(value: localeCubit),
       BlocProvider.value(value: themeCubit),
+      BlocProvider.value(value: pageAnimationCubit),
     ],
     child: const _LibraryDisplaySheet(),
   ),
@@ -194,11 +198,42 @@ class _DisplaySettings extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          AppSettingsSection(
+            title: l10n.readerPageAnimation,
+            child: const _PageAnimationControl(),
+          ),
+          const SizedBox(height: AppSpacing.lg),
           _LanguagePickerRow(onPressed: onLanguage),
         ],
       ),
     );
   }
+}
+
+class _PageAnimationControl extends StatelessWidget {
+  const _PageAnimationControl();
+
+  @override
+  Widget build(BuildContext context) =>
+      BlocBuilder<LibraryPageAnimationCubit, ReaderPageAnimation>(
+        builder: (context, animation) => AppChoiceControl<ReaderPageAnimation>(
+          key: const ValueKey('library-page-animation-control'),
+          selected: animation,
+          onChanged: context.read<LibraryPageAnimationCubit>().setPageAnimation,
+          options: [
+            AppChoiceOption(
+              value: ReaderPageAnimation.slide,
+              label: context.l10n.readerPageAnimationSlide,
+              labelKey: const ValueKey('library-page-animation-slide'),
+            ),
+            AppChoiceOption(
+              value: ReaderPageAnimation.cover,
+              label: context.l10n.readerPageAnimationCover,
+              labelKey: const ValueKey('library-page-animation-cover'),
+            ),
+          ],
+        ),
+      );
 }
 
 class _LanguagePickerRow extends StatelessWidget {

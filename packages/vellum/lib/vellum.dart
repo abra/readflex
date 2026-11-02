@@ -30,6 +30,7 @@ export 'src/text/sentence_breaks.dart';
 export 'src/text/whitespace.dart';
 export 'src/image/image_dimensions.dart';
 export 'src/image/page_content.dart';
+export 'src/page_turn/page_turn_animation.dart';
 export 'src/css/computed_style.dart';
 export 'src/css/css_custom_properties.dart' show CssCustomProperties;
 export 'src/css/css_media.dart';

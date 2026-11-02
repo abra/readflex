@@ -109,6 +109,9 @@ class PreferencesRepository {
         readerPageTurnStyle: _readReaderPageTurnStyle(
           map['readerPageTurnStyle'],
         ),
+        readerPageAnimation: _readReaderPageAnimation(
+          map['readerPageAnimation'],
+        ),
         readerTrimPageMargins: map['readerTrimPageMargins'] as bool? ?? true,
         readerPageColors: ReaderPageColors.fromId(
           map['readerPageColors'] as String?,
@@ -189,6 +192,7 @@ class PreferencesRepository {
       'readerOverrideColor': prefs.readerOverrideColor,
       'readerUseBookLayout': prefs.readerUseBookLayout,
       'readerPageTurnStyle': prefs.readerPageTurnStyle.id,
+      'readerPageAnimation': prefs.readerPageAnimation.id,
       'readerTrimPageMargins': prefs.readerTrimPageMargins,
       'readerPageColors': prefs.readerPageColors.id,
       'readerColumns': prefs.readerColumns.id,
@@ -252,6 +256,9 @@ class PreferencesRepository {
     if (value is! String) return ReaderPageTurnStyle.horizontal;
     return ReaderPageTurnStyle.fromId(value);
   }
+
+  static ReaderPageAnimation _readReaderPageAnimation(Object? value) =>
+      ReaderPageAnimation.fromId(value is String ? value : null);
 
   static Map<String, ReaderAppearanceOverride> _readReaderAppearanceOverrides(
     Object? value,

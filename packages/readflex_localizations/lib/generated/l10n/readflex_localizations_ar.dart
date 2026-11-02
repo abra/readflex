@@ -896,6 +896,15 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get readerPageTurn => 'تقليب الصفحات';
 
   @override
+  String get readerPageAnimation => 'حركة الصفحات';
+
+  @override
+  String get readerPageAnimationSlide => 'انزلاق';
+
+  @override
+  String get readerPageAnimationCover => 'تغطية';
+
+  @override
   String get readerResetTextSize => 'إعادة تعيين حجم النص';
 
   @override

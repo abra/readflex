@@ -187,6 +187,56 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets(
+    'global comic page animation switches without changing its page or zoom',
+    (
+      tester,
+    ) async {
+      await preferences.update(
+        (prefs) =>
+            prefs.copyWith(readerPageAnimation: ReaderPageAnimation.slide),
+      );
+      await pumpReader(tester);
+      final pages = find.byType(FixedPagesView);
+      final initial = tester.widget<FixedPagesView>(pages);
+      expect(initial.pageTurnAnimation, PageTurnAnimation.slide);
+      final controller = initial.controller;
+      expect(controller.next(), isTrue);
+      await tester.pumpAndSettle();
+      await settle(tester);
+      expect(controller.page, 1);
+      final source = (initial.pages as ComicPages).source;
+      final viewer = find.byType(InteractiveViewer).hitTestable().first;
+      final zoom = tester
+          .widget<InteractiveViewer>(viewer)
+          .transformationController!;
+      zoom.value = Matrix4.diagonal3Values(1.75, 1.75, 1);
+      await tester.pump();
+      final matrix = zoom.value.clone();
+      final epoch = controller.zoomEpoch;
+      await preferences.update(
+        (prefs) =>
+            prefs.copyWith(readerPageAnimation: ReaderPageAnimation.cover),
+      );
+      await tester.pumpAndSettle();
+      final updated = tester.widget<FixedPagesView>(pages);
+      expect(updated.pageTurnAnimation, PageTurnAnimation.cover);
+      expect(updated.controller, same(controller));
+      expect((updated.pages as ComicPages).source, same(source));
+      expect(controller.page, 1);
+      expect(controller.zoomEpoch, epoch);
+      expect(
+        tester.widget<InteractiveViewer>(viewer).transformationController,
+        same(zoom),
+      );
+      expect(zoom.value, matrix);
+      expect(preferences.readerAppearanceOverrideFor(comic.id), isNull);
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
+
   testWidgets('the chrome bookmark button bookmarks the page on screen', (
     tester,
   ) async {

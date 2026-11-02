@@ -755,12 +755,21 @@ table of contents entry whose anchor is not after the end of what is
 shown). The position is kept as that CFI, so rotation, a style change or
 newly loaded fonts land on the same text. Operations run one at a time;
 neighbouring sections are laid out ahead so a turn never waits.
-`TextPagesView` draws the spread, follows swipes along either axis with
-the neighbour beside it (a swipe further than a quarter of the view or a
-fling turns), animates the controller's turns (not under reduced motion),
+`TextPagesView.pageTurnAnimation` selects `PageTurnAnimation.slide` or `cover`
+(the default), independently of `axis`. Slide moves both spreads; Cover moves
+the incoming spread over a stationary page, with an opaque background and a
+shadow at its leading edge. Swipes along either axis follow the finger (a swipe
+further than a quarter of the view or a fling turns); a cancelled swipe
+returns the incoming spread off screen. The same transition animates the
+controller's turns (not under reduced motion),
 gives taps to links, then highlights, then the reader as view fractions,
-and is a selection area whose taps and swipes still reach the view. A
-swipe that starts on a table that scrolls scrolls it, and on after a
+and is a selection area whose taps and swipes still reach the view. Stable
+clipping wrappers keep selection render objects in place; tracked
+highlight rectangles are clipped to the part of the current page still visible.
+Selection handles are hidden during a turn and restored when it settles,
+including when a short swipe returns to the same page. Reduced motion skips
+the completion animation after a swipe as well as controller turns.
+A swipe that starts on a table that scrolls scrolls it, and on after a
 fling with the platform's scroll friction (`ScrollerDrag`), unless the
 table is already at its edge that way: then it turns the page; with
 pages turning up and down, sideways drags on tables are theirs alone
@@ -1126,13 +1135,35 @@ reports the numbers the app shows (`fraction = (page + 1) / pageCount`,
 chapter counter = page counter, one byte-based location). Every turn,
 jump or rotation resets zoom (`zoomEpoch`).
 
+Both paginated views use `src/page_turn/`: `PageTurnFrame` describes normalized
+motion, entry side and axis; its strategies resolve offsets and visible regions.
+`PageTurnLayer` keeps a stable transform/clip/repaint-boundary tree, and
+`PageTurnDecoration` paints above the page layers. The text viewer supplies its
+gesture/controller motion; the fixed viewer compensates native `PageView`
+offsets with the same resolved geometry. Highlight tracking uses those same
+visible regions. An active turn keeps its selected animation until it settles;
+a changed setting applies to the next turn.
+
+Changing animation reuses layout, selection, page images and zoom. Slide and
+Cover do not capture pages or own texture caches; Flutter retains its normal
+paint and raster caching. A future deforming effect
+such as Curl needs its own renderer at the page-layer seam, owning temporary
+textures only during the turn and releasing them on settle/cancel/dispose;
+offset/clip strategies alone cannot bend a page. Adding that renderer does not
+change format parsers, positions or gesture arbitration. Only implemented
+effects belong in the public enum and app settings.
+
 `FixedPagesView` draws any `FixedPageSource` (`ComicPages` over a
 `ComicPageSource`, `PdfPages` over a `PdfBook`) with framework parts:
 `PageView` under a `Directionality` for the reading direction (its
 `axis` turns pages sideways or, for the reader's vertical page turn, up
 and down, where reading direction does not apply),
 `PageScrollPhysics`, `allowImplicitScrolling` for neighbours,
-`InteractiveViewer` for pinch and pan (1–4×), a `CustomMultiChildLayout`
+and the same `pageTurnAnimation` choice as text pages. The scrolling viewport
+retains its physics; the shared page-turn layer compensates its native offsets
+as required by the selected effect, including reverse and RTL turns. Page units
+retain their image and zoom widgets while the transition moves.
+The view uses `InteractiveViewer` for pinch and pan (1–4×), a `CustomMultiChildLayout`
 that gives facing pages one scale and a shared gutter (a PDF's known
 `pageAspect` lays the spread out before anything is drawn), and a
 `FixedPagePainter` per page drawing the source's `pageImage` at the frame

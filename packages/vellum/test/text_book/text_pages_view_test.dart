@@ -43,6 +43,20 @@ Future<EpubTextSource> book({String tableA = ''}) async => EpubTextSource(
 
 const style = BookStyle(fontScale: 10 / 16, lineHeight: 1.5, justify: false);
 
+class _TrackedSelectionControls extends MaterialTextSelectionControls
+    with TextSelectionHandleControls {
+  @override
+  Widget buildHandle(
+    BuildContext context,
+    TextSelectionHandleType type,
+    double textHeight, [
+    VoidCallback? onTap,
+  ]) => KeyedSubtree(
+    key: ValueKey('coverHandle-${type.name}'),
+    child: super.buildHandle(context, type, textHeight, onTap),
+  );
+}
+
 void main() {
   late BookImageCache images;
   late TextPagesController controller;
@@ -64,8 +78,11 @@ void main() {
   Future<void> show(
     WidgetTester tester, {
     Axis axis = Axis.horizontal,
+    PageTurnAnimation pageTurnAnimation = PageTurnAnimation.cover,
+    ValueNotifier<PageTurnAnimation>? animation,
     bool rtl = false,
     bool reduceMotion = false,
+    BookStyle pageStyle = style,
     TextPageSettings settings = const TextPageSettings(
       sideMarginPercent: 0,
       topMargin: 10,
@@ -79,6 +96,7 @@ void main() {
     String? trackedHighlight,
     ValueChanged<List<Rect>>? onHighlightRects,
     ValueChanged<TextPagesSelection?>? onSelectionChanged,
+    TextSelectionControls? selectionControls,
     bool Function(Offset point)? onSelectionTap,
     ValueChanged<bool>? onSelectionAdjusting,
     SelectableRegionContextMenuBuilder? contextMenuBuilder,
@@ -90,30 +108,38 @@ void main() {
     final source = await tester.runAsync(() => book(tableA: tableA));
     controller = TextPagesController(
       source: source!,
-      style: style,
+      style: pageStyle,
       fonts: const BookFonts(),
       images: images,
       settings: settings,
       rtl: rtl,
     );
     addTearDown(controller.dispose);
+    final selectedAnimation = animation ?? ValueNotifier(pageTurnAnimation);
+    if (animation == null) addTearDown(selectedAnimation.dispose);
     await tester.pumpWidget(
       MaterialApp(
         home: MediaQuery(
           data: MediaQueryData(size: size, disableAnimations: reduceMotion),
-          child: TextPagesView(
-            controller: controller,
-            axis: axis,
-            onTap: onTap,
-            onLinkTap: onLinkTap,
-            onHighlightTap: onHighlightTap,
-            highlightsOf: highlightsOf,
-            trackedHighlight: trackedHighlight,
-            onHighlightRects: onHighlightRects,
-            onSelectionChanged: onSelectionChanged,
-            onSelectionTap: onSelectionTap,
-            onSelectionAdjusting: onSelectionAdjusting,
-            contextMenuBuilder: contextMenuBuilder,
+          child: ValueListenableBuilder<PageTurnAnimation>(
+            valueListenable: selectedAnimation,
+            builder: (context, value, _) => TextPagesView(
+              controller: controller,
+              axis: axis,
+              pageTurnAnimation: value,
+              backgroundColor: Color(pageStyle.backgroundColor),
+              onTap: onTap,
+              onLinkTap: onLinkTap,
+              onHighlightTap: onHighlightTap,
+              highlightsOf: highlightsOf,
+              trackedHighlight: trackedHighlight,
+              onHighlightRects: onHighlightRects,
+              onSelectionChanged: onSelectionChanged,
+              selectionControls: selectionControls,
+              onSelectionTap: onSelectionTap,
+              onSelectionAdjusting: onSelectionAdjusting,
+              contextMenuBuilder: contextMenuBuilder,
+            ),
           ),
         ),
       ),
@@ -190,7 +216,141 @@ void main() {
 
   double topOf(int spread) => controller.layout.laidOut(0)!.pages[spread].top;
 
-  group('a turn by the controller slides the pages', () {
+  Map<double, double> positions(WidgetTester tester, Axis axis) => {
+    for (final element in find.byType(TextColumnPage).evaluate())
+      (element.widget as TextColumnPage).page.top: axis == Axis.horizontal
+          ? (element.renderObject! as RenderBox).localToGlobal(Offset.zero).dx
+          : (element.renderObject! as RenderBox).localToGlobal(Offset.zero).dy,
+  };
+
+  group('slide animation', () {
+    for (final axis in Axis.values) {
+      for (final rtl in [false, true]) {
+        for (final forward in [false, true]) {
+          testWidgets(
+            'both pages move together: $axis, RTL $rtl, forward $forward',
+            (tester) async {
+              await show(
+                tester,
+                axis: axis,
+                rtl: rtl,
+                pageTurnAnimation: PageTurnAnimation.slide,
+              );
+              await tester.runAsync(controller.next);
+              await tester.pumpAndSettle();
+              final baseline = axis == Axis.horizontal ? 0.0 : 10.0;
+              final extent = axis == Axis.horizontal ? 200.0 : 160.0;
+              final entrySign =
+                  (forward ? 1.0 : -1.0) *
+                  (axis == Axis.horizontal && rtl ? -1.0 : 1.0);
+              await tester.runAsync(
+                forward ? controller.next : controller.previous,
+              );
+              await tester.pump();
+              await tester.pump(const Duration(milliseconds: 100));
+              final at = positions(tester, axis);
+              final target = forward ? 2 : 0;
+              final incoming = at[topOf(target)]! - baseline;
+              final outgoing = at[topOf(1)]! - baseline;
+              expect(incoming * entrySign, inExclusiveRange(0, extent));
+              expect(outgoing * entrySign, inExclusiveRange(-extent, 0));
+              expect(
+                (incoming - outgoing) * entrySign,
+                closeTo(extent, 0.000001),
+                reason: 'slide pages keep touching rather than covering',
+              );
+              await tester.pumpAndSettle();
+              expect(controller.position!.spread, target);
+              expect(positions(tester, axis), {topOf(target): baseline});
+            },
+          );
+        }
+
+        testWidgets('a short drag returns both pages: $axis, RTL $rtl', (
+          tester,
+        ) async {
+          await show(
+            tester,
+            axis: axis,
+            rtl: rtl,
+            pageTurnAnimation: PageTurnAnimation.slide,
+          );
+          await tester.runAsync(controller.next);
+          await tester.pumpAndSettle();
+          final baseline = axis == Axis.horizontal ? 0.0 : 10.0;
+          final extent = axis == Axis.horizontal ? 200.0 : 160.0;
+          final sign = axis == Axis.horizontal && rtl ? 1.0 : -1.0;
+          final direction = axis == Axis.horizontal
+              ? Offset(sign, 0)
+              : Offset(0, sign);
+          final gesture = await tester.startGesture(const Offset(100, 80));
+          await gesture.moveBy(
+            direction * 25,
+            timeStamp: const Duration(milliseconds: 100),
+          );
+          await tester.pump();
+          await gesture.moveBy(
+            direction * (extent * 0.15),
+            timeStamp: const Duration(milliseconds: 200),
+          );
+          await tester.pump();
+          expect(
+            (positions(tester, axis)[topOf(1)]! - baseline) * sign,
+            greaterThan(0),
+          );
+          await gesture.up(timeStamp: const Duration(milliseconds: 400));
+          await tester.pumpAndSettle();
+          expect(controller.position!.spread, 1);
+          expect(positions(tester, axis), {topOf(1): baseline});
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+
+    testWidgets('reduced motion skips programmatic slides', (tester) async {
+      await show(
+        tester,
+        reduceMotion: true,
+        pageTurnAnimation: PageTurnAnimation.slide,
+      );
+      await tester.runAsync(controller.next);
+      await tester.pump();
+      expect(lefts(tester), {topOf(1): 0});
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('changing animation during a turn applies to the next turn', (
+      tester,
+    ) async {
+      final animation = ValueNotifier(PageTurnAnimation.cover);
+      addTearDown(animation.dispose);
+      await show(tester, animation: animation);
+      await tester.runAsync(controller.next);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final before = lefts(tester);
+      animation.value = PageTurnAnimation.slide;
+      await tester.pump();
+      expect(
+        lefts(tester),
+        before,
+        reason: 'the running cover keeps its strategy',
+      );
+      await tester.pumpAndSettle();
+      await tester.runAsync(controller.next);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        lefts(tester)[topOf(1)],
+        lessThan(0),
+        reason: 'the next turn slides',
+      );
+      await tester.pumpAndSettle();
+      expect(controller.position!.spread, 2);
+    });
+  });
+
+  group('a turn by the controller covers the current page', () {
     testWidgets('forward: the next page comes in from the right', (
       tester,
     ) async {
@@ -201,7 +361,7 @@ void main() {
       final x = lefts(tester);
       expect(x.keys, unorderedEquals([topOf(0), topOf(1)]), reason: 'both');
       expect(x[topOf(1)], inExclusiveRange(0, 200), reason: 'coming in');
-      expect(x[topOf(0)], inExclusiveRange(-200, 0), reason: 'leaving left');
+      expect(x[topOf(0)], 0, reason: 'the covered page stays still');
       await tester.pumpAndSettle();
       expect(lefts(tester), {topOf(1): 0});
       expect(controller.position!.spread, 1);
@@ -219,7 +379,7 @@ void main() {
       final x = lefts(tester);
       expect(x.keys, unorderedEquals([topOf(0), topOf(1)]), reason: 'both');
       expect(x[topOf(0)], inExclusiveRange(-200, 0), reason: 'coming in');
-      expect(x[topOf(1)], inExclusiveRange(0, 200), reason: 'leaving right');
+      expect(x[topOf(1)], 0, reason: 'the covered page stays still');
       await tester.pumpAndSettle();
       expect(lefts(tester), {topOf(0): 0});
       expect(controller.position!.spread, 0);
@@ -234,7 +394,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       final x = lefts(tester);
       expect(x[topOf(1)], inExclusiveRange(-200, 0), reason: 'coming in');
-      expect(x[topOf(0)], inExclusiveRange(0, 200), reason: 'leaving right');
+      expect(x[topOf(0)], 0, reason: 'the covered page stays still');
       await tester.pumpAndSettle();
       await tester.runAsync(controller.previous);
       await tester.pump();
@@ -243,7 +403,100 @@ void main() {
       await tester.pumpAndSettle();
       expect(lefts(tester), {topOf(0): 0});
     });
+
+    testWidgets('vertical covers arrive from below and above', (tester) async {
+      await show(tester, axis: Axis.vertical);
+      Map<double, double> tops() => {
+        for (final element in find.byType(TextColumnPage).evaluate())
+          (element.widget as TextColumnPage).page.top:
+              (element.renderObject! as RenderBox)
+                  .localToGlobal(Offset.zero)
+                  .dy,
+      };
+
+      await tester.runAsync(controller.next);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tops()[topOf(0)], 10);
+      expect(tops()[topOf(1)], inExclusiveRange(10, 170));
+      await tester.pumpAndSettle();
+
+      await tester.runAsync(controller.previous);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tops()[topOf(1)], 10);
+      expect(tops()[topOf(0)], inExclusiveRange(-150, 10));
+      await tester.pumpAndSettle();
+      expect(tops(), {topOf(0): 10});
+    });
+
+    testWidgets('a newer turn settles on its latest destination', (
+      tester,
+    ) async {
+      await show(tester);
+      await tester.runAsync(controller.next);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.runAsync(controller.next);
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(controller.position!.spread, 2);
+      expect(lefts(tester), {topOf(2): 0});
+      expect(find.byType(TextColumnPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a swipe waits for a programmatic cover to finish', (
+      tester,
+    ) async {
+      await show(tester);
+      await tester.runAsync(controller.next);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final before = lefts(tester);
+      expect(before[topOf(1)], inExclusiveRange(0, 200));
+
+      final gesture = await tester.startGesture(const Offset(100, 80));
+      await gesture.moveBy(const Offset(-20, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(-80, 0));
+      await tester.pump();
+      expect(lefts(tester), before, reason: 'the running cover keeps control');
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      expect(controller.position!.spread, 1);
+      expect(lefts(tester), {topOf(1): 0});
+      expect(tester.takeException(), isNull);
+    });
   });
+
+  for (final (name, axis, rtl, pageStyle) in [
+    ('light', Axis.horizontal, false, style),
+    (
+      'dark_rtl',
+      Axis.horizontal,
+      true,
+      style.copyWith(textColor: 0xFFF2F2F2, backgroundColor: 0xFF16181C),
+    ),
+    ('vertical', Axis.vertical, false, style),
+  ]) {
+    testWidgets('an opaque cover hides the text beneath: $name', (
+      tester,
+    ) async {
+      await show(tester, axis: axis, rtl: rtl, pageStyle: pageStyle);
+      await tester.runAsync(controller.next);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await expectLater(
+        find.byType(TextPagesView),
+        matchesGoldenFile('goldens/text_pages_cover_$name.png'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(TextColumnPage), findsOneWidget);
+    }, tags: ['golden']);
+  }
 
   group('a released swipe moves on from where the finger left', () {
     /// A slow drag by [dx] past the touch slop, held at the end: no fling.
@@ -257,27 +510,38 @@ void main() {
       }
 
       final shown = controller.spreadAt(0)!.pages.first.top;
+      final incoming = controller.spreadAt(dx < 0 ? 1 : -1)!.pages.first.top;
       await move(dx.sign * 20);
       await move(dx);
-      expect(lefts(tester)[shown], dx, reason: 'follows the finger');
+      final x = lefts(tester);
+      expect(x[shown], 0, reason: 'the covered page stays still');
+      expect(
+        x[incoming],
+        dx + (dx < 0 ? 200 : -200),
+        reason: 'the incoming page follows the finger',
+      );
       await gesture.up(timeStamp: time + const Duration(milliseconds: 100));
       return gesture;
     }
 
-    testWidgets('forward: the page keeps going left', (tester) async {
+    testWidgets('forward: the cover continues from the drag position', (
+      tester,
+    ) async {
       await show(tester);
       await drag(tester, -80);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
       final x = lefts(tester);
-      expect(x[topOf(0)], lessThan(-80), reason: 'not back at rest first');
+      expect(x[topOf(0)], 0, reason: 'the covered page stays still');
       expect(x[topOf(1)], inExclusiveRange(0, 120));
       await settle(tester, () => controller.position!.spread == 1);
       await tester.pumpAndSettle();
       expect(lefts(tester), {topOf(1): 0});
     });
 
-    testWidgets('back: the page keeps going right', (tester) async {
+    testWidgets('back: the cover continues from the drag position', (
+      tester,
+    ) async {
       await show(tester);
       await tester.runAsync(controller.next);
       await tester.pumpAndSettle();
@@ -285,7 +549,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
       final x = lefts(tester);
-      expect(x[topOf(1)], greaterThan(80));
+      expect(x[topOf(1)], 0, reason: 'the covered page stays still');
       expect(x[topOf(0)], inExclusiveRange(-120, 0));
       await settle(tester, () => controller.position!.spread == 0);
       await tester.pumpAndSettle();
@@ -297,7 +561,12 @@ void main() {
       await drag(tester, -30);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      expect(lefts(tester)[topOf(0)], inExclusiveRange(-30, 0));
+      expect(
+        lefts(tester)[topOf(0)],
+        0,
+        reason: 'the current page stays still',
+      );
+      expect(lefts(tester)[topOf(1)], inExclusiveRange(170, 200));
       await tester.pumpAndSettle();
       expect(lefts(tester), {topOf(0): 0});
       expect(controller.position!.spread, 0);
@@ -310,6 +579,34 @@ void main() {
     await tester.pump();
     expect(find.byType(TextColumnPage), findsOneWidget);
     expect(controller.position!.spread, 1);
+  });
+
+  testWidgets('reduced motion cancels a released swipe in one frame', (
+    tester,
+  ) async {
+    await show(tester, reduceMotion: true);
+    final gesture = await tester.startGesture(const Offset(100, 80));
+    await gesture.moveBy(
+      const Offset(-20, 0),
+      timeStamp: const Duration(milliseconds: 100),
+    );
+    await tester.pump();
+    await gesture.moveBy(
+      const Offset(-30, 0),
+      timeStamp: const Duration(milliseconds: 200),
+    );
+    await tester.pump();
+    expect(
+      lefts(tester)[topOf(1)],
+      170,
+      reason: 'a drag still follows the finger',
+    );
+
+    await gesture.up(timeStamp: const Duration(milliseconds: 400));
+    await tester.pump();
+    expect(lefts(tester), {topOf(0): 0});
+    expect(controller.position!.spread, 0);
+    expect(tester.hasRunningAnimations, isFalse);
   });
 
   testWidgets('taps: links first, then highlights, then the zones', (
@@ -398,6 +695,56 @@ void main() {
     expect(reports.last, isEmpty);
   });
 
+  testWidgets('a cover clips tracked highlights to the uncovered page', (
+    tester,
+  ) async {
+    final reports = <List<Rect>>[];
+    await show(
+      tester,
+      trackedHighlight: 'tracked',
+      onHighlightRects: reports.add,
+      highlightsOf: (section) {
+        final layout = controller.layout.laidOut(section);
+        if (layout == null || section != 0) return const [];
+        final heading = const TextAnchor.selector('h1').find(
+          layout.prepared.document,
+        );
+        return [
+          TextHighlight(
+            id: 'tracked',
+            range: TextPointRange(
+              TextPoint(heading + 1, 0),
+              TextPoint(heading + 1, 1),
+            ),
+            color: const Color(0x80FFE600),
+          ),
+        ];
+      },
+    );
+    await tester.pump();
+    final original = reports.last.single;
+    expect(original.left, 0);
+    expect(original.right, greaterThan(15));
+
+    final gesture = await tester.startGesture(const Offset(180, 80));
+    await gesture.moveBy(const Offset(-20, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(-185, 0));
+    await tester.pump();
+    final incomingLeft = lefts(tester)[topOf(1)]!;
+    expect(incomingLeft, closeTo(15, 0.01));
+    expect(reports.last.single.left, original.left);
+    expect(reports.last.single.right, closeTo(incomingLeft, 0.01));
+    expect(reports.last.single.top, original.top);
+    expect(reports.last.single.bottom, original.bottom);
+
+    await gesture.up();
+    await settle(tester, () => controller.position!.spread == 1);
+    await tester.pumpAndSettle();
+    expect(reports.last, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('vertical turns go up and down', (tester) async {
     await show(tester, axis: Axis.vertical);
     await tester.fling(find.byType(TextPagesView), const Offset(0, -100), 800);
@@ -432,12 +779,16 @@ void main() {
     Future<void> showSelectable(
       WidgetTester tester, {
       bool Function(Offset point)? onSelectionTap,
+      TextSelectionControls? selectionControls,
+      ValueNotifier<PageTurnAnimation>? animation,
     }) async {
       reported = [];
       adjusting = [];
       await show(
         tester,
+        animation: animation,
         onSelectionChanged: reported.add,
+        selectionControls: selectionControls,
         onSelectionTap: onSelectionTap,
         onSelectionAdjusting: adjusting.add,
         // The reader's own menu; the default toolbar would take swipes.
@@ -483,6 +834,33 @@ void main() {
       expect(selection.text.contains(' '), isFalse, reason: 'one word');
       return selection.range;
     }
+
+    testWidgets('changing animation keeps the live page and selected range', (
+      tester,
+    ) async {
+      final animation = ValueNotifier(PageTurnAnimation.cover);
+      addTearDown(animation.dispose);
+      await showSelectable(tester, animation: animation);
+      final range = await selectWord(tester);
+      final pageElement = find.byType(TextColumnPage).evaluate().single;
+      final renderPage = shownPage(tester);
+      final layout = controller.spreadAt(0)!.layout;
+      final position = controller.position;
+      for (final value in [PageTurnAnimation.slide, PageTurnAnimation.cover]) {
+        animation.value = value;
+        await tester.pump();
+        expect(
+          find.byType(TextColumnPage).evaluate().single,
+          same(pageElement),
+        );
+        expect(shownPage(tester), same(renderPage));
+        expect(controller.spreadAt(0)!.layout, same(layout));
+        expect(controller.position, same(position));
+        expect(last()!.range, range);
+        expect(renderPage.selection, isNotNull);
+        expect(tester.takeException(), isNull);
+      }
+    });
 
     /// Turns and waits until the selection lands on the new spread.
     Future<void> settleTurn(WidgetTester tester, int spread) async {
@@ -558,6 +936,49 @@ void main() {
       expect(shownPage(tester).selection, isNull);
       expect(controller.position!.spread, 1);
     });
+
+    testWidgets(
+      'a cover hides selection handles and cancellation restores them',
+      (
+        tester,
+      ) async {
+        await showSelectable(
+          tester,
+          selectionControls: _TrackedSelectionControls(),
+        );
+        final range = await selectWord(tester);
+        final handles = find.byWidgetPredicate(
+          (widget) =>
+              widget.key == const ValueKey('coverHandle-left') ||
+              widget.key == const ValueKey('coverHandle-right'),
+        );
+        expect(handles, findsNWidgets(2));
+
+        final gesture = await tester.startGesture(const Offset(100, 80));
+        await gesture.moveBy(
+          const Offset(-20, 0),
+          timeStamp: const Duration(milliseconds: 100),
+        );
+        await tester.pump();
+        await gesture.moveBy(
+          const Offset(-30, 0),
+          timeStamp: const Duration(milliseconds: 200),
+        );
+        await tester.pump();
+        expect(
+          handles,
+          findsNothing,
+          reason: 'root overlay handles must not cover the incoming page',
+        );
+
+        await gesture.up(timeStamp: const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+        expect(controller.position!.spread, 0);
+        expect(last()!.range, range);
+        expect(handles, findsNWidgets(2));
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('a slow tap or swipe keeps it as a quick one does', (
       tester,

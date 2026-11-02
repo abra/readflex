@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
@@ -283,6 +284,87 @@ void main() {
     expect(books.updatedBook?.readingProgress, greaterThan(0));
     await close(tester);
   });
+
+  testWidgets(
+    'global page animation switches live without relayout or lost selection',
+    (
+      tester,
+    ) async {
+      await preferences.update(
+        (prefs) =>
+            prefs.copyWith(readerPageAnimation: ReaderPageAnimation.slide),
+      );
+      await pumpReader(tester);
+      final pages = find.byType(TextPagesView);
+      final controller = tester.widget<TextPagesView>(pages).controller;
+      expect(
+        tester.widget<TextPagesView>(pages).pageTurnAnimation,
+        PageTurnAnimation.slide,
+      );
+      await tester.runAsync(controller.next);
+      await tester.pumpAndSettle();
+      expect(controller.position!.spread, greaterThan(0));
+
+      final page = find.byType(TextColumnPage).first;
+      final pageWidget = tester.widget<TextColumnPage>(page);
+      final paragraph = pageWidget.column.items
+          .whereType<ColumnText>()
+          .firstWhere(
+            (item) =>
+                item.rect.top >= pageWidget.page.top &&
+                item.rect.bottom <= pageWidget.page.bottom,
+          );
+      final character = paragraph.paragraph.boxesFor(0, 1).first.toRect();
+      final point =
+          tester.getTopLeft(page) +
+          paragraph.rect.topLeft -
+          Offset(0, pageWidget.page.top) +
+          character.center;
+      await tester.longPressAt(point);
+      await tester.pumpAndSettle();
+      final selection = tester.element(pages).read<ReaderSelectionCubit>();
+      expect(selection.state.hasSelection, isTrue);
+      final range = selection.state.cfiRange;
+      final cfi = controller.position!.cfi;
+      final layout = controller.spreadAt(0)!.layout;
+      final renderedPage = tester.renderObject(page);
+      final appearance = tester.element(pages).read<ReaderAppearanceCubit>();
+
+      void expectStablePage(PageTurnAnimation animation) {
+        final view = tester.widget<TextPagesView>(pages);
+        expect(view.pageTurnAnimation, animation);
+        expect(view.controller, same(controller));
+        expect(controller.spreadAt(0)!.layout, same(layout));
+        expect(tester.renderObject(page), same(renderedPage));
+        expect(controller.position!.cfi, cfi);
+        expect(selection.state.cfiRange, range);
+      }
+
+      await preferences.update(
+        (prefs) =>
+            prefs.copyWith(readerPageAnimation: ReaderPageAnimation.cover),
+      );
+      await tester.pumpAndSettle();
+      expectStablePage(PageTurnAnimation.cover);
+      expect(preferences.readerAppearanceOverrideFor(book.id), isNull);
+
+      await preferences.update(
+        (prefs) =>
+            prefs.copyWith(readerPageAnimation: ReaderPageAnimation.slide),
+      );
+      await tester.pumpAndSettle();
+      expectStablePage(PageTurnAnimation.slide);
+      await appearance.reset();
+      await tester.pumpAndSettle();
+      expectStablePage(PageTurnAnimation.slide);
+      expect(
+        preferences.current.readerPageAnimation,
+        ReaderPageAnimation.slide,
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+      await close(tester);
+    },
+  );
 
   testWidgets('reopens at the saved position and keeps it on close', (
     tester,

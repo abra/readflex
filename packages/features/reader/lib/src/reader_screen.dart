@@ -174,6 +174,12 @@ ReaderTapAxis _readerTapAxisForPageTurnStyle(ReaderPageTurnStyle style) {
 Axis _nativePageAxis(ReaderPageTurnStyle style) =>
     style == ReaderPageTurnStyle.vertical ? Axis.vertical : Axis.horizontal;
 
+PageTurnAnimation _nativePageTurnAnimation(ReaderPageAnimation animation) =>
+    switch (animation) {
+      ReaderPageAnimation.slide => PageTurnAnimation.slide,
+      ReaderPageAnimation.cover => PageTurnAnimation.cover,
+    };
+
 /// Full-screen reader for a library source (route `/reader/:sourceId`).
 ///
 /// Composition only: wires [ReaderBloc] (source + highlights + position

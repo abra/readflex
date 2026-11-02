@@ -11,6 +11,10 @@ import '../layout/book_image_cache.dart';
 import '../layout/column_scroller.dart';
 import '../layout/text_page.dart';
 import '../layout/text_page_highlights.dart';
+import '../page_turn/page_turn_animation.dart';
+import '../page_turn/page_turn_decoration.dart';
+import '../page_turn/page_turn_frame.dart';
+import '../page_turn/page_turn_layer.dart';
 import 'text_book_layout.dart';
 import 'text_page_geometry.dart';
 import 'scroller_gestures.dart';
@@ -45,9 +49,10 @@ class TextPagesSelection {
 }
 
 /// The pages of a text book: the spread [controller] shows, turned by
-/// swipes along [axis] (the neighbour spread follows the finger) or by
+/// swipes along [axis] (the neighbour follows the finger) or by
 /// the controller (animated unless [animateTurns] is false or the
-/// platform asks for reduced motion).
+/// platform asks for reduced motion). [pageTurnAnimation] selects the visual
+/// transition independently of the axis and pagination.
 ///
 /// Taps go to a link under them ([onLinkTap]), then a highlight
 /// ([onHighlightTap]), then [onTap] as fractions of the view, which the
@@ -77,6 +82,7 @@ class TextPagesView extends StatefulWidget {
     super.key,
     required this.controller,
     this.axis = Axis.horizontal,
+    this.pageTurnAnimation = PageTurnAnimation.cover,
     this.animateTurns = true,
     this.turnDuration = const Duration(milliseconds: 250),
     this.backgroundColor = const Color(0xFFFFFFFF),
@@ -96,6 +102,7 @@ class TextPagesView extends StatefulWidget {
 
   final TextPagesController controller;
   final Axis axis;
+  final PageTurnAnimation pageTurnAnimation;
   final bool animateTurns;
   final Duration turnDuration;
   final Color backgroundColor;
@@ -157,6 +164,8 @@ class _TextPagesViewState extends State<TextPagesView>
   /// Where the shown spread sits along the axis, as a share of the view:
   /// 0 at rest, -1 turned forward out of view.
   double _offset = 0;
+  PageTurnAnimation? _activeAnimation;
+  double _entrySide = 1;
   bool _dragging = false;
 
   /// A swipe's turn is being finished: the controller's report of it is
@@ -176,6 +185,7 @@ class _TextPagesViewState extends State<TextPagesView>
   /// A turn took the selection to a spread it has not landed on yet.
   bool _carryPending = false;
   bool _adjusting = false;
+  bool _selectionControlsHidden = false;
 
   /// Fingers down on the pages.
   int _pointers = 0;
@@ -203,7 +213,10 @@ class _TextPagesViewState extends State<TextPagesView>
       ..addStatusListener((status) {
         // A turn by the controller ends: the old spread is gone.
         if (status.isCompleted && _leaving != null && mounted) {
-          setState(() => _leaving = null);
+          setState(() {
+            _leaving = null;
+            _activeAnimation = null;
+          });
           _scheduleLanding();
         }
       });
@@ -241,14 +254,17 @@ class _TextPagesViewState extends State<TextPagesView>
   List<Rect> _rectsOf(String? id) {
     final view = context.findRenderObject();
     if (id == null || view is! RenderBox || !view.hasSize) return const [];
-    final bounds = Offset.zero & view.size;
+    final bounds = _visibleShownRect(view.size);
     return [
       for (final key in _columnKeys)
         if (key.currentContext?.findRenderObject()
             case final RenderTextColumnPage page when page.attached)
           for (final rect in page.highlightRects(id))
-            if (MatrixUtils.transformRect(page.getTransformTo(view), rect)
-                case final inView when inView.overlaps(bounds))
+            if (MatrixUtils.transformRect(
+                  page.getTransformTo(view),
+                  rect,
+                ).intersect(bounds)
+                case final inView when !inView.isEmpty)
               inView,
     ];
   }
@@ -270,6 +286,34 @@ class _TextPagesViewState extends State<TextPagesView>
   /// right-to-left book), or up.
   double get _forwardSign =>
       widget.axis == Axis.horizontal && _controller.rtl ? 1 : -1;
+
+  PageTurnFrame get _turnFrame {
+    final animation = _activeAnimation ?? widget.pageTurnAnimation;
+    final leaving = _leaving;
+    if (leaving != null && !leaving.layout.isDisposed) {
+      return PageTurnFrame.active(
+        animation: animation,
+        axis: widget.axis,
+        incomingOffset: _offset,
+        entrySide: _entrySide,
+      );
+    }
+    final idle = PageTurnFrame.idle(animation: animation, axis: widget.axis);
+    if (_offset == 0) return idle;
+    final toward = _offset * _forwardSign > 0 ? 1 : -1;
+    if (_controller.spreadAt(toward) == null) return idle;
+    return PageTurnFrame.active(
+      animation: animation,
+      axis: widget.axis,
+      incomingOffset: _offset - _forwardSign * toward,
+      entrySide: -_forwardSign * toward,
+    );
+  }
+
+  Rect _visibleShownRect(Size size) => _turnFrame.visibleRect(
+    _leaving == null ? PageTurnRole.outgoing : PageTurnRole.incoming,
+    size,
+  );
 
   void _onController() {
     if (!mounted) return;
@@ -301,8 +345,10 @@ class _TextPagesViewState extends State<TextPagesView>
             next.section > previous.section ||
             (next.section == previous.section && next.spread > previous.spread);
         _leaving = previous;
+        _activeAnimation = widget.pageTurnAnimation;
         // The new spread comes in from the side the old one leaves to.
-        _turn.value = forward ? -_forwardSign : _forwardSign;
+        _entrySide = forward ? -_forwardSign : _forwardSign;
+        _turn.value = _entrySide;
         _offset = _turn.value;
         unawaited(
           _turn.animateTo(
@@ -355,6 +401,7 @@ class _TextPagesViewState extends State<TextPagesView>
     _carryPending = false;
     _carry = null;
     _selection = null;
+    _selectionControlsHidden = false;
     _onSpread = null;
     _selectableRegion?.clearSelection();
     _setAdjusting(false);
@@ -653,6 +700,7 @@ class _TextPagesViewState extends State<TextPagesView>
   void _reselect(TextPointRange range) {
     final region = _selectableRegion;
     if (region == null) return;
+    _selectionControlsHidden = false;
     _selecting = true;
     try {
       region.selectAll(SelectionChangedCause.toolbar);
@@ -713,11 +761,17 @@ class _TextPagesViewState extends State<TextPagesView>
   }
 
   void _onDragStart(DragStartDetails details) {
-    if (_committing) return;
-    // The selection's handles move with its page.
-    if (_hasSelection) _setAdjusting(true);
+    // Let a controller turn settle before interpreting another page drag.
+    if (_committing || _leaving != null) return;
+    if (_hasSelection) {
+      // Handles live in the root overlay, outside the page's clipping region.
+      _selectableRegion?.hideToolbar();
+      _selectionControlsHidden = true;
+      _setAdjusting(true);
+    }
     _turn.stop();
     _leaving = null;
+    _activeAnimation ??= widget.pageTurnAnimation;
     _dragging = true;
   }
 
@@ -761,7 +815,9 @@ class _TextPagesViewState extends State<TextPagesView>
       _turn.value = _offset;
       await _turn.animateTo(
         _forwardSign * direction,
-        duration: widget.turnDuration * (1 - travelled.abs()).clamp(0.2, 1.0),
+        duration: _reducedMotion
+            ? Duration.zero
+            : widget.turnDuration * (1 - travelled.abs()).clamp(0.2, 1.0),
         curve: Curves.easeOut,
       );
       final bool turned;
@@ -790,7 +846,7 @@ class _TextPagesViewState extends State<TextPagesView>
     _turn.value = _offset;
     await _turn.animateTo(
       0,
-      duration: widget.turnDuration,
+      duration: _reducedMotion ? Duration.zero : widget.turnDuration,
       curve: Curves.easeOut,
     );
     if (!mounted) return;
@@ -804,9 +860,15 @@ class _TextPagesViewState extends State<TextPagesView>
   /// After a swipe: the selection lands on the spread turned to, or stays
   /// on the one that came back.
   void _settleSelection() {
+    _activeAnimation = null;
     if (_carryPending) {
+      _selectionControlsHidden = false;
       _scheduleLanding();
     } else if (_hasSelection) {
+      final range = _onSpread;
+      if (_selectionControlsHidden && range != null) {
+        _reselect(range);
+      }
       _setAdjusting(false);
     }
   }
@@ -880,14 +942,14 @@ class _TextPagesViewState extends State<TextPagesView>
       final children = <Widget>[];
       if (geometry != null && shown != null && geometry.viewport == size) {
         final leaving = _leaving;
+        final frame = _turnFrame;
         if (leaving != null && !leaving.layout.isDisposed) {
-          // An animated turn: the old spread leaves to the far side.
-          final forward = _offset * _forwardSign < 0 ? 1 : -1;
           children.add(
             _PlacedSpread(
               key: const ValueKey('beside'),
               spread: leaving,
-              offset: _offset + _forwardSign * forward,
+              frame: frame,
+              role: PageTurnRole.outgoing,
               view: this,
             ),
           );
@@ -899,7 +961,8 @@ class _TextPagesViewState extends State<TextPagesView>
               _PlacedSpread(
                 key: const ValueKey('beside'),
                 spread: neighbour,
-                offset: _offset - _forwardSign * toward,
+                frame: frame,
+                role: PageTurnRole.incoming,
                 view: this,
               ),
             );
@@ -912,11 +975,21 @@ class _TextPagesViewState extends State<TextPagesView>
           _PlacedSpread(
             key: const ValueKey('shown'),
             spread: shown,
-            offset: _offset,
+            frame: frame,
+            role: leaving == null
+                ? PageTurnRole.outgoing
+                : PageTurnRole.incoming,
             view: this,
             columnKeys: _keysFor(shown.pages.length),
           ),
         );
+        if (frame.isActive) {
+          children.add(
+            Positioned.fill(
+              child: PageTurnDecoration(frame: frame),
+            ),
+          );
+        }
       }
       final horizontal = widget.axis == Axis.horizontal;
       // Inside the selection area, so taps and swipes reach this detector
@@ -1029,19 +1102,21 @@ class _Spread extends StatelessWidget {
   }
 }
 
-/// A spread moved [offset] views along the axis. Only the spread shown,
+/// A spread presented by the shared page-turn renderer. Only the spread shown,
 /// the one with [columnKeys], takes part in a selection.
 class _PlacedSpread extends StatelessWidget {
   const _PlacedSpread({
     super.key,
     required this.spread,
-    required this.offset,
+    required this.frame,
+    required this.role,
     required this.view,
     this.columnKeys,
   });
 
   final TextSpread spread;
-  final double offset;
+  final PageTurnFrame frame;
+  final PageTurnRole role;
   final _TextPagesViewState view;
   final List<GlobalKey>? columnKeys;
 
@@ -1059,10 +1134,11 @@ class _PlacedSpread extends StatelessWidget {
       columnKeys: columnKeys,
     );
     return Positioned.fill(
-      child: Transform.translate(
-        offset: widget.axis == Axis.horizontal
-            ? Offset(offset * size.width, 0)
-            : Offset(0, offset * size.height),
+      child: PageTurnLayer(
+        frame: frame,
+        role: role,
+        viewportSize: size,
+        backgroundColor: widget.backgroundColor,
         child: columnKeys == null
             ? SelectionContainer.disabled(child: pages)
             : pages,

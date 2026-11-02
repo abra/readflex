@@ -20,7 +20,7 @@ and UI preference cubits internally.
 | `articleRepository`   | `ArticleRepository?`                | Optional article list + delete               |
 | `collectionRepository`| `CollectionRepository`              | Collections and favourites persistence      |
 | `fsrsRepository`      | `FsrsRepository?`                   | Review counts for the Practice entry; `null` shows none |
-| `preferencesService`  | `PreferencesService`                | Persist list/grid, theme, and locale choices |
+| `preferencesService`  | `PreferencesService`                | Persist list/grid, theme, locale and global reader animation |
 | `isOffline`           | `bool`                               | Connectivity indicator for the Library UI   |
 | `onSourcePressed`     | `Future<void> Function(...)`        | Open reader, then refresh                    |
 | `onAddPressed`        | `LibraryImportLauncher`             | Open import UI at a `LibraryImportEntry`; notify successful persistence |
@@ -57,6 +57,10 @@ selection, and collection commands separate:
   `PreferencesService.themeMode`.
 - `LibraryLocaleCubit` — app language selector, persisted through
   `PreferencesService.locale`.
+- `LibraryPageAnimationCubit` — global Slide/Cover page animation in the
+  header's Display sheet. Persists `readerPageAnimation` and observes the
+  preferences stream; an older queued snapshot cannot undo a newer choice.
+  All books, PDFs and comics use it. It does not edit source appearance.
 - `LibrarySelectionCubit` — multi-select state for bulk source actions.
 - `AddToCollectionCubit` / `ManageCollectionCubit` — collection mutations and
   their transient command state.

@@ -1,6 +1,8 @@
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vellum/all_formats.dart';
 
@@ -38,7 +40,10 @@ void main() {
     int initialPage = 0,
     bool reduceMotion = false,
     Axis axis = Axis.horizontal,
+    PageTurnAnimation pageTurnAnimation = PageTurnAnimation.cover,
+    ValueNotifier<PageTurnAnimation>? animation,
     bool keepController = false,
+    bool capture = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -51,19 +56,31 @@ void main() {
       );
       addTearDown(controller.dispose);
     }
-    await tester.pumpWidget(
-      MediaQuery(
-        data: MediaQueryData(size: size, disableAnimations: reduceMotion),
-        child: Directionality(
-          textDirection: TextDirection.ltr,
-          child: FixedPagesView(
+    final selectedAnimation = animation ?? ValueNotifier(pageTurnAnimation);
+    if (animation == null) addTearDown(selectedAnimation.dispose);
+    final view = MediaQuery(
+      data: MediaQueryData(size: size, disableAnimations: reduceMotion),
+      child: Directionality(
+        textDirection: TextDirection.ltr,
+        child: ValueListenableBuilder<PageTurnAnimation>(
+          valueListenable: selectedAnimation,
+          builder: (context, value, _) => FixedPagesView(
             pages: ComicPages(source),
             controller: controller,
             onTap: taps.add,
             axis: axis,
+            pageTurnAnimation: value,
           ),
         ),
       ),
+    );
+    await tester.pumpWidget(
+      capture
+          ? RepaintBoundary(
+              key: const ValueKey('fixedPagesTestBoundary'),
+              child: view,
+            )
+          : view,
     );
     await tester.pump();
   }
@@ -111,6 +128,11 @@ void main() {
   }
 
   Finder pageLabel(int page) => find.bySemanticsLabel('Page $page of 5');
+
+  Finder pageFrame(int page) => find.byWidgetPredicate(
+    (widget) =>
+        widget is Semantics && widget.properties.label == 'Page $page of 5',
+  );
 
   group('layout', () {
     testWidgets('portrait shows one page, landscape a spread', (tester) async {
@@ -209,6 +231,291 @@ void main() {
   });
 
   group('turning', () {
+    for (final axis in Axis.values) {
+      for (final rtl in [false, true]) {
+        for (final forward in [false, true]) {
+          testWidgets(
+            'slide moves adjacent pages together: $axis, RTL $rtl, forward $forward',
+            (tester) async {
+              await pumpView(
+                tester,
+                axis: axis,
+                rtl: rtl,
+                initialPage: 1,
+                pageTurnAnimation: PageTurnAnimation.slide,
+              );
+              final resting = tester.getRect(pageFrame(2));
+              if (forward) {
+                controller.next();
+              } else {
+                controller.previous();
+              }
+              await tester.pump();
+              await tester.pump(const Duration(milliseconds: 70));
+              final oldPage = tester.getRect(pageFrame(2));
+              final newPage = tester.getRect(pageFrame(forward ? 3 : 1));
+              final baseline = axis == Axis.horizontal
+                  ? resting.left
+                  : resting.top;
+              final outgoing =
+                  (axis == Axis.horizontal ? oldPage.left : oldPage.top) -
+                  baseline;
+              final incoming =
+                  (axis == Axis.horizontal ? newPage.left : newPage.top) -
+                  baseline;
+              final extent = axis == Axis.horizontal
+                  ? portrait.width
+                  : portrait.height;
+              final sign =
+                  (forward ? 1.0 : -1.0) *
+                  (axis == Axis.horizontal && rtl ? -1.0 : 1.0);
+              expect(incoming * sign, inExclusiveRange(0, extent));
+              expect(outgoing * sign, inExclusiveRange(-extent, 0));
+              expect((incoming - outgoing) * sign, closeTo(extent, 0.000001));
+              await tester.pumpAndSettle();
+              expect(controller.page, forward ? 2 : 0);
+              expect(tester.takeException(), isNull);
+            },
+          );
+        }
+
+        testWidgets('a cancelled slide returns to its page: $axis, RTL $rtl', (
+          tester,
+        ) async {
+          await pumpView(
+            tester,
+            axis: axis,
+            rtl: rtl,
+            initialPage: 1,
+            pageTurnAnimation: PageTurnAnimation.slide,
+          );
+          final resting = tester.getRect(pageFrame(2));
+          final sign = axis == Axis.horizontal && rtl ? 1.0 : -1.0;
+          final direction = axis == Axis.horizontal
+              ? Offset(sign, 0)
+              : Offset(0, sign);
+          final gesture = await tester.startGesture(
+            portrait.center(Offset.zero),
+          );
+          await gesture.moveBy(direction * 25);
+          await gesture.moveBy(direction * 100);
+          await tester.pump();
+          expect(
+            (tester.getTopLeft(pageFrame(2)) - resting.topLeft).distance,
+            greaterThan(0),
+            reason: 'the old page moves with a slide',
+          );
+          await gesture.cancel();
+          await tester.pumpAndSettle();
+          expect(controller.page, 1);
+          expect(
+            (tester.getTopLeft(pageFrame(2)) - resting.topLeft).distance,
+            lessThan(0.000001),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+
+    testWidgets('animation changes preserve the current page and zoom', (
+      tester,
+    ) async {
+      final animation = ValueNotifier(PageTurnAnimation.cover);
+      addTearDown(animation.dispose);
+      await pumpView(tester, initialPage: 1, animation: animation);
+      await decodeVisible(tester, frameWidth: portrait.width);
+      final pageElement = pageFrame(2).evaluate().single;
+      final pageRender = tester.renderObject(pageFrame(2));
+      controller.reportZoomScale(2);
+      await tester.pump();
+      final epoch = controller.zoomEpoch;
+      for (final value in [PageTurnAnimation.slide, PageTurnAnimation.cover]) {
+        animation.value = value;
+        await tester.pump();
+        expect(controller.page, 1);
+        expect(controller.isZoomed, isTrue);
+        expect(controller.zoomEpoch, epoch);
+        expect(pageFrame(2).evaluate().single, same(pageElement));
+        expect(tester.renderObject(pageFrame(2)), same(pageRender));
+        expect(tester.takeException(), isNull);
+      }
+    });
+
+    testWidgets('an active cover finishes before a changed animation applies', (
+      tester,
+    ) async {
+      final animation = ValueNotifier(PageTurnAnimation.cover);
+      addTearDown(animation.dispose);
+      await pumpView(tester, initialPage: 1, animation: animation);
+      final resting = tester.getRect(pageFrame(2));
+      controller.next();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      final before = tester.getRect(pageFrame(2));
+      expect(before, resting);
+      animation.value = PageTurnAnimation.slide;
+      await tester.pump();
+      expect(
+        tester.getRect(pageFrame(2)),
+        before,
+        reason: 'the running cover keeps its strategy',
+      );
+      await tester.pumpAndSettle();
+      final nextRest = tester.getRect(pageFrame(3));
+      controller.next();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 70));
+      expect(tester.getRect(pageFrame(3)).left, lessThan(nextRest.left));
+      await tester.pumpAndSettle();
+      expect(controller.page, 3);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('reduced motion skips the selected slide', (tester) async {
+      await pumpView(
+        tester,
+        reduceMotion: true,
+        pageTurnAnimation: PageTurnAnimation.slide,
+      );
+      controller.goToPage(3);
+      await tester.pump();
+      await tester.pump();
+      expect(pageLabel(4), findsOneWidget);
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    for (final axis in Axis.values) {
+      for (final rtl in [false, true]) {
+        for (final forward in [false, true]) {
+          testWidgets(
+            'cover keeps the outgoing page still: $axis, RTL $rtl, forward $forward',
+            (tester) async {
+              await pumpView(tester, axis: axis, rtl: rtl, initialPage: 1);
+              final before = tester.getRect(pageFrame(2));
+              if (forward) {
+                controller.next();
+              } else {
+                controller.previous();
+              }
+              await tester.pump();
+              await tester.pump(const Duration(milliseconds: 70));
+              expect(tester.getRect(pageFrame(2)), before);
+              final incoming = tester.getRect(pageFrame(forward ? 3 : 1));
+              final movement = axis == Axis.horizontal
+                  ? incoming.left
+                  : incoming.top;
+              final extent = axis == Axis.horizontal
+                  ? portrait.width
+                  : portrait.height;
+              final sign =
+                  (forward ? 1 : -1) *
+                  (axis == Axis.horizontal && rtl ? -1 : 1);
+              expect(movement * sign, greaterThan(0));
+              expect(movement.abs(), lessThan(extent));
+              await tester.pumpAndSettle();
+              expect(controller.page, forward ? 2 : 0);
+              expect(tester.takeException(), isNull);
+            },
+          );
+        }
+      }
+    }
+
+    for (final axis in Axis.values) {
+      for (final rtl in [false, true]) {
+        testWidgets(
+          'a cancelled cover swipe returns to rest: $axis, RTL $rtl',
+          (
+            tester,
+          ) async {
+            await pumpView(tester, axis: axis, rtl: rtl, initialPage: 1);
+            final before = tester.getRect(pageFrame(2));
+            final sign = axis == Axis.horizontal && rtl ? 1.0 : -1.0;
+            final direction = axis == Axis.horizontal
+                ? Offset(sign, 0)
+                : const Offset(0, -1);
+            final gesture = await tester.startGesture(
+              portrait.center(Offset.zero),
+            );
+            await gesture.moveBy(direction * 25);
+            await gesture.moveBy(direction * 100);
+            await tester.pump();
+            expect(
+              (tester.getTopLeft(pageFrame(2)) - before.topLeft).distance,
+              lessThan(0.000001),
+            );
+            expect(controller.page, 1);
+            await gesture.cancel();
+            await tester.pumpAndSettle();
+            expect(controller.page, 1);
+            expect(
+              (tester.getTopLeft(pageFrame(2)) - before.topLeft).distance,
+              lessThan(0.000001),
+            );
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
+
+    for (final axis in Axis.values) {
+      for (final forward in [false, true]) {
+        testWidgets(
+          'incoming page paints over the old one: $axis, forward $forward',
+          (
+            tester,
+          ) async {
+            await pumpView(tester, initialPage: 1, capture: true, axis: axis);
+            await decodeVisible(tester, frameWidth: portrait.width);
+            if (forward) {
+              controller.next();
+            } else {
+              controller.previous();
+            }
+            await tester.pump();
+            await decodeVisible(tester, frameWidth: portrait.width);
+            await tester.pump(const Duration(milliseconds: 70));
+            final boundary = tester.renderObject<RenderRepaintBoundary>(
+              find.byKey(const ValueKey('fixedPagesTestBoundary')),
+            );
+            final pixels = await tester.runAsync(() async {
+              final image = await boundary.toImage();
+              try {
+                return (await image.toByteData(
+                  format: ui.ImageByteFormat.rawRgba,
+                ))!.buffer.asUint8List();
+              } finally {
+                image.dispose();
+              }
+            });
+            final first = axis == Axis.horizontal
+                ? const Offset(20, 422)
+                : const Offset(195, 200);
+            final second = axis == Axis.horizontal
+                ? const Offset(370, 422)
+                : const Offset(195, 644);
+            final left =
+                (portrait.width.toInt() * first.dy.toInt() + first.dx.toInt()) *
+                4;
+            final right =
+                (portrait.width.toInt() * second.dy.toInt() +
+                    second.dx.toInt()) *
+                4;
+            expect(
+              pixels!.sublist(left, left + 4),
+              forward ? [0x27, 0xAE, 0x60, 0xFF] : [0xC0, 0x39, 0x2B, 0xFF],
+            );
+            expect(
+              pixels.sublist(right, right + 4),
+              forward ? [0x29, 0x80, 0xB9, 0xFF] : [0x27, 0xAE, 0x60, 0xFF],
+            );
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
+
     testWidgets('a swipe turns the page and reports it as a turn', (
       tester,
     ) async {

@@ -129,6 +129,11 @@ void main() {
     expect(find.text('Font size'), findsOneWidget);
     expect(find.text('Line spacing'), findsOneWidget);
     expect(find.text('Page turn'), findsNothing);
+    expect(find.text('Page animation'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('reader-page-animation-control')),
+      findsNothing,
+    );
     expect(find.byIcon(AppIcons.pageTurnHorizontal), findsNothing);
     expect(find.byIcon(AppIcons.pageTurnVertical), findsNothing);
     expect(find.text('Horizontal'), findsNothing);
@@ -138,6 +143,66 @@ void main() {
     expect(find.text('Text alignment'), findsOneWidget);
     expect(find.byType(VerticalDivider), findsNothing);
   });
+
+  for (final (name, showPageTurnControls, pdfControls) in [
+    ('book and comic', true, false),
+    ('PDF', true, true),
+    ('article', false, false),
+  ]) {
+    testWidgets('Library animation stays outside Reader appearance: $name', (
+      tester,
+    ) async {
+      await preferencesService.update(
+        (prefs) =>
+            prefs.copyWith(readerPageAnimation: ReaderPageAnimation.slide),
+      );
+      await tester.openAppearanceSheet(
+        cubit,
+        showPageTurnControls: showPageTurnControls,
+        pdfControls: pdfControls,
+      );
+      for (final label in ['Page animation', 'Slide', 'Cover']) {
+        expect(find.text(label), findsNothing);
+      }
+      expect(
+        find.byKey(const ValueKey('reader-page-animation-control')),
+        findsNothing,
+      );
+      expect(
+        find.text('Page turn'),
+        showPageTurnControls ? findsOneWidget : findsNothing,
+      );
+
+      final reset = find
+          .ancestor(
+            of: find.text('Reset'),
+            matching: find.byWidgetPredicate(
+              (widget) => widget is ButtonStyleButton,
+            ),
+          )
+          .first;
+      expect(
+        tester.widget<ButtonStyleButton>(reset).onPressed,
+        isNull,
+        reason: 'A Library animation alone must not enable Reader reset',
+      );
+
+      await cubit.setTheme('night');
+      await tester.pumpAndSettle();
+      expect(tester.widget<ButtonStyleButton>(reset).onPressed, isNotNull);
+      await tester.tap(find.text('Reset'));
+      await tester.pumpAndSettle();
+      expect(tester.widget<ButtonStyleButton>(reset).onPressed, isNull);
+      expect(
+        cubit.state.effectiveAppearance.pageAnimation,
+        ReaderPageAnimation.slide,
+      );
+      expect(
+        preferencesService.current.readerPageAnimation,
+        ReaderPageAnimation.slide,
+      );
+    });
+  }
 
   group('PDF pages', () {
     testWidgets('swap text controls for margins and page colors', (
@@ -240,7 +305,11 @@ void main() {
         pdfControls: true,
         textScaler: const TextScaler.linear(2),
       );
-      for (final text in ['Whole page', 'Trimmed', 'Original']) {
+      for (final text in [
+        'Whole page',
+        'Trimmed',
+        'Original',
+      ]) {
         final finder = find.text(text);
         await tester.ensureVisible(finder);
         await tester.pumpAndSettle();
@@ -404,7 +473,11 @@ void main() {
     ) async {
       final semantics = tester.ensureSemantics();
       await tester.openAppearanceSheet(cubit);
-      for (final caption in ['Theme', 'Text alignment', 'Page turn']) {
+      for (final caption in [
+        'Theme',
+        'Text alignment',
+        'Page turn',
+      ]) {
         expect(
           find.ancestor(
             of: find.text(caption),

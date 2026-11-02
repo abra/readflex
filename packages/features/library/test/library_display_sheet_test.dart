@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_display_sheet.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_locale_cubit.dart';
+import 'package:library_feature/src/library_page_animation_cubit.dart';
 import 'package:library_feature/src/library_theme_cubit.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -15,6 +16,7 @@ void main() {
   late LibraryLayoutCubit layout;
   late LibraryLocaleCubit locale;
   late LibraryThemeCubit theme;
+  late LibraryPageAnimationCubit pageAnimation;
 
   setUp(() async {
     SharedPreferencesAsyncPlatform.instance =
@@ -25,9 +27,12 @@ void main() {
     layout = LibraryLayoutCubit(preferencesService: preferences);
     locale = LibraryLocaleCubit(preferencesService: preferences);
     theme = LibraryThemeCubit(preferencesService: preferences);
+    pageAnimation = LibraryPageAnimationCubit(preferencesService: preferences);
     addTearDown(layout.close);
     addTearDown(locale.close);
     addTearDown(theme.close);
+    addTearDown(pageAnimation.close);
+    addTearDown(preferences.dispose);
   });
 
   Future<void> open(
@@ -67,6 +72,7 @@ void main() {
                     layoutCubit: layout,
                     localeCubit: locale,
                     themeCubit: theme,
+                    pageAnimationCubit: pageAnimation,
                   ),
                   child: const Text('Open'),
                 ),
@@ -82,6 +88,123 @@ void main() {
 
   final picker = find.byKey(const ValueKey('libraryLanguagePicker'));
   final russian = find.byKey(const ValueKey('libraryLanguageOption-ru'));
+  final animationControl = find.byKey(
+    const ValueKey('library-page-animation-control'),
+  );
+  final slide = find.byKey(const ValueKey('library-page-animation-slide'));
+  final cover = find.byKey(const ValueKey('library-page-animation-cover'));
+
+  testWidgets('page animation is global and retained when Display reopens', (
+    tester,
+  ) async {
+    await preferences.setReaderAppearanceOverride(
+      'book-with-custom-text',
+      const ReaderAppearanceOverride(textScale: 1.2),
+    );
+    await open(tester);
+    expect(
+      tester
+          .widget<AppChoiceControl<ReaderPageAnimation>>(animationControl)
+          .selected,
+      ReaderPageAnimation.cover,
+    );
+    await tester.tap(slide);
+    await tester.pumpAndSettle();
+    expect(preferences.current.readerPageAnimation, ReaderPageAnimation.slide);
+    expect(pageAnimation.state, ReaderPageAnimation.slide);
+    expect(
+      preferences.current
+          .effectiveReaderAppearanceFor('book-with-custom-text')
+          .pageAnimation,
+      ReaderPageAnimation.slide,
+    );
+    expect(
+      preferences.current
+          .effectiveReaderAppearanceFor('book-with-custom-text')
+          .textScale,
+      1.2,
+    );
+    expect(
+      preferences.current
+          .effectiveReaderAppearanceFor('another-source')
+          .pageAnimation,
+      ReaderPageAnimation.slide,
+    );
+    await tester.tap(find.byTooltip('Close').hitTestable());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<AppChoiceControl<ReaderPageAnimation>>(animationControl)
+          .selected,
+      ReaderPageAnimation.slide,
+    );
+    await tester.tap(cover);
+    await tester.pumpAndSettle();
+    expect(preferences.current.readerPageAnimation, ReaderPageAnimation.cover);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final code in ['en', 'ar']) {
+    testWidgets('page animation keeps 48dp targets at 320dp / 200%: $code', (
+      tester,
+    ) async {
+      await locale.setLocale(Locale(code));
+      await open(tester, size: const Size(320, 568), scale: 2);
+      expect(
+        Directionality.of(tester.element(animationControl)),
+        code == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+      );
+      for (final (label, value) in [
+        (slide, ReaderPageAnimation.slide),
+        (cover, ReaderPageAnimation.cover),
+      ]) {
+        await tester.ensureVisible(label);
+        await tester.pumpAndSettle();
+        final button = find
+            .ancestor(
+              of: label,
+              matching: find.byWidgetPredicate(
+                (widget) => widget is ButtonStyleButton,
+              ),
+            )
+            .first;
+        final rect = tester.getRect(button);
+        expect(rect.width, greaterThanOrEqualTo(48));
+        expect(rect.height, greaterThanOrEqualTo(48));
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(320));
+        await tester.tapAt(rect.bottomLeft + const Offset(2, -2));
+        await tester.pumpAndSettle();
+        expect(preferences.current.readerPageAnimation, value);
+      }
+      await tester.ensureVisible(picker);
+      await tester.pumpAndSettle();
+      final sheet = tester.getRect(find.byType(BottomSheet));
+      await tester.tap(picker);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(BottomSheet)), sheet);
+      expect(animationControl.hitTestable(), findsNothing);
+      final l10n = tester
+          .element(
+            find.byKey(
+              const ValueKey('libraryLanguageOption-en'),
+            ),
+          )
+          .l10n;
+      await tester.tap(find.byTooltip(l10n.commonBack));
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(BottomSheet)), sheet);
+      expect(
+        tester
+            .widget<AppChoiceControl<ReaderPageAnimation>>(animationControl)
+            .selected,
+        ReaderPageAnimation.cover,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets(
     'display ends at its content padding, not the language grid height',

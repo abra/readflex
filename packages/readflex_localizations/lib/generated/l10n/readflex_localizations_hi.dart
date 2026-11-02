@@ -879,6 +879,15 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get readerPageTurn => 'पेज पलटना';
 
   @override
+  String get readerPageAnimation => 'पृष्ठ एनिमेशन';
+
+  @override
+  String get readerPageAnimationSlide => 'स्लाइड';
+
+  @override
+  String get readerPageAnimationCover => 'ओवरलैप';
+
+  @override
   String get readerResetTextSize => 'टेक्स्ट आकार रीसेट करें';
 
   @override

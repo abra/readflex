@@ -9,6 +9,7 @@ import 'library_layout.dart';
 import 'library_layout_cubit.dart';
 import 'library_display_sheet.dart';
 import 'library_locale_cubit.dart';
+import 'library_page_animation_cubit.dart';
 import 'library_theme_cubit.dart';
 import 'library_title_layout.dart';
 
@@ -236,6 +237,7 @@ class _DisplayMenuButton extends StatelessWidget {
         layoutCubit: context.read<LibraryLayoutCubit>(),
         localeCubit: context.read<LibraryLocaleCubit>(),
         themeCubit: context.read<LibraryThemeCubit>(),
+        pageAnimationCubit: context.read<LibraryPageAnimationCubit>(),
       ),
     );
   }

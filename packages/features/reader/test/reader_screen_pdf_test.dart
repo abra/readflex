@@ -187,6 +187,55 @@ void main() {
     await tester.pump();
   });
 
+  testWidgets(
+    'global PDF page animation switches without reopening',
+    (
+      tester,
+    ) async {
+      await preferences.update(
+        (prefs) =>
+            prefs.copyWith(readerPageAnimation: ReaderPageAnimation.slide),
+      );
+      await pumpReader(tester);
+      final pages = find.byType(FixedPagesView);
+      final initial = tester.widget<FixedPagesView>(pages);
+      expect(initial.pageTurnAnimation, PageTurnAnimation.slide);
+      final controller = initial.controller;
+      expect(controller.next(), isTrue);
+      await tester.pumpAndSettle();
+      await settle(tester);
+      expect(controller.page, 1);
+      final book = (initial.pages as PdfPages).book;
+      final overlay = tester
+          .widgetList<PdfTextOverlay>(find.byType(PdfTextOverlay))
+          .firstWhere((overlay) => overlay.page == 1);
+      final position = controller.position.cfi;
+      final epoch = controller.zoomEpoch;
+      await preferences.update(
+        (prefs) =>
+            prefs.copyWith(readerPageAnimation: ReaderPageAnimation.cover),
+      );
+      await tester.pumpAndSettle();
+      final updated = tester.widget<FixedPagesView>(pages);
+      expect(updated.pageTurnAnimation, PageTurnAnimation.cover);
+      expect(updated.controller, same(controller));
+      expect((updated.pages as PdfPages).book, same(book));
+      expect(controller.position.cfi, position);
+      expect(controller.zoomEpoch, epoch);
+      expect(
+        tester
+            .widgetList<PdfTextOverlay>(find.byType(PdfTextOverlay))
+            .firstWhere((overlay) => overlay.page == 1)
+            .selection,
+        same(overlay.selection),
+      );
+      expect(preferences.readerAppearanceOverrideFor(pdf.id), isNull);
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+  );
+
   testWidgets('PDF annotation colour previews only after an explicit choice '
       'and clears with the selection', (
     tester,

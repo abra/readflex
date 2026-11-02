@@ -860,6 +860,15 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get readerPageTurn => 'ページめくり';
 
   @override
+  String get readerPageAnimation => 'ページアニメーション';
+
+  @override
+  String get readerPageAnimationSlide => 'スライド';
+
+  @override
+  String get readerPageAnimationCover => '重ねる';
+
+  @override
   String get readerResetTextSize => '文字サイズをリセット';
 
   @override

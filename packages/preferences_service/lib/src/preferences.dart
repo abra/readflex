@@ -49,6 +49,24 @@ enum ReaderPageTurnStyle {
   };
 }
 
+/// Visual page transition, independent of the horizontal/vertical turn axis.
+enum ReaderPageAnimation {
+  slide('slide'),
+  cover('cover');
+
+  const ReaderPageAnimation(this.id);
+
+  final String id;
+
+  static ReaderPageAnimation fromId(String? value) => tryFromId(value) ?? cover;
+
+  static ReaderPageAnimation? tryFromId(String? value) => switch (value) {
+    'slide' => slide,
+    'cover' => cover,
+    _ => null,
+  };
+}
+
 /// Colors of fixed image pages (PDF).
 enum ReaderPageColors {
   /// Paper takes the reader background and ink the reader text color; dark
@@ -120,6 +138,7 @@ class ReaderAppearancePreferences {
     required this.trimPageMargins,
     required this.pageColors,
     required this.columns,
+    this.pageAnimation = ReaderPageAnimation.cover,
   });
 
   static const defaultLineHeight = 1.6;
@@ -153,6 +172,7 @@ class ReaderAppearancePreferences {
     overrideColor: true,
     useBookLayout: true,
     pageTurnStyle: ReaderPageTurnStyle.horizontal,
+    pageAnimation: ReaderPageAnimation.cover,
     trimPageMargins: true,
     pageColors: ReaderPageColors.theme,
     columns: ReaderColumns.auto,
@@ -178,6 +198,8 @@ class ReaderAppearancePreferences {
 
   final ReaderPageTurnStyle pageTurnStyle;
 
+  final ReaderPageAnimation pageAnimation;
+
   /// Fixed image pages (PDF) drop their blank margins so the printed area
   /// fills a phone screen. On by default; sparse pages keep the whole page.
   final bool trimPageMargins;
@@ -201,6 +223,7 @@ class ReaderAppearancePreferences {
     bool? overrideColor,
     bool? useBookLayout,
     ReaderPageTurnStyle? pageTurnStyle,
+    ReaderPageAnimation? pageAnimation,
     bool? trimPageMargins,
     ReaderPageColors? pageColors,
     ReaderColumns? columns,
@@ -217,6 +240,7 @@ class ReaderAppearancePreferences {
     overrideColor: overrideColor ?? this.overrideColor,
     useBookLayout: useBookLayout ?? this.useBookLayout,
     pageTurnStyle: pageTurnStyle ?? this.pageTurnStyle,
+    pageAnimation: pageAnimation ?? this.pageAnimation,
     trimPageMargins: trimPageMargins ?? this.trimPageMargins,
     pageColors: pageColors ?? this.pageColors,
     columns: columns ?? this.columns,
@@ -238,6 +262,7 @@ class ReaderAppearancePreferences {
           overrideColor == other.overrideColor &&
           useBookLayout == other.useBookLayout &&
           pageTurnStyle == other.pageTurnStyle &&
+          pageAnimation == other.pageAnimation &&
           trimPageMargins == other.trimPageMargins &&
           pageColors == other.pageColors &&
           columns == other.columns;
@@ -256,6 +281,7 @@ class ReaderAppearancePreferences {
     overrideColor,
     useBookLayout,
     pageTurnStyle,
+    pageAnimation,
     trimPageMargins,
     pageColors,
     columns,
@@ -561,6 +587,7 @@ class Preferences {
     this.readerOverrideColor = true,
     this.readerUseBookLayout = true,
     this.readerPageTurnStyle = ReaderPageTurnStyle.horizontal,
+    this.readerPageAnimation = ReaderPageAnimation.cover,
     this.readerTrimPageMargins = true,
     this.readerPageColors = ReaderPageColors.theme,
     this.readerColumns = ReaderColumns.auto,
@@ -601,6 +628,7 @@ class Preferences {
   final bool readerOverrideColor;
   final bool readerUseBookLayout;
   final ReaderPageTurnStyle readerPageTurnStyle;
+  final ReaderPageAnimation readerPageAnimation;
   final bool readerTrimPageMargins;
   final ReaderPageColors readerPageColors;
   final ReaderColumns readerColumns;
@@ -649,6 +677,7 @@ class Preferences {
         overrideColor: readerOverrideColor,
         useBookLayout: readerUseBookLayout,
         pageTurnStyle: readerPageTurnStyle,
+        pageAnimation: readerPageAnimation,
         trimPageMargins: readerTrimPageMargins,
         pageColors: readerPageColors,
         columns: readerColumns,
@@ -687,6 +716,7 @@ class Preferences {
     bool? readerOverrideColor,
     bool? readerUseBookLayout,
     ReaderPageTurnStyle? readerPageTurnStyle,
+    ReaderPageAnimation? readerPageAnimation,
     bool? readerTrimPageMargins,
     ReaderPageColors? readerPageColors,
     ReaderColumns? readerColumns,
@@ -719,6 +749,7 @@ class Preferences {
     readerOverrideColor: readerOverrideColor ?? this.readerOverrideColor,
     readerUseBookLayout: readerUseBookLayout ?? this.readerUseBookLayout,
     readerPageTurnStyle: readerPageTurnStyle ?? this.readerPageTurnStyle,
+    readerPageAnimation: readerPageAnimation ?? this.readerPageAnimation,
     readerTrimPageMargins: readerTrimPageMargins ?? this.readerTrimPageMargins,
     readerPageColors: readerPageColors ?? this.readerPageColors,
     readerColumns: readerColumns ?? this.readerColumns,
@@ -767,6 +798,7 @@ class Preferences {
           readerOverrideColor == other.readerOverrideColor &&
           readerUseBookLayout == other.readerUseBookLayout &&
           readerPageTurnStyle == other.readerPageTurnStyle &&
+          readerPageAnimation == other.readerPageAnimation &&
           readerTrimPageMargins == other.readerTrimPageMargins &&
           readerPageColors == other.readerPageColors &&
           readerColumns == other.readerColumns &&
@@ -805,6 +837,7 @@ class Preferences {
     readerOverrideColor,
     readerUseBookLayout,
     readerPageTurnStyle,
+    readerPageAnimation,
     readerTrimPageMargins,
     readerPageColors,
     readerColumns,

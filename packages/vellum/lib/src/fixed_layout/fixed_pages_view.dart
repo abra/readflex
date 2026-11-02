@@ -5,6 +5,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
+import '../page_turn/page_turn_animation.dart';
+import '../page_turn/page_turn_decoration.dart';
+import '../page_turn/page_turn_frame.dart';
+import '../page_turn/page_turn_layer.dart';
 import 'fixed_page_source.dart';
 import 'fixed_pages_controller.dart';
 import 'page_colors.dart';
@@ -23,6 +27,7 @@ typedef PageOverlayBuilder =
 typedef VisibleRectOf = Rect? Function(int page);
 
 /// Pages of a comic or a PDF: a `PageView` of single pages or spreads,
+/// presented with [pageTurnAnimation],
 /// pinch and double-tap zoom, and the tap arbitration of the WebView
 /// reader. The pages come from a [FixedPageSource]; the view knows nothing
 /// of formats.
@@ -44,6 +49,7 @@ class FixedPagesView extends StatefulWidget {
     this.visibleRectOf,
     this.pageColors,
     this.axis = Axis.horizontal,
+    this.pageTurnAnimation = PageTurnAnimation.cover,
     this.edgeTapZoneFraction = 0.3,
     this.backgroundColor = const Color(0xFF000000),
     this.turnDuration = const Duration(milliseconds: 250),
@@ -75,6 +81,7 @@ class FixedPagesView extends StatefulWidget {
   /// reader's vertical page turn. Reading direction only applies side to
   /// side; tap zones stay at the left and right edges either way.
   final Axis axis;
+  final PageTurnAnimation pageTurnAnimation;
 
   /// Width share at each edge where a tap turns the page at once.
   final double edgeTapZoneFraction;
@@ -118,6 +125,8 @@ class _FixedPagesViewState extends State<FixedPagesView> {
   final _viewportKey = GlobalKey();
   late PageController _pageController;
   late bool _singlePage;
+  late int _turnOriginUnit;
+  PageTurnAnimation? _activeAnimation;
   final _zoomControllers = <int, TransformationController>{};
   Size _size = Size.zero;
   Timer? _pendingTap;
@@ -130,6 +139,7 @@ class _FixedPagesViewState extends State<FixedPagesView> {
   void initState() {
     super.initState();
     _singlePage = _controller.singlePage;
+    _turnOriginUnit = _controller.unit;
     _pageController = PageController(initialPage: _controller.unit);
     _controller.addListener(_onControllerChanged);
   }
@@ -176,6 +186,8 @@ class _FixedPagesViewState extends State<FixedPagesView> {
 
   void _resetPageController() {
     _singlePage = _controller.singlePage;
+    _turnOriginUnit = _controller.unit;
+    _activeAnimation = null;
     final previous = _pageController;
     _pageController = PageController(initialPage: _controller.unit);
     // The old controller is still attached to the outgoing PageView until
@@ -188,6 +200,7 @@ class _FixedPagesViewState extends State<FixedPagesView> {
       _pageController.jumpToPage(unit);
       return;
     }
+    _activeAnimation ??= widget.pageTurnAnimation;
     _animating = true;
     try {
       await _pageController.animateToPage(
@@ -211,6 +224,46 @@ class _FixedPagesViewState extends State<FixedPagesView> {
     if (_animating) return;
     _cancelPendingTap();
     _controller.showUnit(unit);
+  }
+
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (notification.depth != 0 ||
+        (notification is! ScrollStartNotification &&
+            notification is! ScrollEndNotification)) {
+      return false;
+    }
+    final page = _pageController.page;
+    if (page != null && (page - page.round()).abs() < 0.000001) {
+      // An interrupted turn keeps its origin until it reaches a whole page.
+      _turnOriginUnit = page.round();
+      _activeAnimation = notification is ScrollStartNotification
+          ? widget.pageTurnAnimation
+          : null;
+    }
+    return false;
+  }
+
+  _PageTurnPosition get _turnPosition => _PageTurnPosition(
+    page: _pageController.hasClients
+        ? (_pageController.page ?? _turnOriginUnit.toDouble())
+        : _turnOriginUnit.toDouble(),
+    origin: _turnOriginUnit,
+    count: _controller.unitCount,
+    axis: widget.axis,
+    rtl: _controller.rtl,
+  );
+
+  PageTurnFrame _frameFor(_PageTurnPosition position) {
+    final animation = _activeAnimation ?? widget.pageTurnAnimation;
+    final incoming = position.incomingOffset;
+    return incoming == null
+        ? PageTurnFrame.idle(animation: animation, axis: widget.axis)
+        : PageTurnFrame.active(
+            animation: animation,
+            axis: widget.axis,
+            incomingOffset: incoming,
+            entrySide: position.entrySide,
+          );
   }
 
   TransformationController _zoomControllerFor(int unit) =>
@@ -305,24 +358,42 @@ class _FixedPagesViewState extends State<FixedPagesView> {
                 textDirection: _controller.rtl
                     ? TextDirection.rtl
                     : TextDirection.ltr,
-                child: PageView.builder(
-                  key: ValueKey<bool>(singlePage),
-                  controller: _pageController,
-                  scrollDirection: widget.axis,
-                  physics: locked
-                      ? const NeverScrollableScrollPhysics()
-                      : const PageScrollPhysics(),
-                  allowImplicitScrolling: true,
-                  onPageChanged: _onPageChanged,
-                  itemCount: _controller.unitCount,
-                  itemBuilder: (context, unit) => _PageUnit(
-                    key: ValueKey<int>(unit),
-                    unit: unit,
-                    view: widget,
-                    size: _size,
-                    zoomController: _zoomControllerFor(unit),
-                    onDisposed: () => _releaseZoomController(unit),
-                  ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    NotificationListener<ScrollNotification>(
+                      onNotification: _onScrollNotification,
+                      child: PageView.builder(
+                        key: ValueKey<bool>(singlePage),
+                        controller: _pageController,
+                        scrollDirection: widget.axis,
+                        physics: locked
+                            ? const NeverScrollableScrollPhysics()
+                            : const PageScrollPhysics(),
+                        allowImplicitScrolling: true,
+                        onPageChanged: _onPageChanged,
+                        itemCount: _controller.unitCount,
+                        itemBuilder: (context, unit) => _PageTurnUnit(
+                          unit: unit,
+                          view: this,
+                          child: _PageUnit(
+                            key: ValueKey<int>(unit),
+                            unit: unit,
+                            view: widget,
+                            size: _size,
+                            zoomController: _zoomControllerFor(unit),
+                            onDisposed: () => _releaseZoomController(unit),
+                          ),
+                        ),
+                      ),
+                    ),
+                    AnimatedBuilder(
+                      animation: _pageController,
+                      builder: (context, _) => PageTurnDecoration(
+                        frame: _frameFor(_turnPosition),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -330,6 +401,72 @@ class _FixedPagesViewState extends State<FixedPagesView> {
         );
       },
     );
+  }
+}
+
+/// Adapts native viewport offsets to the shared page-turn presentation.
+class _PageTurnUnit extends StatelessWidget {
+  const _PageTurnUnit({
+    required this.unit,
+    required this.view,
+    required this.child,
+  });
+
+  final int unit;
+  final _FixedPagesViewState view;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: view._pageController,
+    child: child,
+    builder: (context, child) {
+      final position = view._turnPosition;
+      final frame = view._frameFor(position);
+      final role = !frame.isActive
+          ? null
+          : unit == position.outgoing
+          ? PageTurnRole.outgoing
+          : unit == position.incoming
+          ? PageTurnRole.incoming
+          : null;
+      return PageTurnLayer(
+        frame: frame,
+        role: role,
+        nativeOffset: position.offsetOf(unit),
+        viewportSize: view._size,
+        backgroundColor: view.widget.backgroundColor,
+        child: child!,
+      );
+    },
+  );
+}
+
+class _PageTurnPosition {
+  const _PageTurnPosition({
+    required this.page,
+    required this.origin,
+    required this.count,
+    required this.axis,
+    required this.rtl,
+  });
+
+  final double page;
+  final int origin;
+  final int count;
+  final Axis axis;
+  final bool rtl;
+
+  int get _direction => (page - origin).sign.toInt();
+  double get _sign => axis == Axis.horizontal && rtl ? -1 : 1;
+  int get outgoing => _direction >= 0 ? page.floor() : page.ceil();
+  int get incoming => outgoing + _direction;
+  double get entrySide => _direction * _sign;
+  double offsetOf(int unit) => (unit - page) * _sign;
+
+  double? get incomingOffset {
+    if (_direction == 0 || incoming < 0 || incoming >= count) return null;
+    return (incoming - page) * _sign;
   }
 }
 

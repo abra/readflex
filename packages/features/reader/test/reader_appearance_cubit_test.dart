@@ -32,6 +32,10 @@ void main() {
         expect(cubit.state.effectiveAppearance.themeId, 'paper');
         expect(cubit.state.effectiveAppearance.sideMargin, 8);
         expect(
+          cubit.state.effectiveAppearance.pageAnimation,
+          ReaderPageAnimation.cover,
+        );
+        expect(
           cubit.state.effectiveAppearance.pageTurnStyle,
           ReaderPageTurnStyle.horizontal,
         );
@@ -127,6 +131,85 @@ void main() {
               .readerAppearanceOverrideFor(_sourceId)
               ?.pageTurnStyle,
           ReaderPageTurnStyle.vertical,
+        );
+      },
+    );
+
+    test(
+      'global page animation follows updates without a source override',
+      () async {
+        final cubit = ReaderAppearanceCubit(
+          preferencesService: preferencesService,
+          sourceId: _sourceId,
+        );
+        addTearDown(cubit.close);
+        await cubit.setFont('sans');
+        final changed = cubit.stream.firstWhere(
+          (state) =>
+              state.effectiveAppearance.pageAnimation ==
+              ReaderPageAnimation.slide,
+        );
+        await preferencesService.update(
+          (prefs) =>
+              prefs.copyWith(readerPageAnimation: ReaderPageAnimation.slide),
+        );
+        await changed;
+
+        expect(
+          cubit.state.effectiveAppearance.pageAnimation,
+          ReaderPageAnimation.slide,
+        );
+        expect(cubit.state.effectiveAppearance.fontId, 'sans');
+        expect(
+          cubit.state.effectiveAppearance.pageTurnStyle,
+          ReaderPageTurnStyle.horizontal,
+        );
+        expect(
+          preferencesService.readerAppearanceOverrideFor(_sourceId)?.fontId,
+          'sans',
+        );
+      },
+    );
+
+    test(
+      'Reader reset ignores and preserves the Library page animation',
+      () async {
+        await preferencesService.update(
+          (prefs) =>
+              prefs.copyWith(readerPageAnimation: ReaderPageAnimation.slide),
+        );
+        final cubit = ReaderAppearanceCubit(
+          preferencesService: preferencesService,
+          sourceId: _sourceId,
+        );
+        addTearDown(cubit.close);
+        expect(cubit.state.hasOverride, isFalse);
+        expect(cubit.state.isFactoryDefault, isTrue);
+
+        await cubit.setTheme('night');
+        await cubit.setPageTurnStyle(ReaderPageTurnStyle.vertical);
+        expect(cubit.state.hasOverride, isTrue);
+        expect(cubit.state.isFactoryDefault, isFalse);
+        await cubit.reset();
+
+        expect(cubit.state.effectiveAppearance.themeId, 'paper');
+        expect(
+          cubit.state.effectiveAppearance.pageTurnStyle,
+          ReaderPageTurnStyle.horizontal,
+        );
+        expect(
+          cubit.state.effectiveAppearance.pageAnimation,
+          ReaderPageAnimation.slide,
+        );
+        expect(
+          preferencesService.current.readerPageAnimation,
+          ReaderPageAnimation.slide,
+        );
+        expect(cubit.state.hasOverride, isFalse);
+        expect(cubit.state.isFactoryDefault, isTrue);
+        expect(
+          preferencesService.readerAppearanceOverrideFor(_sourceId),
+          isNull,
         );
       },
     );

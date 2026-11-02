@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_display_sheet.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_locale_cubit.dart';
+import 'package:library_feature/src/library_page_animation_cubit.dart';
 import 'package:library_feature/src/library_theme_cubit.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_appearance_sheet.dart';
@@ -26,6 +27,9 @@ void main() {
       final layout = LibraryLayoutCubit(preferencesService: preferences);
       final locale = LibraryLocaleCubit(preferencesService: preferences);
       final theme = LibraryThemeCubit(preferencesService: preferences);
+      final pageAnimation = LibraryPageAnimationCubit(
+        preferencesService: preferences,
+      );
       final appearance = ReaderAppearanceCubit(
         preferencesService: preferences,
         sourceId: 'settings-fixture',
@@ -33,6 +37,7 @@ void main() {
       addTearDown(layout.close);
       addTearDown(locale.close);
       addTearDown(theme.close);
+      addTearDown(pageAnimation.close);
       addTearDown(appearance.close);
       late BuildContext host;
       await pumpGoldenSurface(
@@ -54,6 +59,7 @@ void main() {
         layoutCubit: layout,
         localeCubit: locale,
         themeCubit: theme,
+        pageAnimationCubit: pageAnimation,
       );
       await tester.pumpAndSettle();
       final displayHeader = tester.getRect(find.byType(BottomSheetHeader));

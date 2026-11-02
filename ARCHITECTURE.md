@@ -377,6 +377,19 @@ The reader is intentionally split across several packages:
 | `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
 | `features/dictionary` | Implements `DictionaryAction` and owns the remote definition sheet/cubit. |
 
+Page-turn animation is a UI preference independent of paging direction.
+`preferences_service` persists `ReaderPageAnimation` globally.
+`LibraryPageAnimationCubit` owns its choice in Library's Display sheet;
+Reader appearance observes the global value without editing it. Legacy
+per-source animation keys are ignored while retaining other overrides. Reader
+maps it to Vellum's `PageTurnAnimation`, without passing preferences into the
+engine. Text and fixed-layout viewers retain their input/controller logic and
+feed one normalized `PageTurnFrame`; shared strategies, `PageTurnLayer` and
+`PageTurnDecoration` own geometry, clipping and painting. Active turns freeze
+their effect, and selecting another effect does not repaginate or reset zoom.
+Future nonlinear effects belong at that rendering seam and own their temporary
+GPU resources; Slide and Cover capture no page snapshots. Curl is not implemented.
+
 The reader does not import the Highlight, Translate, or Dictionary feature
 packages. `routing.dart` creates their `TextAction` implementations and passes
 a list into `ReaderScreen`; the reader adds its UI-only `CopyTextAction`. The

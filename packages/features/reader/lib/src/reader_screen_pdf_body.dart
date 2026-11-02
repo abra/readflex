@@ -13,6 +13,7 @@ class _ReaderPdfBody extends StatefulWidget {
     required this.trimPageMargins,
     required this.pageColors,
     required this.pageTurnStyle,
+    required this.pageAnimation,
     this.onPositionChanged,
     this.onReady,
     this.onLoading,
@@ -24,6 +25,7 @@ class _ReaderPdfBody extends StatefulWidget {
   final bool trimPageMargins;
   final ReaderPageColors pageColors;
   final ReaderPageTurnStyle pageTurnStyle;
+  final ReaderPageAnimation pageAnimation;
   final ValueChanged<BookPosition>? onPositionChanged;
   final VoidCallback? onReady;
   final VoidCallback? onLoading;
@@ -562,6 +564,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
           backgroundColor: theme.backgroundColor,
           pageColors: pageColors,
           axis: _nativePageAxis(widget.pageTurnStyle),
+          pageTurnAnimation: _nativePageTurnAnimation(widget.pageAnimation),
           visibleRectOf: widget.trimPageMargins ? _visibleRectOf : null,
           onTap: (point) => _dispatchReaderTap(
             context,

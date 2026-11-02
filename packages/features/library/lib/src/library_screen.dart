@@ -23,6 +23,7 @@ import 'library_import_entry.dart';
 import 'library_layout.dart';
 import 'library_layout_cubit.dart';
 import 'library_locale_cubit.dart';
+import 'library_page_animation_cubit.dart';
 import 'library_theme_cubit.dart';
 import 'manage_collection_cubit.dart';
 import 'manage_collection_sheet.dart';
@@ -121,6 +122,11 @@ class LibraryScreen extends StatelessWidget {
           ),
         ),
         BlocProvider(create: (_) => LibrarySelectionCubit()),
+        BlocProvider(
+          create: (_) => LibraryPageAnimationCubit(
+            preferencesService: preferencesService,
+          ),
+        ),
         BlocProvider(
           create: (_) => AddToCollectionCubit(
             collectionRepository: collectionRepository,

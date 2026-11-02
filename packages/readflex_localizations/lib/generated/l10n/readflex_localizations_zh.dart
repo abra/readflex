@@ -860,6 +860,15 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get readerPageTurn => '翻页';
 
   @override
+  String get readerPageAnimation => '翻页动画';
+
+  @override
+  String get readerPageAnimationSlide => '滑动';
+
+  @override
+  String get readerPageAnimationCover => '覆盖';
+
+  @override
   String get readerResetTextSize => '重置文字大小';
 
   @override
