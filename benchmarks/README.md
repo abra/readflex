@@ -49,6 +49,85 @@ fvm flutter test benchmarks/perf_audit_test.dart --dart-define=PERF_AUDIT_COMMAN
 Use these numbers to justify production changes; do not turn the benchmark into
 a strict pass/fail test without platform-specific thresholds.
 
+## Native import, opening and reading
+
+The native app harness imports real EPUB, FB2, MOBI, AZW3, CBZ and PDF files,
+opens them from the Library, mounts the first page and turns a page. Pass plain
+FB2 files: the current import entry determines format from the final extension,
+so archived FB2 is not an equivalent import workload. Use plain paths without
+commas; on Android first push the files to a device-readable directory. The iOS
+simulator can read host paths.
+
+```sh
+READFLEX_NATIVE_DEVICE=<android-device-id> fvm flutter drive --profile \
+  --driver=test_driver/ui_driver.dart \
+  --target=integration_test/native_books_open_test.dart \
+  -d <android-device-id> \
+  '--dart-define=VELLUM_BOOKS=/data/local/tmp/books/book.epub|/data/local/tmp/books/book.mobi' \
+  --dart-define=VELLUM_PERF_REPEATS=3 \
+  --dart-define=VELLUM_PERF_SCREENSHOTS=false
+```
+
+Reports and optional screenshots go to `.local/ui-device/run-*/`. Each raw row
+includes file bytes, import/open milliseconds, repeat number and process RSS.
+Import calls the production `importBookFile`: metadata/cover extraction, file
+copy with progress and repository insertion are timed together. File picking,
+application startup and picker-copy cleanup are excluded. Each repeat uses a
+fresh app, in-memory SQLite database and real temporary book/cover files. These
+numbers do not measure durable database writes. Repeats share the Dart process,
+native initialization and OS caches; process peak RSS is cumulative.
+
+Opening starts at the Library tap after its tile becomes tappable and ends
+when the first page is mounted. Each readiness poll delays 30 ms then pumps
+30 ms (roughly 60 ms plus frame alignment on a live binding). It excludes the
+old fixed tap-settling delay and does not establish the physical first painted
+pixel or complete image decoding. Screenshots and image-settling delays are
+outside the open interval. Keep the recorded platform, build mode and viewport
+with the raw samples; compare medians and ranges on the same device.
+
+For a breakdown of text preparation and execution, run the same driver with
+`--target=integration_test/vellum_text_engine_test.dart` and text books in
+`VELLUM_BOOKS`. It records file opening, up to 30 linear sections per book,
+section preparation, image probing, initial layout, full layout and pagination
+separately. `firstPageMs` is initial layout alone;
+`prepareToFirstPageMs` also includes section preparation and image probing.
+The first book additionally exercises selection, whole-book search and 12 page
+turns with raw action times, individual build/raster/total frame timings and
+frame summaries. Frames are filtered to each turn's action interval; screenshot
+and inter-turn preparation frames are excluded. `resumeMiddleMs` measures
+navigation to the expected section and spread at 50% of the already-open book,
+including its layout and mounted-view update, rather than reopening a file.
+Turn times include the test gesture and animation; they are not per-frame
+execution times. The screenshot toggle also applies to this text-engine suite;
+the repeat define applies only to `native_books_open_test.dart`.
+
+`integration_test/article_performance_test.dart` uses the same driver to measure
+saving a fixture article, Library-to-reader opening, reopening at a saved middle
+position, search and 12 real-time scroll animations with raw Flutter frame
+timings. `VELLUM_PERF_REPEATS` defaults to 3 there. Article persistence uses the
+same isolated in-memory SQLite and real temporary files. Network download and
+extraction, application bootstrap and durable database writes are excluded.
+
+Use profile mode on a physical phone for device latency and frame budgets.
+The iOS simulator supports debug mode only: omit `--profile` there. Debug,
+simulator and emulator results are diagnostics, not bounds or predictions for
+physical release performance. `native_article_test.dart` separately exercises
+a saved fixture article's open/scroll/search/reopen flow; it excludes network
+download and extraction. No current harness measures complete process startup.
+
+For application startup, Flutter's built-in trace uses the normal entry point:
+
+```sh
+fvm flutter run --profile --trace-startup -d <android-device-id>
+```
+
+Preserve `build/start_up_info.json` and `build/start_up_timeline.json` before
+repeating: Flutter replaces them. The timings begin at engine entry; distinguish
+the first built frame from the first rasterized frame. They include application
+dependency initialization, but do not measure the OS launch before engine entry
+or establish that Library data is ready. A profile APK's size also differs from
+release APK/AAB delivery size; keep its ABI list with any size measurements.
+
 ## MOBI Dart/Rust experiment
 
 Record the retained Dart reference decoder in host AOT, with Node.js 20+ and the pinned SDK:
@@ -87,8 +166,8 @@ runtime and generator to `flutter_rust_bridge` 2.13.0. Its generated bridge uses
 comparing against the serialization-only SSE/MOI configuration. FRB's
 [codec documentation](https://cjycode.com/flutter_rust_bridge/guides/miscellaneous/codec)
 describes the copy/allocation tradeoff for byte buffers. It has its own Pub/Cargo
-lockfiles and is not a runtime dependency. The app uses the separate production
-`packages/vellum_mobi_native` backend. Requirements for this experiment:
+lockfiles and is not a runtime dependency. The app uses Vellum's internal
+production backend in `packages/vellum/rust`. Requirements for this experiment:
 Rust/Cargo with edition 2024 support, the pinned Flutter
 SDK and Node.js 20+. Install dependencies, check parity and measure:
 
@@ -193,8 +272,8 @@ CST/DCO Rust dylib is 915,024 bytes and its Dart executable 6,178,784 bytes,
 versus 6,079,712 bytes for the Dart worker. CLI bundles also contain Vellum's
 PDFium/Objective-C assets; these figures do not measure an APK/IPA size delta.
 
-This historical experiment selected CST/DCO/NOM. Production now uses the
-separate `vellum_mobi_native` Rust backend for MOBI/KF8 record I/O and decoding;
+This historical experiment selected CST/DCO/NOM. Production now uses Vellum's
+internal Rust crate `vellum_mobi_native` for MOBI/KF8 record I/O and decoding;
 the [reader part comparison](reader_native/README.md) uses that backend against
 the retained Dart reference. The measurements above do not establish
 book-open/first-page time, batch-size/memory tradeoffs or mobile FPS.

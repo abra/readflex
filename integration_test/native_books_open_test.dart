@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:domain_models/domain_models.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:import_flow/import_flow.dart' show importBookFile;
 import 'package:integration_test/integration_test.dart';
 import 'package:vellum/all_formats.dart';
 
@@ -12,10 +14,16 @@ import '../test/support/ui_test_driver.dart';
 
 /// Every book format reads on vellum in the real app, never in the
 /// WebView: each book of `--dart-define=VELLUM_BOOKS=a|b|…` (EPUB, FB2,
-/// MOBI, AZW3, CBZ or PDF) is added to an empty library, opened from its
-/// tile, shows its first page, turns one page and closes. Reports the
-/// open time and the process RSS per book, and saves a screenshot of each
-/// first page.
+/// MOBI, AZW3, CBZ or PDF) is imported into an empty library, opened from
+/// its tile, shows its first page, turns one page and closes. Reports
+/// metadata/cover extraction and persistence together as import time,
+/// then tap-to-first-page-mounted time and process RSS. The isolated app
+/// uses an in-memory SQLite DB and real temporary book/cover files.
+///
+/// `--dart-define=VELLUM_PERF_REPEATS=3` repeats each book with a fresh
+/// app. `--dart-define=VELLUM_PERF_SCREENSHOTS=false` skips screenshots
+/// and their image-settling delay. Repeats share the process and OS caches;
+/// first-page-mounted time is not a physical first-pixel measurement.
 ///
 /// `--dart-define=VELLUM_AT=href|…` (in the books' order, empty to skip
 /// one) then goes to that place of a book (a section href with an
@@ -29,37 +37,81 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   const books = String.fromEnvironment('VELLUM_BOOKS');
   const places = String.fromEnvironment('VELLUM_AT');
+  const repeats = int.fromEnvironment('VELLUM_PERF_REPEATS', defaultValue: 1);
+  const screenshots = bool.fromEnvironment(
+    'VELLUM_PERF_SCREENSHOTS',
+    defaultValue: true,
+  );
 
-  testWidgets('every book opens and turns on vellum', (tester) async {
-    final paths = books.split('|').where((p) => p.isNotEmpty).toList();
-    if (paths.isEmpty) {
-      markTestSkipped('pass VELLUM_BOOKS');
-      return;
-    }
-    tester.platformDispatcher.defaultRouteNameTestValue = '/';
-    addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
-    final report = <Map<String, Object?>>[];
-    final targets = places.split('|');
-    for (final (index, path) in paths.indexed) {
-      final format = _formatOf(path);
-      expect(format, isNotNull, reason: 'a book format: $path');
-      final at = index < targets.length ? targets[index] : '';
-      report.add(
-        await _openAndTurn(
-          tester,
-          binding,
-          index,
-          path,
-          format!,
-          at: at.isEmpty ? null : at,
-        ),
+  testWidgets(
+    'every book opens and turns on vellum',
+    (tester) async {
+      final paths = books.split('|').where((p) => p.isNotEmpty).toList();
+      if (paths.isEmpty) {
+        markTestSkipped('pass VELLUM_BOOKS');
+        return;
+      }
+      expect(
+        repeats,
+        greaterThan(0),
+        reason: 'VELLUM_PERF_REPEATS must be positive',
       );
-    }
-    for (final entry in report) {
-      debugPrint('NATIVE BOOK $entry');
-    }
-    binding.reportData = {...?binding.reportData, 'nativeBooks': report};
-  });
+      tester.platformDispatcher.defaultRouteNameTestValue = '/';
+      addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
+      final report = <Map<String, Object?>>[];
+      final targets = places.split('|');
+      for (final (index, path) in paths.indexed) {
+        final format = _formatOf(path);
+        expect(format, isNotNull, reason: 'a book format: $path');
+        final at = index < targets.length ? targets[index] : '';
+        for (var repeat = 1; repeat <= repeats; repeat++) {
+          report.add(
+            await _openAndTurn(
+              tester,
+              binding,
+              index,
+              path,
+              format!,
+              repeat: repeat,
+              screenshots: screenshots,
+              at: at.isEmpty ? null : at,
+            ),
+          );
+        }
+      }
+      for (final entry in report) {
+        debugPrint('NATIVE BOOK $entry');
+      }
+      final view = tester.view;
+      binding.reportData = {
+        ...?binding.reportData,
+        'nativeBooks': report,
+        'nativeBooksEnvironment': {
+          'platform': Platform.operatingSystem,
+          'operatingSystemVersion': Platform.operatingSystemVersion,
+          'runtime': Platform.version,
+          'mode': kReleaseMode
+              ? 'release'
+              : kProfileMode
+              ? 'profile'
+              : 'debug',
+          'viewport': {
+            'width': view.physicalSize.width / view.devicePixelRatio,
+            'height': view.physicalSize.height / view.devicePixelRatio,
+            'devicePixelRatio': view.devicePixelRatio,
+          },
+          'repeats': repeats,
+          'screenshots': screenshots,
+          'storage': 'in-memory SQLite; real temporary book and cover files',
+          'openMetric':
+              'tap to first page mounted; 30 ms delay plus 30 ms pump per poll',
+          'rssBytes': ProcessInfo.currentRss,
+          'maxRssBytes': ProcessInfo.maxRss,
+        },
+      };
+    },
+    timeout: const Timeout(Duration(minutes: 20)),
+  );
 }
 
 /// Opens [path] in a fresh app, goes to [at] when given, turns a page
@@ -70,18 +122,39 @@ Future<Map<String, Object?>> _openAndTurn(
   int index,
   String path,
   BookFormat format, {
+  required int repeat,
+  required bool screenshots,
   String? at,
 }) async {
   final app = await UiTestApp.create(withBook: false);
   try {
     final name = path.split('/').last;
+    final file = File(path);
+    final fileBytes = await file.length();
+    final rssBeforeImportBytes = ProcessInfo.currentRss;
+    var progressUpdates = 0;
+    double? lastProgress;
+    final importWatch = Stopwatch()..start();
     final book = await tester.runAsync(
-      () => app.bookRepository.addBook(
-        sourceFile: File(path),
-        title: name,
-        format: format,
+      () => importBookFile(
+        sourceFile: file,
+        bookRepository: app.bookRepository,
+        logger: app.logger,
+        onProgress: (progress) {
+          progressUpdates++;
+          lastProgress = progress;
+        },
       ),
     );
+    importWatch.stop();
+    expect(book, isNotNull, reason: 'imports $name');
+    expect(book!.format, format, reason: 'imports the expected format');
+    expect(
+      lastProgress,
+      1.0,
+      reason: 'the import completes its byte-copy phase',
+    );
+    final rssAfterImportBytes = ProcessInfo.currentRss;
     await tester.pumpWidget(app.widget);
 
     final fixed = format == BookFormat.cbz || format == BookFormat.pdf;
@@ -103,22 +176,32 @@ Future<Map<String, Object?>> _openAndTurn(
       return position == null ? null : '${position.section}:${position.spread}';
     }
 
+    final tile = find.byKey(ValueKey('library-grid-${book.id}'));
+    await waitForUi(
+      tester,
+      () => tile.hitTestable().evaluate().isNotEmpty,
+      description: 'the library tile of $name',
+    );
     final open = Stopwatch()..start();
-    await tapUi(tester, find.byKey(ValueKey('library-grid-${book!.id}')));
+    await tester.tap(tile.hitTestable().first);
+    await tester.pump();
     await waitForUi(
       tester,
       () => page.evaluate().isNotEmpty && place() != null,
       description: 'the first page of $name',
       timeout: const Duration(seconds: 60),
     );
-    final openMs = open.elapsedMilliseconds;
-    await _settleImages(tester);
-    await takeDeviceScreenshot(
-      binding,
-      'native-book-${index.toString().padLeft(2, '0')}-${format.name}',
-    );
+    open.stop();
+    final openMs = open.elapsedMicroseconds / 1000;
+    final rssAtFirstPageBytes = ProcessInfo.currentRss;
+    final shot = 'native-book-${index.toString().padLeft(2, '0')}-run-$repeat';
+    if (screenshots) {
+      await _settleImages(tester);
+      await takeDeviceScreenshot(binding, '$shot-${format.name}');
+    } else {
+      await tester.pumpAndSettle();
+    }
     final rssMb = ProcessInfo.currentRss >> 20;
-    final shot = 'native-book-${index.toString().padLeft(2, '0')}';
     if (at != null && !fixed) {
       final before = place();
       final moved = await tester.runAsync(
@@ -131,8 +214,10 @@ Future<Map<String, Object?>> _openAndTurn(
         description: 'the page of $at',
         timeout: const Duration(seconds: 30),
       );
-      await _settleImages(tester);
-      await takeDeviceScreenshot(binding, '$shot-at');
+      if (screenshots) {
+        await _settleImages(tester);
+        await takeDeviceScreenshot(binding, '$shot-at');
+      }
     }
 
     // The next page lies left of the view in right-to-left books.
@@ -163,8 +248,16 @@ Future<Map<String, Object?>> _openAndTurn(
     return {
       'book': name,
       'format': format.name,
+      'repeat': repeat,
+      'fileBytes': fileBytes,
+      'importMs': importWatch.elapsedMicroseconds / 1000,
+      'importProgressUpdates': progressUpdates,
       'openMs': openMs,
       'rssMb': rssMb,
+      'rssBeforeImportBytes': rssBeforeImportBytes,
+      'rssAfterImportBytes': rssAfterImportBytes,
+      'rssAtFirstPageBytes': rssAtFirstPageBytes,
+      'maxRssBytes': ProcessInfo.maxRss,
       'from': first,
       'to': second,
     };

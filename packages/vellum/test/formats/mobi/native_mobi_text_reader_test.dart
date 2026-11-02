@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:test/test.dart';
-import 'package:vellum_mobi_native/vellum_mobi_native.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:vellum/src/formats/mobi/native/native_mobi_text_reader.dart';
 
 void main() {
   late Directory directory;

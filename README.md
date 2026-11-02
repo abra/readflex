@@ -31,8 +31,7 @@ Start here:
 | `packages/local_storage` | Drift database, DAOs, migrations, storage mappers |
 | `packages/domain_models` | Pure domain models, enums, and exceptions |
 | `packages/component_library` | Theme, design tokens, and reusable widgets |
-| `packages/vellum` | The reader engine: book formats, layout, pages, CFIs, search |
-| `packages/vellum_mobi_native` | Rust MOBI/KF8 text-record I/O and decompression, private to Vellum |
+| `packages/vellum` | The reader engine: book formats, layout, pages, CFIs, search, internal Rust MOBI/KF8 backend |
 | `android`, `ios` | App runners and native platform integrations |
 | `test/ui`, `integration_test` | Root UI flows, visual comparisons and device checks |
 | `benchmarks` | Opt-in performance comparisons, separate from the app graph |
@@ -59,9 +58,10 @@ The test harness, coverage reports and benchmark orchestration need Node.js 20+.
 Android builds also need the project's
 JDK/SDK setup; iOS builds need Xcode and CocoaPods.
 MOBI text processing uses Rust through FRB. Install rustup; the compiler and
-targets are pinned in `packages/vellum_mobi_native/rust/rust-toolchain.toml`.
-Flutter/Dart build hooks compile and bundle the library automatically. See the
-[native package README](packages/vellum_mobi_native/README.md) for setup and checks.
+targets are pinned in `packages/vellum/rust/rust-toolchain.toml`.
+Vellum's Flutter/Dart build hook compiles and bundles the library automatically,
+including for consumers importing another format. See the
+[native backend notes](packages/vellum/doc/mobi_native.md) for setup and checks.
 
 ### Versioned Configuration
 
@@ -74,7 +74,7 @@ checkout does not depend on a developer's global ignore settings.
 
 The independent library packages under `packages/` and `third_party/` keep
 their own test-environment `pubspec.lock` files local, except the pinned
-`vellum_mobi_native` bridge/build environment. Its Cargo lockfile is tracked too.
+`vellum` bridge/build environment. Its `rust/Cargo.lock` is tracked too.
 The root lockfile pins
 the application graph, not every library's standalone dev dependencies.
 

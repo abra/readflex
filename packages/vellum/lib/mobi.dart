@@ -1,6 +1,6 @@
 /// MOBI 6 and KF8 (AZW3) on the vellum core: the Palm database, headers,
 /// indexes, both book kinds as `TextBookSource`s and import metadata.
-/// Production text-record I/O and decompression use `vellum_mobi_native`;
+/// Production text-record I/O and decompression use Vellum's internal Rust backend;
 /// the Dart decoders remain exported for reference and parity checks.
 library;
 

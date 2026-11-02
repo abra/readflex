@@ -298,9 +298,8 @@ remain for migration compatibility only (last revision `189e2cc1`).
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, Practice, and app composition. Practice limits (`practiceNewCardsPerDay`, `practiceReviewHighlights`, `practiceDesiredRetention`) are edited in the Practice settings sheet. |
 | `review_scheduler` | FSRS-6 over the vendored `fsrs`: computes the next review state and log for a rating at the reader's desired retention, previews intervals. Study days start at 04:00; day-level intervals are at least a day, ordered by rating and capped at 365; one learning and one relearning step of 10 min because the step is not persisted; fuzzing off so previews match. Held to py-fsrs by a 118-history reference test. | Used by `fsrs_repository` only. |
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
-| `vellum` | Reader engine: Dart containers, document/CSS models, paged EPUB/FB2/MOBI, scrolling articles, comic pages, PDFium rendering, CFIs, progress, search, Flutter adaptive text selection, highlights and import metadata. MOBI text-record I/O/decompression uses `vellum_mobi_native`; `package:vellum/testing.dart` builds fixtures. | Used by Reader through `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. Format libraries export the core `vellum.dart`; the core imports no format and formats never import each other (`test/library_boundaries_test.dart`). See [Vellum's README](packages/vellum/README.md) for capabilities and native bundling limits. |
+| `vellum` | Reader engine: Dart containers, document/CSS models, paged EPUB/FB2/MOBI, scrolling articles, comic pages, PDFium rendering, CFIs, progress, search, Flutter adaptive text selection, highlights and import metadata. Its internal Rust crate handles MOBI text-record I/O/decompression; `package:vellum/testing.dart` builds fixtures. | Used by Reader through `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. Format libraries export the core `vellum.dart`; the core imports no format and formats never import each other (`test/library_boundaries_test.dart`). See [Vellum's README](packages/vellum/README.md) for capabilities and native bundling limits. |
 | `screen_control_service` | Keep-awake and brightness coordination for active reading sessions. | Wraps low-level brightness plugin. |
-| `vellum_mobi_native` | Rust MOBI/KF8 text-record reading and decompression, native file/dictionary ownership, release Native Assets build hook and FRB bindings. | Used only by Vellum's MOBI module; no UI/domain/repository dependencies. |
 | `toast_service` | Thin toastification wrapper: bottom-anchored toasts that float above controls marked with `ToastAvoidArea`; `ToastNavigatorObserver` on the root navigator clears them when a sheet or dialog opens. | Feature packages do not import toastification directly. |
 
 Some infrastructure packages are used by only one feature today. That is still
@@ -725,23 +724,27 @@ EPUB: `TextBookUnsupported`) shows the open error until vellum draws it
 (R3/R4 in the native reader plan).
 
 `vellum` delegates only MOBI/KF8 text-record I/O, trailing-entry removal and
-PalmDOC/HUFF-CDIC decompression to `packages/vellum_mobi_native` over
+PalmDOC/HUFF-CDIC decompression to its Rust crate in `packages/vellum/rust` over
 `flutter_rust_bridge` 2.13.0. PDB/MOBI headers, combined-file selection,
 metadata, resources, chapter reconstruction, document parsing and layout stay
-in Dart. The native package has no Flutter UI, domain or repository dependencies.
+in Dart. The crate and native library retain the name `vellum_mobi_native`;
+there is one Dart package, `vellum`. The wrapper, loader and generated Dart
+bindings are private to `lib/src/formats/mobi/native/`. This backend has no
+Flutter UI, domain or repository dependencies.
 MOBI 6 requests its text in one batch; KF8 keeps record reads on demand and its
 existing Dart range caches. The native session starts lazily, serializes reads
 on the FRB pool and drains them before closing its file/dictionary/opaque handle.
 Failed book opening closes both native and PDB resources. Native read errors
 surface as `VellumException`; there is no silent backend retry.
 
-The native package's build hook compiles a locked Cargo crate in release mode
+Vellum's `hook/build.dart` compiles the locked Cargo crate in release mode
 with its pinned rustup compiler and bundles it through Native Assets. Native
-assets are package-level dependencies even for consumers importing another
-Vellum format. Generated bindings and native lockfiles are versioned; development
+assets, including PDFium, are built/bundled even for consumers importing another
+Vellum format. Generated bindings and build lockfiles are versioned; development
 requires rustup and the target platform toolchain. Host tests/CLI resolve the
 build-hook asset, and packaged apps use FRB's platform loader. `make analyze`
 includes Rust checks; `make test` includes Rust and bridge/session tests.
+See [the native backend notes](packages/vellum/doc/mobi_native.md) for setup and regeneration.
 
 The current Dart decoders remain the explicit parity reference through
 `MobiContainer.open(..., useDartTextReader: true)` or the diagnostic build define

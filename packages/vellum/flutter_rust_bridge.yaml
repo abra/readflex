@@ -1,6 +1,6 @@
 rust_input: crate::api
 rust_root: rust/
-dart_output: lib/src/rust
+dart_output: lib/src/formats/mobi/native/rust
 dart_entrypoint_class_name: VellumMobiRustLib
 web: false
 build_runner: false

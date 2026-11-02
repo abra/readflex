@@ -1,8 +1,0 @@
-include: package:lints/recommended.yaml
-
-analyzer:
-  exclude:
-    - lib/src/rust/**
-
-formatter:
-  trailing_commas: preserve

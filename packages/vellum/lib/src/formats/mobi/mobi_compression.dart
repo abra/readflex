@@ -1,6 +1,6 @@
 /// Dart reference for MOBI text-record decoding: variable-length integers,
 /// trailing entries, PalmDOC (LZ77) and Huffman/CDIC decompression, based on
-/// `mobi.js`. Production text records use `vellum_mobi_native`; the index
+/// `mobi.js`. Production text records use the internal Rust backend; the index
 /// parser also uses the variable-length integer helpers here.
 library;
 

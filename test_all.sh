@@ -84,7 +84,6 @@ run "device_screen_brightness"    "$FLUTTER test test/" "$SCRIPT_DIR/third_party
 run "screen_control_service"       "$FLUTTER test test/" "$SCRIPT_DIR/packages/screen_control_service"
 run "preferences_service"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/preferences_service"
 run "vellum"                      "$FLUTTER test test/" "$SCRIPT_DIR/packages/vellum"
-run "vellum_mobi_native"           "$DART test test/" "$SCRIPT_DIR/packages/vellum_mobi_native"
 run "toast_service"               "$FLUTTER test test/" "$SCRIPT_DIR/packages/toast_service"
 run "library"                     "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/library"
 run "import_flow"                 "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/import_flow"

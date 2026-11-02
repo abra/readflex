@@ -6,7 +6,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
 
 import 'rust/frb_generated.dart';
 
-const _assetId = 'package:vellum_mobi_native/src/rust/frb_generated.io.dart';
+const _assetId =
+    'package:vellum/src/formats/mobi/native/rust/frb_generated.io.dart';
 const _isFlutter = bool.fromEnvironment('dart.library.ui');
 const _isProduct = bool.fromEnvironment('dart.vm.product');
 Future<void>? _initialization;

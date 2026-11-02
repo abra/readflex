@@ -10,3 +10,4 @@ analyzer:
   exclude:
     - "**/*.*.dart"
     - "**/generated/**"
+    - "lib/src/formats/mobi/native/rust/**"

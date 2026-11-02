@@ -1,11 +1,10 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:vellum_mobi_native/vellum_mobi_native.dart';
-
 import '../../vellum_exception.dart';
 import 'mobi_compression.dart';
 import 'mobi_headers.dart';
+import 'native/native_mobi_text_reader.dart';
 import 'pdb.dart';
 
 /// Internal text-byte boundary; format parsing and chapter assembly stay in Dart.

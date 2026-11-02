@@ -34,9 +34,10 @@ Each format lives in one folder (`src/formats/<format>/`, articles in
 `src/article/`) with its parser, its `TextBookSource` or page source and
 its import metadata; the core imports no format and no format imports
 another. `test/library_boundaries_test.dart` walks the import graph from
-every library to keep it so. PDFium and the MOBI Rust backend are package
-dependencies: their native assets are built/bundled even when a consumer
-imports only another format.
+every library to keep it so. PDFium's native dependency and the internal MOBI
+Rust backend are built/bundled even when a consumer imports only another format.
+The Rust crate and library retain the name `vellum_mobi_native`; the only Dart
+package is `vellum`. See [native backend setup and maintenance](doc/mobi_native.md).
 
 ## Modules
 
@@ -72,7 +73,8 @@ fixtures preserve the behavior that saved positions and content depend on.
 
 `container`, `epubcfi`, `document` and the format parsers have no
 `dart:ui` dependency: they run in isolates and are tested without a Flutter
-binding. MOBI text-record I/O and decoding use `vellum_mobi_native`;
+binding. MOBI text-record I/O and decoding use the internal Rust crate in
+`rust/`, through private bindings in `src/formats/mobi/native/`;
 `formats/pdf/pdf_book.dart` talks to pdfium through `pdfrx_engine` and one
 FFI call of its own; `formats/pdf/pdf_engine.dart` is the Flutter side of
 that (loading the library the app bundles). `metadata`, `layout`,
@@ -266,7 +268,7 @@ long enough to hold them: an old MOBI 3 header ends at 0xD0 and the bytes
 at the flags' offset are its title, as Calibre reads it; a size past the
 start leaves nothing, a size of 0 leaves the record whole, where
 `mobi.js`'s `subarray(0, -0)` empties it), then PalmDOC or Huffman/CDIC
-decompression in [vellum_mobi_native](../vellum_mobi_native/README.md).
+decompression in the [internal Rust backend](doc/mobi_native.md).
 The native reader is opened lazily on the first text request, owns one file
 handle and dictionary cache, and runs I/O/decoding on the FRB worker pool.
 MOBI 6 uses `loadAllText()` for one batch; KF8 retains individual `loadText`
@@ -285,8 +287,8 @@ parity/benchmarks; `--dart-define=VELLUM_MOBI_USE_DART=true` selects it for a
 diagnostic build. This is not an app-facing engine preference. The regular
 `MobiBook.open(path)` API and source/UI contracts are unchanged. Rust is limited
 to MOBI text bytes: XML/HTML parsing, EPUB/CBZ ZIP, FB2 and layout remain Dart;
-PDF remains PDFium. Flutter/Dart build hooks bundle the Rust library; development
-requires rustup with the toolchain pinned by the native package.
+PDF remains PDFium. Vellum's Flutter/Dart build hook bundles the Rust library;
+development requires rustup with the toolchain pinned in `rust/rust-toolchain.toml`.
 
 `Mobi6Book` reads all text records into one stream (as `mobi.js` must,
 `filepos` offsets count bytes of the whole), splits it at

@@ -783,13 +783,6 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
-  vellum_mobi_native:
-    dependency: transitive
-    description:
-      path: "../../packages/vellum_mobi_native"
-      relative: true
-    source: path
-    version: "0.1.0"
   vm_service:
     dependency: transitive
     description:

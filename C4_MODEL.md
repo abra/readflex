@@ -94,8 +94,7 @@ flowchart TB
 | Repositories/services | `packages/*_repository`, `packages/*_service`, specialized packages | Data source orchestration, platform/backend contracts, persistence boundaries. |
 | Local database | `packages/local_storage` | Drift schema, DAOs, migrations, storage rows. |
 | App files | App documents directory | Imported books, extracted article HTML and assets. |
-| Reader engine | `packages/vellum` | Opens EPUB, FB2, MOBI/KF8, CBZ, PDF and saved articles from their files, lays them out and draws their pages; import metadata, search, selection, CFIs. |
-| MOBI text backend | `packages/vellum_mobi_native` | Vellum's Rust record I/O and PalmDOC/HUFF-CDIC decoder over FRB; lazy KF8 reads and batched MOBI 6 text, built through Native Assets. Headers, chapters, document parsing and UI remain in Dart. |
+| Reader engine | `packages/vellum` | Opens EPUB, FB2, MOBI/KF8, CBZ, PDF and saved articles from their files, lays them out and draws their pages; import metadata, search, selection, CFIs. Its internal Rust crate in `rust/` handles MOBI record I/O and PalmDOC/HUFF-CDIC decoding over FRB, with lazy KF8 reads and batched MOBI 6 text. Vellum's build hook bundles it through Native Assets. |
 
 ## Level 3: Components
 

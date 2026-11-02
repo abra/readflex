@@ -1,6 +1,7 @@
+import 'dart:developer' show Timeline;
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:ui' show FrameTiming, TimingsCallback;
+import 'dart:ui' show FramePhase, FrameTiming, TimingsCallback;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -20,13 +21,20 @@ import '../test/support/device_screenshots.dart';
 /// Books come from `--dart-define=VELLUM_BOOKS=/path/a.epub|/path/b.fb2`:
 /// the iOS simulator reads host paths; on Android push the books first
 /// (`adb push a.epub /data/local/tmp/vellum/`) and pass the device paths.
-/// The iOS simulator runs debug builds only: their times are an upper
-/// bound. The Android emulator also runs `--profile` (AOT on the host's
-/// CPU: nearer the release budget, still faster than a phone). The report
-/// has the process RSS after each book and the run's peak.
+/// The iOS simulator runs debug builds only. Android can also run
+/// `--profile`; neither simulator nor emulator timings establish a
+/// physical phone's latency or frame budget. The report separates file
+/// opening, section preparation, image probing, initial layout and full
+/// layout/pagination, with process RSS after each book and the run's peak.
+/// `--dart-define=VELLUM_PERF_SCREENSHOTS=false` excludes screenshot work
+/// and retained image payloads from performance-only runs.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   const books = String.fromEnvironment('VELLUM_BOOKS');
+  const captureScreenshots = bool.fromEnvironment(
+    'VELLUM_PERF_SCREENSHOTS',
+    defaultValue: true,
+  );
 
   testWidgets(
     'real books lay out within the chapter budget',
@@ -51,7 +59,11 @@ void main() {
       final results = <Map<String, Object>>[];
       for (final path in paths) {
         final name = path.split('/').last;
+        final fileBytes = await File(path).length();
+        final open = Stopwatch()..start();
         final book = await tester.runAsync(() => _open(path));
+        open.stop();
+        final rssAfterOpenBytes = ProcessInfo.currentRss;
         final source = textBookSourceOf(book!);
         final images = BookImageCache(read: source.readImage);
         final preparer = SectionPreparer(source);
@@ -63,9 +75,17 @@ void main() {
           final section = (await tester.runAsync(
             () => preparer.prepare(i, style),
           ))!;
+          watch.stop();
           final prepareUs = watch.elapsedMicroseconds;
+          watch
+            ..reset()
+            ..start();
           await tester.runAsync(() => images.probe(section.imageKeys.values));
-          watch.reset();
+          watch.stop();
+          final imageProbeUs = watch.elapsedMicroseconds;
+          watch
+            ..reset()
+            ..start();
           final task = ColumnLayoutTask(
             section.boxes,
             width: pageWidth,
@@ -85,9 +105,13 @@ void main() {
           final firstPageUs = watch.elapsedMicroseconds;
           task.advance();
           final column = task.column;
+          watch.stop();
           final layoutUs = watch.elapsedMicroseconds;
-          watch.reset();
+          watch
+            ..reset()
+            ..start();
           final pages = paginateColumn(column, pageHeight: pageHeight);
+          watch.stop();
           final paginateUs = watch.elapsedMicroseconds;
           final textLength = section.boxes.paragraphs.fold<int>(
             0,
@@ -99,11 +123,14 @@ void main() {
             'paragraphs': column.paragraphs.length,
             'pages': pages.length,
             'prepareMs': prepareUs / 1000,
+            'imageProbeMs': imageProbeUs / 1000,
             'firstPageMs': firstPageUs / 1000,
+            'prepareToFirstPageMs':
+                (prepareUs + imageProbeUs + firstPageUs) / 1000,
             'layoutMs': layoutUs / 1000,
             'paginateMs': paginateUs / 1000,
           });
-          if (screenshots < 2 && textLength > 2000) {
+          if (captureScreenshots && screenshots < 2 && textLength > 2000) {
             await tester.pumpWidget(
               _Page(
                 column: column,
@@ -129,10 +156,14 @@ void main() {
         await tester.runAsync(source.close);
         results.add({
           'book': name,
+          'fileBytes': fileBytes,
+          'openMs': open.elapsedMicroseconds / 1000,
+          'rssAfterOpenBytes': rssAfterOpenBytes,
           'chapters': chapters,
           ..._summary(chapters),
           // What the process holds once the book is closed.
           'rssMb': _mb(ProcessInfo.currentRss),
+          'maxRssBytes': ProcessInfo.maxRss,
         });
         debugPrint('VELLUM ${_summary(chapters)} $name');
       }
@@ -146,6 +177,7 @@ void main() {
             ? 'profile'
             : 'debug',
         'maxRssMb': _mb(ProcessInfo.maxRss),
+        'screenshotsEnabled': captureScreenshots,
         'page': {'width': pageWidth, 'height': pageHeight},
         'books': results,
       };
@@ -237,16 +269,22 @@ void main() {
 
     await tester.longPressAt(wordIn(longest, 0.4));
     await tester.pumpAndSettle();
-    await takeDeviceScreenshot(binding, 'vellum-selection-word');
+    if (captureScreenshots) {
+      await takeDeviceScreenshot(binding, 'vellum-selection-word');
+    }
     // From the first paragraph into the third (or the last there is).
     final gesture = await tester.startGesture(wordIn(texts.first, 0.5));
     await tester.pump(const Duration(milliseconds: 700));
     await gesture.moveTo(wordIn(texts[math.min(2, texts.length - 1)], 0.4));
     await tester.pump(const Duration(milliseconds: 200));
-    await takeDeviceScreenshot(binding, 'vellum-selection-drag');
+    if (captureScreenshots) {
+      await takeDeviceScreenshot(binding, 'vellum-selection-drag');
+    }
     await gesture.up();
     await tester.pumpAndSettle();
-    await takeDeviceScreenshot(binding, 'vellum-selection-range');
+    if (captureScreenshots) {
+      await takeDeviceScreenshot(binding, 'vellum-selection-range');
+    }
     final selection = render.selection!;
     final details = TextSelectionDetails.of(
       section,
@@ -310,6 +348,9 @@ void main() {
       markTestSkipped('pass VELLUM_BOOKS');
       return;
     }
+    final framePolicy = binding.framePolicy;
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    addTearDown(() => binding.framePolicy = framePolicy);
     const fonts = BookFonts(serif: 'Literata', sansSerif: 'Open Sans');
     const style = BookStyle(fontScale: 1.2, fontFamily: 'Literata');
     final book = await tester.runAsync(() => _open(path));
@@ -329,60 +370,161 @@ void main() {
         home: TextPagesView(controller: controller),
       ),
     );
-    Future<void> settle(bool Function() done) async {
+    Future<void> settle(
+      bool Function() done, {
+      required String description,
+    }) async {
       for (var i = 0; i < 600 && !done(); i++) {
         await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 5)),
         );
         await tester.pump(const Duration(milliseconds: 16));
       }
+      expect(done(), isTrue, reason: 'Timed out waiting for $description');
     }
 
-    await settle(() => find.byType(TextColumnPage).evaluate().isNotEmpty);
+    await settle(
+      () => find.byType(TextColumnPage).evaluate().isNotEmpty,
+      description: 'the first mounted page',
+    );
     final firstSpreadMs = watch.elapsedMilliseconds;
-    await takeDeviceScreenshot(binding, 'vellum-pages-open');
+    if (captureScreenshots) {
+      await takeDeviceScreenshot(binding, 'vellum-pages-open');
+    }
     final turns = <int>[];
     final positions = <String>[];
     // The engine's frame timings over the turns (build and raster per
     // frame, frames over budget); the turn times include the test's fling.
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 1100)),
+    );
     final frames = <FrameTiming>[];
+    final turnWindows = <(int, int)>[];
     final TimingsCallback watchFrames = frames.addAll;
     binding.addTimingsCallback(watchFrames);
-    for (var i = 0; i < 12; i++) {
-      await settle(() => controller.spreadAt(1) != null);
-      final turn = Stopwatch()..start();
-      await tester.fling(
-        find.byType(TextPagesView),
-        const Offset(-200, 0),
-        1500,
+    try {
+      for (var i = 0; i < 12; i++) {
+        await settle(
+          () => controller.spreadAt(1) != null,
+          description: 'the next spread before turn ${i + 1}',
+        );
+        final before = controller.position;
+        final startedUs = Timeline.now;
+        final turn = Stopwatch()..start();
+        await tester.fling(
+          find.byType(TextPagesView),
+          Offset(controller.rtl ? 200 : -200, 0),
+          1500,
+        );
+        await settle(
+          () => controller.position != before,
+          description: 'turn ${i + 1} from $before',
+        );
+        await tester.pumpAndSettle(const Duration(milliseconds: 16));
+        turn.stop();
+        turnWindows.add((startedUs, Timeline.now));
+        turns.add(turn.elapsedMilliseconds);
+        positions.add('${controller.position}');
+        if (captureScreenshots && i == 2) {
+          await takeDeviceScreenshot(binding, 'vellum-pages-turned');
+        }
+      }
+      // Callbacks are batched: flush, then keep only each action's frames.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 1100)),
       );
-      final before = controller.position;
-      await settle(() => controller.position != before);
-      await tester.pumpAndSettle();
-      turns.add(turn.elapsedMilliseconds);
-      positions.add('${controller.position}');
-      if (i == 2) await takeDeviceScreenshot(binding, 'vellum-pages-turned');
+    } finally {
+      binding.removeTimingsCallback(watchFrames);
     }
-    // The engine reports frame timings in batches, up to a second late.
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(seconds: 2)),
+    final turnFrames = frames.where((timing) {
+      final start = timing.timestampInMicroseconds(FramePhase.buildStart);
+      return turnWindows.any(
+        (window) => start >= window.$1 && start <= window.$2,
+      );
+    }).toList();
+    expect(
+      turnFrames,
+      isNotEmpty,
+      reason: 'Native frame timings are required for page-turn measurements',
     );
-    binding.removeTimingsCallback(watchFrames);
-    await tester.runAsync(() => controller.goToFraction(0.5));
-    await settle(() => controller.position?.fraction != null);
-    await tester.pumpAndSettle();
-    await takeDeviceScreenshot(binding, 'vellum-pages-middle');
+
+    const middleFraction = 0.5;
+    final progress = SectionProgress(
+      [for (var i = 0; i < source.sectionCount; i++) source.sectionSize(i)],
+      linear: [
+        for (var i = 0; i < source.sectionCount; i++) source.isLinear(i),
+      ],
+    );
+    final (targetSection, inSection) = progress.section(middleFraction);
+    final beforeMiddle = controller.position;
+    final resumeMiddle = Stopwatch()..start();
+    final middleTarget = await tester.runAsync(() async {
+      await controller.goToFraction(middleFraction);
+      return controller.position;
+    });
+    expect(
+      middleTarget,
+      isNotNull,
+      reason: 'middle navigation returns a position',
+    );
+    expect(middleTarget!.section, targetSection);
+    expect(middleTarget.spreadCount, isNotNull);
+    final spreadCount = middleTarget.spreadCount!;
+    final targetSpread = math.min(
+      spreadCount - 1,
+      (inSection * spreadCount).floor(),
+    );
+    expect(middleTarget.spread, targetSpread);
+    await tester.pump();
+    await settle(
+      () =>
+          controller.isReady &&
+          controller.position?.section == targetSection &&
+          controller.position?.spread == targetSpread,
+      description: 'middle section $targetSection spread $targetSpread',
+    );
+    await tester.pumpAndSettle(const Duration(milliseconds: 16));
+    resumeMiddle.stop();
+    expect(controller.error, isNull);
+    if (captureScreenshots) {
+      await takeDeviceScreenshot(binding, 'vellum-pages-middle');
+    }
     final report = {
       'firstSpreadMs': firstSpreadMs,
       'turnMs': turns,
       'positions': positions,
+      'resumeMiddleMs': resumeMiddle.elapsedMicroseconds / 1000,
+      'middleNavigationSucceeded': true,
+      'middleRequestedFraction': middleFraction,
+      'middleTargetSection': targetSection,
+      'middleTargetSpread': targetSpread,
+      'beforeMiddle': '$beforeMiddle',
       'middle': '${controller.position}',
     };
     debugPrint('VELLUM pages $report');
     binding.reportData = {
       ...?binding.reportData,
       'pages': report,
-      'turnFrames': FrameTimingSummarizer(frames).summary,
+      'turnFrames': FrameTimingSummarizer(turnFrames).summary,
+      'turnFrameRefreshRateHz': tester.view.display.refreshRate,
+      'turnFrameWindows': [
+        for (final (start, end) in turnWindows)
+          {'startedAtMonotonicUs': start, 'endedAtMonotonicUs': end},
+      ],
+      'turnFrameSamples': [
+        for (final timing in turnFrames)
+          {
+            'vsyncStartUs': timing.timestampInMicroseconds(
+              FramePhase.vsyncStart,
+            ),
+            'buildStartUs': timing.timestampInMicroseconds(
+              FramePhase.buildStart,
+            ),
+            'buildUs': timing.buildDuration.inMicroseconds,
+            'rasterUs': timing.rasterDuration.inMicroseconds,
+            'totalSpanUs': timing.totalSpan.inMicroseconds,
+          },
+      ],
     };
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
@@ -420,6 +562,7 @@ Map<String, Object> _summary(List<Map<String, Object>> chapters) {
   final layout = [for (final c in chapters) c['layoutMs']! as double];
   final prepare = [for (final c in chapters) c['prepareMs']! as double];
   final firstPage = [for (final c in chapters) c['firstPageMs']! as double];
+  final imageProbe = [for (final c in chapters) c['imageProbeMs']! as double];
   final per100k = [
     for (final c in chapters)
       if ((c['textChars']! as int) > 5000)
@@ -434,6 +577,8 @@ Map<String, Object> _summary(List<Map<String, Object>> chapters) {
     'firstPageMaxMs': ms(firstPage.reduce(math.max)),
     'prepareMedianMs': ms(percentile(prepare, 0.5)),
     'prepareMaxMs': ms(prepare.reduce(math.max)),
+    'imageProbeMedianMs': ms(percentile(imageProbe, 0.5)),
+    'imageProbeMaxMs': ms(imageProbe.reduce(math.max)),
     if (per100k.isNotEmpty)
       'layoutPer100kCharsMedianMs': ms(percentile(per100k, 0.5)),
   };

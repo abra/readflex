@@ -3,9 +3,9 @@ import 'dart:typed_data';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart'
     show AnyhowException;
 
-import 'src/native_library.dart';
+import 'native_library.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart' as frb;
-import 'src/rust/api.dart' as rust;
+import 'rust/api.dart' as rust;
 
 /// A decoding or file error reported by the native MOBI reader.
 class MobiNativeException implements Exception {

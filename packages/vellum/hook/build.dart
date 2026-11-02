@@ -16,6 +16,7 @@ Future<void> main(List<String> args) async {
     }
     await FlutterRustBridgeNativeAssetsBuilder(
       cratePath: 'rust',
+      assetName: 'src/formats/mobi/native/rust/frb_generated.io.dart',
       extraCargoBuildArgs: ['--locked'],
       // Homebrew rustc can precede rustup proxies in PATH on macOS.
       extraCargoEnvironmentVariables: {

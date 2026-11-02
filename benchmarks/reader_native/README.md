@@ -15,7 +15,8 @@ backend. ZIP/XML/HTML remain isolated candidates, outside the production graph.
 | MOBI/KF8 text stream | `MobiContainer.open(..., useDartTextReader: true).loadAllText()` | The same container using production Rust text-record I/O/decoding in one FRB batch |
 | MOBI/KF8 record sequence | Dart reads first, next, middle and last records | Production Rust reads the same individual records through FRB |
 
-Both ZIP implementations use native zlib. MOBI uses `vellum_mobi_native`;
+Both ZIP implementations use native zlib. MOBI uses Vellum's internal Rust
+backend (`packages/vellum/rust`, crate name `vellum_mobi_native`);
 the earlier `mobi_rust` experiment is retained separately. This does not measure an entire reader or introduce a
 second rendering architecture. PDF already uses PDFium through `pdfrx`; replacing
 that wrapper would not compare an existing Dart PDF engine with a Rust engine.

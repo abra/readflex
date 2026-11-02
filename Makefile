@@ -29,7 +29,6 @@ PACKAGES = \
 	third_party/device_screen_brightness \
 	packages/screen_control_service \
 	packages/vellum \
-	packages/vellum_mobi_native \
 	packages/toast_service \
 	packages/features/library \
 	packages/features/import_flow \
@@ -45,18 +44,18 @@ ROOT_ANALYZE_PATHS = lib test integration_test test_driver bin benchmarks script
 ## Regenerate the production MOBI bridge with flutter_rust_bridge_codegen 2.13.0
 generate-vellum-mobi-native:
 	@test "$$(flutter_rust_bridge_codegen --version)" = "flutter_rust_bridge_codegen 2.13.0"
-	cd packages/vellum_mobi_native && fvm exec flutter_rust_bridge_codegen generate --skip-fvm-install
-	cd packages/vellum_mobi_native/rust && $(MOBI_RUST_ENV) cargo fmt
-	$(DART) format packages/vellum_mobi_native/lib/src/rust
+	cd packages/vellum && fvm exec flutter_rust_bridge_codegen generate --skip-fvm-install
+	cd packages/vellum/rust && $(MOBI_RUST_ENV) cargo fmt
+	$(DART) format packages/vellum/lib/src/formats/mobi/native/rust
 
 ## Analyze production Rust code and formatting
 analyze-vellum-mobi-rust:
-	cd packages/vellum_mobi_native/rust && $(MOBI_RUST_ENV) cargo fmt --check
-	cd packages/vellum_mobi_native/rust && $(MOBI_RUST_ENV) cargo clippy --locked --all-targets -- -D warnings
+	cd packages/vellum/rust && $(MOBI_RUST_ENV) cargo fmt --check
+	cd packages/vellum/rust && $(MOBI_RUST_ENV) cargo clippy --locked --all-targets -- -D warnings
 
 ## Test production Rust decoders, limits and session lifecycle
 test-vellum-mobi-rust:
-	cd packages/vellum_mobi_native/rust && $(MOBI_RUST_ENV) cargo test --locked
+	cd packages/vellum/rust && $(MOBI_RUST_ENV) cargo test --locked
 
 ## Install dependencies for root and all packages
 get:

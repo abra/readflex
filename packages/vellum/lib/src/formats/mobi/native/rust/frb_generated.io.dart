@@ -376,7 +376,7 @@ class VellumMobiRustLibWire implements BaseWire {
 
   late final _wire__crate__api__MobiTextReader_closePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.UintPtr)>>(
-        'frbgen_vellum_mobi_native_wire__crate__api__MobiTextReader_close',
+        'frbgen_vellum_wire__crate__api__MobiTextReader_close',
       );
   late final _wire__crate__api__MobiTextReader_close =
       _wire__crate__api__MobiTextReader_closePtr
@@ -399,7 +399,7 @@ class VellumMobiRustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_mobi_text_config>,
           )
         >
-      >('frbgen_vellum_mobi_native_wire__crate__api__MobiTextReader_open');
+      >('frbgen_vellum_wire__crate__api__MobiTextReader_open');
   late final _wire__crate__api__MobiTextReader_open =
       _wire__crate__api__MobiTextReader_openPtr
           .asFunction<
@@ -423,9 +423,7 @@ class VellumMobiRustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.UintPtr, ffi.Uint32)
         >
-      >(
-        'frbgen_vellum_mobi_native_wire__crate__api__MobiTextReader_read_record',
-      );
+      >('frbgen_vellum_wire__crate__api__MobiTextReader_read_record');
   late final _wire__crate__api__MobiTextReader_read_record =
       _wire__crate__api__MobiTextReader_read_recordPtr
           .asFunction<void Function(int, int, int)>();
@@ -449,9 +447,7 @@ class VellumMobiRustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.UintPtr, ffi.Uint32, ffi.Uint32)
         >
-      >(
-        'frbgen_vellum_mobi_native_wire__crate__api__MobiTextReader_read_records',
-      );
+      >('frbgen_vellum_wire__crate__api__MobiTextReader_read_records');
   late final _wire__crate__api__MobiTextReader_read_records =
       _wire__crate__api__MobiTextReader_read_recordsPtr
           .asFunction<void Function(int, int, int, int)>();
@@ -462,7 +458,7 @@ class VellumMobiRustLibWire implements BaseWire {
 
   late final _wire__crate__api__is_release_buildPtr =
       _lookup<ffi.NativeFunction<WireSyncRust2DartDco Function()>>(
-        'frbgen_vellum_mobi_native_wire__crate__api__is_release_build',
+        'frbgen_vellum_wire__crate__api__is_release_build',
       );
   late final _wire__crate__api__is_release_build =
       _wire__crate__api__is_release_buildPtr
@@ -479,7 +475,7 @@ class VellumMobiRustLibWire implements BaseWire {
 
   late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReaderPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-        'frbgen_vellum_mobi_native_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader',
+        'frbgen_vellum_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader',
       );
   late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader =
       _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReaderPtr
@@ -496,7 +492,7 @@ class VellumMobiRustLibWire implements BaseWire {
 
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReaderPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-        'frbgen_vellum_mobi_native_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader',
+        'frbgen_vellum_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader',
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReaderPtr
@@ -510,7 +506,7 @@ class VellumMobiRustLibWire implements BaseWire {
   late final _cst_new_box_autoadd_mobi_text_configPtr =
       _lookup<
         ffi.NativeFunction<ffi.Pointer<wire_cst_mobi_text_config> Function()>
-      >('frbgen_vellum_mobi_native_cst_new_box_autoadd_mobi_text_config');
+      >('frbgen_vellum_cst_new_box_autoadd_mobi_text_config');
   late final _cst_new_box_autoadd_mobi_text_config =
       _cst_new_box_autoadd_mobi_text_configPtr
           .asFunction<ffi.Pointer<wire_cst_mobi_text_config> Function()>();
@@ -526,7 +522,7 @@ class VellumMobiRustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_prim_i_64_strict> Function(ffi.Int32)
         >
-      >('frbgen_vellum_mobi_native_cst_new_list_prim_i_64_strict');
+      >('frbgen_vellum_cst_new_list_prim_i_64_strict');
   late final _cst_new_list_prim_i_64_strict = _cst_new_list_prim_i_64_strictPtr
       .asFunction<ffi.Pointer<wire_cst_list_prim_i_64_strict> Function(int)>();
 
@@ -541,7 +537,7 @@ class VellumMobiRustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_prim_u_8_strict> Function(ffi.Int32)
         >
-      >('frbgen_vellum_mobi_native_cst_new_list_prim_u_8_strict');
+      >('frbgen_vellum_cst_new_list_prim_u_8_strict');
   late final _cst_new_list_prim_u_8_strict = _cst_new_list_prim_u_8_strictPtr
       .asFunction<ffi.Pointer<wire_cst_list_prim_u_8_strict> Function(int)>();
 

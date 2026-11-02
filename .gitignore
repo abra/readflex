@@ -73,9 +73,9 @@ tools/
 /benchmarks/reader_native/rust/target/
 !/benchmarks/reader_native/pubspec.lock
 !/benchmarks/reader_native/rust/Cargo.lock
-/packages/vellum_mobi_native/rust/target/
-!/packages/vellum_mobi_native/pubspec.lock
-!/packages/vellum_mobi_native/rust/Cargo.lock
+/packages/**/rust/target/
+!/packages/vellum/pubspec.lock
+!/packages/vellum/rust/Cargo.lock
 
 # FVM Version Cache
 .fvm/

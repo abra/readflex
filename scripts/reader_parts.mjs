@@ -52,14 +52,13 @@ async function hashSources(relative) {
 }
 for (const directory of ['benchmarks/reader_native/bin', 'benchmarks/reader_native/lib',
   'benchmarks/reader_native/rust/src', 'packages/vellum/lib',
-  'packages/vellum_mobi_native/lib', 'packages/vellum_mobi_native/rust/src',
-  'packages/vellum_mobi_native/hook']) await hashSources(directory);
+  'packages/vellum/rust/src', 'packages/vellum/hook']) await hashSources(directory);
 for (const file of ['benchmarks/reader_native/pubspec.lock',
   'benchmarks/reader_native/flutter_rust_bridge.yaml',
   'benchmarks/reader_native/rust/Cargo.toml', 'benchmarks/reader_native/rust/Cargo.lock',
-  'packages/vellum_mobi_native/pubspec.yaml', 'packages/vellum_mobi_native/rust/Cargo.toml',
-  'packages/vellum_mobi_native/rust/Cargo.lock', 'packages/vellum_mobi_native/rust/rust-toolchain.toml',
-  'packages/vellum_mobi_native/flutter_rust_bridge.yaml',
+  'packages/vellum/pubspec.yaml', 'packages/vellum/pubspec.lock',
+  'packages/vellum/rust/Cargo.toml', 'packages/vellum/rust/Cargo.lock',
+  'packages/vellum/rust/rust-toolchain.toml', 'packages/vellum/flutter_rust_bridge.yaml',
   'benchmarks/mobi_rust/rust/src/decoder.rs', 'scripts/reader_parts.mjs']) {
   sources[file] = sha256(await readFile(path.join(root, file)));
 }
@@ -117,7 +116,7 @@ const report = {
   rustc: execFileSync('rustc', ['--version', '--verbose'], {encoding: 'utf8'}),
   productionRustc: execFileSync(
     execFileSync('rustup', ['which', 'rustc'], {
-      cwd: path.join(root, 'packages/vellum_mobi_native/rust'), encoding: 'utf8',
+      cwd: path.join(root, 'packages/vellum/rust'), encoding: 'utf8',
     }).trim(), ['--version', '--verbose'], {encoding: 'utf8'}),
   order: rounds, samplesPerProcess: 21, warmups: 3,
   artifacts, sourcesAtRun: sources, frozenSources: 'sources/',

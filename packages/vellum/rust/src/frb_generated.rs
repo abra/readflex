@@ -700,7 +700,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_wire__crate__api__MobiTextReader_close(
+    pub extern "C" fn frbgen_vellum_wire__crate__api__MobiTextReader_close(
         port_: i64,
         that: usize,
     ) {
@@ -708,7 +708,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_wire__crate__api__MobiTextReader_open(
+    pub extern "C" fn frbgen_vellum_wire__crate__api__MobiTextReader_open(
         port_: i64,
         path: *mut wire_cst_list_prim_u_8_strict,
         config: *mut wire_cst_mobi_text_config,
@@ -717,7 +717,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_wire__crate__api__MobiTextReader_read_record(
+    pub extern "C" fn frbgen_vellum_wire__crate__api__MobiTextReader_read_record(
         port_: i64,
         that: usize,
         index: u32,
@@ -726,7 +726,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_wire__crate__api__MobiTextReader_read_records(
+    pub extern "C" fn frbgen_vellum_wire__crate__api__MobiTextReader_read_records(
         port_: i64,
         that: usize,
         start: u32,
@@ -736,13 +736,13 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_wire__crate__api__is_release_build()
+    pub extern "C" fn frbgen_vellum_wire__crate__api__is_release_build()
     -> flutter_rust_bridge::for_generated::WireSyncRust2DartDco {
         wire__crate__api__is_release_build_impl()
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader(
+    pub extern "C" fn frbgen_vellum_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader(
         ptr: *const std::ffi::c_void,
     ) {
         unsafe {
@@ -751,7 +751,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader(
+    pub extern "C" fn frbgen_vellum_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMobiTextReader(
         ptr: *const std::ffi::c_void,
     ) {
         unsafe {
@@ -760,7 +760,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_cst_new_box_autoadd_mobi_text_config()
+    pub extern "C" fn frbgen_vellum_cst_new_box_autoadd_mobi_text_config()
     -> *mut wire_cst_mobi_text_config {
         flutter_rust_bridge::for_generated::new_leak_box_ptr(
             wire_cst_mobi_text_config::new_with_null_ptr(),
@@ -768,7 +768,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_cst_new_list_prim_i_64_strict(
+    pub extern "C" fn frbgen_vellum_cst_new_list_prim_i_64_strict(
         len: i32,
     ) -> *mut wire_cst_list_prim_i_64_strict {
         let ans = wire_cst_list_prim_i_64_strict {
@@ -779,7 +779,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_vellum_mobi_native_cst_new_list_prim_u_8_strict(
+    pub extern "C" fn frbgen_vellum_cst_new_list_prim_u_8_strict(
         len: i32,
     ) -> *mut wire_cst_list_prim_u_8_strict {
         let ans = wire_cst_list_prim_u_8_strict {
