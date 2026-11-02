@@ -184,14 +184,17 @@ class _DisplaySettings extends StatelessWidget {
                   AppChoiceOption(
                     value: ThemeMode.system,
                     label: l10n.libraryThemeSystem,
+                    icon: AppIcons.deviceMode,
                   ),
                   AppChoiceOption(
                     value: ThemeMode.light,
                     label: l10n.libraryThemeLight,
+                    icon: AppIcons.lightMode,
                   ),
                   AppChoiceOption(
                     value: ThemeMode.dark,
                     label: l10n.libraryThemeDark,
+                    icon: AppIcons.darkMode,
                   ),
                 ],
               ),
@@ -224,11 +227,13 @@ class _PageAnimationControl extends StatelessWidget {
             AppChoiceOption(
               value: ReaderPageAnimation.slide,
               label: context.l10n.readerPageAnimationSlide,
+              icon: AppIcons.pageAnimationSlide,
               labelKey: const ValueKey('library-page-animation-slide'),
             ),
             AppChoiceOption(
               value: ReaderPageAnimation.cover,
               label: context.l10n.readerPageAnimationCover,
+              icon: AppIcons.pageAnimationCover,
               labelKey: const ValueKey('library-page-animation-cover'),
             ),
           ],
@@ -250,6 +255,7 @@ class _LanguagePickerRow extends StatelessWidget {
       return AppDrillInRow(
         key: const ValueKey('libraryLanguagePicker'),
         title: context.l10n.libraryDisplayLanguage,
+        icon: AppIcons.language,
         value: language.name,
         // Settings rows keep the 56dp list-row height that sizes Display.
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),

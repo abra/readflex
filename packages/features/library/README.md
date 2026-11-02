@@ -473,8 +473,11 @@ selection changes reuse loaded sources instead of querying storage again.
 
 Display shares `ActionBottomSheetLayout.scrollable`, `AppSettingsSection` and
 `AppChoiceControl` with reader Appearance. The Language row is the shared
-`AppDrillInRow` with a `value`, padded to the 56dp settings-row height. Layout/theme segments adapt to rows
-when localized labels at the current text scale do not fit. Groups are separated
+`AppDrillInRow` with a leading language icon. Layout, theme and page-animation
+choices all pair their labels with icons in the shared choice control.
+The row retains its current-language `value` and minimum 56dp height.
+Layout/theme segments adapt to rows when localized labels at the current text
+scale do not fit. Groups are separated
 by spacing, without an extra divider above Language. The language row
 shows the current language beside the chevron, mirrored for RTL. When they do
 not fit alongside the label, the value and chevron move together onto the next

@@ -87,6 +87,8 @@ abstract final class AppIcons {
   static const IconData pageColorsOriginal = LucideIcons.image;
   static const IconData pageTurnHorizontal = LucideIcons.arrowLeftRight;
   static const IconData pageTurnVertical = LucideIcons.arrowUpDown;
+  static const IconData pageAnimationSlide = LucideIcons.panelsLeftRight;
+  static const IconData pageAnimationCover = LucideIcons.layers2;
   // Reader text columns: chosen by the window, one page, or a spread.
   static const IconData columnsAuto = LucideIcons.sparkles;
   static const IconData columnsOne = LucideIcons.file;
