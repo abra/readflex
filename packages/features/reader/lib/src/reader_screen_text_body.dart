@@ -147,7 +147,6 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       fonts: _bookFonts(),
       images: images,
       settings: _pageSettings(),
-      rtl: source.rtl,
       initialCfi: document.currentCfi,
       initialFraction: document.currentCfi == null
           ? document.readingProgress
@@ -366,7 +365,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
         TextRelocationReason.page => 'page',
         TextRelocationReason.navigation || TextRelocationReason.layout => null,
       },
-      pageProgressionRtl: _source?.rtl ?? false,
+      pageProgressionRtl: _controller?.rtl ?? false,
       atStart: _atStart,
       atEnd: atEnd,
       bookmarkExists: bookmark != null,

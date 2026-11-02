@@ -63,6 +63,7 @@ export 'src/progress/section_progress.dart';
 export 'src/progress/toc_progress.dart';
 export 'src/text_book/footnotes.dart';
 export 'src/text_book/highlight_merge.dart';
+export 'src/text_book/page_progression.dart';
 export 'src/text_book/section_preparer.dart';
 export 'src/text_book/selection_context.dart';
 export 'src/text_book/text_anchor.dart';

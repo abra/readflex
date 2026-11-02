@@ -13,6 +13,7 @@ import '../layout/column_layout.dart';
 import '../layout/column_pages.dart';
 import '../progress/section_progress.dart';
 import '../progress/toc_progress.dart';
+import 'page_progression.dart';
 import 'text_anchor.dart';
 import 'text_book_layout.dart';
 import 'text_book_source.dart';
@@ -123,10 +124,12 @@ class TextPagesController extends ChangeNotifier {
     required this.images,
     TextPageSettings settings = const TextPageSettings(),
     TextScaler textScaler = TextScaler.noScaling,
-    this.rtl = false,
+    bool? rtl,
     String? initialCfi,
     double? initialFraction,
-  }) : _settings = settings,
+  }) : _rtlOverride = rtl,
+       _rtl = rtl ?? source.rtl,
+       _settings = settings,
        _layout = TextBookLayout(
          source: source,
          style: style,
@@ -160,8 +163,11 @@ class TextPagesController extends ChangeNotifier {
   final TextBookSource source;
   final BookImageCache images;
 
-  /// Pages progress right to left (Japanese, Arabic books).
-  final bool rtl;
+  /// Effective page progression, resolved before the first spread is shown.
+  /// An explicit constructor value overrides content inference.
+  bool get rtl => _rtl;
+  bool _rtl;
+  final bool? _rtlOverride;
 
   final TextBookLayout _layout;
   final SectionProgress _progress;
@@ -250,6 +256,8 @@ class TextPagesController extends ChangeNotifier {
         );
       }
       if (first) {
+        _rtl = _rtlOverride ?? await resolvePageProgressionRtl(source);
+        if (_disposed) return;
         final cfi = _initialCfi;
         final fraction = _initialFraction;
         if (cfi != null &&

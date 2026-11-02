@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:component_library/component_library.dart';
@@ -44,6 +45,74 @@ String fb2() =>
     '<body name="notes"><section id="n1"><title><p>1</p></title>'
     '<p>The note text.</p></section></body>'
     '</FictionBook>';
+
+/// EPUB 2 with misleading Malay metadata and no explicit spine direction.
+/// The first chapter is Malay; most of the book is Arabic styled through CSS.
+List<int> mixedLanguageArabicEpub() {
+  const container =
+      '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">'
+      '<rootfiles><rootfile full-path="OEBPS/content.opf" '
+      'media-type="application/oebps-package+xml"/></rootfiles></container>';
+  final archive = ZipBuilder()
+    ..add('mimetype', utf8.encode('application/epub+zip'))
+    ..add('META-INF/container.xml', utf8.encode(container))
+    ..add(
+      'OEBPS/content.opf',
+      utf8.encode(
+        '<package xmlns="http://www.idpf.org/2007/opf" version="2.0" '
+        'unique-identifier="book-id">'
+        '<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">'
+        '<dc:identifier id="book-id">mixed-language-fixture</dc:identifier>'
+        '<dc:title>Mixed language fixture</dc:title><dc:language>ms</dc:language>'
+        '</metadata><manifest>'
+        '<item id="intro" href="intro.xhtml" media-type="application/xhtml+xml"/>'
+        '${List.generate(3, (i) => '<item id="arabic-${i + 1}" href="arabic-${i + 1}.xhtml" media-type="application/xhtml+xml"/>').join()}'
+        '<item id="style" href="book.css" media-type="text/css"/>'
+        '<item id="ncx" href="book.ncx" media-type="application/x-dtbncx+xml"/>'
+        '</manifest><spine toc="ncx"><itemref idref="intro"/>'
+        '${List.generate(3, (i) => '<itemref idref="arabic-${i + 1}"/>').join()}'
+        '</spine></package>',
+      ),
+    )
+    ..add(
+      'OEBPS/book.css',
+      utf8.encode('.quranb { direction: rtl; text-align: right; }'),
+    )
+    ..add(
+      'OEBPS/book.ncx',
+      utf8.encode(
+        '<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">'
+        '<head/><docTitle><text>Mixed language fixture</text></docTitle><navMap>'
+        '<navPoint id="intro" playOrder="1"><navLabel><text>Pengenalan</text>'
+        '</navLabel><content src="intro.xhtml"/></navPoint>'
+        '${List.generate(3, (i) => '<navPoint id="arabic-${i + 1}" playOrder="${i + 2}"><navLabel><text>الفصل ${i + 1}</text></navLabel><content src="arabic-${i + 1}.xhtml"/></navPoint>').join()}'
+        '</navMap></ncx>',
+      ),
+    )
+    ..add(
+      'OEBPS/intro.xhtml',
+      utf8.encode(
+        '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ms">'
+        '<head><title>Pengenalan</title><link rel="stylesheet" href="book.css"/>'
+        '</head><body><h1>Pengenalan</h1>'
+        '<p>Ini pengenalan ringkas dalam bahasa Melayu sebelum bab bahasa Arab.</p>'
+        '</body></html>',
+      ),
+    );
+  for (var i = 1; i <= 3; i++) {
+    archive.add(
+      'OEBPS/arabic-$i.xhtml',
+      utf8.encode(
+        '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>الفصل $i</title>'
+        '<link rel="stylesheet" href="book.css"/></head><body>'
+        '<h1 class="quranb">الفصل $i</h1>'
+        '${List.generate(30, (p) => '<p class="quranb">هذا نص عربي لاختبار اتجاه القراءة. يبدأ القارئ من اليمين ويواصل إلى الصفحة التالية. هذه فقرة طويلة تحمل معلومات واضحة عن الكتاب والقراءة. ${p + 1}</p>').join()}'
+        '</body></html>',
+      ),
+    );
+  }
+  return archive.build();
+}
 
 void main() {
   late Directory tempDir;
@@ -284,6 +353,93 @@ void main() {
     expect(books.updatedBook?.readingProgress, greaterThan(0));
     await close(tester);
   });
+
+  for (final (animation, effect) in [
+    (ReaderPageAnimation.slide, PageTurnAnimation.slide),
+    (ReaderPageAnimation.cover, PageTurnAnimation.cover),
+  ]) {
+    testWidgets(
+      'Arabic EPUB content sets RTL navigation despite Malay metadata: $animation',
+      (tester) async {
+        tester.platformDispatcher.localeTestValue = const Locale('en');
+        addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+        final path = '${tempDir.path}/mixed-language.epub';
+        File(path).writeAsBytesSync(mixedLanguageArabicEpub());
+        book = Book(
+          id: 'mixed-language-epub',
+          title: 'Mixed language fixture',
+          filePath: path,
+          format: BookFormat.epub,
+          addedAt: DateTime(2026, 1, 1),
+        );
+        books.seedBook(book);
+        await preferences.update(
+          (prefs) => prefs.copyWith(readerPageAnimation: animation),
+        );
+        await pumpReader(tester);
+        await tester.pumpAndSettle();
+        final pages = find.byType(TextPagesView);
+        final view = tester.widget<TextPagesView>(pages);
+        final controller = view.controller;
+        expect(view.pageTurnAnimation, effect);
+        expect(
+          controller.source.rtl,
+          isFalse,
+          reason: 'The EPUB omits its spine progression direction',
+        );
+        expect(controller.rtl, isTrue);
+        expect(bloc(tester).state.pageProgressionRtl, isTrue);
+        expect(
+          Localizations.localeOf(tester.element(pages)).languageCode,
+          'en',
+        );
+        expect(
+          Directionality.of(tester.element(find.byType(ReaderScreen))),
+          TextDirection.ltr,
+        );
+        expect(controller.position!.section, 0);
+        expect(controller.position!.spread, 0);
+
+        final viewport = tester.getRect(pages);
+        await tester.tapAt(Offset(viewport.left + 24, viewport.center.dy));
+        await settle(tester, () => controller.position!.section == 1);
+        await tester.pumpAndSettle();
+        expect(
+          controller.position!.spread,
+          0,
+          reason: 'The left edge advances to the first Arabic chapter',
+        );
+        expect(bloc(tester).state.pageProgressionRtl, isTrue);
+
+        await tester.tapAt(Offset(viewport.right - 24, viewport.center.dy));
+        await settle(tester, () => controller.position!.section == 0);
+        await tester.pumpAndSettle();
+        expect(
+          controller.position!.spread,
+          0,
+          reason: 'The right edge returns to the Malay introduction',
+        );
+        expect(
+          controller.rtl,
+          isTrue,
+          reason: 'Book progression must not flip with chapter language',
+        );
+
+        await tester.fling(pages, const Offset(300, 0), 1000);
+        await settle(tester, () => controller.position!.section == 1);
+        await tester.pumpAndSettle();
+        expect(
+          controller.position!.spread,
+          0,
+          reason: 'A rightward horizontal swipe advances an RTL book',
+        );
+        expect(bloc(tester).state.pageProgressionRtl, isTrue);
+        expect(tester.takeException(), isNull);
+        await tester.pump(const Duration(milliseconds: 700));
+        await close(tester);
+      },
+    );
+  }
 
   testWidgets(
     'global page animation switches live without relayout or lost selection',

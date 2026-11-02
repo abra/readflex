@@ -14,12 +14,17 @@ String chapter(String title, int paragraphs, {String extra = ''}) =>
     '${List.generate(paragraphs, (i) => '<p id="$title-$i">$title paragraph $i has words enough to wrap twice in a column.</p>').join()}'
     '$extra</body></html>';
 
-Future<EpubTextSource> book() async => EpubTextSource(
+Future<EpubTextSource> book({
+  String language = 'en',
+  String? secondChapter,
+}) async => EpubTextSource(
   await EpubBook.load(
     MemoryEpubFiles({
       'META-INF/container.xml': utf8.encode(container),
       'OEBPS/content.opf': utf8.encode(
-        '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata/>'
+        '<package xmlns="http://www.idpf.org/2007/opf" version="3.0">'
+        '<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">'
+        '<dc:language>$language</dc:language></metadata>'
         '<manifest>'
         '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>'
         '<item id="a" href="a.xhtml" media-type="application/xhtml+xml"/>'
@@ -36,7 +41,7 @@ Future<EpubTextSource> book() async => EpubTextSource(
       ),
       'OEBPS/a.xhtml': utf8.encode(chapter('A', 12)),
       'OEBPS/notes.xhtml': utf8.encode(chapter('N', 2)),
-      'OEBPS/b.xhtml': utf8.encode(chapter('B', 30)),
+      'OEBPS/b.xhtml': utf8.encode(secondChapter ?? chapter('B', 30)),
     }),
   ),
 );
@@ -100,6 +105,49 @@ void main() {
     expect(controller.position!.spreadCount, greaterThan(3));
     await until(() => controller.position!.tocItem != null);
     expect(controller.position!.tocItem!.label, 'Part A');
+  });
+
+  test(
+    'resolves RTL before showing a Latin opening and keeps it on relayout',
+    () async {
+      final source = await book(
+        language: 'ms',
+        secondChapter:
+            '<html><body>'
+            '${List.filled(40, '<p>بسم الله الرحمن الرحيم الحمد لله رب العالمين</p>').join()}'
+            '</body></html>',
+      );
+      addTearDown(source.close);
+      expect(source.rtl, isFalse);
+      controller = TextPagesController(
+        source: source,
+        style: style,
+        fonts: const BookFonts(),
+        images: images,
+        settings: settings,
+      )..setViewport(const Size(200, 140));
+      await until(() => controller.position != null);
+      expect(controller.position!.section, 0);
+      expect(controller.rtl, isTrue);
+      controller.setViewport(const Size(240, 140));
+      await until(() => controller.isReady);
+      expect(controller.rtl, isTrue);
+    },
+  );
+
+  test('an explicit LTR override bypasses RTL language inference', () async {
+    final source = await book(language: 'ar');
+    addTearDown(source.close);
+    controller = TextPagesController(
+      source: source,
+      style: style,
+      fonts: const BookFonts(),
+      images: images,
+      settings: settings,
+      rtl: false,
+    )..setViewport(const Size(200, 140));
+    await until(() => controller.position != null);
+    expect(controller.rtl, isFalse);
   });
 
   test('turns through a section, skips non-linear ones, and back', () async {

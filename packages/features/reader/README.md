@@ -271,7 +271,12 @@ opens the file with vellum (`EpubBook`, `Fb2Book`, `MobiBook` from
 `package:vellum/all_formats.dart`, the source by `textBookSourceOf`; a
 failure reports `ReaderSurfaceFailed`) and shows `TextPagesView` over a
 `TextPagesController` restored from the saved CFI, or the fraction for rows
-saved without one. The appearance becomes the `BookStyle`: the layout
+saved without one. Its effective `rtl` drives swipes, spread order and reported
+`BookPosition.pageProgressionRtl` for edge taps. Vellum resolves it once before
+the first spread from declared RTL, an RTL language or bounded body-text
+sampling, retaining Readflex's former foliate-js fallback for books with
+missing or misleading metadata. It does not depend on the app locale.
+The appearance becomes the `BookStyle`: the layout
 preset's font size times the device scale as `fontScale`, the font
 preset's family, weight, spacing, indent, line height, alignment, the three
 override switches and the theme colours; the reader's style sheet

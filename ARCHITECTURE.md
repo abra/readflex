@@ -377,6 +377,14 @@ The reader is intentionally split across several packages:
 | `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
 | `features/dictionary` | Implements `DictionaryAction` and owns the remote definition sheet/cubit. |
 
+Vellum's `TextPagesController` resolves book page progression before displaying
+the first spread, retaining Readflex's former foliate-js extension: declared
+RTL or an RTL language, otherwise body-text majority across a bounded sample
+of linear sections. Sampling reads at most 12 sections (512 KiB per section,
+2 MiB total) and parses off the UI isolate. Reader reports `controller.rtl`
+for its tap zones as well as using it for swipes and spread order. Paragraph
+CSS direction and the app locale remain independent of book progression.
+
 Page-turn animation is a UI preference independent of paging direction.
 `preferences_service` persists `ReaderPageAnimation` globally.
 `LibraryPageAnimationCubit` owns its choice in Library's Display sheet;

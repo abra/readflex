@@ -755,6 +755,16 @@ table of contents entry whose anchor is not after the end of what is
 shown). The position is kept as that CFI, so rotation, a style change or
 newly loaded fonts land on the same text. Operations run one at a time;
 neighbouring sections are laid out ahead so a turn never waits.
+Before the first spread, the controller resolves page progression using the
+Readflex content fallback previously added to foliate-js: declared RTL, then
+an RTL book language, then the majority of RTL versus Latin letters in body
+text sampled across the linear reading order. LTR metadata does not prevent
+predominantly Arabic content from resolving to RTL. At most 12 sections are
+sampled, with a 512 KiB section limit and a 2 MiB total budget; parsing and
+counting run in an isolate. Unreadable samples are skipped. An explicit
+`TextPagesController(rtl: ...)` overrides inference. The result is stable for
+the session and independent of the app locale and each paragraph's CSS
+direction; changing appearance does not repeat the scan.
 `TextPagesView.pageTurnAnimation` selects `PageTurnAnimation.slide` or `cover`
 (the default), independently of `axis`. Slide moves both spreads; Cover moves
 the incoming spread over a stationary page, with an opaque background and a

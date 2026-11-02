@@ -72,7 +72,8 @@ abstract interface class TextBookSource {
   /// The book's language as it declares it, or null.
   String? get language;
 
-  /// Whether pages progress right to left (`page-progression-direction`).
+  /// The format's declared right-to-left page progression.
+  /// The paged controller also considers language and sampled body text.
   bool get rtl;
 
   /// Style sheets every section gets, before its own (FB2's built-in

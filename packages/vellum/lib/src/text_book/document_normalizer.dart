@@ -9,6 +9,7 @@ library;
 import '../css/computed_style.dart';
 import '../css/style_resolver.dart';
 import '../document/content_document.dart';
+import 'reading_direction.dart';
 
 /// The class the reader's style sheet styles code blocks by.
 const codeBlockClass = 'readflex-code-block';
@@ -34,7 +35,7 @@ void normalizeLanguageAndDirection(ContentDocument doc, {String? language}) {
   ].firstWhere((d) => d != null && d.isNotEmpty, orElse: () => null);
   final languageDirection = primary == null
       ? null
-      : _rtlLanguages.contains(primary)
+      : isRtlLanguage(primary)
       ? 'rtl'
       : 'ltr';
   final direction =
@@ -164,13 +165,9 @@ String? _inferredDirection(ContentDocument doc, int? body) {
   final sample = doc.textContentOf(body).replaceAll(RegExp(r'\s+'), ' ');
   final text = sample.length > 5000 ? sample.substring(0, 5000) : sample;
   if (text.trim().isEmpty) return null;
-  final rtl = _rtlLetters.allMatches(text).length;
-  final ltr = _ltrLetters.allMatches(text).length;
-  return rtl > ltr ? 'rtl' : null;
+  final counts = directionCharacterCounts(text);
+  return counts.rtl > counts.ltr ? 'rtl' : null;
 }
-
-final _rtlLetters = RegExp('[֐-ࣿיִ-﷿ﹰ-﻿]');
-final _ltrLetters = RegExp('[A-Za-zÀ-ɏḀ-ỿ]');
 
 /// The language tag with its subtags' conventional case (`en-US`,
 /// `zh-Hant-TW`), as `Intl.getCanonicalLocales` gives it; null for none.
@@ -189,26 +186,3 @@ String? _canonicalLanguage(String? language) {
         part.toLowerCase(),
   ].join('-');
 }
-
-/// Languages written right to left (`Intl.Locale`'s text info).
-const _rtlLanguages = {
-  'ar',
-  'arc',
-  'ckb',
-  'dv',
-  'fa',
-  'glk',
-  'he',
-  'iw',
-  'ks',
-  'lrc',
-  'mzn',
-  'nqo',
-  'pnb',
-  'ps',
-  'sd',
-  'syr',
-  'ug',
-  'ur',
-  'yi',
-};
