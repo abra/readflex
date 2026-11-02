@@ -208,6 +208,7 @@
   "highlightColorPurple": "Roxo",
   "highlightColorSemantics": "Cor de destaque {color}",
   "highlightSelectColor": "Selecionar cor do destaque",
+  "readerLoadingContent": "Carregando conteúdo",
   "readerFailedToLoadContent": "Não foi possível carregar o conteúdo",
   "readerGoBack": "Voltar",
   "readerBookSearchUnavailable": "Pesquisa no livro indisponível",

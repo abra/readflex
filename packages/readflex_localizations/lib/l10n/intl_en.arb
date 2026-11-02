@@ -409,6 +409,10 @@
     }
   },
   "highlightSelectColor": "Select highlight color",
+  "readerLoadingContent": "Loading content",
+  "@readerLoadingContent": {
+    "description": "Accessibility label while the reader prepares its first page or article."
+  },
   "readerFailedToLoadContent": "Failed to load content",
   "readerGoBack": "Go Back",
   "readerBookSearchUnavailable": "Book search is unavailable",

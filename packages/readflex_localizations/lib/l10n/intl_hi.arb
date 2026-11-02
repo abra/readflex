@@ -208,6 +208,7 @@
   "highlightColorPurple": "बैंगनी",
   "highlightColorSemantics": "{color} हाइलाइट रंग",
   "highlightSelectColor": "हाइलाइट रंग चुनें",
+  "readerLoadingContent": "सामग्री लोड हो रही है",
   "readerFailedToLoadContent": "सामग्री लोड नहीं हो सकी",
   "readerGoBack": "वापस जाएं",
   "readerBookSearchUnavailable": "किताब खोज उपलब्ध नहीं है",

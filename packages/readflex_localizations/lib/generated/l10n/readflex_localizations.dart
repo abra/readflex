@@ -1365,6 +1365,12 @@ abstract class ReadflexLocalizations {
   /// **'Select highlight color'**
   String get highlightSelectColor;
 
+  /// Accessibility label while the reader prepares its first page or article.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading content'**
+  String get readerLoadingContent;
+
   /// No description provided for @readerFailedToLoadContent.
   ///
   /// In en, this message translates to:

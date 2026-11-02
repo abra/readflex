@@ -749,6 +749,9 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
   String get highlightSelectColor => 'Seleccionar color de resaltado';
 
   @override
+  String get readerLoadingContent => 'Cargando contenido';
+
+  @override
   String get readerFailedToLoadContent => 'No se pudo cargar el contenido';
 
   @override

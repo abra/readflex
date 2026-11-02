@@ -752,6 +752,9 @@ class ReadflexLocalizationsFr extends ReadflexLocalizations {
   String get highlightSelectColor => 'Choisir la couleur du surlignage';
 
   @override
+  String get readerLoadingContent => 'Chargement du contenu';
+
+  @override
   String get readerFailedToLoadContent => 'Impossible de charger le contenu';
 
   @override

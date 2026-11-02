@@ -723,6 +723,9 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get highlightSelectColor => '选择高亮颜色';
 
   @override
+  String get readerLoadingContent => '正在加载内容';
+
+  @override
   String get readerFailedToLoadContent => '无法加载内容';
 
   @override

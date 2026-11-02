@@ -151,7 +151,13 @@ class _ReaderBodyState extends State<_ReaderBody> {
             opacity: loadingVisible ? 1 : 0,
             duration: context.motion(AppMotion.short),
             curve: Curves.easeOutCubic,
-            child: _ReaderLoadingScrim(theme: readerTheme),
+            child: ExcludeSemantics(
+              excluding: !loadingVisible,
+              child: TickerMode(
+                enabled: loadingVisible && !context.reduceMotion,
+                child: _ReaderLoadingScrim(theme: readerTheme),
+              ),
+            ),
           ),
         ),
       ],
@@ -966,17 +972,21 @@ class _ArticleSystemBarBackground extends StatelessWidget {
   }
 }
 
-class _ReaderLoadingMark extends StatelessWidget {
-  const _ReaderLoadingMark({required this.theme});
+class _ReaderLoadingIndicator extends StatelessWidget {
+  const _ReaderLoadingIndicator({required this.theme});
 
   final ReaderThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    return Icon(
-      AppIcons.book,
-      size: _kReaderLoadingIconSize,
-      color: theme.primaryTextColor.withValues(alpha: 0.82),
+    return SizedBox.square(
+      dimension: _kReaderLoadingIndicatorSize,
+      child: CircularProgressIndicator(
+        key: const ValueKey('readerLoadingProgress'),
+        strokeWidth: 2,
+        color: theme.primaryTextColor.withValues(alpha: 0.82),
+        semanticsLabel: context.l10n.readerLoadingContent,
+      ),
     );
   }
 }
@@ -991,10 +1001,7 @@ class _ReaderLoadingScrim extends StatelessWidget {
     return ColoredBox(
       color: theme.backgroundColor,
       child: Center(
-        child: SizedBox.square(
-          dimension: _kReaderLoadingIconSize,
-          child: _ReaderLoadingMark(theme: theme),
-        ),
+        child: _ReaderLoadingIndicator(theme: theme),
       ),
     );
   }

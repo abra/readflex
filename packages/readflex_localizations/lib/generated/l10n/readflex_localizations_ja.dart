@@ -723,6 +723,9 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get highlightSelectColor => 'ハイライト色を選択';
 
   @override
+  String get readerLoadingContent => 'コンテンツを読み込み中';
+
+  @override
   String get readerFailedToLoadContent => 'コンテンツを読み込めませんでした';
 
   @override

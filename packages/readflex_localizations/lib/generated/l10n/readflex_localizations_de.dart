@@ -755,6 +755,9 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
   String get highlightSelectColor => 'Markierungsfarbe auswählen';
 
   @override
+  String get readerLoadingContent => 'Inhalt wird geladen';
+
+  @override
   String get readerFailedToLoadContent => 'Inhalt konnte nicht geladen werden';
 
   @override

@@ -208,6 +208,7 @@
   "highlightColorPurple": "Фиолетовый",
   "highlightColorSemantics": "{color} цвет выделения",
   "highlightSelectColor": "Выбрать цвет выделения",
+  "readerLoadingContent": "Загрузка содержимого",
   "readerFailedToLoadContent": "Не удалось загрузить содержимое",
   "readerGoBack": "Назад",
   "readerBookSearchUnavailable": "Поиск по книге недоступен",

@@ -749,6 +749,9 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   String get highlightSelectColor => 'Selecionar cor do destaque';
 
   @override
+  String get readerLoadingContent => 'Carregando conteúdo';
+
+  @override
   String get readerFailedToLoadContent =>
       'Não foi possível carregar o conteúdo';
 

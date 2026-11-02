@@ -208,6 +208,7 @@
   "highlightColorPurple": "紫色",
   "highlightColorSemantics": "{color}高亮颜色",
   "highlightSelectColor": "选择高亮颜色",
+  "readerLoadingContent": "正在加载内容",
   "readerFailedToLoadContent": "无法加载内容",
   "readerGoBack": "返回",
   "readerBookSearchUnavailable": "图书搜索不可用",

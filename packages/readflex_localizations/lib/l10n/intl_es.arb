@@ -208,6 +208,7 @@
   "highlightColorPurple": "Morado",
   "highlightColorSemantics": "Color de resaltado {color}",
   "highlightSelectColor": "Seleccionar color de resaltado",
+  "readerLoadingContent": "Cargando contenido",
   "readerFailedToLoadContent": "No se pudo cargar el contenido",
   "readerGoBack": "Volver",
   "readerBookSearchUnavailable": "La búsqueda en el libro no está disponible",

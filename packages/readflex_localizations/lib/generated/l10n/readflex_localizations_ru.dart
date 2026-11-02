@@ -757,6 +757,9 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get highlightSelectColor => 'Выбрать цвет выделения';
 
   @override
+  String get readerLoadingContent => 'Загрузка содержимого';
+
+  @override
   String get readerFailedToLoadContent => 'Не удалось загрузить содержимое';
 
   @override

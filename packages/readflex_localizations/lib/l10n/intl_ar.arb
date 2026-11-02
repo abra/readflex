@@ -208,6 +208,7 @@
   "highlightColorPurple": "بنفسجي",
   "highlightColorSemantics": "لون التظليل {color}",
   "highlightSelectColor": "اختيار لون التظليل",
+  "readerLoadingContent": "جارٍ تحميل المحتوى",
   "readerFailedToLoadContent": "تعذر تحميل المحتوى",
   "readerGoBack": "رجوع",
   "readerBookSearchUnavailable": "البحث في الكتاب غير متاح",

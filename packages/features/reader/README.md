@@ -33,12 +33,22 @@ class ReaderScreen extends StatelessWidget {
 highlights and bookmarks, and prefers the book if both repositories return a
 source. Saved articles open from `Article.contentHtmlPath`. It maps both
 books and articles to a source-neutral `ReaderDocument`, so article HTML is not
-modeled as an EPUB. `initialSource` lets the route avoid a loading flash
-when a book source was already loaded by the previous route. For articles,
+modeled as an EPUB. `initialSource` reuses book metadata already loaded by the
+previous route; page preparation still uses the shared loading overlay. For articles,
 `onArticleTitlePressed` lets the composition root open the original article URL
 from the top reader chrome without coupling the reader package to
 `url_launcher`. `initialCfi` opens a saved word or highlight's anchor once the
 document is ready; Practice supplies it when opening an item in its source.
+
+### Opening content
+
+One outer loading overlay covers metadata loading and preparation of the first
+visible page or article. Its indeterminate circular indicator uses the reader
+theme's foreground and a localized accessibility label for every format.
+The overlay fades away when the surface reports ready, or gives way to the
+existing error/retry UI. Hidden indicators leave semantics and stop ticking;
+under reduced motion the loading arc stays still and the overlay settles
+immediately.
 
 ### External links
 

@@ -741,6 +741,9 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get highlightSelectColor => 'हाइलाइट रंग चुनें';
 
   @override
+  String get readerLoadingContent => 'सामग्री लोड हो रही है';
+
+  @override
   String get readerFailedToLoadContent => 'सामग्री लोड नहीं हो सकी';
 
   @override

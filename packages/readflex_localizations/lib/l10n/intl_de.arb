@@ -208,6 +208,7 @@
   "highlightColorPurple": "Lila",
   "highlightColorSemantics": "Markierungsfarbe {color}",
   "highlightSelectColor": "Markierungsfarbe auswählen",
+  "readerLoadingContent": "Inhalt wird geladen",
   "readerFailedToLoadContent": "Inhalt konnte nicht geladen werden",
   "readerGoBack": "Zurück",
   "readerBookSearchUnavailable": "Buchsuche ist nicht verfügbar",

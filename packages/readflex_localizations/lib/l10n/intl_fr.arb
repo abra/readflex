@@ -208,6 +208,7 @@
   "highlightColorPurple": "Violet",
   "highlightColorSemantics": "Couleur de surlignage {color}",
   "highlightSelectColor": "Choisir la couleur du surlignage",
+  "readerLoadingContent": "Chargement du contenu",
   "readerFailedToLoadContent": "Impossible de charger le contenu",
   "readerGoBack": "Retour",
   "readerBookSearchUnavailable": "Recherche indisponible dans ce livre",

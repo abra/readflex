@@ -743,6 +743,9 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get highlightSelectColor => 'Select highlight color';
 
   @override
+  String get readerLoadingContent => 'Loading content';
+
+  @override
   String get readerFailedToLoadContent => 'Failed to load content';
 
   @override

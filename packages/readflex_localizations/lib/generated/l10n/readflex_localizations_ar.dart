@@ -759,6 +759,9 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get highlightSelectColor => 'اختيار لون التظليل';
 
   @override
+  String get readerLoadingContent => 'جارٍ تحميل المحتوى';
+
+  @override
   String get readerFailedToLoadContent => 'تعذر تحميل المحتوى';
 
   @override

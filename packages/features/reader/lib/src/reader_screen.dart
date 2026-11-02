@@ -102,7 +102,7 @@ bool _selectionActionsVisible(bool hasSelection) => hasSelection;
 /// `context.motion(AppMotion.short)` so reduced motion settles in one frame.
 const _kChromeAnimCurve = Curves.easeOutCubic;
 const _kChromeHideAnimCurve = Curves.easeInCubic;
-const _kReaderLoadingIconSize = 28.0;
+const _kReaderLoadingIndicatorSize = AppIconSize.lg;
 const _kReaderPageBookmarkIndicatorLift = 28.0;
 const _kReaderPageBookmarkIndicatorSize = AppIconSize.md;
 const _kReaderBrightnessStep = 0.05;
