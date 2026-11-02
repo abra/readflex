@@ -100,8 +100,53 @@ and routes. Do not use `--keep-app-running` for normal verification: it leaves
 the test process showing an empty surface, not the production Library. Relaunch
 the regular app with `run.sh` after device testing.
 On iOS Simulator, disable I/O > Keyboard > Connect Hardware Keyboard for the
-native keyboard scenario. The iOS binding captures the Flutter surface, not the
-OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
+native keyboard scenario. Check both the global preference and the selected
+device's override; a per-device value can keep the hardware keyboard connected
+after changing only the global setting. The iOS binding captures the Flutter
+surface, not the OS keyboard overlay; the test additionally asserts real nonzero
+keyboard insets.
+
+### Native tablets
+
+Use an iPad Simulator or Android tablet emulator whose actual logical viewport
+has a shortest side of at least 600dp. The tablet batches use the native window;
+they do not resize a phone with a synthetic tester surface. The current profiles
+are a 13-inch iPad at 1032 × 1376 logical pixels and an Android tablet at
+1280 × 800dp, with the dimensions reversed after rotation.
+
+```sh
+make test-tablet DEVICE=<tablet-id>
+make test-tablet-layout DEVICE=<tablet-id>
+# Also verify the same open book across real orientation changes:
+make test-tablet-layout DEVICE=<tablet-id> ROTATION=1
+```
+
+`test-tablet` runs the 20-case native regression batch: tablet viewport, Library
+controls/collections, text-book and article actions, EPUB/FB2/MOBI import, CBZ
+zoom, PDF, the native MOBI backend, notes and toasts. `test-tablet-layout` runs
+four tests covering Library grid/list and RTL selection, book columns and reading
+position, Arabic EPUB page direction, and completion of a Practice session.
+Both targets use the normal test app with isolated storage and deterministic
+service implementations; no live backend or private configuration is needed.
+
+Physical rotation is opt-in (`ROTATION=1` or `ROTATION=true`). When the output
+prints `READFLEX_TABLET_ROTATE:portrait` or `READFLEX_TABLET_ROTATE:landscape`,
+turn the device or use the Simulator's native Device > Rotate Left/Right command
+within 45 seconds. The test waits for the actual Flutter viewport and ready page
+layout, then checks the reading anchor, controller identity, font scale and
+columns. The default run checks the current native orientation without waiting
+for these commands.
+
+Before tablet runs, dismiss first-launch OS overlays such as Android's "Viewing
+full screen" prompt. Such a window can take focus, intercept taps and prevent a
+clipboard read even while Flutter still finds the underlying widget. Inspect the
+native screenshot and focused window before treating this as an app regression.
+
+These tests complement the existing phone RTL and large-text cases. They provide
+functional assertions and screenshots on the named simulator/emulator profiles;
+they do not establish physical-device selection-handle behavior, VoiceOver or
+TalkBack correctness, or device FPS. Artifacts and restore/cleanup rules are the
+same as for `test-device` above.
 
 ## Coverage
 

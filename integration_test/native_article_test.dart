@@ -35,7 +35,6 @@ void main() {
   ) async {
     final app = await UiTestApp.create(withBook: false);
     addTearDown(app.dispose);
-    // The reader route still hands out the book server's address (plan R6).
     final article = (await tester.runAsync(() => _addArticle(app)))!;
     tester.platformDispatcher.defaultRouteNameTestValue = '/';
     addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
@@ -194,15 +193,51 @@ void main() {
     await tester.pumpAndSettle();
     await takeDeviceScreenshot(binding, 'native-article-highlight');
 
-    // Back in the library and in again, it opens at the sentence it was
-    // left on.
-    final left = bloc.state.document!.currentCfi;
+    // Restore a middle sentence on every viewport: an end position uses
+    // fraction restoration and would not exercise the saved sentence.
+    final document = controller().section!.prepared.document;
+    final thirdSentences = ArticleIndex.of(document).sentences
+        .where(
+          (sentence) =>
+              document.attributeOf(sentence, 'data-rf-sentence') == '2',
+        )
+        .toList();
+    expect(thirdSentences, hasLength(24));
+    final target = TextPoint(thirdSentences[thirdSentences.length ~/ 2], 0);
+    final targetAnchor = ArticleAnchor.forSentence(document, target.node)!;
+    await tester.runAsync(() => controller().goToPoint(target));
+    await tester.pumpAndSettle();
+    await waitForUi(
+      tester,
+      () =>
+          ArticleAnchor.decode(bloc.state.document!.currentCfi)?.blockId ==
+          targetAnchor.blockId,
+      description: 'middle sentence reported',
+    );
+    expect(controller().position!.point, target);
+    expect(controller().position!.atStart, isFalse);
+    expect(controller().position!.atEnd, isFalse);
+
+    // Back in the library and in again, it opens at the exact sentence.
     await tester.pump(const Duration(seconds: 2));
     await tester.tapAt(size.center(Offset.zero));
     await tester.pumpAndSettle();
+    final left = bloc.state.document!.currentCfi;
+    final anchorRoundTrip = _anchorRoundTrip(controller(), left);
     await tapUi(tester, find.byTooltip(l10n.readerBack));
     await tester.pumpAndSettle();
     await takeDeviceScreenshot(binding, 'native-article-library');
+    final saved = (await tester.runAsync(
+      () => app.articleRepository.getArticleById(article.id),
+    ))!;
+    expect(
+      saved.currentCfi,
+      left,
+      reason: 'the exact settled sentence anchor must persist before reopening',
+    );
+    expect(ArticleAnchor.decode(left)?.blockId, targetAnchor.blockId);
+    expect(saved.readingProgress, greaterThan(0.001));
+    expect(saved.readingProgress, lessThan(0.999));
     // The library item itself: a cover in the grid, a row in the list, or
     // the Continue reading card that takes the row's place.
     await tapUi(
@@ -221,6 +256,14 @@ void main() {
     );
     await tester.pumpAndSettle();
     final reopened = tester.element(view).read<ReaderBloc>();
+    final reopenedDocument = controller().section!.prepared.document;
+    expect(
+      controller().position!.point,
+      TextPoint(targetAnchor.elementIn(reopenedDocument)!, 0),
+      reason: 'initialPoint must restore the saved middle sentence',
+    );
+    expect(controller().position!.atStart, isFalse);
+    expect(controller().position!.atEnd, isFalse);
     await takeDeviceScreenshot(binding, 'native-article-reopened');
 
     final report = {
@@ -231,6 +274,12 @@ void main() {
       'searchMs': searchMs,
       'results': results,
       'selection': selection.markedContextText,
+      'leftCfi': left,
+      'savedCfi': saved.currentCfi,
+      'reopenedCfi': reopened.state.document!.currentCfi,
+      'anchorRoundTrip': anchorRoundTrip,
+      'restoreTarget': targetAnchor.blockId,
+      'savedProgress': saved.readingProgress,
       'left': ArticleAnchor.decode(left)?.sentenceText,
       'reopened': ArticleAnchor.decode(
         reopened.state.document!.currentCfi,
@@ -243,6 +292,34 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await unmountUi(tester);
   });
+}
+
+Map<String, Object?> _anchorRoundTrip(
+  TextScrollController controller,
+  String? cfi,
+) {
+  final section = controller.section;
+  final anchor = ArticleAnchor.decode(cfi);
+  if (section == null || anchor == null) return const {};
+  final document = section.prepared.document;
+  final element = anchor.elementIn(document);
+  final y = element == null ? null : section.locator.yOf(element, 0);
+  final point = y == null ? null : section.locator.pointAt(y);
+  final sentence = point == null
+      ? null
+      : ArticleIndex.of(document).sentenceAt(point);
+  return {
+    'blockId': anchor.blockId,
+    'sentenceIndex': anchor.sentenceIndex,
+    'element': element,
+    'lineTop': y,
+    'linePointNode': point?.node,
+    'linePointOffset': point?.offset,
+    'lineSentence': sentence == null
+        ? null
+        : ArticleAnchor.forSentence(document, sentence)?.sentenceText,
+    'scrollOffset': controller.scroll.offset,
+  };
 }
 
 /// The reading fixture with every block the import writes, and a picture

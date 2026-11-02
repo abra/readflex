@@ -58,6 +58,33 @@ void main() {
       description: 'comic page $index',
     );
 
+    Future<void> turn({required bool forward}) async {
+      final current = controller();
+      final target = forward
+          ? current.layout.next(
+              current.location,
+              singlePage: current.singlePage,
+            )
+          : current.layout.previous(
+              current.location,
+              singlePage: current.singlePage,
+            );
+      expect(target, isNotNull, reason: 'the fixture has another comic spread');
+      final expectedPage = current.layout.pageAt(target!);
+      final expectedVisible = current.layout.visiblePages(
+        target,
+        singlePage: current.singlePage,
+      );
+      // A wide viewport turns whole spreads; a portrait viewport changes
+      // one page. Use the physical edge appropriate for the reading order.
+      await tapComic(x: forward != current.rtl ? 0.8 : 0.1);
+      await waitForPage(expectedPage);
+      await tester.pumpAndSettle();
+      expect(controller().location, target);
+      expect(controller().visiblePages, expectedVisible);
+      expect(controller().isZoomed, isFalse);
+    }
+
     expect(
       controller().page,
       0,
@@ -85,13 +112,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 450));
     expect(uiCubit.state.chromeVisible, isTrue);
     // Stay in the page zone, outside the visible brightness control's hit box.
-    await tapComic(x: 0.8);
-    await waitForPage(1);
+    await turn(forward: true);
     expect(uiCubit.state.chromeVisible, isFalse);
-    await tapComic(x: 0.8);
-    await waitForPage(2);
-    await tapComic(x: 0.1);
-    await waitForPage(1);
+    await turn(forward: true);
+    await turn(forward: false);
     await tester.pump(const Duration(milliseconds: 250));
     await screenshot('comic-after-edge-turns');
     expect(tester.takeException(), isNull);

@@ -468,7 +468,81 @@ void main() {
       description: 'native keyboard',
     );
     await capture(tester, 'collection-keyboard');
-    expectShortCollectionFits();
+    final keyboardSheet = find.byKey(
+      const ValueKey('manageCollectionContent'),
+    );
+    final keyboardViewport = find.descendant(
+      of: keyboardSheet,
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable &&
+            axisDirectionToAxis(widget.axisDirection) == Axis.vertical,
+      ),
+    );
+    expect(keyboardViewport, findsOneWidget);
+    final position = tester.state<ScrollableState>(keyboardViewport).position;
+    final sheetBounds = tester.getRect(keyboardSheet);
+    final fieldBounds = tester.getRect(field);
+    final sourceBounds = tester.getRect(
+      find.byKey(ValueKey('collectionSource-${app.book!.id}')),
+    );
+    final save = find.widgetWithText(FilledButton, 'Save');
+    final saveBounds = tester.getRect(save);
+    final keyboardTop =
+        (tester.view.physicalSize.height - tester.view.viewInsets.bottom) /
+        tester.view.devicePixelRatio;
+    expect(sheetBounds.bottom, lessThanOrEqualTo(keyboardTop));
+    for (final (label, bounds) in [
+      ('name field', fieldBounds),
+      ('source row', sourceBounds),
+      ('Save', saveBounds),
+    ]) {
+      expect(
+        bounds.left,
+        greaterThanOrEqualTo(sheetBounds.left),
+        reason: label,
+      );
+      expect(bounds.right, lessThanOrEqualTo(sheetBounds.right), reason: label);
+      expect(bounds.top, greaterThanOrEqualTo(sheetBounds.top), reason: label);
+      expect(
+        bounds.bottom,
+        lessThanOrEqualTo(sheetBounds.bottom),
+        reason: label,
+      );
+    }
+    final viewportBounds = tester.getRect(keyboardViewport);
+    expect(sourceBounds.top, greaterThanOrEqualTo(viewportBounds.top));
+    expect(sourceBounds.bottom, lessThanOrEqualTo(viewportBounds.bottom));
+    expect(saveBounds.height, AppSizes.buttonHeight);
+    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
+    expect(tester.widget<TextField>(field).controller!.text, 'Unsaved');
+    expect(editable.widget.focusNode.hasFocus, isTrue);
+    // A short landscape viewport can clip the list's bottom padding under a
+    // native keyboard. Roomy windows must still fit without scrolling.
+    final fieldScrolls = find
+        .descendant(of: keyboardViewport, matching: field)
+        .evaluate()
+        .isNotEmpty;
+    final contentTop = fieldScrolls ? fieldBounds.top : sourceBounds.top;
+    final requiredHeight = sourceBounds.bottom + AppSpacing.lg - contentTop;
+    if (requiredHeight <= position.viewportDimension) {
+      expect(position.maxScrollExtent, 0);
+    } else {
+      expect(
+        position.maxScrollExtent,
+        closeTo(requiredHeight - position.viewportDimension, .01),
+      );
+    }
+    for (final fade in tester.widgetList<ScrollEdgeFade>(
+      find.descendant(of: keyboardSheet, matching: find.byType(ScrollEdgeFade)),
+    )) {
+      expect(
+        fade.visible,
+        fade.edge == ScrollFadeEdge.top
+            ? position.extentBefore > 0
+            : position.extentAfter > 0,
+      );
+    }
     await tapUi(tester, find.byTooltip('Close'));
     await capture(tester, 'collection-discard');
     expect(find.byType(AlertDialog), findsNothing);

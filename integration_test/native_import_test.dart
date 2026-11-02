@@ -9,6 +9,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:pagecraft/testing.dart';
 import 'package:pagecraft/all_formats.dart';
 
+import '../test/support/device_screenshots.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
@@ -126,6 +127,7 @@ void main() {
       );
     }
     await tester.pump(const Duration(seconds: 1));
-    await binding.takeScreenshot('native-import-library');
+    await takeDeviceScreenshot(binding, 'native-import-library');
+    await unmountUi(tester);
   });
 }

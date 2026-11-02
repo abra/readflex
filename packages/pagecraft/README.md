@@ -953,8 +953,10 @@ replaces the WebView article shell and keeps what that shell stored:
 `TextScrollController` lays the article out as one column the width of
 the view less its margins, no wider than the measure, as far as the view
 needs and the rest between frames; the position (`TextScrollPosition`)
-is the first text at the middle of the view, the scroll share and what
-moved it (`TextScrollReason`: the reader's finger, a jump, a new
+keeps the exact requested point after opening or point navigation, even
+when earlier text shares its line. Scrolling resumes reporting the first
+text at the middle of the view. The position also holds the scroll share
+and what moved it (`TextScrollReason`: the reader's finger, a jump, a new
 layout). A new size, style or font that drops the layout lays it out
 again with that text at the middle; an unchanged one keeps everything.
 It opens at a point or a share, and goes to a point (centred or at the

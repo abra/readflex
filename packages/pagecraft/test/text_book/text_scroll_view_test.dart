@@ -14,6 +14,20 @@ String article(int paragraphs) => [
         '<a href="#block-1">back</a></p>',
 ].join('\n');
 
+String inlineArticle({required bool wrappedPrefix}) => [
+  for (var i = 0; i < 80; i++)
+    '<p id="block-$i" data-rf-block-id="block-$i">'
+        '<span id="block-$i-s0" data-rf-sentence="0">'
+        '${wrappedPrefix ? 'The first sentence has enough words to occupy several lines in the article column.' : 'One.'}'
+        '</span> '
+        '<span id="block-$i-s1" data-rf-sentence="1">'
+        '${wrappedPrefix ? 'The second sentence also wraps before the saved sentence begins.' : 'Two.'}'
+        '</span> '
+        '<span id="block-$i-s2" data-rf-sentence="2">'
+        'Target sentence $i has enough words to continue onto another line.'
+        '</span></p>',
+].join('\n');
+
 const style = BookStyle(fontScale: 10 / 16, lineHeight: 1.5, justify: false);
 const settings = TextPageSettings(
   sideMarginPercent: 5,
@@ -50,6 +64,7 @@ void main() {
     ValueChanged<List<Rect>>? onHighlightRects,
     String? html,
     BookStyle bookStyle = style,
+    TextPageSettings pageSettings = settings,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -59,7 +74,7 @@ void main() {
       style: bookStyle,
       fonts: const BookFonts(),
       images: images,
-      settings: settings,
+      settings: pageSettings,
       initialPoint: initialPoint,
       initialFraction: initialFraction,
     );
@@ -236,6 +251,115 @@ void main() {
       (after.node - before.node).abs(),
       lessThan(12),
       reason: 'from $before to $after',
+    );
+  });
+
+  for (final wrappedPrefix in [false, true]) {
+    testWidgets(
+      'keeps an exact inline anchor ${wrappedPrefix ? 'after wrapped text' : 'on a shared line'} until scrolling',
+      (tester) async {
+        late TextPoint target;
+        await show(
+          tester,
+          size: const Size(1280, 800),
+          html: inlineArticle(wrappedPrefix: wrappedPrefix),
+          pageSettings: const TextPageSettings(measure: 320),
+          initialPoint: (doc) => target = TextPoint(
+            doc.elementIndexById('block-40-s2'),
+            0,
+          ),
+        );
+        await settle(tester, () => controller.section!.isComplete);
+        await tester.pumpAndSettle();
+
+        void expectTargetCentered() {
+          final item = controller.section!.column.paragraphs.firstWhere(
+            (item) => item.paragraph.box.text.contains('Target sentence 40'),
+          );
+          final paragraph = item.paragraph;
+          final offset = paragraph.box.text.indexOf('Target sentence 40');
+          // Use painted glyph bounds, independently of the source locator.
+          final glyph = paragraph.boxesFor(offset, offset + 1).single.toRect();
+          final line = paragraph.lineAtY(glyph.center.dy);
+          final lineTop =
+              controller.topInset + item.rect.top + paragraph.lineTop(line);
+          expect(
+            controller.contentOffsetOf(target),
+            closeTo(lineTop, 1e-6),
+            reason: 'the locator must resolve the target glyph line',
+          );
+          expect(
+            lineTop - controller.scroll.offset,
+            closeTo(controller.viewport.height / 2, 1e-6),
+            reason: 'the target glyph line must actually be centred',
+          );
+          expect(controller.position!.point, target);
+        }
+
+        expectTargetCentered();
+        expect(controller.position!.atStart, isFalse);
+        expect(controller.position!.atEnd, isFalse);
+
+        tester.view.physicalSize = const Size(1000, 1000);
+        await tester.pump();
+        await settle(tester, () => controller.viewport.height == 1000);
+        await tester.pumpAndSettle();
+        expectTargetCentered();
+
+        await tester.drag(find.byType(TextScrollView), const Offset(0, -250));
+        await tester.pumpAndSettle();
+        final point = controller.position!.point!;
+        expect(
+          controller.section!.prepared.document.comparePoints(point, target),
+          greaterThan(0),
+        );
+        expect(controller.position!.reason, TextScrollReason.scroll);
+
+        await tester.runAsync(() => controller.goToPoint(target));
+        await tester.pumpAndSettle();
+        expectTargetCentered();
+        await tester.runAsync(() => controller.goToFraction(0));
+        await tester.pumpAndSettle();
+        expect(controller.position!.atStart, isTrue);
+        expect(controller.position!.point, isNot(target));
+      },
+    );
+  }
+
+  testWidgets('keeps point navigation when style changes before its frame', (
+    tester,
+  ) async {
+    await show(
+      tester,
+      size: const Size(1280, 800),
+      html: inlineArticle(wrappedPrefix: true),
+      pageSettings: const TextPageSettings(measure: 320),
+      initialPoint: (doc) => TextPoint(doc.elementIndexById('block-20-s2'), 0),
+    );
+    await settle(tester, () => controller.section!.isComplete);
+    await tester.pumpAndSettle();
+    final previous = controller.position!.point;
+    final section = controller.section!;
+    final target = TextPoint(
+      section.prepared.document.elementIndexById('block-40-s2'),
+      0,
+    );
+
+    await controller.goToPoint(target);
+    expect(
+      controller.position!.point,
+      previous,
+      reason: 'the scheduled position frame has not run yet',
+    );
+    controller.style = style.copyWith(fontScale: 12 / 16);
+    await settle(tester, () => controller.section != section);
+    await tester.pumpAndSettle();
+
+    expect(controller.position!.point, target);
+    expect(controller.position!.reason, TextScrollReason.layout);
+    expect(
+      controller.contentOffsetOf(target)! - controller.scroll.offset,
+      closeTo(controller.viewport.height / 2, 1e-6),
     );
   });
 

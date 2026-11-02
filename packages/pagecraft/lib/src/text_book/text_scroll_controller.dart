@@ -17,9 +17,9 @@ import 'text_page_geometry.dart';
 /// place, or a new layout keeping the place.
 enum TextScrollReason { scroll, navigation, layout }
 
-/// Where a scrolled text is: the first text at the middle of the view
-/// ([point]: what the reader keeps as the reading position, as the
-/// article shell keeps the sentence at the centre), how far down it is,
+/// Where a scrolled text is: the requested point after navigation, or
+/// the first text at the middle of the view after scrolling ([point]:
+/// what the reader keeps as the reading position), how far down it is,
 /// whether the start or the end is in view, and what moved it there.
 @immutable
 class TextScrollPosition {
@@ -101,6 +101,7 @@ class TextScrollController extends ChangeNotifier {
   Size _viewport = Size.zero;
   TextSectionLayout? _section;
   TextScrollPosition? _position;
+  TextPoint? _anchor;
   Object? _error;
   int _loads = 0;
   bool _disposed = false;
@@ -186,7 +187,7 @@ class TextScrollController extends ChangeNotifier {
   void _relayoutIfStale() {
     final section = _section;
     if (section != null && !section.isStale) return;
-    _reload(keep: _position?.point);
+    _reload(keep: _anchor ?? _position?.point);
   }
 
   void _relayout() {
@@ -304,7 +305,11 @@ class TextScrollController extends ChangeNotifier {
     final y = _yOf(section, point);
     if (y == null) return;
     // Centred, or at the top margin.
-    _scrollTo(center ? topInset + y - _viewport.height / 2 : y, reason: reason);
+    _scrollTo(
+      center ? topInset + y - _viewport.height / 2 : y,
+      reason: reason,
+      point: point,
+    );
   }
 
   /// [point]'s height in the column, laid out as far as it is.
@@ -317,9 +322,15 @@ class TextScrollController extends ChangeNotifier {
     return y;
   }
 
-  void _scrollTo(double offset, {required TextScrollReason reason}) {
+  void _scrollTo(
+    double offset, {
+    required TextScrollReason reason,
+    TextPoint? point,
+  }) {
     final section = _section;
     _reason = reason;
+    // Several sentences can share a line: its start loses the exact target.
+    _anchor = point;
     final target = offset.clamp(0.0, _maxScroll);
     section?.ensureHeight(target + _viewport.height * 2);
     if (scroll.hasClients) {
@@ -351,7 +362,10 @@ class TextScrollController extends ChangeNotifier {
   }
 
   void _onScroll() {
-    if (!_jumping) _reason = TextScrollReason.scroll;
+    if (!_jumping) {
+      _reason = TextScrollReason.scroll;
+      _anchor = null;
+    }
     final section = _section;
     if (section != null && !section.isComplete && scroll.hasClients) {
       final before = section.column.height;
@@ -381,6 +395,7 @@ class TextScrollController extends ChangeNotifier {
     final middle = offset + _viewport.height / 2 - topInset;
     final next = TextScrollPosition(
       point:
+          _anchor ??
           section.locator.pointAt(math.max(0, middle)) ??
           section.locator.pointAt(0),
       fraction: max <= 0 ? 1 : (offset / max).clamp(0.0, 1.0),

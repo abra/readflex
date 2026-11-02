@@ -58,13 +58,21 @@ void main() {
       await tester.pump(const Duration(milliseconds: 450));
     }
 
-    // Defaults: margins trimmed, rendered denser than the screen so the
-    // crop stays sharp.
-    final screenWidth = tester.view.physicalSize.width;
+    // Each page follows its painted physical size, including in a spread;
+    // the full-page bitmap remains bounded by the renderer's pixel budget.
     await waitForUi(
       tester,
-      () => painter().visible.left > 0 && painter().image.width > screenWidth,
-      description: 'trimmed page rendered denser than the screen',
+      () {
+        final page = painter();
+        final physicalWidth =
+            page.imageRect.width * tester.view.devicePixelRatio;
+        final expectedWidth = boundedPdfRenderWidth(
+          physicalWidth.ceil(),
+          page.image.width / page.image.height,
+        );
+        return page.visible.left > 0 && page.image.width >= expectedWidth - 2;
+      },
+      description: 'trimmed page raster matches its painted physical size',
     );
     expect(view().controller.page, 0);
 
@@ -136,14 +144,23 @@ void main() {
     // that came back with the closed panel takes page input; hide it.
     tester.element(pages).read<ReaderUiCubit>().hideChrome();
     await tester.pump(const Duration(milliseconds: 400));
-    // The page's centre can fall between two lines: press a little higher
-    // or lower until a word is under the finger.
+    await waitForUi(
+      tester,
+      () => _visibleWord(tester, pages) != null,
+      description: 'selectable text on the current PDF page',
+    );
+    // A landscape spread's viewport centre can be its gutter. Press a glyph
+    // from the actual page text layer, transformed into screen coordinates.
+    final target = _visibleWord(tester, pages)!;
     final highlight = find.byTooltip('Highlight');
-    for (final dy in const [0.0, -5.0, 5.0, -10.0, 10.0]) {
-      await tester.longPressAt(tester.getCenter(pages) + Offset(0, dy));
-      await tester.pump(const Duration(milliseconds: 400));
-      if (highlight.hitTestable().evaluate().isNotEmpty) break;
-    }
+    await tester.longPressAt(target.point);
+    await waitForUi(
+      tester,
+      () => highlight.hitTestable().evaluate().isNotEmpty,
+      description: 'PDF text selection action',
+    );
+    expect(target.overlay.selection.page, target.overlay.page);
+    expect(target.overlay.selection.range, target.range);
     await _screenshot(binding, 'pdf-selection');
     await tapUi(tester, highlight);
     await waitForUi(
@@ -186,6 +203,46 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpWidget(const SizedBox.shrink());
   });
+}
+
+({Offset point, PdfTextOverlay overlay, PdfTextRange range})? _visibleWord(
+  WidgetTester tester,
+  Finder pages,
+) {
+  final viewport = tester.getRect(pages).deflate(24);
+  final wordCharacter = RegExp(r'[\p{L}\p{N}]', unicode: true);
+  ({Offset point, PdfTextOverlay overlay, PdfTextRange range})? nearest;
+  var distance = double.infinity;
+  for (final element in find.byType(PdfTextOverlay).evaluate()) {
+    final overlay = element.widget as PdfTextOverlay;
+    final layer = overlay.layer;
+    if (!overlay.enabled ||
+        layer == null ||
+        overlay.page != overlay.controller.page) {
+      continue;
+    }
+    final render = element.renderObject! as RenderBox;
+    if (!render.hasSize) continue;
+    final scale = overlay.imageRect.width / overlay.pageWidth;
+    for (var index = 0; index < layer.text.length; index++) {
+      final box = layer.charBoxes[index];
+      if (box.isEmpty || !wordCharacter.hasMatch(layer.text[index])) continue;
+      final range = layer.wordAt(index);
+      if (range == null) continue;
+      final local =
+          overlay.imageRect.topLeft +
+          Offset((box.left + box.right) / 2, (box.top + box.bottom) / 2) *
+              scale;
+      final point = render.localToGlobal(local);
+      if (!viewport.contains(point)) continue;
+      final candidateDistance = (point - viewport.center).distanceSquared;
+      if (candidateDistance < distance) {
+        distance = candidateDistance;
+        nearest = (point: point, overlay: overlay, range: range);
+      }
+    }
+  }
+  return nearest;
 }
 
 Future<void> _screenshot(
