@@ -7,7 +7,7 @@ import '../exceptions/device_screen_brightness_exception.dart';
 import '../jni/device_screen_brightness_helper.dart';
 import 'device_screen_brightness_backend.dart';
 
-/// Android backend using JNIgen-generated bindings to Settings.System.
+/// Android backend using JNI for system and Activity-window brightness.
 class AndroidBackend implements DeviceScreenBrightnessBackend {
   late final DeviceScreenBrightnessHelper _helper;
 

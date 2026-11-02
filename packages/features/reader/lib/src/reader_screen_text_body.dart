@@ -1,6 +1,6 @@
 part of 'reader_screen.dart';
 
-/// Hosts the text engine (`package:vellum`) for EPUB, FB2 and MOBI books
+/// Hosts the text engine (`package:pagecraft`) for EPUB, FB2 and MOBI books
 /// and translates its events into the reader bloc and cubit updates every
 /// page body produces: position, table of contents, bookmarks,
 /// text selection with its context, saved highlights, search marks,
@@ -215,7 +215,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       ..settings = _pageSettings();
   }
 
-  BookStyle _bookStyle() => _vellumBookStyle(
+  BookStyle _bookStyle() => _pagecraftBookStyle(
     context,
     appearance: widget.appearance,
     theme: widget.readerTheme,
@@ -223,7 +223,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
 
   /// CSS generics resolve to the app's bundled faces; symbols come from the
   /// symbol font.
-  BookFonts _bookFonts() => _vellumBookFonts(_fontInk);
+  BookFonts _bookFonts() => _pagecraftBookFonts(_fontInk);
 
   /// The reader's fonts' ink, for WebKit's line boxes.
   Map<String, FontInk> _fontInk = const {};
@@ -238,7 +238,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       columns: appearance.columns,
     );
     final em = columns.maxLineWidthEm;
-    final fontSize = layout.fontSize * _vellumDeviceFontScale(context);
+    final fontSize = layout.fontSize * _pagecraftDeviceFontScale(context);
     return TextPageSettings(
       sideMarginPercent: appearance.sideMargin,
       topMargin: layout.topMargin,
@@ -856,16 +856,16 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
   }
 }
 
-/// The reader's style for text vellum lays out, on top of the book's own
+/// The reader's style for text pagecraft lays out, on top of the book's own
 /// CSS.
-BookStyle _vellumBookStyle(
+BookStyle _pagecraftBookStyle(
   BuildContext context, {
   required ReaderAppearancePreferences appearance,
   required ReaderThemeData theme,
 }) {
   final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
   final font = ReaderFontPreset.fromId(appearance.fontId);
-  final fontScale = layout.fontSize * _vellumDeviceFontScale(context);
+  final fontScale = layout.fontSize * _pagecraftDeviceFontScale(context);
   return BookStyle(
     fontScale: fontScale,
     fontFamily: font.fontFamily,
@@ -899,13 +899,13 @@ BookStyle _vellumBookStyle(
         lineHeight: appearance.lineHeight,
       ),
     ),
-    media: _vellumMedia(context),
+    media: _pagecraftMedia(context),
   );
 }
 
 /// The window the book's media queries and viewport units see: the
 /// reader's, on this screen, in the system's colour scheme.
-CssMediaEnvironment _vellumMedia(BuildContext context) {
+CssMediaEnvironment _pagecraftMedia(BuildContext context) {
   final window = MediaQuery.sizeOf(context);
   final display = View.maybeOf(context)?.display;
   final screen = display == null || display.size.isEmpty
@@ -929,7 +929,7 @@ bool get _webKitLines =>
     defaultTargetPlatform == TargetPlatform.iOS ||
     defaultTargetPlatform == TargetPlatform.macOS;
 
-double _vellumDeviceFontScale(BuildContext context) => readerDeviceFontScale(
+double _pagecraftDeviceFontScale(BuildContext context) => readerDeviceFontScale(
   platform: defaultTargetPlatform,
   viewportSize: MediaQuery.sizeOf(context),
 );
@@ -937,7 +937,7 @@ double _vellumDeviceFontScale(BuildContext context) => readerDeviceFontScale(
 /// CSS generics resolve to the app's bundled faces; symbols come from the
 /// symbol font; [ink] is the reader's fonts' ink, for WebKit's line
 /// boxes.
-BookFonts _vellumBookFonts(Map<String, FontInk> ink) => BookFonts(
+BookFonts _pagecraftBookFonts(Map<String, FontInk> ink) => BookFonts(
   serif: AppTypography.fontFamilySerif,
   sansSerif: AppTypography.fontFamilyOpenSans,
   monospace: defaultTargetPlatform == TargetPlatform.iOS
@@ -961,7 +961,7 @@ const _tintIds = {
 /// The active search hit's tint.
 const _searchMarkColor = Color(0x66FFB300);
 
-/// Opens a reflowable book file with vellum by its format.
+/// Opens a reflowable book file with pagecraft by its format.
 Future<Object> _openTextBook(ReaderDocument document) async {
   final path = document.filePath;
   return switch (document.format) {

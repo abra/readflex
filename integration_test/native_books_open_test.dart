@@ -6,26 +6,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart' show importBookFile;
 import 'package:integration_test/integration_test.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import '../test/support/device_screenshots.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
-/// Every book format reads on vellum in the real app, never in the
-/// WebView: each book of `--dart-define=VELLUM_BOOKS=a|b|…` (EPUB, FB2,
+/// Every book format reads on pagecraft in the real app, never in the
+/// WebView: each book of `--dart-define=PAGECRAFT_BOOKS=a|b|…` (EPUB, FB2,
 /// MOBI, AZW3, CBZ or PDF) is imported into an empty library, opened from
 /// its tile, shows its first page, turns one page and closes. Reports
 /// metadata/cover extraction and persistence together as import time,
 /// then tap-to-first-page-mounted time and process RSS. The isolated app
 /// uses an in-memory SQLite DB and real temporary book/cover files.
 ///
-/// `--dart-define=VELLUM_PERF_REPEATS=3` repeats each book with a fresh
-/// app. `--dart-define=VELLUM_PERF_SCREENSHOTS=false` skips screenshots
+/// `--dart-define=PAGECRAFT_PERF_REPEATS=3` repeats each book with a fresh
+/// app. `--dart-define=PAGECRAFT_PERF_SCREENSHOTS=false` skips screenshots
 /// and their image-settling delay. Repeats share the process and OS caches;
 /// first-page-mounted time is not a physical first-pixel measurement.
 ///
-/// `--dart-define=VELLUM_AT=href|…` (in the books' order, empty to skip
+/// `--dart-define=PAGECRAFT_AT=href|…` (in the books' order, empty to skip
 /// one) then goes to that place of a book (a section href with an
 /// optional `#id`) and saves a screenshot of it: what a layout change is
 /// checked on.
@@ -35,26 +35,29 @@ import '../test/support/ui_test_driver.dart';
 /// commas in their names under plain names first.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  const books = String.fromEnvironment('VELLUM_BOOKS');
-  const places = String.fromEnvironment('VELLUM_AT');
-  const repeats = int.fromEnvironment('VELLUM_PERF_REPEATS', defaultValue: 1);
+  const books = String.fromEnvironment('PAGECRAFT_BOOKS');
+  const places = String.fromEnvironment('PAGECRAFT_AT');
+  const repeats = int.fromEnvironment(
+    'PAGECRAFT_PERF_REPEATS',
+    defaultValue: 1,
+  );
   const screenshots = bool.fromEnvironment(
-    'VELLUM_PERF_SCREENSHOTS',
+    'PAGECRAFT_PERF_SCREENSHOTS',
     defaultValue: true,
   );
 
   testWidgets(
-    'every book opens and turns on vellum',
+    'every book opens and turns on pagecraft',
     (tester) async {
       final paths = books.split('|').where((p) => p.isNotEmpty).toList();
       if (paths.isEmpty) {
-        markTestSkipped('pass VELLUM_BOOKS');
+        markTestSkipped('pass PAGECRAFT_BOOKS');
         return;
       }
       expect(
         repeats,
         greaterThan(0),
-        reason: 'VELLUM_PERF_REPEATS must be positive',
+        reason: 'PAGECRAFT_PERF_REPEATS must be positive',
       );
       tester.platformDispatcher.defaultRouteNameTestValue = '/';
       addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);

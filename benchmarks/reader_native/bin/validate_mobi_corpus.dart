@@ -3,8 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:vellum/src/formats/mobi/mobi_container.dart';
-import 'package:vellum/src/formats/mobi/pdb.dart';
+import 'package:pagecraft/src/formats/mobi/mobi_container.dart';
+import 'package:pagecraft/src/formats/mobi/pdb.dart';
 
 /// Validates the runtime backend against Dart without timing preparation/hash work.
 Future<void> main(List<String> args) async {

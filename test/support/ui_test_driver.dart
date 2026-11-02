@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vellum/vellum.dart' show FixedPagePainter;
+import 'package:pagecraft/pagecraft.dart' show FixedPagePainter;
 
 /// Bounded condition wait, including real SQLite/platform work outside the
 /// widget test's fake clock. Avoid pumpAndSettle while a spinner is active.

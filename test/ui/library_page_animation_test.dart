@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:preferences_service/preferences_service.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';

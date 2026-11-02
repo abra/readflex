@@ -7,7 +7,7 @@ import 'package:practice/practice.dart';
 import 'package:reader/reader.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:readflex/app/routing.dart';
-import 'package:vellum/all_formats.dart' show TextColumnPage, TextPagesView;
+import 'package:pagecraft/all_formats.dart' show TextColumnPage, TextPagesView;
 
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';

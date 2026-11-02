@@ -10,6 +10,10 @@ PASS=0
 FAIL=0
 FAILED_LABELS=()
 
+run_dart() {
+  eval "$DART" '"$@"'
+}
+
 run() {
   local label=$1
   local cmd=$2
@@ -55,12 +59,12 @@ if [ -n "$COVERAGE_DIR" ]; then
     echo "Use a fresh COVERAGE_DIR to avoid mixing results from different runs." >&2
     exit 2
   fi
-  node "$SCRIPT_DIR/scripts/coverage_report.mjs" --snapshot "$COVERAGE_DIR"
-  COVERAGE_PACKAGES="$(node -e 'const fs = require("node:fs"); const s = JSON.parse(fs.readFileSync(process.argv[1])); process.stdout.write("^(" + s.packages.join("|") + ")$");' "$COVERAGE_DIR/sources.json")"
+  run_dart "$SCRIPT_DIR/scripts/coverage_report.dart" --snapshot "$COVERAGE_DIR"
+  IFS= read -r COVERAGE_PACKAGES < "$COVERAGE_DIR/packages.regex"
 fi
 
-run "test_harness"                 "node --test scripts/test/*.test.mjs" "$SCRIPT_DIR"
-run "app"                          "$FLUTTER test test/" "$SCRIPT_DIR"
+run "test_harness"                 "$DART test test/tooling" "$SCRIPT_DIR"
+run "app"                          "$FLUTTER test test/ --exclude-tags tooling" "$SCRIPT_DIR"
 run "domain_models"                "$FLUTTER test test/" "$SCRIPT_DIR/packages/domain_models"
 run "shared"                       "$FLUTTER test test/" "$SCRIPT_DIR/packages/shared"
 run "readflex_localizations"       "$FLUTTER test test/" "$SCRIPT_DIR/packages/readflex_localizations"
@@ -83,7 +87,7 @@ run "dictionary_service"           "$FLUTTER test test/" "$SCRIPT_DIR/packages/d
 run "device_screen_brightness"    "$FLUTTER test test/" "$SCRIPT_DIR/third_party/device_screen_brightness"
 run "screen_control_service"       "$FLUTTER test test/" "$SCRIPT_DIR/packages/screen_control_service"
 run "preferences_service"         "$FLUTTER test test/" "$SCRIPT_DIR/packages/preferences_service"
-run "vellum"                      "$FLUTTER test test/" "$SCRIPT_DIR/packages/vellum"
+run "pagecraft"                   "$FLUTTER test test/" "$SCRIPT_DIR/packages/pagecraft"
 run "toast_service"               "$FLUTTER test test/" "$SCRIPT_DIR/packages/toast_service"
 run "library"                     "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/library"
 run "import_flow"                 "$FLUTTER test test/" "$SCRIPT_DIR/packages/features/import_flow"

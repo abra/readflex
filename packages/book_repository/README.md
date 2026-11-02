@@ -48,7 +48,7 @@ filenames before being written to the DB.
 | `deleteBookmarkBySourceAndCfi(sourceId, cfi)` | Legacy fallback removal by CFI |
 | `deleteBook(id, {scope})`           | Delete row + remove per-book directory; optionally preserve learning data |
 
-Cover bytes (`coverData`) are produced upstream by `vellum`'s metadata
+Cover bytes (`coverData`) are produced upstream by `pagecraft`'s metadata
 readers (`import_flow`'s `importBookFile`).
 
 Bookmark restoration checks source existence, detects an already recreated

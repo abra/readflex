@@ -1,5 +1,5 @@
 import 'package:flutter/painting.dart';
-import 'package:vellum/comic.dart';
+import 'package:pagecraft/comic.dart';
 
 import 'reader_search_event.dart';
 import 'reader_selection.dart';

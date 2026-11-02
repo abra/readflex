@@ -10,14 +10,14 @@ import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_page_grid.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import '../test/support/native_screenshots.dart';
 import '../test/support/pdf_fixture.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
-/// PDF pages on vellum (pdfium) in the real app: denser than the screen
+/// PDF pages on pagecraft (pdfium) in the real app: denser than the screen
 /// when trimmed, double-tap zoom that ends sharp, theme colors with margin
 /// crops, search, a saved highlight and page previews.
 void main() {

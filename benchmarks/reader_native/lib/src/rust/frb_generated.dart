@@ -81,7 +81,7 @@ class ReaderRustLib
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
-        stem: 'vellum_reader_benchmark',
+        stem: 'pagecraft_reader_benchmark',
         ioDirectory: 'rust/target/release/',
         webPrefix: 'pkg/',
         wasmBindgenName: 'wasm_bindgen',

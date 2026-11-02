@@ -7,11 +7,11 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:vellum/testing.dart';
-import 'package:vellum/all_formats.dart'
+import 'package:pagecraft/testing.dart';
+import 'package:pagecraft/all_formats.dart'
     show ImageDimensions, probeImageDimensions;
 
-const pdfFixtures = '../../vellum/test/fixtures/pdf';
+const pdfFixtures = '../../pagecraft/test/fixtures/pdf';
 
 void main() {
   late Directory tempDir;
@@ -142,7 +142,7 @@ void main() {
   });
 
   test('imports an EPUB through the native engine', () async {
-    final fixture = Directory('../../vellum/test/fixtures/epub/epub3');
+    final fixture = Directory('../../pagecraft/test/fixtures/epub/epub3');
     final zip = ZipBuilder();
     for (final entity in fixture.listSync(recursive: true)) {
       if (entity is File) {
@@ -177,7 +177,7 @@ void main() {
   test('imports an FB2 through the native engine', () async {
     final source = await writeComic(
       'story.fb2',
-      await File('../../vellum/test/fixtures/fb2/rich.fb2').readAsBytes(),
+      await File('../../pagecraft/test/fixtures/fb2/rich.fb2').readAsBytes(),
     );
 
     final book = await importBookFile(
@@ -202,7 +202,7 @@ void main() {
       books = _RecordingBookRepository();
       final source = await writeComic(
         name,
-        await File('../../vellum/test/fixtures/mobi/$name').readAsBytes(),
+        await File('../../pagecraft/test/fixtures/mobi/$name').readAsBytes(),
       );
 
       final book = await importBookFile(

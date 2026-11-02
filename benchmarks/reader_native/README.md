@@ -1,8 +1,8 @@
 # Reader part comparison
 
-This isolated experiment compares Rust candidates with the **current Vellum Dart
+This isolated experiment compares Rust candidates with the **current Pagecraft Dart
 implementations**. The app does not depend on this package. MOBI measurements
-use the production Vellum container with its explicit Dart reference and Rust
+use the production Pagecraft container with its explicit Dart reference and Rust
 backend. ZIP/XML/HTML remain isolated candidates, outside the production graph.
 
 | Operation | Dart baseline | Rust candidate |
@@ -15,8 +15,8 @@ backend. ZIP/XML/HTML remain isolated candidates, outside the production graph.
 | MOBI/KF8 text stream | `MobiContainer.open(..., useDartTextReader: true).loadAllText()` | The same container using production Rust text-record I/O/decoding in one FRB batch |
 | MOBI/KF8 record sequence | Dart reads first, next, middle and last records | Production Rust reads the same individual records through FRB |
 
-Both ZIP implementations use native zlib. MOBI uses Vellum's internal Rust
-backend (`packages/vellum/rust`, crate name `vellum_mobi_native`);
+Both ZIP implementations use native zlib. MOBI uses Pagecraft's internal Rust
+backend (`packages/pagecraft/rust`, crate name `pagecraft_mobi_native`);
 the earlier `mobi_rust` experiment is retained separately. This does not measure an entire reader or introduce a
 second rendering architecture. PDF already uses PDFium through `pdfrx`; replacing
 that wrapper would not compare an existing Dart PDF engine with a Rust engine.
@@ -24,16 +24,20 @@ that wrapper would not compare an existing Dart PDF engine with a Rust engine.
 ## Reproduce
 
 Use the repository's FVM SDK, Cargo and `flutter_rust_bridge_codegen` **2.13.0**.
+Corpus selection and comparison orchestration are Dart tools; Node.js is not
+required. `make test-tools` checks their evidence validation independently of
+this experiment's native tests.
+
 On macOS the release library is
-`benchmarks/reader_native/rust/target/release/libvellum_reader_benchmark.dylib`.
-Linux uses `.so`; Windows uses `vellum_reader_benchmark.dll`.
+`benchmarks/reader_native/rust/target/release/libpagecraft_reader_benchmark.dylib`.
+Linux uses `.so`; Windows uses `pagecraft_reader_benchmark.dll`.
 
 ```sh
 make get-reader-native
 make test-reader-native
 make build-reader-native
 
-node scripts/reader_corpus.mjs ~/Downloads/pocketbook \
+fvm dart scripts/reader_corpus.dart ~/Downloads/pocketbook \
   .local/performance/reader-parts/selection.json
 
 cd benchmarks/reader_native
@@ -44,13 +48,17 @@ cd ../..
 
 make benchmark-reader-parts \
   DATASET=.local/performance/reader-parts/corpus/dataset.json \
-  LIBRARY=benchmarks/reader_native/rust/target/release/libvellum_reader_benchmark.dylib
+  LIBRARY=benchmarks/reader_native/rust/target/release/libpagecraft_reader_benchmark.dylib
 ```
 
 The selector inventories the supplied book directory, excludes device `System`
 files and selects inputs across file sizes. Limits are 12 EPUB, 8 MOBI, 4 AZW3,
 4 FB2, 4 zipped FB2 and 4 CBZ. Selected files are deduplicated by SHA-256; selection
 paths remain under ignored `.local/`.
+
+Files of equal size use deterministic path code-unit ordering rather than the
+old host-locale collator. A newly selected corpus can therefore differ at size
+ties; reuse the frozen `dataset.json` and inputs for matched comparisons.
 
 Preparation freezes inputs and expected output fingerprints using production
 Dart. EPUB workloads read up to 24 entries and parse the two largest chapters.
@@ -72,6 +80,12 @@ medians combine the 42 warm samples per implementation. Raw samples, per-process
 medians, first-operation times, setup times, peak RSS, host/toolchain information
 and SHA-256 hashes are saved with frozen executables, libraries and datasets in
 `.local/performance/reader-parts/comparison-*/`.
+
+The Dart orchestrator keeps the existing report protocol and raw samples,
+validates each worker's output fingerprint and median/p95 against those
+samples, and checks input hashes before freezing them. The median is the
+upper-middle sorted sample and p95 uses the nearest rank. Source and artifact
+hashes remain part of the report alongside frozen copies.
 
 The timer includes the Dart-facing operation, bridge dispatch, transferred output
 and the compatibility conversion described above. Input text loading, experimental

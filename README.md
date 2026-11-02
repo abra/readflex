@@ -31,9 +31,10 @@ Start here:
 | `packages/local_storage` | Drift database, DAOs, migrations, storage mappers |
 | `packages/domain_models` | Pure domain models, enums, and exceptions |
 | `packages/component_library` | Theme, design tokens, and reusable widgets |
-| `packages/vellum` | The reader engine: book formats, layout, pages, CFIs, search, internal Rust MOBI/KF8 backend |
+| `packages/pagecraft` | The reader engine: book formats, layout, pages, CFIs, search, internal Rust MOBI/KF8 backend |
 | `android`, `ios` | App runners and native platform integrations |
 | `test/ui`, `integration_test` | Root UI flows, visual comparisons and device checks |
+| `scripts`, `test/tooling` | Dart development tools and their isolated tests |
 | `benchmarks` | Opt-in performance comparisons, separate from the app graph |
 
 Create source subdirectories when they contain code or maintained fixtures,
@@ -54,14 +55,17 @@ fvm install
 make get
 ```
 
-The test harness, coverage reports and benchmark orchestration need Node.js 20+.
+The test harness, coverage reports and benchmark orchestration use the pinned
+Dart SDK. Node.js is optional, only for regenerating the independent ICU sentence
+reference in `packages/pagecraft/test/fixtures/icu_sentence_breaks.mjs`;
+normal builds, tests and benchmarks use the committed reference data.
 Android builds also need the project's
 JDK/SDK setup; iOS builds need Xcode and CocoaPods.
 MOBI text processing uses Rust through FRB. Install rustup; the compiler and
-targets are pinned in `packages/vellum/rust/rust-toolchain.toml`.
-Vellum's Flutter/Dart build hook compiles and bundles the library automatically,
+targets are pinned in `packages/pagecraft/rust/rust-toolchain.toml`.
+Pagecraft's Flutter/Dart build hook compiles and bundles the library automatically,
 including for consumers importing another format. See the
-[native backend notes](packages/vellum/doc/mobi_native.md) for setup and checks.
+[native backend notes](packages/pagecraft/doc/mobi_native.md) for setup and checks.
 
 ### Versioned Configuration
 
@@ -74,7 +78,7 @@ checkout does not depend on a developer's global ignore settings.
 
 The independent library packages under `packages/` and `third_party/` keep
 their own test-environment `pubspec.lock` files local, except the pinned
-`vellum` bridge/build environment. Its `rust/Cargo.lock` is tracked too.
+`pagecraft` bridge/build environment. Its `rust/Cargo.lock` is tracked too.
 The root lockfile pins
 the application graph, not every library's standalone dev dependencies.
 
@@ -100,6 +104,9 @@ Test:
 ```sh
 make test
 ```
+
+`make test` includes Dart development-tool tests in `test/tooling/`. Run that
+subset with `make test-tools` when changing coverage or benchmark orchestration.
 
 UI flows and committed visual comparisons run without API keys:
 

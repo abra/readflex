@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/painting.dart';
-import 'package:vellum/article.dart';
+import 'package:pagecraft/article.dart';
 
 import 'reader_search_event.dart';
 import 'reader_selection.dart';
@@ -43,7 +43,7 @@ class ReaderArticleSession {
   final ReaderSelection? Function() currentSelection;
 }
 
-/// An article drawn by the native text engine (`package:vellum`) behind
+/// An article drawn by the native text engine (`package:pagecraft`) behind
 /// the [ReaderSurface] contract, as one scrolling column.
 ///
 /// Positions, bookmarks and highlights are article anchors

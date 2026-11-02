@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:coverage/coverage.dart';
+import 'package:flutter_driver/flutter_driver.dart';
 import 'package:integration_test/integration_test_driver_extended.dart';
 
+import '../scripts/coverage_report.dart' show sourceSnapshot;
 import '../test/support/native_screenshots.dart';
 
 Future<void> main() async {
@@ -14,12 +16,10 @@ Future<void> main() async {
   final measureCoverage =
       Platform.environment['READFLEX_NATIVE_COVERAGE'] == '1';
   if (measureCoverage) {
-    final snapshot = await Process.run('node', [
-      'scripts/coverage_report.mjs',
-      '--snapshot',
-      directory.path,
-    ]);
-    if (snapshot.exitCode != 0) throw StateError('${snapshot.stderr}');
+    final snapshot = await sourceSnapshot(Directory.current.path);
+    await File('${directory.path}/sources.json').writeAsString(
+      jsonEncode(snapshot.toJson()),
+    );
   }
   final screenshots = <String>[];
   Future<bool> saveScreenshot(
@@ -80,6 +80,7 @@ Future<void> main() async {
 
   try {
     await integrationDriver(
+      driver: await FlutterDriver.connect(logCommunicationToFile: false),
       onScreenshot: saveScreenshot,
       writeResponseOnFailure: true,
       responseDataCallback: (data) async {

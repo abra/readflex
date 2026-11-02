@@ -4,12 +4,12 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:reader_native_benchmark/reader_native.dart' as native;
-import 'package:vellum/src/container/zip_archive.dart';
-import 'package:vellum/src/container/zip_entry.dart';
-import 'package:vellum/src/document/content_document.dart';
-import 'package:vellum/src/formats/fb2/fb2_book.dart' show decodeFb2Text;
-import 'package:vellum/src/formats/mobi/mobi_container.dart';
-import 'package:vellum/src/formats/mobi/pdb.dart';
+import 'package:pagecraft/src/container/zip_archive.dart';
+import 'package:pagecraft/src/container/zip_entry.dart';
+import 'package:pagecraft/src/document/content_document.dart';
+import 'package:pagecraft/src/formats/fb2/fb2_book.dart' show decodeFb2Text;
+import 'package:pagecraft/src/formats/mobi/mobi_container.dart';
+import 'package:pagecraft/src/formats/mobi/pdb.dart';
 import 'package:xml/xml.dart';
 
 const protocol = 'reader-parts-v1';

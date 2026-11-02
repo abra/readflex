@@ -4,10 +4,10 @@ import 'package:book_repository/book_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:monitoring/monitoring.dart';
-import 'package:vellum/all_formats.dart'
+import 'package:pagecraft/all_formats.dart'
     show
         BookMetadata,
-        VellumException,
+        PagecraftException,
         readComicMetadata,
         readEpubMetadata,
         readFb2Metadata,
@@ -45,7 +45,7 @@ Future<File?> pickBookFile() async {
 
 /// Imports an already-picked [sourceFile] into the repository.
 ///
-/// Reads the title, author and cover with `vellum` (the format from the
+/// Reads the title, author and cover with `pagecraft` (the format from the
 /// file's extension, EPUB when it has none) and persists via
 /// [BookRepository.addBook], forwarding [onProgress] so callers can show
 /// a real progress bar during the byte-copy phase. Returns the persisted
@@ -93,7 +93,7 @@ Future<BookMetadata> _readMetadata(String filePath, BookFormat format) async {
       BookFormat.mobi || BookFormat.azw3 => await readMobiMetadata(filePath),
       BookFormat.cbz => await readComicMetadata(filePath),
     };
-  } on VellumException catch (e) {
+  } on PagecraftException catch (e) {
     throw BookImportException(e.message);
   }
 }

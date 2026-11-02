@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:vellum/mobi.dart';
+import 'package:pagecraft/mobi.dart';
 
-import '../packages/vellum/test/formats/mobi/mobi_fixture_books.dart';
+import '../packages/pagecraft/test/formats/mobi/mobi_fixture_books.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -12,10 +12,10 @@ void main() {
   testWidgets('bundled Rust reads MOBI 6 and lazy KF8 on the device', (
     tester,
   ) async {
-    expect(const bool.fromEnvironment('VELLUM_MOBI_USE_DART'), isFalse);
+    expect(const bool.fromEnvironment('PAGECRAFT_MOBI_USE_DART'), isFalse);
     final report = await tester.runAsync(() async {
       final directory = await Directory.systemTemp.createTemp(
-        'vellum-mobi-device-',
+        'pagecraft-mobi-device-',
       );
       final entries = <Map<String, Object>>[];
       try {

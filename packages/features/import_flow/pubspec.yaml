@@ -24,8 +24,8 @@ dependencies:
     path: ../../domain_models
   book_repository:
     path: ../../book_repository
-  vellum:
-    path: ../../vellum
+  pagecraft:
+    path: ../../pagecraft
   monitoring:
     path: ../../monitoring
 

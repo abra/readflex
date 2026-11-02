@@ -20,6 +20,13 @@ Android 9+, as the system Settings slider shows it, and the legacy 0..255
 scale for small values on devices that report a larger range; that code was
 only restructured. iOS, macOS, Linux and Windows code is unchanged.
 
+## Android JNI bridge
+
+`lib/src/jni/device_screen_brightness_helper.dart` is a hand-written wrapper
+around the Java helper. Update its JNI method names and signatures together
+with the Java API. The unused upstream generator configuration and `jnigen`
+development dependency were removed; runtime calls still use `package:jni`.
+
 ## Verification
 
 `make verify` runs the package's Dart tests (`test/`) and analysis. They cover

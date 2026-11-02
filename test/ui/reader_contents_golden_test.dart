@@ -8,7 +8,7 @@ import 'package:reader/reader.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:vellum/all_formats.dart' show TextColumnPage, TextPagesView;
+import 'package:pagecraft/all_formats.dart' show TextColumnPage, TextPagesView;
 
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';

@@ -16,8 +16,8 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:vellum/all_formats.dart';
-import 'package:vellum/testing.dart';
+import 'package:pagecraft/all_formats.dart';
+import 'package:pagecraft/testing.dart';
 
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';

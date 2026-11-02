@@ -11,14 +11,15 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`
 // These functions are ignored (category: IgnoreBecauseOwnerTyShouldIgnore): `default`
 
-/// Synchronous calls execute in SectionPreparer's existing Dart isolate.
+/// Namespace-preserving mode matches package:xml's FB2 DOM whitespace.
+/// The other mode matches ContentDocument's browser-style arena.
 NativeDocument parseXml({required String text, required bool namespaces}) =>
     ReaderRustLib.instance.api.crateMarkupParseXml(
       text: text,
       namespaces: namespaces,
     );
 
-/// Initial FB2/EPUB documents use the FRB pool, outside the UI isolate.
+/// Includes dispatch through the FRB worker pool in the benchmark.
 Future<NativeDocument> parseXmlAsync({
   required String text,
   required bool namespaces,
@@ -33,7 +34,7 @@ NativeDocument parseHtml({required String text}) =>
 Future<NativeDocument> parseHtmlAsync({required String text}) =>
     ReaderRustLib.instance.api.crateMarkupParseHtmlAsync(text: text);
 
-/// The same arena columns as Vellum's ContentDocument, transferred as typed arrays.
+/// The same arena columns as Pagecraft's ContentDocument, transferred as typed arrays.
 class NativeDocument {
   final Uint8List kinds;
   final Int32List parents;

@@ -1,5 +1,6 @@
 .PHONY: get format format-check analyze test test-ui test-ui-contracts test-goldens update-goldens test-device coverage test-performance benchmark-mobi get-mobi-rust generate-mobi-rust build-mobi-rust test-mobi-rust benchmark-mobi-rust compare-mobi get-reader-native generate-reader-native build-reader-native test-reader-native benchmark-reader-parts verify clean build build-android build-apk run help
-.PHONY: generate-vellum-mobi-native analyze-vellum-mobi-rust test-vellum-mobi-rust
+.PHONY: generate-pagecraft-mobi-native analyze-pagecraft-mobi-rust test-pagecraft-mobi-rust
+.PHONY: test-tools
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
@@ -28,7 +29,7 @@ PACKAGES = \
 	packages/dictionary_service \
 	third_party/device_screen_brightness \
 	packages/screen_control_service \
-	packages/vellum \
+	packages/pagecraft \
 	packages/toast_service \
 	packages/features/library \
 	packages/features/import_flow \
@@ -42,20 +43,20 @@ PACKAGES = \
 ROOT_ANALYZE_PATHS = lib test integration_test test_driver bin benchmarks scripts
 
 ## Regenerate the production MOBI bridge with flutter_rust_bridge_codegen 2.13.0
-generate-vellum-mobi-native:
+generate-pagecraft-mobi-native:
 	@test "$$(flutter_rust_bridge_codegen --version)" = "flutter_rust_bridge_codegen 2.13.0"
-	cd packages/vellum && fvm exec flutter_rust_bridge_codegen generate --skip-fvm-install
-	cd packages/vellum/rust && $(MOBI_RUST_ENV) cargo fmt
-	$(DART) format packages/vellum/lib/src/formats/mobi/native/rust
+	cd packages/pagecraft && fvm exec flutter_rust_bridge_codegen generate --skip-fvm-install
+	cd packages/pagecraft/rust && $(MOBI_RUST_ENV) cargo fmt
+	$(DART) format packages/pagecraft/lib/src/formats/mobi/native/rust
 
 ## Analyze production Rust code and formatting
-analyze-vellum-mobi-rust:
-	cd packages/vellum/rust && $(MOBI_RUST_ENV) cargo fmt --check
-	cd packages/vellum/rust && $(MOBI_RUST_ENV) cargo clippy --locked --all-targets -- -D warnings
+analyze-pagecraft-mobi-rust:
+	cd packages/pagecraft/rust && $(MOBI_RUST_ENV) cargo fmt --check
+	cd packages/pagecraft/rust && $(MOBI_RUST_ENV) cargo clippy --locked --all-targets -- -D warnings
 
 ## Test production Rust decoders, limits and session lifecycle
-test-vellum-mobi-rust:
-	cd packages/vellum/rust && $(MOBI_RUST_ENV) cargo test --locked
+test-pagecraft-mobi-rust:
+	cd packages/pagecraft/rust && $(MOBI_RUST_ENV) cargo test --locked
 
 ## Install dependencies for root and all packages
 get:
@@ -74,7 +75,7 @@ format-check:
 	$(DART) format --output=none --set-exit-if-changed $(ROOT_ANALYZE_PATHS) packages
 
 ## Analyze all Dart code, then reject widget-returning helpers in lib/
-analyze: analyze-vellum-mobi-rust
+analyze: analyze-pagecraft-mobi-rust
 	$(FLUTTER) analyze $(ROOT_ANALYZE_PATHS)
 	@set -e; for pkg in $(PACKAGES); do \
 		echo "▶ analyze $$pkg"; \
@@ -84,8 +85,12 @@ analyze: analyze-vellum-mobi-rust
 	$(DART) run scripts/check_widget_helpers.dart . $(filter packages/%,$(PACKAGES))
 
 ## Run all tests across packages
-test: test-vellum-mobi-rust
+test: test-pagecraft-mobi-rust
 	@FLUTTER="$(FLUTTER)" DART="$(DART)" bash test_all.sh
+
+## Check development tools without running the app test suites
+test-tools:
+	$(DART) test test/tooling --reporter expanded
 
 ## Run root UI flows and visual comparisons without a device or API keys
 test-ui:
@@ -105,11 +110,11 @@ coverage:
 
 ## Run repeatable workload benchmarks, with reports in .local/performance/
 test-performance:
-	$(FLUTTER) test benchmarks/reader_search_benchmark_test.dart benchmarks/library_benchmark_test.dart benchmarks/vellum_document_benchmark_test.dart --concurrency=1 --reporter expanded
+	$(FLUTTER) test benchmarks/reader_search_benchmark_test.dart benchmarks/library_benchmark_test.dart benchmarks/pagecraft_document_benchmark_test.dart --concurrency=1 --reporter expanded
 
 ## Freeze MOBI workloads and record current decoder timings in host AOT
 benchmark-mobi:
-	DART="$(DART)" node scripts/mobi_benchmark.mjs baseline $(ARGS)
+	DART="$(DART)" $(DART) scripts/mobi_benchmark.dart baseline $(ARGS)
 
 ## Install locked dependencies for the isolated Rust experiment
 get-mobi-rust:
@@ -124,19 +129,19 @@ generate-mobi-rust:
 
 ## Build the release Rust library and AOT candidate worker
 build-mobi-rust:
-	DART="$(DART)" node scripts/mobi_rust.mjs build
+	DART="$(DART)" $(DART) scripts/mobi_rust.dart build
 
 ## Check Rust, native decoder tests and parity through the real FRB adapter
 test-mobi-rust:
-	DART="$(DART)" node scripts/mobi_rust.mjs test
+	DART="$(DART)" $(DART) scripts/mobi_rust.dart test
 
 ## Measure Rust through FRB: ARGS='--dataset <baseline-directory>/dataset.json'
 benchmark-mobi-rust:
-	DART="$(DART)" node scripts/mobi_rust.mjs benchmark $(ARGS)
+	DART="$(DART)" $(DART) scripts/mobi_rust.dart benchmark $(ARGS)
 
 ## Compare compatible MOBI reports: BASELINE=<report.json> CANDIDATE=<report.json>
 compare-mobi:
-	node scripts/mobi_benchmark.mjs compare "$(BASELINE)" "$(CANDIDATE)"
+	$(DART) scripts/mobi_benchmark.dart compare "$(BASELINE)" "$(CANDIDATE)"
 
 ## Install the isolated ZIP/XML/HTML Rust comparison dependencies
 get-reader-native:
@@ -167,7 +172,7 @@ test-reader-native:
 ## Freeze and compare parts: DATASET=<dataset.json> LIBRARY=<release library>
 benchmark-reader-parts:
 	@test -n "$(DATASET)" && test -n "$(LIBRARY)"
-	node scripts/reader_parts.mjs "$(DATASET)" .local/performance/reader-parts/build/bundle "$(LIBRARY)"
+	$(DART) scripts/reader_parts.dart "$(DATASET)" .local/performance/reader-parts/build/bundle "$(LIBRARY)"
 
 ## Compare committed visual baselines (does not update them)
 test-goldens:

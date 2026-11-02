@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_pdf_surface.dart';
 import 'package:reader/src/reader_search_event.dart';
 import 'package:reader/src/reader_selection.dart';
-import 'package:vellum/all_formats.dart';
-import 'package:vellum/testing.dart';
+import 'package:pagecraft/all_formats.dart';
+import 'package:pagecraft/testing.dart';
 
-const fixtures = '../../vellum/test/fixtures/pdf';
+const fixtures = '../../pagecraft/test/fixtures/pdf';
 
 void main() {
   late PdfBook book;
@@ -88,17 +88,20 @@ void main() {
     expect(bookmarkToggles, 1);
   });
 
-  test('search streams hits as vellum CFIs with excerpts, then done', () async {
-    final events = await surface.searchBookStream('page 17')!.toList();
-    expect(events.last, isA<ReaderSearchDone>());
-    final results = events.whereType<ReaderSearchResults>().toList();
-    expect(results, hasLength(11));
-    final first = results.first.results.single;
-    expect(first.cfi, pdfTextCfi(16, const PdfTextRange(0, 7)));
-    expect(first.excerpt.match, 'Page 17');
-    expect(layers.peek(199), isNotNull, reason: 'the cache was used');
-    expect(layers.loadedPages.length, layers.capacity);
-  });
+  test(
+    'search streams hits as pagecraft CFIs with excerpts, then done',
+    () async {
+      final events = await surface.searchBookStream('page 17')!.toList();
+      expect(events.last, isA<ReaderSearchDone>());
+      final results = events.whereType<ReaderSearchResults>().toList();
+      expect(results, hasLength(11));
+      final first = results.first.results.single;
+      expect(first.cfi, pdfTextCfi(16, const PdfTextRange(0, 7)));
+      expect(first.excerpt.match, 'Page 17');
+      expect(layers.peek(199), isNotNull, reason: 'the cache was used');
+      expect(layers.loadedPages.length, layers.capacity);
+    },
+  );
 
   test('a search result opens its page and marks the hit', () {
     surface.goToSearchResult(pdfTextCfi(16, const PdfTextRange(0, 7)));

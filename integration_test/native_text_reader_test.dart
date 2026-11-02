@@ -11,23 +11,23 @@ import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_result_tile.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import '../test/support/device_screenshots.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
-/// An FB2 book in the real app on the native text engine (`vellum`): it
+/// An FB2 book in the real app on the native text engine (`pagecraft`): it
 /// opens from the library, shows its chrome, turns pages (back with a
 /// slide too), lists its contents, selects a word with the reader's
 /// context panel and searches.
 ///
-/// Opens the first `.fb2` of `--dart-define=VELLUM_BOOKS=a|b` (the iOS
+/// Opens the first `.fb2` of `--dart-define=PAGECRAFT_BOOKS=a|b` (the iOS
 /// simulator reads host paths; on Android pass a path pushed with
 /// `adb push`), or the app's reading fixture without one.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  const books = String.fromEnvironment('VELLUM_BOOKS');
+  const books = String.fromEnvironment('PAGECRAFT_BOOKS');
 
   testWidgets('an FB2 reads on the native text engine in the app', (
     tester,
@@ -47,7 +47,7 @@ void main() {
       final book = await tester.runAsync(
         () => app.bookRepository.addBook(
           sourceFile: File(path),
-          title: 'FB2 on vellum',
+          title: 'FB2 on pagecraft',
           format: BookFormat.fb2,
         ),
       );

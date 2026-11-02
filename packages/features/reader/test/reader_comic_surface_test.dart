@@ -4,8 +4,8 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_comic_surface.dart';
 import 'package:reader/src/reader_selection.dart';
-import 'package:vellum/all_formats.dart';
-import 'package:vellum/testing.dart';
+import 'package:pagecraft/all_formats.dart';
+import 'package:pagecraft/testing.dart';
 
 void main() {
   late Directory tempDir;

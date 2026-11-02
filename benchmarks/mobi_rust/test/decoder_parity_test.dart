@@ -3,10 +3,10 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:test/test.dart';
-import 'package:vellum/src/formats/mobi/mobi_compression.dart';
-import 'package:vellum/src/formats/mobi/mobi_container.dart';
-import 'package:vellum/src/formats/mobi/pdb.dart';
-import 'package:vellum/src/testing/mobi_builder.dart';
+import 'package:pagecraft/src/formats/mobi/mobi_compression.dart';
+import 'package:pagecraft/src/formats/mobi/mobi_container.dart';
+import 'package:pagecraft/src/formats/mobi/pdb.dart';
+import 'package:pagecraft/src/testing/mobi_builder.dart';
 
 import '../../mobi_decoder_benchmark.dart';
 import '../../mobi_huff_fixture.dart';
@@ -72,7 +72,7 @@ void main() {
 
   test('committed MOBI fixture matches the production container', () async {
     final pdb = await PdbFile.open(
-      '../../packages/vellum/test/fixtures/mobi/six.mobi',
+      '../../packages/pagecraft/test/fixtures/mobi/six.mobi',
     );
     try {
       final container = await MobiContainer.open(pdb);

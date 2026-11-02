@@ -1,6 +1,6 @@
 part of 'reader_screen.dart';
 
-/// Hosts the comic engine (`package:vellum`) and translates its events into
+/// Hosts the comic engine (`package:pagecraft`) and translates its events into
 /// the reader bloc and cubit updates every page body produces, so the
 /// chrome, drawers and context panel do not know what draws the pages.
 class _ReaderComicBody extends StatefulWidget {

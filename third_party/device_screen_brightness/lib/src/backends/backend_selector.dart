@@ -7,7 +7,7 @@ import 'ffi_backend.dart';
 
 /// Returns the [DeviceScreenBrightnessBackend] for the current platform.
 ///
-/// Android uses the [AndroidBackend] (JNIgen / Settings.System).
+/// Android uses the [AndroidBackend] (JNI / Java helper).
 /// iOS, macOS, Linux and Windows use the [FfiBackend] (FFIgen / native C).
 DeviceScreenBrightnessBackend backendForCurrentPlatform() {
   return _backend ??= _resolve();

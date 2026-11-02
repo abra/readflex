@@ -4,7 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
+import 'package:pagecraft/testing.dart' show preparePdfEngineForTests;
 
 import '../support/pdf_fixture.dart';
 import '../support/reading_fixture.dart';
@@ -12,7 +13,7 @@ import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 
 /// Reader text layout end to end: the window size and the Appearance
-/// choices reach vellum's page settings and style as text columns, line
+/// choices reach pagecraft's page settings and style as text columns, line
 /// length and text size, and phones never change.
 void main() {
   const phone = Size(390, 844);
@@ -84,7 +85,7 @@ void main() {
       tester.widget<TextScrollView>(find.byType(TextScrollView)).controller;
 
   /// Opens the article from the Library at [window]: it scrolls on
-  /// vellum.
+  /// pagecraft.
   Future<void> openArticle(WidgetTester tester, {Size window = phone}) async {
     tester.view
       ..physicalSize = window
@@ -254,6 +255,7 @@ void main() {
   testWidgets('PDF pages keep their layout and offer no columns', (
     tester,
   ) async {
+    await tester.runAsync(preparePdfEngineForTests);
     final pdf = (await tester.runAsync(() => addPdfFixture(app)))!;
     tester.view
       ..physicalSize = tabletLandscape
@@ -267,6 +269,7 @@ void main() {
       description: 'the PDF pages',
       timeout: const Duration(seconds: 30),
     );
+    await waitForFixedPage(tester);
     await tester.pumpAndSettle();
     expect(find.byType(TextPagesView), findsNothing);
 

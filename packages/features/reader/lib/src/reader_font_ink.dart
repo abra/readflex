@@ -1,7 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/foundation.dart' show FlutterError, SynchronousFuture;
 import 'package:flutter/services.dart';
-import 'package:vellum/vellum.dart';
+import 'package:pagecraft/pagecraft.dart';
 
 /// How far a line of text inks in each of the reader's fonts, read once
 /// from their files: what WebKit's line boxes held in the iOS WebView reader

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/painting.dart';
-import 'package:vellum/pdf.dart';
+import 'package:pagecraft/pdf.dart';
 
 import 'reader_search_event.dart';
 import 'reader_selection.dart';
@@ -34,7 +34,7 @@ class ReaderPdfSession {
 ///
 /// Navigation reaches the session's `FixedPagesController`; search runs
 /// through `searchPdfBook` over the session's text layers and reports
-/// hits as vellum CFIs with excerpts around the match; selection
+/// hits as pagecraft CFIs with excerpts around the match; selection
 /// commands drive the `PdfTextSelection`. Image-area commands are
 /// no-ops: PDF pages carry text highlights. Without a session commands
 /// are dropped and queries answer null.
@@ -271,7 +271,7 @@ class ReaderPdfSurface implements ReaderSurface {
 }
 
 /// The selection payload the reader's text actions take, built from a
-/// page's text layer: the exact text, the sentence around it, and vellum's
+/// page's text layer: the exact text, the sentence around it, and pagecraft's
 /// range CFI.
 ReaderSelection readerSelectionFromLayer(
   PdfTextLayer layer,

@@ -9,8 +9,8 @@ environment:
 dependencies:
   crypto: ^3.0.8
   flutter_rust_bridge: 2.13.0
-  vellum:
-    path: ../../packages/vellum
+  pagecraft:
+    path: ../../packages/pagecraft
   xml: ^6.5.0
 
 dev_dependencies:

@@ -1,6 +1,6 @@
 part of 'reader_screen.dart';
 
-/// Hosts a saved article on the text engine (`package:vellum`) as one
+/// Hosts a saved article on the text engine (`package:pagecraft`) as one
 /// scrolling column and translates its events into the reader bloc and
 /// cubit updates every page body produces: the position
 /// (the sentence at the middle of the view, its heading, minutes left),
@@ -169,7 +169,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
     final controller = TextScrollController(
       source: source,
       style: _bookStyle(),
-      fonts: _vellumBookFonts(_fontInk),
+      fonts: _pagecraftBookFonts(_fontInk),
       images: images,
       settings: _pageSettings(),
       initialPoint: opening.anchor == null
@@ -257,7 +257,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
     if (controller == null) return;
     controller
       ..style = _bookStyle()
-      ..fonts = _vellumBookFonts(_fontInk)
+      ..fonts = _pagecraftBookFonts(_fontInk)
       ..settings = _pageSettings();
   }
 
@@ -266,7 +266,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
   /// article shell, whose softer captions, quotes and table rules come
   /// before the reader's sheet (its dark theme sets its own).
   BookStyle _bookStyle() {
-    final style = _vellumBookStyle(
+    final style = _pagecraftBookStyle(
       context,
       appearance: widget.appearance,
       theme: widget.readerTheme,
@@ -307,7 +307,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
       columns: null,
     );
     final em = columns.maxLineWidthEm;
-    final fontSize = layout.fontSize * _vellumDeviceFontScale(context);
+    final fontSize = layout.fontSize * _pagecraftDeviceFontScale(context);
     final side = appearance.sideMargin;
     return TextPageSettings(
       sideMarginPercent: side >= 0 && side < 100

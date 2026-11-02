@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:vellum/all_formats.dart' show TextColumnPage, TextPagesView;
+import 'package:pagecraft/all_formats.dart' show TextColumnPage, TextPagesView;
 
 import '../support/reading_fixture.dart';
 import '../support/ui_test_app.dart';

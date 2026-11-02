@@ -479,6 +479,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagecraft_mobi_benchmark"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "flutter_rust_bridge",
+]
+
+[[package]]
 name = "parking_lot_core"
 version = "0.9.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -646,14 +654,6 @@ name = "unicode-ident"
 version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
-
-[[package]]
-name = "vellum_mobi_benchmark"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "flutter_rust_bridge",
-]
 
 [[package]]
 name = "version_check"

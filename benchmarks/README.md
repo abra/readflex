@@ -9,6 +9,10 @@ These checks are opt-in benchmarks, not part of `make test`. Run with the pinned
 SDK and avoid concurrent builds, coverage collection, or emulator workloads
 when comparing elapsed times.
 
+Orchestration under `scripts/` uses Dart from that SDK; Node.js is not required.
+`make test-tools` validates the tools in isolation, including frozen-input
+hashes, worker correctness evidence and statistics calculated from raw samples.
+
 ```sh
 make test-performance
 ```
@@ -18,7 +22,7 @@ make test-performance
   microseconds, state emissions, and cumulative result entries published.
 - `library_benchmark_test.dart`: 1k/5k/20k books through the production Library
   state projection/search; one warmup and five samples, plus 10k cached reads.
-- `vellum_document_benchmark_test.dart`: synthetic XHTML chapters of 100/400/1600
+- `pagecraft_document_benchmark_test.dart`: synthetic XHTML chapters of 100/400/1600
   paragraphs (about 100 KB to 1.7 MB) through `ContentDocument.parseXml`; one
   warmup and three samples. Records source bytes, node count, median parse,
   style resolution (user-agent sheet plus a book-like sheet) and box building
@@ -27,7 +31,7 @@ make test-performance
   per-isolate hyphenator) and the column laid out at 360 px with and without
   them (the test font, so relative cost, not device time).
 - Results: `.local/performance/reader-search.json`, `library.json` and
-  `vellum-document.json`. Preserve
+  `pagecraft-document.json`. Preserve
   before/after artifacts locally before rerunning, since these paths are replaced.
 
 Normal tests enforce structural budgets, without flaky stopwatch thresholds:
@@ -38,7 +42,7 @@ tiles during scrolling and verifies cached projection identity at 20k books.
 These are host/JIT measurements, not release-device frame, peak-memory or import
 benchmarks. The Library workload starts from loaded models; it does not include
 SQLite reads or cover decoding. The search workload measures burst handling, not
-vellum's search through a book or every continuous-stream pattern.
+pagecraft's search through a book or every continuous-stream pattern.
 
 Run database query/index measurements:
 
@@ -63,9 +67,9 @@ READFLEX_NATIVE_DEVICE=<android-device-id> fvm flutter drive --profile \
   --driver=test_driver/ui_driver.dart \
   --target=integration_test/native_books_open_test.dart \
   -d <android-device-id> \
-  '--dart-define=VELLUM_BOOKS=/data/local/tmp/books/book.epub|/data/local/tmp/books/book.mobi' \
-  --dart-define=VELLUM_PERF_REPEATS=3 \
-  --dart-define=VELLUM_PERF_SCREENSHOTS=false
+  '--dart-define=PAGECRAFT_BOOKS=/data/local/tmp/books/book.epub|/data/local/tmp/books/book.mobi' \
+  --dart-define=PAGECRAFT_PERF_REPEATS=3 \
+  --dart-define=PAGECRAFT_PERF_SCREENSHOTS=false
 ```
 
 Reports and optional screenshots go to `.local/ui-device/run-*/`. Each raw row
@@ -86,8 +90,8 @@ outside the open interval. Keep the recorded platform, build mode and viewport
 with the raw samples; compare medians and ranges on the same device.
 
 For a breakdown of text preparation and execution, run the same driver with
-`--target=integration_test/vellum_text_engine_test.dart` and text books in
-`VELLUM_BOOKS`. It records file opening, up to 30 linear sections per book,
+`--target=integration_test/pagecraft_text_engine_test.dart` and text books in
+`PAGECRAFT_BOOKS`. It records file opening, up to 30 linear sections per book,
 section preparation, image probing, initial layout, full layout and pagination
 separately. `firstPageMs` is initial layout alone;
 `prepareToFirstPageMs` also includes section preparation and image probing.
@@ -104,7 +108,7 @@ the repeat define applies only to `native_books_open_test.dart`.
 `integration_test/article_performance_test.dart` uses the same driver to measure
 saving a fixture article, Library-to-reader opening, reopening at a saved middle
 position, search and 12 real-time scroll animations with raw Flutter frame
-timings. `VELLUM_PERF_REPEATS` defaults to 3 there. Article persistence uses the
+timings. `PAGECRAFT_PERF_REPEATS` defaults to 3 there. Article persistence uses the
 same isolated in-memory SQLite and real temporary files. Network download and
 extraction, application bootstrap and durable database writes are excluded.
 
@@ -130,7 +134,7 @@ release APK/AAB delivery size; keep its ABI list with any size measurements.
 
 ## MOBI Dart/Rust experiment
 
-Record the retained Dart reference decoder in host AOT, with Node.js 20+ and the pinned SDK:
+Record the retained Dart reference decoder in host AOT with the pinned SDK:
 
 ```sh
 make benchmark-mobi
@@ -166,10 +170,10 @@ runtime and generator to `flutter_rust_bridge` 2.13.0. Its generated bridge uses
 comparing against the serialization-only SSE/MOI configuration. FRB's
 [codec documentation](https://cjycode.com/flutter_rust_bridge/guides/miscellaneous/codec)
 describes the copy/allocation tradeoff for byte buffers. It has its own Pub/Cargo
-lockfiles and is not a runtime dependency. The app uses Vellum's internal
-production backend in `packages/vellum/rust`. Requirements for this experiment:
-Rust/Cargo with edition 2024 support, the pinned Flutter
-SDK and Node.js 20+. Install dependencies, check parity and measure:
+lockfiles and is not a runtime dependency. The app uses Pagecraft's internal
+production backend in `packages/pagecraft/rust`. Requirements for this experiment:
+Rust/Cargo with edition 2024 support and the pinned Flutter SDK. Install
+dependencies, check parity and measure:
 
 ```sh
 make get-mobi-rust
@@ -186,7 +190,7 @@ reject cycles, invalid offsets and excessive expansion. These checks are opt-in;
 ordinary `make analyze`/`make test` do not require the experimental package.
 
 `build-mobi-rust` builds Cargo with `--locked --release` and an AOT Dart worker
-with `dart build cli` (Vellum's transitive packages have native hooks), then prints
+with `dart build cli` (Pagecraft's transitive packages have native hooks), then prints
 their paths. Both workers require Dart's product build mode; the Rust worker
 also rejects a debug Rust library. Loading is explicit through
 `MOBI_RUST_LIBRARY`; the experiment adds no hooks or changes to app runners.
@@ -216,7 +220,7 @@ make generate-mobi-rust
 For an already built candidate or a Dart control repeat:
 
 ```sh
-node scripts/mobi_benchmark.mjs run --label rust-frb \
+fvm dart scripts/mobi_benchmark.dart run --label rust-frb \
   --dataset <baseline-directory>/dataset.json --worker <candidate-executable> \
   --bundle <candidate-build-directory>/bundle \
   --library <release-rust-library>
@@ -232,6 +236,12 @@ configuration and source/lockfile hashes; `benchmark-mobi-rust` includes it in
 the report. Keep `--bundle` for Dart CLI bundle repeats and omit `--library`;
 standalone executables need no `--bundle`. Preserve existing datasets:
 adding a workload changes the dataset hash and requires a new matched baseline.
+
+The Dart orchestration retains the existing frozen dataset/report protocols,
+raw sample arrays, upper-middle median and nearest-rank p95 definitions. It
+checks worker-reported statistics against those samples and keeps SHA-256
+evidence for inputs, expected outputs and artifacts; changing the tool language
+does not make incompatible or unverified runs comparable.
 
 The comparator rejects different datasets, expected outputs, SDKs, machines,
 sampling parameters and incomplete/unverified runs. It reports warm median/p95,
@@ -269,11 +279,11 @@ The first SSE/MOI series gave only 4.2–5.4× PalmDOC speedups and slower HUFF
 medians than Dart. CST/DCO/NOM improved the bridge configuration, but the large
 PalmDOC batch still raised whole-process peak RSS by about 30 MiB. The measured
 CST/DCO Rust dylib is 915,024 bytes and its Dart executable 6,178,784 bytes,
-versus 6,079,712 bytes for the Dart worker. CLI bundles also contain Vellum's
+versus 6,079,712 bytes for the Dart worker. CLI bundles also contain Pagecraft's
 PDFium/Objective-C assets; these figures do not measure an APK/IPA size delta.
 
-This historical experiment selected CST/DCO/NOM. Production now uses Vellum's
-internal Rust crate `vellum_mobi_native` for MOBI/KF8 record I/O and decoding;
+This historical experiment selected CST/DCO/NOM. Production now uses Pagecraft's
+internal Rust crate `pagecraft_mobi_native` for MOBI/KF8 record I/O and decoding;
 the [reader part comparison](reader_native/README.md) uses that backend against
 the retained Dart reference. The measurements above do not establish
 book-open/first-page time, batch-size/memory tradeoffs or mobile FPS.

@@ -17,7 +17,7 @@ import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';
@@ -190,7 +190,7 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('opens on vellum with its contents and the sentence read', (
+  testWidgets('opens on pagecraft with its contents and the sentence read', (
     tester,
   ) async {
     await pumpReader(tester);

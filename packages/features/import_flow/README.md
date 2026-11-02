@@ -32,7 +32,7 @@ Future<ImportFlowResult?> showImportFlowSheet(
   cancellation remains silent and late picker errors do not emit after close.
 - `onImportBook` — called after a file is picked; returns the persisted
   `Book?`. The default helper is `importBookFile(...)`, which reads the
-  metadata with `vellum` and persists via `BookRepository`: the title,
+  metadata with `pagecraft` and persists via `BookRepository`: the title,
   author and a 480×720 JPEG cover from `readComicMetadata` (file name,
   first page), `readPdfMetadata` (Info title, or the file name; the first
   page), `readEpubMetadata`, `readFb2Metadata` and `readMobiMetadata` (the
@@ -238,7 +238,7 @@ and live extraction require separate device checks.
 ## Dependencies
 
 - `book_repository` — persistence
-- `vellum` — `read*Metadata` and `VellumException` (`package:vellum/all_formats.dart`)
+- `pagecraft` — `read*Metadata` and `PagecraftException` (`package:pagecraft/all_formats.dart`)
 - `domain_models` — `BookFormat`
 - `component_library` — `showAppBottomSheet`, `BottomSheetHeader`,
   `ActionBottomSheetLayout`, `AppDrillInRow`, `AppPlainIconButton`,

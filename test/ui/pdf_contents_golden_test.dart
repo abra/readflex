@@ -6,7 +6,8 @@ import 'package:reader/reader.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_page_grid.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:vellum/all_formats.dart' show FixedPagesView;
+import 'package:pagecraft/all_formats.dart' show FixedPagesView;
+import 'package:pagecraft/testing.dart' show preparePdfEngineForTests;
 
 import '../support/pdf_fixture.dart';
 import '../support/ui_test_app.dart';
@@ -15,6 +16,7 @@ import 'golden_support.dart';
 
 void main() {
   setUpAll(loadUiFonts);
+  setUpAll(preparePdfEngineForTests);
   for (final profile in VisualProfile.values) {
     testWidgets('PDF contents with chapters and pages ${profile.name}', (
       tester,

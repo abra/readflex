@@ -17,7 +17,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Helper class called from Dart via JNIgen.
+ * Helper class called from Dart through the hand-written JNI bridge.
  *
  * The Context is obtained in Dart with ActivityThread.currentApplication()
  * and passed through the constructor.

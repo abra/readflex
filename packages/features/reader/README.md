@@ -1,7 +1,7 @@
 # reader
 
 Full-screen reader for books, comics, and saved articles. The single route
-(`/reader/:sourceId`) hosts the page, drawn by the `vellum` engine, reader
+(`/reader/:sourceId`) hosts the page, drawn by the `pagecraft` engine, reader
 chrome, and a text-selection context panel populated by pluggable
 `TextAction`s.
 
@@ -200,7 +200,7 @@ callbacks of the body that draws it, wired to the blocs where it is built.
 `_ReadyContent` picks the body and surface by source type and format
 (`_PageKind`): articles scroll on `ReaderArticleSurface`, CBZ on
 `ReaderComicSurface`, PDF on `ReaderPdfSurface`, EPUB, FB2 and MOBI/AZW3 on
-`ReaderTextSurface`, all on `package:vellum`. The types the page reports
+`ReaderTextSurface`, all on `package:pagecraft`. The types the page reports
 (`BookPosition`, `ReaderTocItem`, `ReaderDocumentFeatures`, search events,
 `ReaderSelection` and its parts) live in this package. A body that cannot
 open or lay out its document adds `ReaderSurfaceFailed` with the error.
@@ -210,12 +210,12 @@ is `fb4b4e5c`. Saved positions, highlights and bookmarks keep the forms it
 wrote.
 
 Paginated books, PDFs and comics observe the global `ReaderPageAnimation`
-through appearance state and map it to Vellum's `PageTurnAnimation`.
+through appearance state and map it to Pagecraft's `PageTurnAnimation`.
 Animation and the horizontal/vertical
 axis are independent. Changing the effect preserves the controller, current
 CFI, text layout, selection and fixed-page zoom; it does not reopen the book.
 An animation already in progress finishes with its original effect. The
-engine owns presentation; preferences and Cubit remain outside Vellum.
+engine owns presentation; preferences and Cubit remain outside Pagecraft.
 
 ### Comics (`_ReaderComicBody`, `ReaderComicSurface`)
 
@@ -248,7 +248,7 @@ For a PDF the body mounts `_ReaderPdfBody`: it opens the file with
 `ReaderSurfaceFailed`), restores the page from
 the saved CFI or fraction, and shows `FixedPagesView` over `PdfPages`,
 with the Appearance sheet's page turn as its `axis`, margin trimming as
-`visibleRectOf` and page colours as `pageColors` (vellum's
+`visibleRectOf` and page colours as `pageColors` (pagecraft's
 `pageColorsFor`: a colour matrix, so the same pixels under Impeller and
 Skia).
 The outline becomes `ReaderTocUpdated` with page CFIs as hrefs, the
@@ -261,9 +261,9 @@ body's numbers. Text layers come from a `PdfTextLayerCache` (the pages on
 screen and their neighbours are loaded ahead); `PdfTextOverlay` draws
 saved text highlights resolved on the page (`resolvePdfTextAnchor`: the
 DOM CFIs the WebView reader wrote resolve by the highlight's text,
-vellum's by range), the search hit and the selection. A long press selects
+pagecraft's by range), the search hit and the selection. A long press selects
 a word and feeds `ReaderSelectionCubit` the exact text,
-the sentence as `contextText`/`markedContextText`, vellum's range CFI and
+the sentence as `contextText`/`markedContextText`, pagecraft's range CFI and
 the selection rect as viewport fractions; a tap on a saved highlight
 focuses `ReaderHighlightFocusCubit` with the sentence as context. Margin
 crops (`trimPageMargins`) are measured per page with
@@ -280,12 +280,12 @@ providers; image-area commands are inert.
 ### Text books (`_ReaderTextBody`, `ReaderTextSurface`)
 
 For an EPUB, FB2 or MOBI/AZW3 book the body mounts `_ReaderTextBody`: it
-opens the file with vellum (`EpubBook`, `Fb2Book`, `MobiBook` from
-`package:vellum/all_formats.dart`, the source by `textBookSourceOf`; a
+opens the file with pagecraft (`EpubBook`, `Fb2Book`, `MobiBook` from
+`package:pagecraft/all_formats.dart`, the source by `textBookSourceOf`; a
 failure reports `ReaderSurfaceFailed`) and shows `TextPagesView` over a
 `TextPagesController` restored from the saved CFI, or the fraction for rows
 saved without one. Its effective `rtl` drives swipes, spread order and reported
-`BookPosition.pageProgressionRtl` for edge taps. Vellum resolves it once before
+`BookPosition.pageProgressionRtl` for edge taps. Pagecraft resolves it once before
 the first spread from declared RTL, an RTL language or bounded body-text
 sampling, retaining Readflex's former foliate-js fallback for books with
 missing or misleading metadata. It does not depend on the app locale.
@@ -324,7 +324,7 @@ hides while the page moves (`ReaderSelectionCubit.setAdjusting`) and its
 actions get the whole range. The reader's sheet (`buildBookCustomCSS`)
 gives tables `width: max-content`, `max-width: max(100%, 40em)` and
 `overflow-x: auto` and keeps their words whole, so a table wider than the
-page scrolls sideways in it, as the WebView reader's wrapper did (vellum
+page scrolls sideways in it, as the WebView reader's wrapper did (pagecraft
 turns the page with a swipe on a table at its edge). Saved highlights are resolved in each
 section's document and tinted under the text with the theme's colour and
 opacity; the selection's colour preview and the search hit are tinted
@@ -339,7 +339,7 @@ is flattened from level 1, so sub-chapters indent.
 
 ### Articles (`_ReaderArticleBody`, `ReaderArticleSurface`)
 
-A saved article opens on vellum, as one scrolling column.
+A saved article opens on pagecraft, as one scrolling column.
 `ArticleTextSource` reads the article's `content.html` cleaned as the
 former WebView shell cleaned it
 and its pictures from its `images/` folder; `TextScrollController` lays
@@ -347,12 +347,12 @@ it out the width of the window less the side margin (the shell's
 `articleSidePadding` share), no wider than 32 em of prose, below the
 status bar plus 32 and above the home indicator plus 40, and keeps the
 sentence read across a new size, style or font. The style is the books'
-(`_vellumBookStyle`) with the reader's layout, font and colours always
+(`_pagecraftBookStyle`) with the reader's layout, font and colours always
 on, and the shell's softer captions (72%), quotes (86%) and table rules
 (22%) ahead of the reader's sheet. Everything stored keeps the shell's
 forms, so what was saved while articles read in the WebView still
 resolves. `ReaderDocument.language` passes the saved article language into
-`ArticleTextSource`; Vellum normalizes document language and text direction
+`ArticleTextSource`; Pagecraft normalizes document language and text direction
 from that hint and the content, retaining explicit direction on content
 elements. The interface locale does not set the article's text direction.
 Articles report `pageProgressionRtl: false`, so their progress line fills
@@ -391,7 +391,7 @@ left to right in every interface locale.
 - **Search** — the sentences in order (`searchArticle`), each hit with
   its heading; every hit is tinted, the one opened apart; one hidden
   under the search bar is marked on the bar's edge
-  (`ReaderSearchOcclusionMarker`, which vellum books use too).
+  (`ReaderSearchOcclusionMarker`, which pagecraft books use too).
 - **Links** — an `#id` scrolls its element to the top, a web, mail or
   phone address goes to the link sheet, a path inside the saved article
   does nothing.
@@ -456,7 +456,7 @@ also gets the reader's Columns choice:
 - **One**: one column at the measure; the margins grow around it.
 - **Two**: a spread in either orientation.
 
-vellum lays the pages out again only when the window or the choice changes
+pagecraft lays the pages out again only when the window or the choice changes
 the columns. Narrow windows, phones included, keep one column at the
 measure whatever the choice says; articles always keep one column at the
 measure; PDF and comic pages keep their own layout. Appearance shows
@@ -465,7 +465,7 @@ wide window (`showReaderAppearanceSheet(showColumnControls:)`); the choice is
 a per-book override like the other rows (`ReaderAppearanceCubit.setColumns`,
 `ReaderAppearanceOverride.columns`) and Reset clears it. Root
 `test/ui/reader_text_layout_test.dart` follows the page settings through
-window changes; vellum's `text_page_geometry_test.dart` covers the layout
+window changes; pagecraft's `text_page_geometry_test.dart` covers the layout
 itself.
 
 In every window the page settings also carry the side safe-area insets
@@ -891,7 +891,7 @@ tap on the already-selected Yellow swatch. The Highlight action saves it.
 For books and articles `ReaderTextSelectionStyle` derives the temporary fill
 from the same accent as the current Cupertino/Material handles. On iOS this
 avoids inheriting MaterialApp's primary tint for Cupertino's blue handles.
-Flutter draws these selection controls over Vellum's text layout.
+Flutter draws these selection controls over Pagecraft's text layout.
 The reader supplies its own action popup in place of Flutter's default toolbar.
 The saved annotation palette is separate.
 
@@ -912,11 +912,11 @@ failure.
   subscribe to multiple BLoC/Cubit sources via `context.select` and feed
   ready values into dumb leaf widgets (`_ReaderBottomChrome`,
   `_ContextPanel`). All BLoC/Cubit interaction lives in drivers.
-- **`_ReaderTextBody`, `_ReaderPdfBody`, `_ReaderComicBody`** host vellum's
+- **`_ReaderTextBody`, `_ReaderPdfBody`, `_ReaderComicBody`** host pagecraft's
   pages keyed on the source id, so a source swap rebuilds them cleanly. Each
   maps domain highlights and bookmarks onto its engine: text highlights by
   CFI, comic highlights as normalized areas keyed by page index.
-- **`_ReaderArticleBody`** hosts vellum's `TextScrollView` for article
+- **`_ReaderArticleBody`** hosts pagecraft's `TextScrollView` for article
   sources (see Articles above). Articles scroll vertically, report progress
   through stable sentence anchors in `content.html`, expose
   contents/search/bookmark chrome actions, and render text highlights through
@@ -927,7 +927,7 @@ failure.
   through `context.motion(AppMotion.x)`, so reduced motion settles in one
   frame; the appearance step and tap-zone hint controllers jump instead.
 - Reader theme (`ReaderThemeData`, font preset, layout preset) is resolved
-  from `ReaderAppearanceCubit` into vellum's `BookStyle` and page settings;
+  from `ReaderAppearanceCubit` into pagecraft's `BookStyle` and page settings;
   the bodies subscribe to the document, readiness, appearance and annotation
   state they need, not to each selection-menu update. Rebuilding a body does
   not recreate its pages unless the source changes.
@@ -941,14 +941,14 @@ failure.
   own hit targets. Text books retain the dismiss-only page barrier. Each edge
   zone is `readerLeftTapZoneEnd` (30%) of the page.
 - Code typography retains the system monospace families and adds the bundled
-  symbol fallback for missing callout numerals. vellum's document normalizer
+  symbol fallback for missing callout numerals. pagecraft's document normalizer
   excludes publisher annotations/captions from code detection, so a long
   explanation does not become a code panel merely because its class name
   contains `code`.
 - Book and article tables follow CSS's automatic layout, as wide as their
   content up to 40em with their words whole; one wider than the page
   scrolls sideways inside it (`overflow-x: auto` in the reader's sheet,
-  vellum's `ColumnScroller`). `test/book_table_layout_test.dart` lays tables
+  pagecraft's `ColumnScroller`). `test/book_table_layout_test.dart` lays tables
   out under the reader's sheet; `integration_test/table_rendering_test.dart`
   scrolls one on a device.
 
@@ -960,7 +960,7 @@ failure.
   search history, and global reader brightness preference persistence
 - `screen_control_service` — content-only keep-awake plus temporary
   application brightness control
-- `vellum` — the reader engine: text, comic, PDF and article pages, CFIs,
+- `pagecraft` — the reader engine: text, comic, PDF and article pages, CFIs,
   search and selection
 - `shared` — `TextAction`, `TextSelectionContext`
 - `domain_models` — `Book`, `SourceType`

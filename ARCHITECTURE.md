@@ -45,7 +45,7 @@ Preferred package shapes:
 - `packages/<name>_repository` for domain persistence and data-source
   orchestration.
 - `packages/<name>_service` for platform, backend, or infrastructure contracts.
-- A named specialized package such as `component_library` or `vellum`
+- A named specialized package such as `component_library` or `pagecraft`
   when the responsibility is neither a feature nor a
   repository/service.
 
@@ -203,11 +203,11 @@ unchanged; the phone golden profiles prove it.
   shows two columns of rows, and the selection bar keeps its actions in one
   row. The empty state, like onboarding, stops at
   `AppSizes.centeredColumnMaxWidth` in every window.
-- Reader: a measure of 32em of body text reaches vellum's page settings in
+- Reader: a measure of 32em of body text reaches pagecraft's page settings in
   every window (phone pages in portrait are narrower than it); wide windows
-  add the Auto / One / Two Columns choice. vellum lays out one column or a
+  add the Auto / One / Two Columns choice. pagecraft lays out one column or a
   landscape spread, and articles keep one centred column. See the reader and
-  vellum READMEs.
+  pagecraft READMEs.
 
 Reading text size is not a layout, so it has its own rule: a tablet-sized
 window, at least 600 on its shortest side (Android's `sw600dp`), renders book
@@ -215,7 +215,7 @@ and article text 12.5% larger (`readerDeviceFontScale` in the reader). The
 shortest side ignores orientation, so rotation never resizes the text, phones
 stay phones in landscape, and a narrow Split View window reads like a phone.
 The reader's own text size stays at 100%; the multiplier only reaches the
-book style vellum lays out with.
+book style pagecraft lays out with.
 
 Bottom sheets keep Material's 640dp width on wide windows. Side panels and
 popovers for tablets are not implemented.
@@ -298,7 +298,7 @@ remain for migration compatibility only (last revision `189e2cc1`).
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, Practice, and app composition. Practice limits (`practiceNewCardsPerDay`, `practiceReviewHighlights`, `practiceDesiredRetention`) are edited in the Practice settings sheet. |
 | `review_scheduler` | FSRS-6 over the vendored `fsrs`: computes the next review state and log for a rating at the reader's desired retention, previews intervals. Study days start at 04:00; day-level intervals are at least a day, ordered by rating and capped at 365; one learning and one relearning step of 10 min because the step is not persisted; fuzzing off so previews match. Held to py-fsrs by a 118-history reference test. | Used by `fsrs_repository` only. |
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
-| `vellum` | Reader engine: Dart containers, document/CSS models, paged EPUB/FB2/MOBI, scrolling articles, comic pages, PDFium rendering, CFIs, progress, search, Flutter adaptive text selection, highlights and import metadata. Its internal Rust crate handles MOBI text-record I/O/decompression; `package:vellum/testing.dart` builds fixtures. | Used by Reader through `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. Format libraries export the core `vellum.dart`; the core imports no format and formats never import each other (`test/library_boundaries_test.dart`). See [Vellum's README](packages/vellum/README.md) for capabilities and native bundling limits. |
+| `pagecraft` | Reader engine: Dart containers, document/CSS models, paged EPUB/FB2/MOBI, scrolling articles, comic pages, PDFium rendering, CFIs, progress, search, Flutter adaptive text selection, highlights and import metadata. Its internal Rust crate handles MOBI text-record I/O/decompression; `package:pagecraft/testing.dart` builds fixtures. | Used by Reader through `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. Format libraries export the core `pagecraft.dart`; the core imports no format and formats never import each other (`test/library_boundaries_test.dart`). See [Pagecraft's README](packages/pagecraft/README.md) for capabilities and native bundling limits. |
 | `screen_control_service` | Keep-awake and brightness coordination for active reading sessions. | Wraps low-level brightness plugin. |
 | `toast_service` | Thin toastification wrapper: bottom-anchored toasts that float above controls marked with `ToastAvoidArea`; `ToastNavigatorObserver` on the root navigator clears them when a sheet or dialog opens. | Feature packages do not import toastification directly. |
 
@@ -323,8 +323,8 @@ they keep their upstream license, structure and style, and each one's
 |---------|------------|---------------------------|
 | `library_feature` (`packages/features/library`) | Main Library screen, source search/list/grid, collection scope/management, and entry into Practice through a separate icon above "+" with a due badge. | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `fsrs_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
 | `practice` | Practice section pushed above the Library: hub (today, Vocabulary, Highlights, by book), Vocabulary and Highlights lists, full-screen review session. | `article_repository`, `book_repository`, `component_library`, `dictionary_repository`, `domain_models`, `fsrs_repository`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
-| `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `readflex_localizations`, `vellum` |
-| `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `screen_control_service`, `shared`, `toast_service`, `vellum` |
+| `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `readflex_localizations`, `pagecraft` |
+| `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `screen_control_service`, `shared`, `toast_service`, `pagecraft` |
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `readflex_localizations`, `shared` |
 | `translate` | Reader text action and contextual translation bottom sheet; Save in the word header keeps the word for review. | `component_library`, `contextual_translation_service`, `dictionary_repository`, `preferences_service`, `readflex_localizations`, `shared`, `toast_service` |
 | `dictionary` | Reader Define action and monolingual definition bottom sheet with system-first fallback; Save in the word header keeps the word for review (only in the Readflex sheet, the native UI has none). | `component_library`, `dictionary_repository`, `dictionary_service`, `readflex_localizations`, `shared`, `toast_service` |
@@ -369,14 +369,14 @@ The reader is intentionally split across several packages:
 
 | Package | Responsibility |
 |---------|----------------|
-| `vellum` | The engine: `ComicBook` over its own ZIP reader, `FixedPagesView` (PageView spreads, pinch and double-tap zoom, tap arbitration), `ComicImageAreaLayer`, `ComicPageImage`/`ComicPageThumbnail`; PDF; reflowable books through `TextPagesView` (EPUB, FB2, MOBI); articles through `TextScrollView`. |
-| `features/reader` | Reader screen, reader bloc/cubits, chrome, Contents and Search sheets, appearance, search, selection, brightness, keep-awake, and the page's types (`BookPosition`, `ReaderTocItem`, search events, selections). Commands to the page go through `ReaderSurface`: `ReaderTextSurface` (EPUB, FB2, MOBI on vellum's `TextPagesView`), `ReaderComicSurface`, `ReaderPdfSurface` and `ReaderArticleSurface` (articles on vellum's `TextScrollView`); the source type and format pick the body and surface. |
+| `pagecraft` | The engine: `ComicBook` over its own ZIP reader, `FixedPagesView` (PageView spreads, pinch and double-tap zoom, tap arbitration), `ComicImageAreaLayer`, `ComicPageImage`/`ComicPageThumbnail`; PDF; reflowable books through `TextPagesView` (EPUB, FB2, MOBI); articles through `TextScrollView`. |
+| `features/reader` | Reader screen, reader bloc/cubits, chrome, Contents and Search sheets, appearance, search, selection, brightness, keep-awake, and the page's types (`BookPosition`, `ReaderTocItem`, search events, selections). Commands to the page go through `ReaderSurface`: `ReaderTextSurface` (EPUB, FB2, MOBI on pagecraft's `TextPagesView`), `ReaderComicSurface`, `ReaderPdfSurface` and `ReaderArticleSurface` (articles on pagecraft's `TextScrollView`); the source type and format pick the body and surface. |
 | `shared` | `TextAction` plugin contract used by reader context-panel actions. |
 | `features/highlight` | Implements `HighlightAction`. |
 | `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
 | `features/dictionary` | Implements `DictionaryAction` and owns the remote definition sheet/cubit. |
 
-Vellum's `TextPagesController` resolves book page progression before displaying
+Pagecraft's `TextPagesController` resolves book page progression before displaying
 the first spread, retaining Readflex's former foliate-js extension: declared
 RTL or an RTL language, otherwise body-text majority across a bounded sample
 of linear sections. Sampling reads at most 12 sections (512 KiB per section,
@@ -389,7 +389,7 @@ Page-turn animation is a UI preference independent of paging direction.
 `LibraryPageAnimationCubit` owns its choice in Library's Display sheet;
 Reader appearance observes the global value without editing it. Legacy
 per-source animation keys are ignored while retaining other overrides. Reader
-maps it to Vellum's `PageTurnAnimation`, without passing preferences into the
+maps it to Pagecraft's `PageTurnAnimation`, without passing preferences into the
 engine. Text and fixed-layout viewers retain their input/controller logic and
 feed one normalized `PageTurnFrame`; shared strategies, `PageTurnLayer` and
 `PageTurnDecoration` own geometry, clipping and painting. Active turns freeze
@@ -438,7 +438,7 @@ after the last request using it. The coordinator disposes both providers.
 Library state holds `LibrarySource` projections rather than full article bodies.
 `ArticlesDao.libraryEntries` selects only metadata, and `ArticleRepository`
 maps it into domain values. Reader/detail paths keep their full article reads.
-Publisher EPUB/MOBI6/KF8 markup is parsed into Vellum's `ContentDocument`.
+Publisher EPUB/MOBI6/KF8 markup is parsed into Pagecraft's `ContentDocument`.
 `SectionPreparer` resolves its styles and builds layout boxes in an isolate;
 publisher scripts are not executed. Saved article HTML uses the separate
 article sanitizer described below.
@@ -491,7 +491,7 @@ Reader-specific UI state is split by responsibility:
   position handler reports book page turns.
 
 The page is kept behind ready-state reader composition so routine UI changes
-do not recreate it. Every source is drawn by vellum; there is no WebView and
+do not recreate it. Every source is drawn by pagecraft; there is no WebView and
 no local reader server (removed in R6; the last revision with them is
 `fb4b4e5c`). Books open as pages: EPUB, FB2 and MOBI/AZW3 on `TextPagesView`,
 CBZ and PDF on `FixedPagesView`. Articles scroll: `ArticleTextSource` reads
@@ -516,7 +516,7 @@ browser and `mailto:`/`tel:` in their apps. Highlight colours, search tints
 and the symbol font fallback come from shared modules, so articles and books
 render the same tokens alike.
 
-Page zoom for comics and PDF lives in vellum's `FixedPagesView`: edge taps are
+Page zoom for comics and PDF lives in pagecraft's `FixedPagesView`: edge taps are
 immediate, centre taps distinguish chrome from double-tap zoom, and zoomed
 drags only pan. PDF pages keep text selection and link taps under zoom.
 Flutter owns chrome visibility and physical/logical page commands
@@ -571,12 +571,12 @@ completion/failure through a listener without rebuilding the page subtree;
 the context popup does not report success when merely enqueueing an edit.
 
 A page that cannot open or lay out its document reports `ReaderSurfaceFailed`
-with the error; the feature shows its localized error/retry state. vellum does
+with the error; the feature shows its localized error/retry state. pagecraft does
 not access repositories or feature cubits.
 
-Publisher scripts never run: vellum lays out the document and executes no
+Publisher scripts never run: pagecraft lays out the document and executes no
 script. Article images are activated only after the repository's guarded
-download succeeds; vellum also cleans legacy saved fragments as the shell did
+download succeeds; pagecraft also cleans legacy saved fragments as the shell did
 and reads only pictures under the article's `images/` folder. These policies
 live in the content-loading layers, separately from typography.
 
@@ -588,7 +588,7 @@ Book import:
 ImportFlowSheet
   -> pickBookFile callback from routing.dart
   -> importBookFile helper in import_flow
-  -> vellum reads the title, author and cover (every format)
+  -> pagecraft reads the title, author and cover (every format)
   -> BookRepository stores file/metadata
   -> deletePickedBookFile removes the picker's temp/cache copy
 ```
@@ -600,7 +600,7 @@ ImportFlowSheet
   -> ArticleExtractionService downloads/cleans article
   -> ArticleRepository stores article, body images, and content.html
      (the og:image stays a remote imageUrl; it is not downloaded)
-  -> Reader opens content.html on vellum (ArticleTextSource, TextScrollView)
+  -> Reader opens content.html on pagecraft (ArticleTextSource, TextScrollView)
   -> ReaderBloc persists the same source progress model through repositories
 ```
 
@@ -718,37 +718,37 @@ registered for disposal before the services and closes after them, also on
 bootstrap rollback; services close only clients they created. Article page
 downloads never use it: they keep the extraction service's own pinned client.
 
-Every book and article is drawn by `vellum`; there is no engine switch. A
+Every book and article is drawn by `pagecraft`; there is no engine switch. A
 book the text body does not lay out yet (vertical writing, a fixed-layout
-EPUB: `TextBookUnsupported`) shows the open error until vellum draws it
+EPUB: `TextBookUnsupported`) shows the open error until pagecraft draws it
 (R3/R4 in the native reader plan).
 
-`vellum` delegates only MOBI/KF8 text-record I/O, trailing-entry removal and
-PalmDOC/HUFF-CDIC decompression to its Rust crate in `packages/vellum/rust` over
+`pagecraft` delegates only MOBI/KF8 text-record I/O, trailing-entry removal and
+PalmDOC/HUFF-CDIC decompression to its Rust crate in `packages/pagecraft/rust` over
 `flutter_rust_bridge` 2.13.0. PDB/MOBI headers, combined-file selection,
 metadata, resources, chapter reconstruction, document parsing and layout stay
-in Dart. The crate and native library retain the name `vellum_mobi_native`;
-there is one Dart package, `vellum`. The wrapper, loader and generated Dart
+in Dart. The crate and native library use the name `pagecraft_mobi_native`;
+there is one Dart package, `pagecraft`. The wrapper, loader and generated Dart
 bindings are private to `lib/src/formats/mobi/native/`. This backend has no
 Flutter UI, domain or repository dependencies.
 MOBI 6 requests its text in one batch; KF8 keeps record reads on demand and its
 existing Dart range caches. The native session starts lazily, serializes reads
 on the FRB pool and drains them before closing its file/dictionary/opaque handle.
 Failed book opening closes both native and PDB resources. Native read errors
-surface as `VellumException`; there is no silent backend retry.
+surface as `PagecraftException`; there is no silent backend retry.
 
-Vellum's `hook/build.dart` compiles the locked Cargo crate in release mode
+Pagecraft's `hook/build.dart` compiles the locked Cargo crate in release mode
 with its pinned rustup compiler and bundles it through Native Assets. Native
 assets, including PDFium, are built/bundled even for consumers importing another
-Vellum format. Generated bindings and build lockfiles are versioned; development
+Pagecraft format. Generated bindings and build lockfiles are versioned; development
 requires rustup and the target platform toolchain. Host tests/CLI resolve the
 build-hook asset, and packaged apps use FRB's platform loader. `make analyze`
 includes Rust checks; `make test` includes Rust and bridge/session tests.
-See [the native backend notes](packages/vellum/doc/mobi_native.md) for setup and regeneration.
+See [the native backend notes](packages/pagecraft/doc/mobi_native.md) for setup and regeneration.
 
 The current Dart decoders remain the explicit parity reference through
 `MobiContainer.open(..., useDartTextReader: true)` or the diagnostic build define
-`VELLUM_MOBI_USE_DART=true`; this is not a reader UI preference. The historical
+`PAGECRAFT_MOBI_USE_DART=true`; this is not a reader UI preference. The historical
 `benchmarks/mobi_rust` prototype remains independent of the app graph, while
 `benchmarks/reader_native` compares production MOBI containers with the Dart
 reference. Other format/parser candidates remain experiments. Device packaging
@@ -786,7 +786,8 @@ make test
 
 `make verify` is the full local quality gate. It checks formatting without
 rewriting files, analyzes the root app and every active package, then runs
-Rust, Dart and Flutter tests plus the Node test-harness checks. Rust formatting
+Rust, Dart and Flutter tests, including the Dart development-tool tests in
+`test/tooling/`. `make test-tools` runs that subset separately. Rust formatting
 and Clippy are part of `make analyze`.
 
 `make test-ui-contracts` is a focused subset for shared components, accessibility,
@@ -828,9 +829,19 @@ keyboard frames rebuild no grid tile; bursty reader search bounds emissions
 and published result entries without losing matches. `make test-performance` records workload timing separately in
 `.local/performance/`. Timings are diagnostic, not machine-independent CI limits.
 
-Node.js 20+ runs the test-harness checks in `make test`, coverage reports,
-benchmark orchestration and Vellum data-table generators. The normal test
-suite does not require browser engines.
+Development tools under `scripts/` use the pinned Dart SDK for coverage reports,
+benchmark orchestration and corpus selection. Their tests validate frozen
+inputs, source/artifact hashes and worker evidence; benchmark raw samples and
+median/p95 definitions are unchanged. Corpus files with equal sizes are ordered
+by path code units, independent of the host locale, so a newly selected corpus
+can differ from an older locale-collated selection. Preserve frozen datasets
+for comparisons.
+
+Node.js is optional only for regenerating Pagecraft's independent ICU sentence
+reference (`test/fixtures/icu_sentence_breaks.mjs` within that package). Normal
+builds and tests use committed reference data and need no browser engine. The
+Foliate fixture recordings and search-fold generator names in Pagecraft's docs
+describe historical provenance, not steps in the current test harness.
 
 Focused package changes can use package-level `flutter test` or `dart test`.
 Use broader checks when changing:
@@ -838,7 +849,7 @@ Use broader checks when changing:
 - shared contracts;
 - repository behavior;
 - package dependencies;
-- reader, vellum, or import flow behavior;
+- reader, pagecraft, or import flow behavior;
 - app composition/routing.
 
 Performance-sensitive reader/import changes should also be validated with the

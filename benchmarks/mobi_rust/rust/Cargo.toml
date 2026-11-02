@@ -1,5 +1,5 @@
 [package]
-name = "vellum_mobi_benchmark"
+name = "pagecraft_mobi_benchmark"
 version = "0.1.0"
 edition = "2024"
 publish = false

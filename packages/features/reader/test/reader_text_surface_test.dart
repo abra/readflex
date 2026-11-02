@@ -4,9 +4,9 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_search_event.dart';
 import 'package:reader/src/reader_text_surface.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
-/// The surface's commands on a real FB2 laid out by vellum.
+/// The surface's commands on a real FB2 laid out by pagecraft.
 String fb2() =>
     '<?xml version="1.0" encoding="UTF-8"?>'
     '<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" '

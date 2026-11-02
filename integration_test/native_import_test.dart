@@ -6,13 +6,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:vellum/testing.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/testing.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
-/// Book import through `vellum` on a real device: the platform image
+/// Book import through `pagecraft` on a real device: the platform image
 /// codecs decode each format's cover and the Library shows the results.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();

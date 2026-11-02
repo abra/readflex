@@ -11,7 +11,7 @@ static DeviceScreenBrightnessResult dsb_error(int32_t code) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ANDROID — stubs (brightness control via JNIgen in Dart, not FFI)
+// ANDROID — stubs (brightness control uses the Dart JNI bridge)
 // ═══════════════════════════════════════════════════════════════════════════
 #if defined(__ANDROID__)
 

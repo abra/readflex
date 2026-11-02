@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_article_surface.dart';
 import 'package:reader/src/reader_search_event.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 /// An article as the import marks it: a heading per part, a sentence
 /// per paragraph.

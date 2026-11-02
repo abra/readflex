@@ -9,7 +9,8 @@ import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_page_grid.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:vellum/all_formats.dart' show FixedPagesView;
+import 'package:pagecraft/all_formats.dart' show FixedPagesView;
+import 'package:pagecraft/testing.dart' show preparePdfEngineForTests;
 
 import '../support/pdf_fixture.dart';
 import '../support/ui_test_app.dart';
@@ -18,6 +19,7 @@ import '../support/ui_test_driver.dart';
 /// The PDF reader wires its page controls end to end: Appearance sheet,
 /// the engine's page view and the Contents page grid.
 void main() {
+  setUpAll(preparePdfEngineForTests);
   testWidgets('PDF page appearance reaches the pages and Contents lists them', (
     tester,
   ) async {
@@ -60,6 +62,7 @@ void main() {
       timeout: const Duration(seconds: 30),
     );
     FixedPagesView view() => tester.widget<FixedPagesView>(pages);
+    await waitForFixedPage(tester);
     expect(view().visibleRectOf, isNotNull, reason: 'trimmed by default');
     expect(view().pageColors, isNotNull, reason: 'theme colours by default');
 

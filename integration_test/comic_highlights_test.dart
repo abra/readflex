@@ -10,7 +10,7 @@ import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_image_highlight_preview.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:vellum/all_formats.dart' show FixedPagesView;
+import 'package:pagecraft/all_formats.dart' show FixedPagesView;
 
 import '../test/support/comic_fixture.dart';
 import '../test/support/native_screenshots.dart';

@@ -79,12 +79,15 @@ dependencies:
 dev_dependencies:
   analyzer: ^10.0.1
   archive: ^4.5.0
+  crypto: ^3.0.6
   flutter_test:
+    sdk: flutter
+  flutter_driver:
     sdk: flutter
   integration_test:
     sdk: flutter
-  vellum:
-    path: packages/vellum
+  pagecraft:
+    path: packages/pagecraft
 
   bloc_test: ^10.0.0
   coverage: ^1.15.0

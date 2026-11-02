@@ -8,7 +8,7 @@ import 'package:reader/src/reader_search_event.dart';
 import 'package:reader/src/reader_search_navigation_bar.dart';
 import 'package:reader/src/reader_search_occlusion.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:vellum/all_formats.dart'
+import 'package:pagecraft/all_formats.dart'
     show TextColumnPage, TextPagesView, TextScrollView;
 
 import '../support/reading_fixture.dart';

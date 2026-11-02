@@ -12,7 +12,7 @@ boundaries, runtime containers, storage ownership, or integration points change.
 
 Readflex is a mobile reading app for imported books, saved web articles, and
 highlights. It runs on iOS and Android, stores user data locally, draws books
-and articles with its own reader engine (`vellum`), and optionally calls
+and articles with its own reader engine (`pagecraft`), and optionally calls
 remote article cleaning, contextual translation, and dictionary backends.
 
 ```mermaid
@@ -65,7 +65,7 @@ flowchart TB
     repos["Repositories and services\ncontent, preferences, connectivity, translation, dictionary, screen control"]
     db["Drift SQLite database\nreadflex.db"]
     files["App documents files\nbooks, articles"]
-    engine["vellum reader engine\nDart formats/layout, PDFium, Rust MOBI backend"]
+    engine["pagecraft reader engine\nDart formats/layout, PDFium, Rust MOBI backend"]
   end
 
   cleaner["Article Cleaner API"]
@@ -94,7 +94,7 @@ flowchart TB
 | Repositories/services | `packages/*_repository`, `packages/*_service`, specialized packages | Data source orchestration, platform/backend contracts, persistence boundaries. |
 | Local database | `packages/local_storage` | Drift schema, DAOs, migrations, storage rows. |
 | App files | App documents directory | Imported books, extracted article HTML and assets. |
-| Reader engine | `packages/vellum` | Opens EPUB, FB2, MOBI/KF8, CBZ, PDF and saved articles from their files, lays them out and draws their pages; import metadata, search, selection, CFIs. Its internal Rust crate in `rust/` handles MOBI record I/O and PalmDOC/HUFF-CDIC decoding over FRB, with lazy KF8 reads and batched MOBI 6 text. Vellum's build hook bundles it through Native Assets. |
+| Reader engine | `packages/pagecraft` | Opens EPUB, FB2, MOBI/KF8, CBZ, PDF and saved articles from their files, lays them out and draws their pages; import metadata, search, selection, CFIs. Its internal Rust crate in `rust/` handles MOBI record I/O and PalmDOC/HUFF-CDIC decoding over FRB, with lazy KF8 reads and batched MOBI 6 text. Pagecraft's build hook bundles it through Native Assets. |
 
 ## Level 3: Components
 
@@ -150,8 +150,8 @@ flowchart LR
 |---------|-------------|-------------|-------------------|
 | Library | `LibraryScreen` | `LibraryBloc`, layout/theme/locale/page-animation/selection cubits | Book, article, collection and FSRS repositories, preferences, toast wrapper. |
 | Practice | `PracticeScreen`, `ReviewSessionScreen`, `PracticeWordsScreen`, `PracticeHighlightsScreen` | `PracticeBloc`, `ReviewSessionBloc`, words/highlights/settings cubits | FSRS, dictionary, highlight, book and article repositories, preferences, toast wrapper. |
-| Import Flow | `showImportFlowSheet` | `ImportFlowCubit` | File picker/import callbacks, article import callback, vellum metadata extraction. |
-| Reader | `ReaderScreen` | `ReaderBloc` plus reader UI cubits | Book/article/highlight repositories, preferences, vellum, screen control, text actions. |
+| Import Flow | `showImportFlowSheet` | `ImportFlowCubit` | File picker/import callbacks, article import callback, pagecraft metadata extraction. |
+| Reader | `ReaderScreen` | `ReaderBloc` plus reader UI cubits | Book/article/highlight repositories, preferences, pagecraft, screen control, text actions. |
 | Highlight | `HighlightAction`, `HighlightSheet` | Immediate action plus `HighlightCubit` for the standalone sheet | Highlight repository, shared text action contract. |
 | Translate | `TranslateAction`, `TranslateSheet` | `TranslateCubit` | Contextual translation service, preferences, shared text action contract. |
 | Dictionary | `DictionaryAction`, `DictionarySheet` | `DictionaryCubit` | Native system dictionary bridge, remote dictionary service, shared text action contract. |
@@ -168,7 +168,7 @@ flowchart TB
   brightness["ReaderBrightnessCubit / KeepAwakeCubit"]
   pageBody["Page body\ntext, comic, PDF or article"]
   surface["ReaderSurface\ncommands to the page"]
-  vellum["vellum package"]
+  pagecraft["pagecraft package"]
   repos["Book / Article / Highlight repositories"]
   prefs["PreferencesService"]
   screenControl["ScreenControlService"]
@@ -179,8 +179,8 @@ flowchart TB
   readerScreen --> brightness
   readerScreen --> pageBody
   readerScreen --> surface
-  surface --> vellum
-  pageBody --> vellum
+  surface --> pagecraft
+  pageBody --> pagecraft
   pageBody -->|"positions, selections, taps"| readerBloc
   readerBloc --> repos
   appearance --> prefs
@@ -199,11 +199,11 @@ Reader-specific split:
 - `ReaderArticleProgressCubit` publishes live article scroll progress separately
   from throttled reading-position persistence.
 - Reader observes the global page animation chosen through Library's
-  `LibraryPageAnimationCubit`; Vellum resolves book progression from metadata
+  `LibraryPageAnimationCubit`; Pagecraft resolves book progression from metadata
   and a bounded content sample, independently of the UI locale.
-- The page bodies host vellum's views and translate their events into the
+- The page bodies host pagecraft's views and translate their events into the
   blocs and cubits; `ReaderSurface` carries the screen's commands to the
-  page. vellum owns formats, layout, search, selection and annotation
+  page. pagecraft owns formats, layout, search, selection and annotation
   drawing.
 
 ## Level 4: Code-Level Slices
@@ -254,12 +254,12 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-  participant Vellum as vellum controller
+  participant Pagecraft as pagecraft controller
   participant PageBody as Page body
   participant ReaderBloc
   participant Repository
 
-  Vellum->>PageBody: position changed
+  Pagecraft->>PageBody: position changed
   PageBody->>ReaderBloc: ReaderBookPositionUpdated
   ReaderBloc->>ReaderBloc: normalize article/book progress and emit state
   ReaderBloc->>ReaderBloc: debounce pending persistence

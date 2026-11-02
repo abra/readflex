@@ -106,7 +106,7 @@ tag alone must not hide the pronunciation of that selected word.
 There is no extra tokenizer or Dictionary API request.
 Below the result, the source sentence is paired with its translation under a
 **Sentence** caption.
-Book context is sentence-bounded in Vellum's selection-details extraction,
+Book context is sentence-bounded in Pagecraft's selection-details extraction,
 not trimmed or re-segmented in the sheet; unrelated
 sentences and clipped character-window prefixes are not part of that context.
 The selected range from the reader's
@@ -250,7 +250,7 @@ Root `make test-ui` adds modal
 goldens in five visual profiles, including words, complete text, language menus
 and collapsed/expanded lexical details.
 `make test-device DEVICE=<id>` exercises the reader-to-translation flow on the
-reader's vellum pages using deterministic services, including equality between the
+reader's pagecraft pages using deterministic services, including equality between the
 book's source sentence, the request context and the visible Sentence text.
 It does not test live providers.
 

@@ -74,7 +74,7 @@ class MobiRustLib
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
-        stem: 'vellum_mobi_benchmark',
+        stem: 'pagecraft_mobi_benchmark',
         ioDirectory: 'rust/target/release/',
         webPrefix: 'pkg/',
         wasmBindgenName: 'wasm_bindgen',

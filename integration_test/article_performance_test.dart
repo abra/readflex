@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:vellum/article.dart';
+import 'package:pagecraft/article.dart';
 
 import '../test/support/reading_fixture.dart';
 import '../test/support/ui_test_app.dart';
@@ -20,7 +20,10 @@ import '../test/support/ui_test_driver.dart' show unmountUi;
 /// real application bootstrap. Run on a device with `flutter drive --profile`.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
-  const repeats = int.fromEnvironment('VELLUM_PERF_REPEATS', defaultValue: 3);
+  const repeats = int.fromEnvironment(
+    'PAGECRAFT_PERF_REPEATS',
+    defaultValue: 3,
+  );
 
   testWidgets(
     'measures saving, opening, scrolling and searching an article',

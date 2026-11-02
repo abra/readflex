@@ -17,7 +17,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';
 import 'package:toast_service/toast_service.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import 'book_custom_css.dart';
 import 'reader_appearance_cubit.dart';

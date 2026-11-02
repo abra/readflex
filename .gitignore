@@ -74,8 +74,8 @@ tools/
 !/benchmarks/reader_native/pubspec.lock
 !/benchmarks/reader_native/rust/Cargo.lock
 /packages/**/rust/target/
-!/packages/vellum/pubspec.lock
-!/packages/vellum/rust/Cargo.lock
+!/packages/pagecraft/pubspec.lock
+!/packages/pagecraft/rust/Cargo.lock
 
 # FVM Version Cache
 .fvm/

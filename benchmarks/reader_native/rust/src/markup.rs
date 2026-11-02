@@ -8,7 +8,7 @@ use html5ever::{parse_document, tendril::TendrilSink};
 use markup5ever_rcdom::{Handle, NodeData, RcDom};
 use xmlparser::{ElementEnd, Token, Tokenizer};
 
-/// The same arena columns as Vellum's ContentDocument, transferred as typed arrays.
+/// The same arena columns as Pagecraft's ContentDocument, transferred as typed arrays.
 #[derive(Default, Debug)]
 pub struct NativeDocument {
     pub kinds: Vec<u8>,

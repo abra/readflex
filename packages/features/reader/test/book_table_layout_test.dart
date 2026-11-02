@@ -2,9 +2,9 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/book_custom_css.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
-/// Tables under the reader's style sheet, laid out by vellum with the test
+/// Tables under the reader's style sheet, laid out by pagecraft with the test
 /// font (every glyph a square as wide as the font size): as the WebView
 /// reader showed them, a table keeps its words whole and its content's
 /// width up to 40em, and scrolls sideways when that is wider than the

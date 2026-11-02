@@ -1,5 +1,5 @@
 name: reader
-description: Vellum reader for books, comics, PDFs, and saved articles.
+description: Pagecraft reader for books, comics, PDFs, and saved articles.
 version: 0.1.0
 publish_to: 'none'
 
@@ -35,8 +35,8 @@ dependencies:
     path: ../../screen_control_service
   toast_service:
     path: ../../toast_service
-  vellum:
-    path: ../../vellum
+  pagecraft:
+    path: ../../pagecraft
 
 dev_dependencies:
   flutter_test:

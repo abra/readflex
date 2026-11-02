@@ -10,7 +10,7 @@ This is not a subset tailored to a particular sentence. At about 181 KiB
 uncompressed, it avoids bundling unused variable-weight data.
 
 The app's common fallback chain uses it only when the primary UI font lacks
-a glyph. Book pages (vellum) fall back to it after the selected reading font,
+a glyph. Book pages (pagecraft) fall back to it after the selected reading font,
 and the reader's monospace code stack uses it for missing symbols. Text
 contents are not changed. The font provides monochrome symbols, not complete emoji or
 Unicode coverage.

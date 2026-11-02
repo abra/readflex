@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/painting.dart';
-import 'package:vellum/article.dart';
+import 'package:pagecraft/article.dart';
 
 import 'reader_search_event.dart';
 import 'reader_selection.dart';
@@ -43,7 +43,7 @@ class ReaderTextSession {
   final String locale;
 }
 
-/// The text engine (`package:vellum`) behind the [ReaderSurface] contract,
+/// The text engine (`package:pagecraft`) behind the [ReaderSurface] contract,
 /// for EPUB, FB2 and MOBI books.
 ///
 /// Navigation reaches the session's `TextPagesController`; search runs
@@ -210,7 +210,7 @@ class ReaderTextSurface implements ReaderSurface {
       Future<ImageProvider?>.value();
 }
 
-/// vellum's search events as the reader's: results in batches with the
+/// pagecraft's search events as the reader's: results in batches with the
 /// chapter title of their section, progress, done, or an error.
 Stream<ReaderSearchEvent> readerSearchEvents(
   Stream<TextSearchEvent> events, {
@@ -250,7 +250,7 @@ Stream<ReaderSearchEvent> readerSearchEvents(
   }
 }
 
-/// The selection payload the reader's text actions take, from vellum's
+/// The selection payload the reader's text actions take, from pagecraft's
 /// [details].
 ReaderSelection readerSelectionFromDetails(
   TextSelectionDetails details, {

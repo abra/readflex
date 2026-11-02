@@ -1,5 +1,5 @@
 name: mobi_rust_benchmark
-description: Isolated FRB candidate for the Vellum MOBI decoder experiment.
+description: Isolated FRB candidate for the Pagecraft MOBI decoder experiment.
 publish_to: none
 version: 0.1.0
 
@@ -8,8 +8,8 @@ environment:
 
 dependencies:
   flutter_rust_bridge: 2.13.0
-  vellum:
-    path: ../../packages/vellum
+  pagecraft:
+    path: ../../packages/pagecraft
 
 dev_dependencies:
   ffigen: 20.1.1

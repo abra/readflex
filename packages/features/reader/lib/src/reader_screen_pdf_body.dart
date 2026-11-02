@@ -1,6 +1,6 @@
 part of 'reader_screen.dart';
 
-/// Hosts the PDF engine (`package:vellum`) and translates its events into
+/// Hosts the PDF engine (`package:pagecraft`) and translates its events into
 /// the reader bloc and cubit updates every page body produces: pages,
 /// position, bookmarks, outline, text selection, saved highlights, search
 /// marks, margin crops and page colours.

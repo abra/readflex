@@ -7,14 +7,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:reader/src/reader_page_grid.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import '../test/support/comic_fixture.dart';
 import '../test/support/native_screenshots.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
-/// A comic on vellum in the real app: double-tap zoom keeps the page, edge
+/// A comic on pagecraft in the real app: double-tap zoom keeps the page, edge
 /// taps turn pages and hide the chrome, and Contents previews the pages.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();

@@ -4,11 +4,11 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:vellum/src/formats/mobi/mobi_compression.dart';
-import 'package:vellum/src/formats/mobi/mobi_container.dart';
-import 'package:vellum/src/formats/mobi/mobi_headers.dart';
-import 'package:vellum/src/formats/mobi/pdb.dart';
-import 'package:vellum/src/testing/mobi_builder.dart';
+import 'package:pagecraft/src/formats/mobi/mobi_compression.dart';
+import 'package:pagecraft/src/formats/mobi/mobi_container.dart';
+import 'package:pagecraft/src/formats/mobi/mobi_headers.dart';
+import 'package:pagecraft/src/formats/mobi/pdb.dart';
+import 'package:pagecraft/src/testing/mobi_builder.dart';
 
 import 'mobi_huff_fixture.dart';
 

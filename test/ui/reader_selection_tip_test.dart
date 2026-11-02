@@ -4,7 +4,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/reader.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:reader/src/reader_selection_tip.dart';
-import 'package:vellum/all_formats.dart' show TextColumnPage, TextPagesView;
+import 'package:pagecraft/all_formats.dart' show TextColumnPage, TextPagesView;
 
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';

@@ -3,11 +3,11 @@ import 'dart:typed_data';
 
 import 'package:reader_native_benchmark/reader_native.dart' as native;
 import 'package:test/test.dart';
-import 'package:vellum/src/container/zip_archive.dart';
-import 'package:vellum/src/document/content_document.dart';
-import 'package:vellum/src/formats/mobi/mobi_container.dart';
-import 'package:vellum/src/formats/mobi/pdb.dart';
-import 'package:vellum/src/testing/zip_builder.dart';
+import 'package:pagecraft/src/container/zip_archive.dart';
+import 'package:pagecraft/src/document/content_document.dart';
+import 'package:pagecraft/src/formats/mobi/mobi_container.dart';
+import 'package:pagecraft/src/formats/mobi/pdb.dart';
+import 'package:pagecraft/src/testing/zip_builder.dart';
 import 'package:xml/xml.dart';
 
 import '../bin/reader_parts_benchmark.dart' as benchmark;
@@ -17,10 +17,10 @@ void main() {
     () => native.ensureReaderNative(
       libraryPath: File(
         'rust/target/release/${Platform.isMacOS
-            ? 'libvellum_reader_benchmark.dylib'
+            ? 'libpagecraft_reader_benchmark.dylib'
             : Platform.isWindows
-            ? 'vellum_reader_benchmark.dll'
-            : 'libvellum_reader_benchmark.so'}',
+            ? 'pagecraft_reader_benchmark.dll'
+            : 'libpagecraft_reader_benchmark.so'}',
       ).absolute.path,
     ),
   );
@@ -165,7 +165,7 @@ void main() {
   for (final name in ['six.mobi', 'eight.azw3']) {
     test('MOBI/KF8 text record I/O and decoding match Dart: $name', () async {
       final path = File(
-        '../../packages/vellum/test/fixtures/mobi/$name',
+        '../../packages/pagecraft/test/fixtures/mobi/$name',
       ).absolute.path;
       final bytes = await File(path).readAsBytes();
       final data = ByteData.sublistView(bytes);

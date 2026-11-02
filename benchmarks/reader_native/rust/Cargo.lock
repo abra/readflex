@@ -560,6 +560,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "pagecraft_reader_benchmark"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "flate2",
+ "flutter_rust_bridge",
+ "html-escape",
+ "html5ever",
+ "markup5ever_rcdom",
+ "xmlparser",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -863,19 +876,6 @@ name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
-
-[[package]]
-name = "vellum_reader_benchmark"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "flate2",
- "flutter_rust_bridge",
- "html-escape",
- "html5ever",
- "markup5ever_rcdom",
- "xmlparser",
-]
 
 [[package]]
 name = "version_check"

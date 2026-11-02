@@ -14,14 +14,14 @@ import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_occlusion.dart';
 import 'package:reader/src/reader_search_result_tile.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import '../test/support/device_screenshots.dart';
 import '../test/support/reading_fixture.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
-/// A saved article in the real app on the native text engine (`vellum`):
+/// A saved article in the real app on the native text engine (`pagecraft`):
 /// every kind of block the import writes, a picture among them. It opens
 /// from the library and scrolls; search opens a hit near the end and
 /// returns to where the reader was; a long press selects a word with its
@@ -62,7 +62,7 @@ void main() {
     await waitForUi(
       tester,
       () => view.evaluate().isNotEmpty && controller().position != null,
-      description: 'article on vellum',
+      description: 'article on pagecraft',
       timeout: const Duration(seconds: 30),
     );
     final openMs = openWatch.elapsedMilliseconds;

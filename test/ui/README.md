@@ -1,6 +1,6 @@
 # UI Verification
 
-This suite complements feature widget/cubit tests and Vellum's reader-engine
+This suite complements feature widget/cubit tests and Pagecraft's reader-engine
 tests. It is not a claim that every OS interaction or every possible
 combination of settings is automated.
 
@@ -38,9 +38,9 @@ semantics ownership and inline-link exceptions remain in
 [`ACCESSIBILITY.md`](../../ACCESSIBILITY.md). Keep this checklist focused on
 verification instead of maintaining another set of design tokens.
 
-Reader content is a separate surface from app controls: vellum lays out tables
+Reader content is a separate surface from app controls: pagecraft lays out tables
 and code by CSS's own rules, not a generic app rule. Font/layout changes can
-affect pagination and saved anchors. Gesture changes need vellum widget tests
+affect pagination and saved anchors. Gesture changes need pagecraft widget tests
 plus on-device iOS and Android checks; a synthesized gesture is not a finger on
 Flutter's adaptive selection handles. Brightness and unrelated reader
 behavior are not part of a general UI consistency pass.
@@ -56,6 +56,7 @@ Run from the repository root with the FVM-pinned Flutter SDK:
 
 ```sh
 make get
+make test-tools
 make test-ui-contracts
 make test-ui
 make test-goldens
@@ -70,7 +71,9 @@ make test-performance
   These tests also run in the existing full suite, without a second invocation.
 - `test-ui`: production-root flows and golden comparisons, no device needed.
 - `test-goldens`: only visual comparisons, without modifying baselines.
-- `verify`: formatting, analysis, all active package tests (vellum's
+- `test-tools`: Dart coverage/benchmark tool tests in `test/tooling/`, also
+  included in `make test`; these run without the app UI suites or Node.js.
+- `verify`: formatting, analysis, all active package tests (pagecraft's
   included) and root UI/goldens. Native device tests are separate.
 - `coverage`: the same test suites with owned Dart line/branch reports and
   per-test outcomes in a fresh `.local/coverage/run-*/` directory.
@@ -111,7 +114,7 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Library | Search/clear, empty results, layout preference; UI changes do not issue new storage reads | `app_flows_test.dart` |
 | Library appearance | Grid, display sheet, empty search results (Clear search) and pressed Display/search-clear actions in all profiles; list rows with title and author at the cover top and the status at its bottom, without the file format, and the compact favourites badge in light/dark and on an Arabic phone; an empty collection offers Show entire Library | `library_golden_test.dart`, `collection_management_golden_test.dart` |
 | Wide windows | A 13-inch iPad in both orientations: the Library list in two columns (light, dark, Arabic RTL) that screen readers still count per source, the grid adding columns instead of growing covers, the empty library at the onboarding width (also on narrow tablets and landscape phones), the selection bar in one row with the command at its own width (portrait, Arabic RTL landscape), and the Appearance sheet's Columns row in light/dark. Phone profiles keep their goldens. Selection bar labels with the app's fonts in all 10 locales at 840 × 480 (100% and 200% text), 1032@2x and phones at 390@1x, 320@1x, 320@2x and 320 with 200% text: no ellipsis, one line each at 100% in a wide window | `tablet_layout_golden_test.dart`, `library_selection_bar_test.dart`, library `library_wide_window_test.dart`, reader `reader_appearance_sheet_test.dart` |
-| Reader text layout | The window and the Columns choice reach vellum's page settings and style end to end: every window keeps the 32em measure, phones and narrow windows keep one column (a portrait phone page stays as it was, a landscape phone centres the measure), a wide window adds Auto/One/Two, articles keep one column at the measure, PDF pages keep their layout and offer no Columns row; tablet-sized windows (shortest side ≥600) get 12.5% larger book and article text, rotation keeps it, narrow Split View and phone landscape stay at the phone size, and the reader's own text size stays 100% and applies on top; the keyboard, even across a rotation, never turns a portrait page into a spread; book and article text keeps clear of a landscape phone's side insets (display cutout) while the page fills the window | `reader_text_layout_test.dart`, reader `reader_text_columns_test.dart` and `reader_device_font_scale_test.dart`, vellum `text_page_geometry_test.dart` |
+| Reader text layout | The window and the Columns choice reach pagecraft's page settings and style end to end: every window keeps the 32em measure, phones and narrow windows keep one column (a portrait phone page stays as it was, a landscape phone centres the measure), a wide window adds Auto/One/Two, articles keep one column at the measure, PDF pages keep their layout and offer no Columns row; tablet-sized windows (shortest side ≥600) get 12.5% larger book and article text, rotation keeps it, narrow Split View and phone landscape stay at the phone size, and the reader's own text size stays 100% and applies on top; the keyboard, even across a rotation, never turns a portrait page into a spread; book and article text keeps clear of a landscape phone's side insets (display cutout) while the page fills the window | `reader_text_layout_test.dart`, reader `reader_text_columns_test.dart` and `reader_device_font_scale_test.dart`, pagecraft `text_page_geometry_test.dart` |
 | Settings consistency | Display and Appearance share header geometry, section typography/gaps, content gutters, 48dp stepper targets and full-width fades in light/dark themes | `settings_consistency_test.dart` |
 | Library scaling | Grid/list remain virtualized with 20k books, callbacks address the right item, cached projections are reused; 320/390dp grids adapt columns at 200% text | `library_scaling_test.dart` |
 | Collection recovery | Retain last loaded scopes on partial failure; Retry replaces the error inside the same sheet, including phone/landscape, 200% text and RTL | Library bloc and `collection_scope_recovery_test.dart` |
@@ -136,11 +139,11 @@ OS keyboard overlay; the test additionally asserts real nonzero keyboard insets.
 | Shared text tools | Search clear control and highlight palette in all profiles; import menu layout | `surfaces_golden_test.dart` |
 | Reader selection tip | Waits for the painted page, a book page turn hides it for the session (a restore does not), a selection ends it for good, a returning reader never sees it; the inverse plate in light/dark and 200% text, where "Got it" moves below the message | `reader_selection_tip_test.dart`, reader `reader_selection_tip_test.dart` and `reader_selection_tip_cubit_test.dart` |
 | Reader progress row | The page slider spans the row right above the capsule; under it the book's chapter (one line, truncating first) and the page label (never loses digits), inset to the track's ends; at 2x text the chapter takes up to two lines with the page label below; capsule-width cap on landscape and tablet, in all visual profiles | `reader_progress_golden_test.dart`, reader `reader_bottom_chrome_test.dart` |
-| Reader page animations | Slide/Cover is global, selected in Library's Display sheet; Reader retains direction controls and Reset leaves the global effect unchanged. Legacy source animation keys cannot override it. Localized 48dp choices at 320dp/200% and phone RTL, persistence/reopening and stable Display/Language step heights. Both renderers share geometry/painting, keep the effect fixed during an active turn and preserve layout, selection, position and zoom when it changes | Library display/cubit tests and `library_golden_test.dart`; reader appearance/screen tests; vellum `text_pages_view_test.dart`, `fixed_pages_view_test.dart`, `pdf_pages_view_test.dart` |
+| Reader page animations | Slide/Cover is global, selected in Library's Display sheet; Reader retains direction controls and Reset leaves the global effect unchanged. Legacy source animation keys cannot override it. Localized 48dp choices at 320dp/200% and phone RTL, persistence/reopening and stable Display/Language step heights. Both renderers share geometry/painting, keep the effect fixed during an active turn and preserve layout, selection, position and zoom when it changes | Library display/cubit tests and `library_golden_test.dart`; reader appearance/screen tests; pagecraft `text_pages_view_test.dart`, `fixed_pages_view_test.dart`, `pdf_pages_view_test.dart` |
 | Reader appearance | Portrait/landscape, 2x text and RTL; header/values readable, final control and font sample reachable, Appearance/Font retain equal height with manual return | `reader_appearance_golden_test.dart` |
 | Native book actions | Expand word to phrase, translate exact final range, copy result, Define fallback, dismiss selection menu | `integration_test/reader_flows_test.dart` |
 | Native persistence | Explicit highlight writes text/CFI to real repository, renders nonzero geometry after reopen, and opens by tapping its Highlights row without copy/arrow controls | `integration_test/reader_flows_test.dart` |
-| Native book import | EPUB, FB2 and MOBI built in the test import through `vellum` on the device: title and author from the book, the cover decoded by the platform codecs and scaled to 480×720, each import under 5 s, all three shown in the Library | `integration_test/native_import_test.dart` |
+| Native book import | EPUB, FB2 and MOBI built in the test import through `pagecraft` on the device: title and author from the book, the cover decoded by the platform codecs and scaled to 480×720, each import under 5 s, all three shown in the Library | `integration_test/native_import_test.dart` |
 | Initial position persistence | A reopened book opens on its saved page and closing it keeps the saved position | reader `reader_screen_text_test.dart` |
 | Active chapter contrast | Actual selected TOC tile uses paired foreground/background colors, including alpha compositing; light/dark, large text and phone RTL snapshots | `reader_contents_golden_test.dart` |
 | Native reader lifecycle | Search navigation and CFI survive synthetic pause/resume without replacing the page view; the page keeps its text | `integration_test/reader_flows_test.dart` |
@@ -166,9 +169,9 @@ keyboard insets (no vertical overflow or fades), real overflow at both ends of a
 long collection, failed collection loading/retry, and lazy collection rows.
 Definition tests keep the header and Close action fixed while long entries scroll.
 
-vellum's own suites cover formats, CSS, layout, selection, CFI round trips,
+pagecraft's own suites cover formats, CSS, layout, selection, CFI round trips,
 image policies and highlight geometry; see
-[`vellum/README.md`](../../packages/vellum/README.md).
+[`pagecraft/README.md`](../../packages/pagecraft/README.md).
 
 ## Visual Baselines
 
@@ -247,7 +250,8 @@ Do not use `convertFlutterSurfaceToImage()` with native Hybrid Composition:
 the SDK screenshot callback can wait indefinitely for an already-consumed frame.
 
 The native scenarios write screenshots and `results.json` to a fresh
-`.local/ui-device/run-*/` directory, printed by the driver.
+`.local/ui-device/run-*/` directory, printed by the driver. Driver protocol
+logging is disabled because it duplicates screenshot payloads into large logs.
 Unlock the test device and dismiss first-run OS overlays before running them
 (for example Android's "Viewing full screen" prompt after a cold emulator boot).
 Flutter finders cannot detect these windows; inspect native screenshots when
@@ -266,7 +270,7 @@ VM service, and intentionally does not claim branch coverage.
 After `make coverage` and native runs on unchanged Dart inputs, combine them:
 
 ```sh
-node scripts/coverage_report.mjs .local/coverage/<host-run> \
+fvm dart scripts/coverage_report.dart .local/coverage/<host-run> \
   .local/ui-device/<ios-run> .local/ui-device/<android-run>
 ```
 
@@ -306,7 +310,7 @@ simulator/emulator rather than a device holding valuable app data.
 - Native selection handles, edge dragging and iOS system context menus. A
   synthesized long-press drag is not a simulation of those OS controls. A
   selection carried across a page turn is checked with taps and swipes
-  (vellum `text_pages_view_test`, reader `reader_screen_text_test`,
+  (pagecraft `text_pages_view_test`, reader `reader_screen_text_test`,
   `integration_test/native_text_reader_test.dart`); dragging a selection handle on a device
   to the page edge does not turn the page.
 - Actual app switching, GPU/context loss, process death, and release-mode
@@ -376,7 +380,7 @@ Both use the real repositories and a phone-sized Arabic override for `tabletRtl`
 Import phase and translation menu snapshots remain in the existing suites.
 Reader-native rendering is tested separately: `comic_zoom_test.dart` zooms and
 turns a comic, opens Pages, waits for the engine's previews and navigates from
-a thumbnail. `pdf_reader_test.dart` opens a generated PDF on vellum. It checks
+a thumbnail. `pdf_reader_test.dart` opens a generated PDF on pagecraft. It checks
 the default trimmed page rendered denser than the screen and sharp zoom, the
 dark theme's colors, then turns both options off from the real Appearance
 sheet, runs PDF search, draws a saved highlight and previews the pages.

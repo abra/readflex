@@ -5,7 +5,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
     show ExternalLibrary;
 import 'package:mobi_rust_benchmark/src/rust/api.dart';
 import 'package:mobi_rust_benchmark/src/rust/frb_generated.dart';
-import 'package:vellum/src/formats/mobi/mobi_headers.dart';
+import 'package:pagecraft/src/formats/mobi/mobi_headers.dart';
 
 import '../../mobi_decoder_benchmark.dart';
 

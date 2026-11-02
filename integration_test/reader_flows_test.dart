@@ -16,7 +16,7 @@ import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_result_tile.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
-import 'package:vellum/all_formats.dart';
+import 'package:pagecraft/all_formats.dart';
 
 import '../test/support/reading_fixture.dart';
 import '../test/support/native_screenshots.dart';
