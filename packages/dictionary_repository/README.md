@@ -16,12 +16,15 @@ wrapped into `StorageException` (from `domain_models`) before surfacing.
 | `getEntryById(id)`                          | Lookup by id                                  |
 | `getEntriesByIds(ids)`                      | Batch lookup                                  |
 | `getEntryCountBySource(sourceId)`           | Count entries saved from one source           |
+| `getAnchorsBySource(sourceId)` / `getAnchorsByEntry(entryId)` | Source locations for saved entries |
 | `addEntry({word, translation, lemma, baseTranslation, contextTranslation, pronunciation, partOfSpeech, context, sourceId, sourceType, usageExamples, anchor…})` | Create entry and its review row |
+| `addAnchor({entryId, sourceId, sourceType, text, cfiRange, ...})` | Attach another source location to an entry |
+| `deleteAnchorsBySource(sourceId)`           | Remove source locations while retaining entries |
 | `findEntry(word, {sourceId})`              | Newest entry for a word, case-insensitive  |
 | `getEntryCount()`                           | Every saved word                              |
 | `updateEntry(entry)`                        | Update fields                                 |
 | `deleteEntry(id)`                           | Delete entry                                  |
-| `changes`                                   | Broadcast stream after add/update/delete      |
+| `changes`                                   | Broadcast stream after entry or anchor mutations |
 | `dispose()`                                 | Close the repository change stream            |
 
 Entries carry optional `sourceId` + `sourceType` so they can be filtered by
@@ -33,8 +36,13 @@ keeps the original spelling, and returns the newest match within the optional
 source scope. Schema v27 backfills keys for already saved entries.
 
 `changes` exists for cross-feature freshness. For example, the translate sheet
-can save an entry while the Dictionary tab is already mounted; the tab listens
+can save an entry while Practice's Vocabulary list is already mounted; the list listens
 to this stream and reloads without depending on the translate feature.
+
+`addEntry` stores its optional source anchor in the same transaction as the
+entry and review row when source id/type, anchor text and CFI are present.
+Anchors live separately from entries so deleting a source can remove its
+underlines while retaining saved words.
 
 ## Review state
 

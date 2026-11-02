@@ -30,8 +30,8 @@ class Book extends Equatable {
   final int totalLocations;
   final int currentLocation;
 
-  /// EPUB CFI position string from foliate-js. Used to restore reading
-  /// position. `currentLocation` is kept for legacy/display purposes.
+  /// Reader restore anchor: a text CFI or a CFI-shaped fixed-page position.
+  /// [currentLocation] is kept for legacy/display purposes.
   final String? currentCfi;
 
   final double readingProgress;

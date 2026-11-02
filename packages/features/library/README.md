@@ -33,7 +33,7 @@ its Save an article. `openImportOnStart: true` calls
 `onAddPressed(entry: LibraryImportEntry.file, ...)` exactly once after the
 first frame (onboarding's "Add a book"); rebuilding the same screen does not
 reopen it, and it goes through the same in-flight guard and refresh as the
-header action.
+bottom "+" action.
 
 ## Architecture
 
@@ -60,7 +60,8 @@ selection, and collection commands separate:
 - `LibraryPageAnimationCubit` — global Slide/Cover page animation in the
   header's Display sheet. Persists `readerPageAnimation` and observes the
   preferences stream; an older queued snapshot cannot undo a newer choice.
-  All books, PDFs and comics use it. It does not edit source appearance.
+  All paginated books, PDFs and comics use it. Cover is the default; articles
+  scroll without a page animation. It does not edit source appearance.
 - `LibrarySelectionCubit` — multi-select state for bulk source actions.
 - `AddToCollectionCubit` / `ManageCollectionCubit` — collection mutations and
   their transient command state.
@@ -398,8 +399,9 @@ whichever is on screen and leave both tappable.
 
 ### Continue reading
 
-In the default view (no search, no collection scope) the first item of both
-the list and the grid scroll view is `LibraryContinueReadingCard` for
+In the default view (no search, no collection scope),
+`LibraryContinueReadingCard` follows the Practice row, when present, and
+precedes the sources in both layouts. It shows
 `LibraryState.continueReadingCardSource`: `continueReadingSource`, the source
 with the latest `lastOpenedAt` among unfinished sources with
 `0 < readingProgress < 1`, computed once per state. The card is that source's
@@ -618,7 +620,9 @@ Shared headers/actions remain in `component_library`.
 - `book_repository` — book data source
 - `article_repository` — article data source
 - `collection_repository` — manual collection and favourites persistence
-- `preferences_service` — layout, theme, and locale persistence
+- `fsrs_repository` — review counts for the Practice entry
+- `preferences_service` — layout, theme, locale, and global reader animation persistence
+- `toast_service` — feedback placement above the floating actions and selection bar
 - `domain_models` — `Book`, `Article`, `LibrarySource`
 - `component_library` — theme, `SearchField`, `ScrollEdgeFadeStack`, `EmptyState`,
   `ErrorState`, `AppDrillInRow`, `AppPlainIconButton`, `AppSheetActions`,

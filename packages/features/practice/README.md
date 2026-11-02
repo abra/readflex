@@ -53,8 +53,9 @@ class ReviewSessionScreen extends StatelessWidget {
 opens a source in the reader at a CFI. `routing.dart` owns every destination:
 Vocabulary, Highlights and the session are nested routes under `/practice`, the
 session as a full-screen dialog page. The hub reloads after each of them
-closes; there is no tab to return to. Nothing else is public;
-tests reach cubits and `PracticeItem` through `src/` imports.
+closes; there is no tab to return to. The entry library exports the four screen
+files and their public callback typedefs and row widgets; cubits and
+`PracticeItem` are accessed through `src/` imports in tests.
 
 On iOS and macOS the session uses a short fade (`AppMotion.short`), skipped
 with reduced motion. Sliding its full-screen background down leaves a moving
@@ -72,7 +73,7 @@ target (Lighter / Balanced / Stronger: FSRS desired retention 0.8 / 0.9 /
 once and writes it to `PreferencesService`; a failed write is reported and
 the choice goes back. A stored value the sheet does not offer shows as its
 nearest choice (`practice_settings_presets.dart`) and is rewritten only when
-the reader picks one. The hub reloads when the sheet closes, since the
+the user picks one. The hub reloads when the sheet closes, since the
 highlights setting changes what counts as due; the Library's due count
 follows the same setting.
 

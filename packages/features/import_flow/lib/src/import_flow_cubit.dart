@@ -248,9 +248,7 @@ class ImportFlowCubit extends Cubit<ImportFlowState> {
       );
     } on BookImportException catch (e) {
       if (isClosed) return;
-      // Surface the JS-side reason ("File type not supported", etc.)
-      // rather than the generic fallback below — the whole reason
-      // BookImportException exists is to carry that detail to the UI.
+      // Preserve the engine's specific rejection reason in the failure UI.
       emit(ImportFlowFailure(customMessage: e.message, filename: filename));
       return;
     } catch (e, st) {

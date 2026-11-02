@@ -104,10 +104,9 @@ class BookStyle {
   /// without it, text is hyphenated where the book asks.
   final bool hyphenate;
 
-  /// The limits foliate-js's prose rule declares with [useBookLayout]
-  /// (`-webkit-hyphenate-limit-before`, `-after` and `-lines`): only
-  /// WebKit reads them, so a host sets them on iOS to match its WebView.
-  /// They apply to all hyphenated text ([hyphenation]).
+  /// Hyphenation limits with [useBookLayout], matching the former reader's
+  /// `-webkit-hyphenate-limit-before`, `-after` and `-lines` settings.
+  /// Vellum applies them to all hyphenated text ([hyphenation]).
   final int hyphenateLimitBefore;
   final int hyphenateLimitAfter;
   final int? hyphenateLimitLines;
@@ -124,7 +123,8 @@ class BookStyle {
 
   /// The host's CSS over the book and these settings, as foliate-js's
   /// `customCSS`: after [foliateStyleSheet], so its rules win ties with
-  /// foliate-js's. Plain values only: no `var()` or `calc()`.
+  /// foliate-js's. Uses the same supported CSS subset as the book's sheets,
+  /// including custom properties, `var()` and length math such as `calc()`.
   final String readerStyleSheet;
 
   /// The window the book's media queries and viewport units see.

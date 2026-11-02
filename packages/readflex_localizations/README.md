@@ -2,7 +2,7 @@
 
 Generated Flutter localizations and supported locale metadata for Readflex.
 
-Supported locales follow the app-defined order from Nota:
+`ReadflexSupportedLocales` defines the supported locales in this order:
 
 ```text
 en, zh, hi, es, ar, fr, ru, pt, de, ja

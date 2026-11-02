@@ -1,8 +1,8 @@
 # reader
 
 Full-screen reader for books, comics, and saved articles. The single route
-(`/reader/:sourceId`) hosts the page, drawn by the `vellum` engine, bottom
-action chrome, and a text-selection context panel populated by pluggable
+(`/reader/:sourceId`) hosts the page, drawn by the `vellum` engine, reader
+chrome, and a text-selection context panel populated by pluggable
 `TextAction`s.
 
 ## Public API
@@ -24,19 +24,21 @@ class ReaderScreen extends StatelessWidget {
     ValueChanged<double>? onReadingPositionSaved,     // saved progress
     void Function(String url, String title)? onArticleTitlePressed,
     ValueChanged<String>? onOpenExternalLink,
+    String? initialCfi,
   });
 }
 ```
 
-`sourceId` resolves first through `BookRepository.getBookById`; when an
-`ArticleRepository` is provided, saved articles are loaded as article sources
-and opened from `Article.contentHtmlPath`. Internally `ReaderBloc` maps both
+`ReaderBloc` requests the book and optional article by `sourceId` alongside
+highlights and bookmarks, and prefers the book if both repositories return a
+source. Saved articles open from `Article.contentHtmlPath`. It maps both
 books and articles to a source-neutral `ReaderDocument`, so article HTML is not
 modeled as an EPUB. `initialSource` lets the route avoid a loading flash
 when a book source was already loaded by the previous route. For articles,
 `onArticleTitlePressed` lets the composition root open the original article URL
 from the top reader chrome without coupling the reader package to
-`url_launcher`.
+`url_launcher`. `initialCfi` opens a saved word or highlight's anchor once the
+document is ready; Practice supplies it when opening an item in its source.
 
 ### External links
 
@@ -168,6 +170,7 @@ persistence across reopening and reset to inherited settings.
 ```dart
 abstract class TextAction {
   String get label;
+  String labelFor(BuildContext context) => label;
   IconData get icon;
   Future<void> onExecute(BuildContext context, TextSelectionContext selection);
 }
@@ -299,8 +302,9 @@ pages, `sizeTotal`, `atStart`/`atEnd` and
 the contents entry as the chapter title. A bookmark is the first word on
 screen as a precise range CFI with anchor version 2, so it opens on that
 word in any layout; a bookmark is on screen when its start is between
-the first and last things shown. A long press selects with the
-platform's handles; `TextSelectionDetails` gives the context panel the
+the first and last things shown. A long press selects through Flutter's
+`SelectionArea`, with adaptive Cupertino/Material handles;
+`TextSelectionDetails` gives the context panel the
 exact and whole-word text and CFIs, the sentence and what a highlight would
 merge. A selection follows the reader through the section, as in the
 WebView reader: a swipe, or a tap in an edge zone (`onSelectionTap` turns
@@ -337,14 +341,20 @@ sentence read across a new size, style or font. The style is the books'
 on, and the shell's softer captions (72%), quotes (86%) and table rules
 (22%) ahead of the reader's sheet. Everything stored keeps the shell's
 forms, so what was saved while articles read in the WebView still
-resolves:
+resolves. `ReaderDocument.language` passes the saved article language into
+`ArticleTextSource`; Vellum normalizes document language and text direction
+from that hint and the content, retaining explicit direction on content
+elements. The interface locale does not set the article's text direction.
+Articles report `pageProgressionRtl: false`, so their progress line fills
+left to right in every interface locale.
 
 - **Position** — the sentence at the middle of the view as a
   `readflex-html-position:` anchor, the scroll share as progress, the
   last heading above as the chapter, minutes left at 1200 characters a
-  minute from that sentence, `atStart`/`atEnd`. Reported as the shell
-  did: once per 140 ms at most while scrolling (or on a new sentence, a
-  0.4% move, an edge, a bookmark change), the place it settles on after.
+  minute from that sentence, `atStart`/`atEnd`. A sentence change, a move
+  of at least 0.4%, an edge change or a bookmark change makes a new position
+  report eligible. Reports are throttled to 140 ms; an end-state change or
+  an explicit bookmark update bypasses that throttle.
   An article left at its start or end reopens there; otherwise at its
   sentence, centred; otherwise at its share.
 - **Progress line** — a passive 3dp track below the top title shows the
@@ -361,7 +371,8 @@ resolves:
   the scroll where it starts once the article is laid out.
 - **Bookmarks** — the sentence read; it is on screen when its anchor or
   its text matches.
-- **Selection** — a long press selects with the platform's handles;
+- **Selection** — a long press selects through Flutter's `SelectionArea`
+  with adaptive Cupertino/Material handles;
   `ArticleSelection` gives the context panel the shell's payload: the
   text with white space collapsed, 200 characters of context within the
   sentence or block, its anchor, the saved highlights it merges.
@@ -386,10 +397,13 @@ body attaches; there are no pages to turn, image areas or thumbnails.
 | `ReaderUiCubit`               | Chrome, drawer, appearance-sheet and search-highlight UI state             |
 | `ReaderSearchCubit`           | Search debounce, streamed results, recent queries, active match and return anchor |
 | `ReaderSelectionCubit`        | Current text selection (text + `cfiRange`) and adjustment phase             |
+| `ReaderArticleProgressCubit`  | Live article scroll fraction for the persistent progress line, separate from saved positions |
 | `ReaderImageSelectionCubit`   | Current image-page area selection for comics/fixed-layout pages            |
 | `ReaderImageHighlightCubit`   | Persists image-page highlights with optional notes, then `ReaderBloc` refreshes annotations |
+| `ReaderHighlightFocusCubit`   | Saved-highlight popup focus and its viewport position                       |
 | `ReaderAppearanceCubit`       | Per-source reader appearance overrides over global preferences             |
 | `ReaderBrightnessCubit`       | System/custom reader brightness state and active window override lifecycle |
+| `ReaderKeepAwakeCubit`        | Screen-awake requests while bare reader content is active                   |
 | `ReaderPageThumbnailCubit`   | UI-only bounded preview queue/cache, owned by the visible Pages or Highlights tab |
 | `ReaderSelectionTipCubit`     | One-time "Press and hold a word" tip: when it shows, hides and ends for good |
 
@@ -867,6 +881,8 @@ tap on the already-selected Yellow swatch. The Highlight action saves it.
 For books and articles `ReaderTextSelectionStyle` derives the temporary fill
 from the same accent as the current Cupertino/Material handles. On iOS this
 avoids inheriting MaterialApp's primary tint for Cupertino's blue handles.
+Flutter draws these selection controls over Vellum's text layout.
+The reader supplies its own action popup in place of Flutter's default toolbar.
 The saved annotation palette is separate.
 
 `ReaderSurfaceFailed` reports a page that cannot open or lay out its document,

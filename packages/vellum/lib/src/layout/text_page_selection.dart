@@ -13,7 +13,7 @@ import 'paragraph_layout.dart';
 
 /// One paragraph's lines on one page, as a [Selectable]: a text page
 /// registers one per paragraph it shows with the enclosing
-/// `SelectionArea` or `SelectableRegion`, which then gives the platform's
+/// `SelectionArea` or `SelectableRegion`, which provides Flutter's adaptive
 /// selection gestures, handles, magnifier and keyboard behaviour, as
 /// `RenderParagraph` does for `Text`.
 ///

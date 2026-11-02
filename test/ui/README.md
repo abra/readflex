@@ -1,7 +1,7 @@
 # UI Verification
 
-This suite complements feature widget/cubit tests and the reader's Chromium and
-WebKit regressions. It is not a claim that every OS interaction or every possible
+This suite complements feature widget/cubit tests and Vellum's reader-engine
+tests. It is not a claim that every OS interaction or every possible
 combination of settings is automated.
 
 ## Review Checklist
@@ -41,8 +41,8 @@ verification instead of maintaining another set of design tokens.
 Reader content is a separate surface from app controls: vellum lays out tables
 and code by CSS's own rules, not a generic app rule. Font/layout changes can
 affect pagination and saved anchors. Gesture changes need vellum widget tests
-plus native iOS and Android checks; a synthesized gesture is not a finger on
-the platform's handles. Brightness and unrelated reader
+plus on-device iOS and Android checks; a synthesized gesture is not a finger on
+Flutter's adaptive selection handles. Brightness and unrelated reader
 behavior are not part of a general UI consistency pass.
 
 Close out with the commands actually run, the profiles/devices inspected and
@@ -236,7 +236,7 @@ Selections are made with a long press dragged across the words, through the
 page's `SelectionArea` and the reader's action menu; dragging the platform's
 handles still requires a hands-on device check.
 Android captures use `adb exec-out screencap -p` on the device selected by
-`make test-device`, including native selection handles and system overlays. A
+`make test-device`, including Flutter selection handles and system overlays. A
 test-only loopback server on an ephemeral host port receives named capture
 requests through ADB reverse on device port 34179. It validates artifact names
 and PNG signatures, bounds waits, rejects overlapping captures and closes the
@@ -307,7 +307,7 @@ simulator/emulator rather than a device holding valuable app data.
   synthesized long-press drag is not a simulation of those OS controls. A
   selection carried across a page turn is checked with taps and swipes
   (vellum `text_pages_view_test`, reader `reader_screen_text_test`,
-  `integration_test/native_text_reader_test.dart`); dragging a native handle
+  `integration_test/native_text_reader_test.dart`); dragging a selection handle on a device
   to the page edge does not turn the page.
 - Actual app switching, GPU/context loss, process death, and release-mode
   performance. Synthetic lifecycle callbacks do not reproduce these conditions.

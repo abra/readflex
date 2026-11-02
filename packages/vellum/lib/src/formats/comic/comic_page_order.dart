@@ -19,8 +19,8 @@ const _imageExtensions = [
 ];
 
 /// Picks the page images out of an archive's entry names and orders them
-/// exactly as the WebView reader does (`comic-book.js`), so a position saved
-/// by one reader opens the same page in the other.
+/// by the rules used by the former WebView reader (`comic-book.js`), so
+/// existing saved positions keep naming the same pages.
 ///
 /// Version 0 (books imported before natural ordering): names ending in a
 /// lowercase image extension, in UTF-16 code-unit order. Version 1: any
@@ -61,7 +61,7 @@ bool _isPageImage(String name) {
 
 /// Orders file names the way `Intl.Collator('en', {numeric: true,
 /// sensitivity: 'variant'})` does, with the collator's ties broken by
-/// code-unit order as the WebView reader does.
+/// code-unit order as the former WebView reader did.
 ///
 /// Three levels, as in ICU: digit runs by numeric value and letters by base
 /// letter first (punctuation before digits before letters, Latin before

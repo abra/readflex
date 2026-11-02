@@ -71,4 +71,6 @@ imports without a progress callback retain the native `File.copy` path.
 
 - `domain_models` — `Book`, `BookFormat`, `StorageException`
 - `local_storage` — `AppDatabase`, `BooksDao`
+- `monitoring` — optional cover and cleanup diagnostics
+- `drift` — partial updates and source-scoped bookmark SQL
 - `path`, `uuid`

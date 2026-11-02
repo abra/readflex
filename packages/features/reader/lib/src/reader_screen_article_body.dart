@@ -430,9 +430,8 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
     }
   }
 
-  /// The position as the shell reported it: at most one report every
-  /// [_articleReportInterval] while scrolling, the place it settles on
-  /// after, and a change of end at once.
+  /// Coalesces changed positions over [_articleReportInterval]; end-state
+  /// changes and forced bookmark reports bypass the throttle.
   void _reportPosition({bool force = false}) {
     final next = _positionNow();
     if (next == null) return;
@@ -899,8 +898,8 @@ class _ArticlePositionReport {
       position.bookmarkExists != other.position.bookmarkExists;
 }
 
-/// The shell's emit rules: a report every 140 ms at most while scrolling,
-/// or when progress moves this far, and its thresholds for the edges.
+/// Position-report throttle, minimum progress change and edge thresholds,
+/// retained from the article shell.
 const _articleReportInterval = Duration(milliseconds: 140);
 const _articleProgressStep = 0.004;
 const _articleStartThreshold = 0.001;

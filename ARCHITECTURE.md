@@ -298,7 +298,7 @@ remain for migration compatibility only (last revision `189e2cc1`).
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, Practice, and app composition. Practice limits (`practiceNewCardsPerDay`, `practiceReviewHighlights`, `practiceDesiredRetention`) are edited in the Practice settings sheet. |
 | `review_scheduler` | FSRS-6 over the vendored `fsrs`: computes the next review state and log for a rating at the reader's desired retention, previews intervals. Study days start at 04:00; day-level intervals are at least a day, ordered by rating and capped at 365; one learning and one relearning step of 10 min because the step is not persisted; fuzzing off so previews match. Held to py-fsrs by a 118-history reference test. | Used by `fsrs_repository` only. |
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
-| `vellum` | The reader engine, which replaced foliate-js and the WebView for every format (R1–R6): ZIP container, CBZ pages in the order foliate-js gave them, fake CFIs, `FixedPagesView`/`FixedPagesController` for comics and PDFs, image areas, thumbnails, import metadata with JPEG covers, `PdfBook` over pdfium (`pdfrx_engine` + `pdfium_flutter`, the only third-party engine; SVG images are drawn with `flutter_svg`) with page rendering, zoom tiles, text layers, selection, search, anchors, margin crops and page colours; reflowable books (EPUB, FB2, MOBI/KF8) parsed into a document tree, styled by its own CSS cascade, laid out with `TextPainter` into columns and pages (`TextPagesController`/`TextPagesView`), with CFIs, progress, platform text selection, highlights, search, notes, embedded fonts, floats, inline blocks, `calc()`/`var()`, background images and SVG; saved articles as one scrolling column (`ArticleTextSource`, `TextScrollController`/`TextScrollView`) with the article shell's sanitizing, contents, sentence anchors, selection payloads and search; `package:vellum/testing.dart` builds fixtures. | Used by Reader behind `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. A library per format on top of the core `package:vellum/vellum.dart` (`epub.dart`, `fb2.dart`, `mobi.dart`, `comic.dart`, `pdf.dart`, `article.dart`; `all_formats.dart` with `textBookSourceOf` for apps that read them all, as readflex does): each format is one folder under `src/formats/` (articles `src/article/`), the core imports no format and no format another (`test/library_boundaries_test.dart`). Plan: `.local/reports/native-reader-steps-2026-10-27.md`. |
+| `vellum` | Reader engine: Dart containers, document/CSS models, paged EPUB/FB2/MOBI, scrolling articles, comic pages, PDFium rendering, CFIs, progress, search, Flutter adaptive text selection, highlights and import metadata. MOBI text-record I/O/decompression uses `vellum_mobi_native`; `package:vellum/testing.dart` builds fixtures. | Used by Reader through `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. Format libraries export the core `vellum.dart`; the core imports no format and formats never import each other (`test/library_boundaries_test.dart`). See [Vellum's README](packages/vellum/README.md) for capabilities and native bundling limits. |
 | `screen_control_service` | Keep-awake and brightness coordination for active reading sessions. | Wraps low-level brightness plugin. |
 | `vellum_mobi_native` | Rust MOBI/KF8 text-record reading and decompression, native file/dictionary ownership, release Native Assets build hook and FRB bindings. | Used only by Vellum's MOBI module; no UI/domain/repository dependencies. |
 | `toast_service` | Thin toastification wrapper: bottom-anchored toasts that float above controls marked with `ToastAvoidArea`; `ToastNavigatorObserver` on the root navigator clears them when a sheet or dialog opens. | Feature packages do not import toastification directly. |
@@ -322,7 +322,7 @@ they keep their upstream license, structure and style, and each one's
 
 | Package | UI surface | Direct local dependencies |
 |---------|------------|---------------------------|
-| `library_feature` (`packages/features/library`) | Main Library screen, source search/filter/list/grid, collection management, the entry into Practice (row leading the content once something is saved, separate icon above "+" with the due badge). | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `fsrs_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
+| `library_feature` (`packages/features/library`) | Main Library screen, source search/list/grid, collection scope/management, and entry into Practice through a separate icon above "+" with a due badge. | `article_repository`, `book_repository`, `collection_repository`, `component_library`, `domain_models`, `fsrs_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
 | `practice` | Practice section pushed above the Library: hub (today, Vocabulary, Highlights, by book), Vocabulary and Highlights lists, full-screen review session. | `article_repository`, `book_repository`, `component_library`, `dictionary_repository`, `domain_models`, `fsrs_repository`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `toast_service` |
 | `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `readflex_localizations`, `vellum` |
 | `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `screen_control_service`, `shared`, `toast_service`, `vellum` |
@@ -439,8 +439,10 @@ after the last request using it. The coordinator disposes both providers.
 Library state holds `LibrarySource` projections rather than full article bodies.
 `ArticlesDao.libraryEntries` selects only metadata, and `ArticleRepository`
 maps it into domain values. Reader/detail paths keep their full article reads.
-Publisher EPUB/MOBI6/KF8 documents pass through the same sanitizer before Blob
-navigation; the reader's iframe sandbox remains compatible with WebKit.
+Publisher EPUB/MOBI6/KF8 markup is parsed into Vellum's `ContentDocument`.
+`SectionPreparer` resolves its styles and builds layout boxes in an isolate;
+publisher scripts are not executed. Saved article HTML uses the separate
+article sanitizer described below.
 
 Dictionary lookup is deliberately distinct from translation:
 
@@ -451,14 +453,14 @@ DictionaryAction
   -> when the platform returns false only:
        DictionarySheet -> DictionaryCubit -> DictionaryLookupService
        -> client memory cache, then POST /v1/dictionary/lookup
-            -> Readflex Dictionary API -> DeepSeek
-            -> validated response cache (memory + PostgreSQL)
+            -> Readflex Dictionary API
 ```
 
 Definitions remain in the language of the selected term. The backend receives
 an optional source-language hint and sentence context, but no target language.
-DeepSeek credentials and provider-specific prompting remain server-side; the
-Flutter package depends only on the stable Readflex dictionary HTTP contract.
+Provider credentials, prompting and server-side caches belong to the separately
+deployed backend. This checkout implements the Readflex dictionary HTTP client
+contract and validates responses at that boundary.
 
 Reader-specific UI state is split by responsibility:
 
@@ -528,7 +530,7 @@ arrives after the page. Comic pages are decoded from the archive on demand;
 PDF pages, tiles and previews are rendered by pdfium.
 
 Text selection is Flutter's `SelectionArea` over each page (or the scrolled
-slices of an article) with the platform's handles and magnifier: a word on a
+slices of an article) with Flutter's adaptive handles and magnifier: a word on a
 long press, word by word on a drag. `TextSelectionDetails` (books) and
 `ArticleSelection` (articles) read it into the context panel's payload: the
 exact and whole-word text and CFIs, the sentence as context, and the saved
@@ -780,8 +782,9 @@ make test
 ```
 
 `make verify` is the full local quality gate. It checks formatting without
-rewriting files, analyzes the root app and every active package, then runs all
-Dart and Flutter tests, vellum's included.
+rewriting files, analyzes the root app and every active package, then runs
+Rust, Dart and Flutter tests plus the Node test-harness checks. Rust formatting
+and Clippy are part of `make analyze`.
 
 `make test-ui-contracts` is a focused subset for shared components, accessibility,
 theme contrast, import/Display navigation and representative root layouts. It
@@ -803,7 +806,7 @@ surfaces at 1032 × 1376 and 1376 × 1032 in the existing profiles' themes.
 `make update-goldens` is a separate, deliberate baseline update. Test fonts and
 committed PNG baselines are not application assets. `make test-device DEVICE=<id>`
 is opt-in and preserves the device's real viewport. It records screenshots under
-`.local/ui-device/`, but does not replace native handle, OS lifecycle, GPU,
+`.local/ui-device/`, but does not replace on-device handle, OS lifecycle, GPU,
 screen-reader, or live-backend checks. Coverage and limitations live in
 [`test/ui/README.md`](test/ui/README.md).
 
@@ -822,8 +825,9 @@ keyboard frames rebuild no grid tile; bursty reader search bounds emissions
 and published result entries without losing matches. `make test-performance` records workload timing separately in
 `.local/performance/`. Timings are diagnostic, not machine-independent CI limits.
 
-Node.js 20+ is needed only by `make coverage` (and by the scripts that
-generate vellum's data tables); `make test` needs no browser engines.
+Node.js 20+ runs the test-harness checks in `make test`, coverage reports,
+benchmark orchestration and Vellum data-table generators. The normal test
+suite does not require browser engines.
 
 Focused package changes can use package-level `flutter test` or `dart test`.
 Use broader checks when changing:
@@ -847,6 +851,9 @@ Documentation should explain contracts, responsibilities, and boundaries:
 - Add code comments only for intentional stubs, lifecycle/platform constraints,
   non-obvious algorithms, framework workarounds, or temporary contracts.
 - Do not add comments that restate obvious code mechanics.
+- Create source subdirectories when code or maintained fixtures need them;
+  do not retain empty placeholders. Generated caches and build outputs are
+  owned by their tools, and local diagnostics belong under `.local/`.
 
 ## Handoff Checklist
 

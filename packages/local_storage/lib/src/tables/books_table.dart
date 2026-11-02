@@ -3,7 +3,7 @@ import 'package:drift/drift.dart';
 /// Drift schema for imported books. The book file and extracted cover live
 /// on disk under the app's books directory; [filePath] and [coverImagePath]
 /// hold only filenames so rows survive iOS Documents-UUID changes.
-/// `currentCfi` stores the foliate-js position key for restore; the legacy
+/// [currentCfi] stores the reader's format-specific restore anchor; the legacy
 /// [currentLocation]/[totalLocations] ints are kept for display.
 class BooksTable extends Table {
   TextColumn get id => text()();
@@ -14,7 +14,7 @@ class BooksTable extends Table {
 
   TextColumn get coverImagePath => text().nullable()();
 
-  TextColumn get format => text()(); // epub, fb2, mobi, pdf
+  TextColumn get format => text()(); // epub, fb2, mobi, pdf, azw3, cbz
   TextColumn get filePath => text()();
 
   IntColumn get totalLocations => integer().withDefault(const Constant(0))();

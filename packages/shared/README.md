@@ -17,6 +17,7 @@ These cross-feature contracts intentionally depend on Flutter:
 | `TextAction`                | abstract class | Contract implemented by features that appear in the reader menu |
 | `ColorHighlightTextAction`  | abstract class | Highlight action contract with caller-selected color            |
 | `TextSelectionContext`      | data class     | Payload passed to an action when the user selects text           |
+| `HighlightMergeTarget`      | data class     | Merged range and saved highlight ids absorbed by a highlight action |
 
 ### TextAction
 

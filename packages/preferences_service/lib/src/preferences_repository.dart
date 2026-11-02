@@ -64,7 +64,7 @@ class PreferencesRepository {
       final storedVersion = (map['_schemaVersion'] as int?) ?? 1;
       final fontIdRaw = map['readerFontId'] as String?;
       // Migration v1 → v2: reset readerFontId to default. After load
-      // returns, the service's first save() persists `_schemaVersion: 2`
+      // returns, the service's first save() persists the current schema version
       // so this only runs once per device.
       final fontId = storedVersion < 2 ? 'serif' : (fontIdRaw ?? 'serif');
       final readerTextScale = storedVersion < 4

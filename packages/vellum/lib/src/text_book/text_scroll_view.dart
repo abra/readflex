@@ -18,7 +18,7 @@ import 'text_scroll_controller.dart';
 /// highlights. Taps go to a link under them ([onLinkTap]), then a
 /// highlight ([onHighlightTap]), then [onTap] as fractions of the view;
 /// a tap while text is selected clears the selection. With [selectable]
-/// the text is a selection area across the slices, with the platform's
+/// the text is a selection area across the slices, with Flutter's adaptive
 /// handles, magnifier and [contextMenuBuilder]. A table wider than the
 /// column scrolls sideways under a horizontal drag that starts on it.
 ///
@@ -49,10 +49,10 @@ class TextScrollView extends StatefulWidget {
   final TextHighlightTapCallback? onHighlightTap;
   final bool selectable;
 
-  /// The platform's when null.
+  /// Flutter's platform-adaptive selection controls when null.
   final TextSelectionControls? selectionControls;
 
-  /// The platform's adaptive toolbar when null.
+  /// Flutter's adaptive toolbar when null.
   final SelectableRegionContextMenuBuilder? contextMenuBuilder;
   final ValueChanged<TextPagesSelection?>? onSelectionChanged;
   final String? trackedHighlight;

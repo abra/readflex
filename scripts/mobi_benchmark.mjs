@@ -143,7 +143,7 @@ async function run(command, opts) {
     const bundle = path.join(directory, 'bundle');
     worker = path.join(bundle, 'bin', name);
     const [dart, ...prefix] = (process.env.DART ?? 'fvm dart').trim().split(/\s+/);
-    process.stderr.write('Compiling production Dart decoder in AOT...\n');
+    process.stderr.write('Compiling Dart reference decoder in AOT...\n');
     invoke(dart, [...prefix, 'build', 'cli', '--target', 'bin/mobi_decoder_benchmark.dart', '--output', directory]);
     artifacts.push(...(await bundleFiles(bundle)).filter(file => file !== worker));
     dataset = path.join(directory, 'dataset.json');

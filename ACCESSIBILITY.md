@@ -118,7 +118,11 @@ to layout, navigation and performance contracts.
 Collections exposes selected state and a check as well as the selection fill.
 Reader active-result text and action icons use tested foreground/background
 pairs in both themes. Quote direction, note direction and interface direction
-are independent. Onboarding is one static screen: the app icon is decorative,
+are independent. Book/article text selection uses Flutter's `SelectionArea`
+with adaptive handles and magnifiers. These are Flutter controls, not an
+embedded OS text view; widget semantics tests do not establish their on-device
+touch behavior or screen-reader announcements.
+Onboarding is one static screen: the app icon is decorative,
 the heading is a header that shrinks rather than break a word at large text,
 each feature row reads as one item, the rows mirror in RTL, nothing animates,
 and both actions stay outside the scrolling content at large text.

@@ -25,7 +25,7 @@ class PreferencesService {
 
   /// Constructs the service asynchronously, loading the initial
   /// [Preferences] from disk. [supportedCodes] bounds locale resolution
-  /// (device locale → first supported → `en`).
+  /// (supported device locale, otherwise `en`).
   static Future<PreferencesService> create({
     required List<String> supportedCodes,
   }) async {

@@ -12,7 +12,7 @@ const _kTextSelectionPopupHeight =
     _kTextSelectionPopupDividerHeight +
     _kTextSelectionActionRowHeight;
 const _kHighlightPopupGap = AppSpacing.sm;
-// Native and continuation handles extend beyond the selected text rectangle.
+// Flutter selection and continuation handles extend beyond the text rectangle.
 const _kTextSelectionPopupGap = AppSpacing.xl + AppSpacing.lg;
 const _kImageHighlightPopupGap = AppSpacing.xl;
 const _kHighlightPopupHorizontalInset = AppSpacing.lg;

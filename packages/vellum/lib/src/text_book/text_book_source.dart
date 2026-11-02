@@ -50,7 +50,7 @@ abstract interface class TextBookSource {
   int sectionSize(int index);
 
   /// The CFI of the section itself, which positions inside it extend:
-  /// the spine item's for EPUB, a fake one (`CFI.fake`) otherwise.
+  /// the spine item's for EPUB, `fakeCfiFromIndex` otherwise.
   String sectionCfi(int index);
 
   /// The section a CFI points into, or null.

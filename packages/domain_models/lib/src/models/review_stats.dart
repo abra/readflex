@@ -19,17 +19,17 @@ class ReviewStats extends Equatable {
   final Map<ReviewableType, int> totalByType;
   final Map<ReviewableType, int> masteredByType;
 
-  /// Reviews recorded since local midnight.
+  /// Reviews recorded in the current study day (04:00 local by default).
   final int reviewedToday;
 
   /// Of those, first reviews of never-reviewed cards; the daily new-card
   /// limit counts against this.
   final int newReviewedToday;
 
-  /// Reviews recorded in the last seven local days, today included.
+  /// Reviews recorded in the last seven study days, today included.
   final int reviewedLast7Days;
 
-  /// Consecutive local days with at least one review, ending today or
+  /// Consecutive study days with at least one review, ending today or
   /// yesterday.
   final int streakDays;
 

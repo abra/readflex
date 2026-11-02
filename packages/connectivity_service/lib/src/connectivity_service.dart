@@ -4,7 +4,8 @@ enum ConnectivityStatus { online, offline }
 /// Reactive connectivity monitor.
 ///
 /// Wraps `connectivity_plus` in production. Provides a [Stream] of
-/// [ConnectivityStatus] for UI (offline banner) and services (fallback logic).
+/// [ConnectivityStatus] for UI hints. Services attempt requests and handle
+/// failures directly; an active interface does not prove backend reachability.
 abstract class ConnectivityService {
   /// Current connectivity status.
   ConnectivityStatus get status;

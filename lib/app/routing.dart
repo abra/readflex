@@ -233,7 +233,7 @@ GoRoute _buildReaderRoute(DependenciesContainer deps) => GoRoute(
   // fullscreenDialog: true disables the iOS left-edge back-swipe
   // gesture (CupertinoPageTransition gates that gesture on
   // !fullscreenDialog). Without this the gesture conflicts with
-  // foliate-js page-turn swipes — a swipe at the left edge would
+  // Vellum page-turn swipes — a swipe at the left edge would
   // pop the reader instead of turning the page.
   pageBuilder: (context, state) {
     final sourceId = state.pathParameters['sourceId']!;

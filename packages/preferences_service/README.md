@@ -2,9 +2,9 @@
 
 User preferences: theme mode, locale, library layout, reader appearance,
 per-source reader appearance overrides, reader search history, translation
-target language, and onboarding. Backed by `shared_preferences` (JSON blob
-under a single key) and exposed to the UI via a reactive stream and an
-`InheritedModel` scope.
+target language, Practice settings, and onboarding. Backed by
+`shared_preferences` (JSON blob under a single key) and exposed to the UI via a
+reactive stream and an `InheritedModel` scope.
 
 This is **not** where credentials belong; production credentials should go
 through a dedicated secure-storage backed service.
@@ -20,6 +20,7 @@ through a dedicated secure-storage backed service.
 | `ReaderPageTurnStyle`           | enum             | Reader page-turn mode (`horizontal`, `vertical`)                  |
 | `ReaderPageAnimation`           | enum             | Page transition (`slide`, `cover`), independent of the turn axis |
 | `ReaderPageColors`              | enum             | PDF page colors (`theme`, `original`)                             |
+| `ReaderColumns`                 | enum             | Reflowable-book columns (`auto`, `one`, `two`)                     |
 | `PreferencesService`            | concrete         | Loads, streams, and persists `Preferences`                         |
 | `PreferencesStorage`            | concrete         | Thin `SharedPreferencesAsync` wrapper                              |
 | `PreferencesRepository`         | concrete         | JSON (de)serialization + locale resolution                         |
@@ -61,6 +62,9 @@ repository loading resolves the device locale to a supported language.
 | `onboardingCompleted`      | `bool`      | `false`     |
 | `readerSelectionTipShowCount` | `int`  | `0`         |
 | `readerSelectionTipDismissed` | `bool` | `false`     |
+| `practiceNewCardsPerDay`    | `int`       | `20`        |
+| `practiceReviewHighlights` | `bool`      | `true`      |
+| `practiceDesiredRetention` | `double`    | `0.9`       |
 
 `readerTrimPageMargins` and `readerPageColors` apply to PDF pages only. They
 are on by default because a phone shows a printed page about a third smaller
@@ -84,6 +88,11 @@ The additive global field needs no schema migration.
 The two `readerSelectionTip*` fields back the reader's one-time "Press and
 hold a word" tip. Storage only records what happened; the show limit and
 dismissal rules belong to the reader's `ReaderSelectionTipCubit`.
+
+Practice owns the daily new-card limit and whether highlights join saved words
+in review. The repository clamps loaded new-card limits to zero or above and
+desired retention to `0.7`–`0.97`; the review scheduler applies retention when
+computing intervals.
 
 ## Usage
 

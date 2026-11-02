@@ -29,4 +29,5 @@ the request lifecycle.
 ## Consumers
 
 - `article_extraction_service` guards its client-side HTML fallback.
-- `article_repository` guards article image and cover downloads.
+- `article_repository` guards article body-image downloads. Article covers are
+  not downloaded on import.

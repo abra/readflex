@@ -1,5 +1,5 @@
 name: reader
-description: Book reader with text selection actions
+description: Vellum reader for books, comics, PDFs, and saved articles.
 version: 0.1.0
 publish_to: 'none'
 

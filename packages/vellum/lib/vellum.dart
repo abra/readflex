@@ -6,8 +6,9 @@
 /// have libraries of their own, each exporting this one: `epub.dart`,
 /// `fb2.dart`, `mobi.dart`, `comic.dart`, `pdf.dart` and `article.dart`;
 /// `all_formats.dart` exports them all. An app imports the formats it
-/// reads, and the others stay out of its build. Nothing here knows about
-/// the app's domain models or storage.
+/// reads; release builds can drop unreachable Dart code. The PDFium and
+/// MOBI native assets remain package dependencies for every consumer.
+/// Nothing here knows about the app's domain models or storage.
 library;
 
 export 'src/container/zip_archive.dart';

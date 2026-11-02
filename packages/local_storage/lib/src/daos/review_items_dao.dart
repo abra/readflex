@@ -141,7 +141,7 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
       (delete(reviewItemsTable)..where((t) => t.itemId.equals(itemId))).go();
 
   /// Bulk-removes review items by their source. Used when a source is deleted
-  /// with the "delete everything" scope so dormant FSRS state does not linger
+  /// with the "delete everything" scope so removed content does not linger
   /// in due-review queries.
   Future<void> deleteItemsBySource(String sourceId) => (delete(
     reviewItemsTable,
@@ -149,8 +149,7 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
 
   /// Bulk-removes review items by source AND item type. Used by the
   /// "keep learning data" delete scope: highlight FSRS state is purged with
-  /// the source, while dormant flashcard/dictionary rows stay available for
-  /// future restoration.
+  /// the source, while saved-word and legacy flashcard review rows survive.
   Future<void> deleteItemsBySourceAndType(
     String sourceId,
     String itemType,

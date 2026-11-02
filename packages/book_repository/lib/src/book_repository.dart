@@ -468,13 +468,14 @@ class BookRepository {
   /// rows (highlights, flashcards, dictionary entries, FSRS review state)
   /// is decided by [scope]:
   ///
-  ///   * [BookDeletionScope.keepLearningData] (default) — only the book
-  ///     row, its highlights and the highlight FSRS state are purged.
-  ///     Dormant flashcard rows keep their dead `deckId`, and dictionary
-  ///     entries are detached from the book by nulling their `sourceId`.
-  ///     This preserves user-created learning data for future restoration.
+  ///   * [BookDeletionScope.keepLearningData] (default) — removes the book,
+  ///     highlights and highlight review state. Dictionary entries are
+  ///     detached by nulling `sourceId`; their anchors are removed and their
+  ///     review state survives. Legacy flashcards keep their `deckId`.
   ///   * [BookDeletionScope.deleteEverything] — full cascade: every
   ///     row that referenced this book id is removed alongside the book.
+  ///
+  /// Bookmarks and collection memberships are removed in either scope.
   ///
   /// File cleanup of the per-book directory is best-effort and runs
   /// after the DB transaction commits, so a filesystem error can't roll

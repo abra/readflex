@@ -64,11 +64,8 @@ enum ReaderFontPreset {
     geist => AppTypography.fontFamilySans,
   };
 
-  /// File name (under the reader server's `assets/fonts/` route) of the
-  /// TTF that backs [fontFamily]. The reader screen builds a localhost
-  /// URL from this so foliate-js's `@font-face` can actually load the
-  /// font — Flutter's bundled fonts are invisible to the WebView, so the
-  /// reader has to serve them itself.
+  /// Bundled TTF filename under `packages/component_library/fonts/`.
+  /// The native reader reads it to measure ink bounds for [fontFamily].
   String get fontFile => switch (this) {
     serif => 'Literata-Variable.ttf',
     ptSerif => 'PTSerif-Regular.ttf',

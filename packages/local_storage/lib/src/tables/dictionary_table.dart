@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart';
 
 /// Drift schema for saved dictionary entries (words / phrases / idioms).
-/// Optional [sourceId] + [sourceType] link the entry back to the book it
+/// Optional [sourceId] + [sourceType] link the entry back to the source it
 /// was captured from; [usageExamples] is a JSON-encoded list of strings.
 /// [translation] is the meaning in context; [baseTranslation] the word's
 /// own meaning and [contextTranslation] the sentence's, when known.
@@ -22,7 +22,7 @@ class DictionaryTable extends Table {
   TextColumn get sourceId => text().nullable()();
 
   TextColumn get sourceType =>
-      text().nullable()(); // 'book' or null (legacy SourceType column)
+      text().nullable()(); // 'book', 'article', or null
   TextColumn get usageExamples => text().nullable()(); // JSON-encoded list
   TextColumn get addedAt => text()(); // ISO 8601
   TextColumn get lemma => text().nullable()();

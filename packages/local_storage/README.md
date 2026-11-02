@@ -77,7 +77,8 @@ collections_table        collection_sources_table
 ```
 
 All FSRS state (stability, difficulty, due date, reps, lapses) is
-centralized in `review_items_table`, keyed by `(item_id, item_type)`.
+centralized in `review_items_table`, keyed by `item_id`, with `item_type`
+identifying the content kind. Reviewable content IDs must be globally unique.
 Entity tables (flashcards/highlights/dictionary) hold only domain
 fields; nothing reviewable is duplicated across tables. This was the
 v3→v4 migration — see the comment in `database.dart`.
@@ -104,8 +105,9 @@ directory instead of being deleted.
 `collections_table` stores manual collection metadata;
 `collection_sources_table` stores manual and protected favourites membership.
 Smart author/site collections are derived by the Library feature and are not
-persisted. `dictionary_anchors_table` belongs to the dormant saved-vocabulary
-schema retained for migration compatibility.
+persisted. `dictionary_anchors_table` stores source-specific text anchors for
+saved words. `DictionaryDao` removes those anchors when their entry is deleted
+or their source is deleted or detached; the saved word may outlive its source.
 
 ## Migrations
 
@@ -168,11 +170,11 @@ in-memory executor.
 ## Where it fits
 
 ```
-local_storage → drift, sqlite3_flutter_libs, path_provider, path
+local_storage → flutter, drift, sqlite3, sqlite3_flutter_libs, path_provider, path
         ▲
         │
         └── article_repository, book_repository, collection_repository,
-            highlight_repository
+            dictionary_repository, fsrs_repository, highlight_repository
 ```
 
 No feature package ever imports `local_storage` directly — features go

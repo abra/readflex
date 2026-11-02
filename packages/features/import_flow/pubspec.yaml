@@ -1,5 +1,5 @@
 name: import_flow
-description: Bottom sheet for adding book files (EPUB / PDF / FB2 / ...) to the library
+description: Bottom sheet for importing book files and saving article URLs.
 version: 0.1.0
 publish_to: 'none'
 

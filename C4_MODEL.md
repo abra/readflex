@@ -23,18 +23,15 @@ flowchart LR
   cleaner["Article Cleaner API"]
   translation["Contextual Translation API"]
   dictionary["Readflex Dictionary API"]
-  deepseek["DeepSeek API"]
   platform["iOS / Android platform services"]
 
   user -->|"Imports books, saves articles, reads, highlights"| app
   app -->|"Fetches article URLs or downloaded HTML for extraction"| cleaner
   app -->|"Translates selected text in context"| translation
   app -->|"Looks up definitions when system lookup is unavailable"| dictionary
-  translation -->|"Requests contextual translation analysis"| deepseek
-  dictionary -->|"Requests monolingual structured definitions"| deepseek
   cleaner -->|"May fetch original article URL"| websites
   app -->|"Can fallback-download article HTML"| websites
-  app -->|"Files, PDF rendering, brightness, wakelock, connectivity"| platform
+  app -->|"Files, brightness, wakelock, connectivity, system dictionary"| platform
 ```
 
 ### External Systems
@@ -45,8 +42,12 @@ flowchart LR
 | Publisher websites | Original article pages and assets. | Article cleaner server fetches first; app can fallback-download HTML. |
 | Contextual Translation API | Resolves selected text using surrounding reading context. | `contextual_translation_service` via HTTP. |
 | Readflex Dictionary API | Returns validated, cached monolingual lexical definitions. | `dictionary_service` via HTTP after native lookup fallback. |
-| DeepSeek API | Produces contextual translations and structured monolingual definition candidates. | Called by the Readflex translation and dictionary backends; its credentials are never shipped in the app. |
-| iOS / Android platform services | Files, pdfium (bundled through `pdfrx`), image codecs, brightness, wakelock, connectivity, native dictionary UI. | Flutter plugins, app runner channels, and local packages. |
+| iOS / Android platform services | Files, image codecs, brightness, wakelock, connectivity, native dictionary UI. | Flutter plugins, app runner channels, and local packages. |
+
+The backend implementations are outside this checkout. Their provider calls,
+server-side caches and deployment details are not client-owned contracts.
+PDFium and the Rust MOBI library are bundled reader dependencies, not system
+PDF or dictionary services.
 
 ## Level 2: Containers
 
@@ -60,11 +61,11 @@ flowchart TB
 
   subgraph mobile["Readflex mobile app"]
     appShell["Flutter app shell\nlib/app"]
-    features["Feature packages\nlibrary, import_flow, reader, highlight, translate, dictionary, onboarding"]
+    features["Feature packages\nlibrary, practice, import_flow, reader, highlight, translate, dictionary, onboarding"]
     repos["Repositories and services\ncontent, preferences, connectivity, translation, dictionary, screen control"]
     db["Drift SQLite database\nreadflex.db"]
     files["App documents files\nbooks, articles"]
-    engine["vellum reader engine\nbook formats, layout, pages"]
+    engine["vellum reader engine\nDart formats/layout, PDFium, Rust MOBI backend"]
   end
 
   cleaner["Article Cleaner API"]
@@ -148,12 +149,14 @@ flowchart LR
 
 | Feature | Entry point | State owner | Main dependencies |
 |---------|-------------|-------------|-------------------|
-| Library | `LibraryScreen` | `LibraryBloc`, layout/theme/selection cubits | Book, article, collection repositories, preferences, toast wrapper. |
+| Library | `LibraryScreen` | `LibraryBloc`, layout/theme/locale/page-animation/selection cubits | Book, article, collection and FSRS repositories, preferences, toast wrapper. |
+| Practice | `PracticeScreen`, `ReviewSessionScreen`, `PracticeWordsScreen`, `PracticeHighlightsScreen` | `PracticeBloc`, `ReviewSessionBloc`, words/highlights/settings cubits | FSRS, dictionary, highlight, book and article repositories, preferences, toast wrapper. |
 | Import Flow | `showImportFlowSheet` | `ImportFlowCubit` | File picker/import callbacks, article import callback, vellum metadata extraction. |
 | Reader | `ReaderScreen` | `ReaderBloc` plus reader UI cubits | Book/article/highlight repositories, preferences, vellum, screen control, text actions. |
 | Highlight | `HighlightAction`, `HighlightSheet` | Immediate action plus `HighlightCubit` for the standalone sheet | Highlight repository, shared text action contract. |
 | Translate | `TranslateAction`, `TranslateSheet` | `TranslateCubit` | Contextual translation service, preferences, shared text action contract. |
 | Dictionary | `DictionaryAction`, `DictionarySheet` | `DictionaryCubit` | Native system dictionary bridge, remote dictionary service, shared text action contract. |
+| Onboarding | `OnboardingScreen` | Router-owned completion callback | Shared components and localizations; the router persists completion. |
 
 ### Reader Components
 
@@ -194,6 +197,11 @@ Reader-specific split:
 - `ReaderSearchCubit`, `ReaderSelectionCubit`, `ReaderImageSelectionCubit`,
   and `ReaderImageHighlightCubit` keep narrower UI/interaction concerns out of
   `ReaderBloc`.
+- `ReaderArticleProgressCubit` publishes live article scroll progress separately
+  from throttled reading-position persistence.
+- Reader observes the global page animation chosen through Library's
+  `LibraryPageAnimationCubit`; Vellum resolves book progression from metadata
+  and a bounded content sample, independently of the UI locale.
 - The page bodies host vellum's views and translate their events into the
   blocs and cubits; `ReaderSurface` carries the screen's commands to the
   page. vellum owns formats, layout, search, selection and annotation
@@ -279,7 +287,8 @@ sequenceDiagram
 - Production backend authentication/attestation and short-lived access tokens
   are not implemented. Static build-time API credentials are blocked outside
   development.
-- Flashcard, practice, profile, subscription, auth, AI, and notification
+- Flashcard, profile, subscription, auth, AI, and notification
   surfaces are currently outside the active package graph.
-- Dormant vocabulary/flashcard/review storage models remain for migration
-  compatibility; the active monolingual Dictionary flow does not use them.
+- Saved dictionary words and highlights use the active FSRS review store.
+  Legacy flashcard tables remain for migration compatibility only.
+- Practice word cards have no Listen (TTS) action or daily reminder.

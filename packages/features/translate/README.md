@@ -106,8 +106,8 @@ tag alone must not hide the pronunciation of that selected word.
 There is no extra tokenizer or Dictionary API request.
 Below the result, the source sentence is paired with its translation under a
 **Sentence** caption.
-Book context is sentence-bounded at the
-DOM-range extraction layer, not trimmed or re-segmented in the sheet; unrelated
+Book context is sentence-bounded in Vellum's selection-details extraction,
+not trimmed or re-segmented in the sheet; unrelated
 sentences and clipped character-window prefixes are not part of that context.
 The selected range from the reader's
 marked-context contract is semibold in the body color without a background

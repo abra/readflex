@@ -26,13 +26,13 @@ enum BookLayoutPreset {
 
 /// Layout + typography scale values for the book reader.
 ///
-/// Values are in the units foliate-js expects:
-/// - [fontSize] in `em`
+/// The native reader maps these values into its layout and text style:
+/// - [fontSize] as a scale multiplier
 /// - [lineHeight] as multiplier
-/// - [topMargin] / [bottomMargin] in `px`
+/// - [topMargin] / [bottomMargin] in logical pixels
 /// - [sideMargin] in percent of viewport width
-/// - [textIndent] in `em`
-/// - [letterSpacing] in `px`
+/// - [paragraphSpacing] / [textIndent] in `em`
+/// - [letterSpacing] in logical pixels
 class BookLayoutData {
   const BookLayoutData({
     required this.fontSize,

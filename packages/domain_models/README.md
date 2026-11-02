@@ -29,10 +29,12 @@ where a storage or wire boundary needs one.
 | `DictionaryAnchor` | Source-scoped anchor attached to a dictionary entry       |
 | `ReviewItem`      | FSRS state for a reviewable item (flashcard/highlight/…)  |
 | `ReviewLog`       | Single review event, persisted for history and statistics |
+| `ReviewStats`     | Due/mastered counts and study-day activity for Practice and Library |
 | `FsrsCardData`    | Embedded FSRS v6 state (stability, difficulty, due date)  |
 
-Flashcard, dictionary, and FSRS models are dormant in the current app surface.
-They stay in `domain_models` for storage compatibility and future restoration.
+Dictionary entries, their anchors, and FSRS models support the active saved-word
+and Practice flows. `Flashcard` remains for storage compatibility; its feature
+is outside the active app graph.
 
 ## Enums
 
@@ -47,7 +49,7 @@ They stay in `domain_models` for storage compatibility and future restoration.
 | `FsrsState`            | `newCard`, `learning`, `review`, `relearning` |
 | `Rating`               | `again`, `hard`, `good`, `easy`               |
 | `CreationSource`       | `manual`, `aiHighlight`, `aiSelection`        |
-| `DictionaryAnchorKind` | `exactSelection`, `normalizedSelection`, `expression` |
+| `DictionaryAnchorKind` | `exactSelection`, `normalizedSelection`, `expression`, `longSelection` |
 
 ## Exceptions
 
@@ -93,7 +95,7 @@ for the canonical shape.
 domain_models  (pure Dart, only depends on equatable)
         ▲
         │
-        ├── shared, local_storage
+        ├── shared
         ├── *_repository packages
         ├── service packages
         └── features/*

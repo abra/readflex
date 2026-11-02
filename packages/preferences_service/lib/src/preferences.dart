@@ -567,7 +567,8 @@ class ReaderAppearanceOverride {
 }
 
 /// Immutable snapshot of every user-configurable preference in the app —
-/// app theme, locale, library layout, reader appearance, and onboarding.
+/// app theme, locale, library layout, reader appearance, translation target,
+/// Practice settings, and onboarding.
 /// Loaded at startup, mutated via [PreferencesService.update], and
 /// surfaced to widgets through [PreferencesScope].
 class Preferences {

@@ -5,9 +5,8 @@ import 'connectivity_service.dart';
 /// Listens to [ConnectivityService] and exposes [ConnectivityStatus] to the
 /// subtree via an [InheritedWidget].
 ///
-/// Mirrors the shape of [PreferencesScope] / [AuthScope]: a [StatelessWidget]
-/// owning a [StreamBuilder] that re-wraps the subtree in a small inherited
-/// holder each time the status changes.
+/// Owns a [StreamBuilder] that updates the inherited status on each event,
+/// and refreshes the service when the app resumes or the service changes.
 ///
 /// State here is a single enum value, so a plain [InheritedWidget] suffices —
 /// no [InheritedModel] aspects needed.

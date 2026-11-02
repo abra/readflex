@@ -28,8 +28,8 @@ const double _titleChromeWidth = _offlineGap + AppIconSize.xs;
 /// New are collections there), opened from the bottom capsule beside "+",
 /// under the thumb.
 ///
-/// Pure presentation — all state changes are surfaced via callbacks and are
-/// expected to hit the library BLoC / UI cubits in the parent.
+/// Search changes use the parent's callback; Display reads the UI cubits
+/// provided by LibraryScreen and opens their settings sheet.
 class LibraryHeader extends StatelessWidget {
   const LibraryHeader({
     required this.state,

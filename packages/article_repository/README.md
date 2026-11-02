@@ -87,6 +87,8 @@ deleted row. The reader serializes these writes and drains them on close.
 - `monitoring` - optional cleanup/download logging
 - `remote_content_policy` - URL, DNS, and redirect safety policy
 - `http` - best-effort article image downloads
+- `crypto` - content-addressed image filenames
+- `drift` - partial updates and article deletion transactions
 - `path`
 - `uuid`
 

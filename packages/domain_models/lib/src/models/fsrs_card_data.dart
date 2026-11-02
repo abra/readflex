@@ -21,7 +21,7 @@ enum FsrsState {
   String toStorageString() => storageKey;
 }
 
-/// FSRS v6 scheduling data embedded in a flashcard.
+/// FSRS v6 scheduling state shared by all reviewable item types.
 class FsrsCardData extends Equatable {
   const FsrsCardData({
     this.state = FsrsState.newCard,

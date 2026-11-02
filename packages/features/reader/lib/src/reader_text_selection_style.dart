@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart' show CupertinoTheme;
 import 'package:flutter/material.dart';
 
-/// Keeps the live selection fill in the same colour as its platform handles.
+/// Matches the live fill to Flutter's adaptive Cupertino/Material handles.
 class ReaderTextSelectionStyle extends StatelessWidget {
   const ReaderTextSelectionStyle({required this.child, super.key});
 

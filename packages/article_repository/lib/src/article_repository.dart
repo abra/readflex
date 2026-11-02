@@ -514,7 +514,7 @@ String _htmlForBlocks(
         }
       case ArticleImageBlock(:final src, :final alt, :final title):
         if (src.trim().isNotEmpty) {
-          // Rejected or over-budget images must not trigger an unguarded WebView retry.
+          // Missing local images must not trigger an unguarded reader fetch.
           final localSource = localImages[src];
           final sourceAttribute = localSource == null
               ? ''

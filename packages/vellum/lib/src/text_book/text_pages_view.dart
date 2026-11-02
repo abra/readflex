@@ -57,7 +57,7 @@ class TextPagesSelection {
 /// Taps go to a link under them ([onLinkTap]), then a highlight
 /// ([onHighlightTap]), then [onTap] as fractions of the view, which the
 /// reader maps to its tap zones. With [selectable], the spread shown is a
-/// selection area with the platform's handles, magnifier and
+/// selection area with Flutter's adaptive handles, magnifier and
 /// [contextMenuBuilder].
 ///
 /// A selection follows the reader through the section, as it did in the
@@ -112,10 +112,10 @@ class TextPagesView extends StatefulWidget {
   final TextHighlightsOf? highlightsOf;
   final bool selectable;
 
-  /// The platform's when null.
+  /// Flutter's platform-adaptive selection controls when null.
   final TextSelectionControls? selectionControls;
 
-  /// The platform's adaptive toolbar when null.
+  /// Flutter's adaptive toolbar when null.
   final SelectableRegionContextMenuBuilder? contextMenuBuilder;
   final ValueChanged<TextPagesSelection?>? onSelectionChanged;
 
@@ -480,7 +480,7 @@ class _TextPagesViewState extends State<TextPagesView>
       _clearSelection();
       return;
     }
-    // The spread whole, to cut down from; with the platform's handles.
+    // The spread whole, to cut down from; with Flutter's selection handles.
     region.selectAll(SelectionChangedCause.toolbar);
     final whole = _spreadSelection()?.range;
     if (whole == null) {
@@ -696,7 +696,7 @@ class _TextPagesViewState extends State<TextPagesView>
     if (range != null && !_carryPending) _reselect(range);
   }
 
-  /// Selects [range] on the spread shown, with the platform's handles.
+  /// Selects [range] on the spread shown, with Flutter's selection handles.
   void _reselect(TextPointRange range) {
     final region = _selectableRegion;
     if (region == null) return;

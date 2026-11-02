@@ -1,8 +1,9 @@
 import 'package:drift/drift.dart';
 
 /// Drift schema for highlights captured in the reader. [sourceId] +
-/// [sourceType] identify the reading source; text highlights use an EPUB
-/// [cfiRange], while comic/image highlights use normalized page-area columns.
+/// [sourceType] identify the reading source; text highlights use [cfiRange]
+/// (a text/PDF CFI or serialized article anchor), while comic/image highlights
+/// use normalized page-area columns.
 /// FSRS review state lives separately in
 /// `review_items_table`.
 ///

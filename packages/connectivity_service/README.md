@@ -15,12 +15,15 @@ isolated development surfaces.
 | `ConnectivityService`       | abstract class | Contract: status + reactive stream |
 | `ConnectivityPlusService`   | concrete       | Production adapter over `connectivity_plus` |
 | `NoopConnectivityService`   | concrete       | Stub — always `online`             |
+| `FixedConnectivityService`  | concrete       | Fixed status for tests, previews, and debug overrides |
 | `ConnectivityStatus`        | enum           | `online` / `offline`               |
+| `ConnectivityScope`         | widget         | Exposes status and refreshes on app resume |
 
 ### Methods
 
 - `ConnectivityStatus get status` — latest known status.
 - `Stream<ConnectivityStatus> get statusStream` — emits on every change.
+- `Future<void> refresh()` — rechecks the platform status and emits changes.
 - `void dispose()` — releases platform listeners.
 
 ## Usage

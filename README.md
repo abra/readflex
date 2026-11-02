@@ -33,6 +33,18 @@ Start here:
 | `packages/component_library` | Theme, design tokens, and reusable widgets |
 | `packages/vellum` | The reader engine: book formats, layout, pages, CFIs, search |
 | `packages/vellum_mobi_native` | Rust MOBI/KF8 text-record I/O and decompression, private to Vellum |
+| `android`, `ios` | App runners and native platform integrations |
+| `test/ui`, `integration_test` | Root UI flows, visual comparisons and device checks |
+| `benchmarks` | Opt-in performance comparisons, separate from the app graph |
+
+Create source subdirectories when they contain code or maintained fixtures,
+rather than keeping empty placeholders for future models, exceptions or helpers.
+Localization belongs to `packages/readflex_localizations`, not empty per-feature
+`l10n` folders. Build tools recreate their cache/output directories as needed;
+local diagnostics belong under ignored `.local/`.
+
+Backend implementations are deployed separately and are not part of this
+checkout. The service packages here contain client contracts and adapters.
 
 ## Development
 
@@ -43,7 +55,8 @@ fvm install
 make get
 ```
 
-The coverage report needs Node.js 20+. Android builds also need the project's
+The test harness, coverage reports and benchmark orchestration need Node.js 20+.
+Android builds also need the project's
 JDK/SDK setup; iOS builds need Xcode and CocoaPods.
 MOBI text processing uses Rust through FRB. Install rustup; the compiler and
 targets are pinned in `packages/vellum_mobi_native/rust/rust-toolchain.toml`.
@@ -177,7 +190,12 @@ Some contracts are intentionally incomplete while the app is still being built:
 
 - Error reporting sends to GlitchTip when `GLITCHTIP_DSN` or `SENTRY_DSN` is
   provided. Without a DSN it intentionally falls back to `NoopErrorReporter`.
-- The reader dictionary action is active and uses the platform dictionary
-  first, with the Readflex Dictionary API as fallback. Flashcard, practice,
-  profile, subscription, auth, AI, and notification surfaces remain frozen
+- Flashcard, profile, subscription, auth, AI, and notification surfaces remain frozen
   outside the active package graph; their last legacy revision is `189e2cc1`.
+- Production backend authentication/attestation and short-lived access tokens
+  are not implemented; static build-time API credentials are limited to DEV.
+- Practice word cards have no Listen (TTS) action or daily reminder.
+
+Dictionary lookup and Practice are active. The reader tries the platform
+dictionary before the Readflex Dictionary API; saved words and highlights
+share FSRS scheduling through `fsrs_repository`.

@@ -1,6 +1,6 @@
-/// What the WebView reader does to a section once it has loaded
-/// (`readflex_document_normalizer.js`), the parts that reach its styles:
-/// the book's language and direction on the root, and a class on blocks
+/// Section normalization based on the former WebView reader's
+/// `readflex_document_normalizer.js`: missing language and direction
+/// attributes on the root/body, and a class on blocks
 /// that look like code, which the reader's style sheet treats as code.
 /// Both go into the document's added attributes, so text, ids and CFIs
 /// stay the book's. Pure Dart.
@@ -15,10 +15,10 @@ import 'reading_direction.dart';
 const codeBlockClass = 'readflex-code-block';
 
 /// Gives the root element the book's [language] unless it declares one,
-/// and, outside Chinese, Japanese and Korean, a direction unless the root
-/// or the body declare one: right to left for a right-to-left language
-/// or when the text is mostly right-to-left letters, as the WebView's
-/// `normalizeDocumentLanguageAndDirection` does for books.
+/// and, outside the legacy `zh`, `ja` and `kr` language tags, a direction
+/// unless the root or body declares one: right to left for a right-to-left
+/// language or mostly right-to-left text, following the former reader's
+/// `normalizeDocumentLanguageAndDirection`.
 void normalizeLanguageAndDirection(ContentDocument doc, {String? language}) {
   const root = ContentDocument.rootIndex;
   final canonical = _canonicalLanguage(language);
@@ -48,7 +48,7 @@ void normalizeLanguageAndDirection(ContentDocument doc, {String? language}) {
 }
 
 /// Marks blocks that look like code with [codeBlockClass], as the
-/// WebView's `normalizeCodeLikeBlocks` does after the book's styles
+/// former reader's `normalizeCodeLikeBlocks` did after the book's styles
 /// apply: a `div`, `p`, `section`, `article` or `li` of at least 80
 /// characters, not inside `pre` or a marked block nor itself a caption
 /// of one, shown as a block, whose class or id says code, or whose font

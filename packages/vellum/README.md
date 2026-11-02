@@ -1,13 +1,11 @@
 # vellum
 
-The reader engine: the Flutter/Dart analogue of foliate-js, which it
-replaced in the app together with the WebView (R1–R6). One package opens a
-book file, understands its format, lays its pages out and draws them, and
+Readflex's native Flutter reader engine, replacing the former WebView and
+foliate-js reader. One package opens a book file, understands its format,
+lays its pages out and draws them, and
 reports positions, selections and taps back. The app embeds
 its views (`TextPagesView`, `TextScrollView`, `FixedPagesView`); `vellum`
 knows nothing about the app's domain models, repositories or blocs.
-
-Plan and progress: `.local/reports/native-reader-steps-2026-10-27.md`.
 
 foliate-js stays reference code, not a standard: the fork the app used is in
 the repository's history (the last revision with it is `fb4b4e5c`, under
@@ -17,8 +15,8 @@ scripts that made them are in that revision too.
 
 ## Libraries
 
-An app imports the formats it reads; the others stay out of its build
-(release builds drop the code nothing reaches):
+An app imports the formats it reads; release builds can drop unreachable
+Dart code:
 
 | Library | What it brings |
 |---|---|
@@ -42,8 +40,8 @@ imports only another format.
 
 ## Modules
 
-Each foliate-js module has one Dart counterpart with the same
-responsibility, so parity can be checked module by module.
+The former reader's modules map to these Vellum responsibilities; recorded
+fixtures preserve the behavior that saved positions and content depend on.
 
 | foliate-js | vellum | Responsibility |
 |---|---|---|
@@ -55,7 +53,7 @@ responsibility, so parity can be checked module by module.
 | `epub.js`, `fb2.js`, `mobi.js` | `src/formats/epub/`, `fb2/`, `mobi/` | sections, table of contents, metadata, `resolveHref`, the format's `TextBookSource` |
 | `getMetadata` in `book.js` | `src/metadata/`, each format's `*_metadata.dart` | `BookMetadata` for the library's import: title, author, cover as a small JPEG (`readEpubMetadata` … `readPdfMetadata`, `encodeCoverThumbnail`) |
 | `epubcfi.js` | `src/epubcfi/`, `src/formats/pdf/pdf_anchor.dart` | CFI parse, range ↔ CFI, compare, fake CFIs, PDF text anchors |
-| browser DOM and CSS | `src/document/` | node tree with DOM child indices, CSS subset, cascade |
+| browser DOM and CSS | `src/document/`, `src/css/` | node tree with DOM child indices, CSS subset, cascade |
 | browser layout | `src/layout/` | paragraph `TextSpan` trees laid out by `TextPainter`; blocks, images and tables as `RenderBox`es |
 | `paginator.js`, `readflex_page_columns.js`, `view.js` navigation | `src/text_book/text_page_geometry.dart`, `text_book_layout.dart`, `text_pages_controller.dart`, `text_pages_view.dart` | column geometry, sections laid out near the reader, spreads, turns and jumps, positions, the page view |
 | `fixed-layout.js`, `readflex_page_zoom.js`, image areas in `book.js` | `src/fixed_layout/` | spreads, orientation, RTL, `FixedPagesView` with zoom and tap arbitration, `FixedPagesController`, image areas, thumbnails |
@@ -65,15 +63,16 @@ responsibility, so parity can be checked module by module.
 | `readflex_selection_normalizer.js`, `readflex_selection_context.js`, `readflex_range.js` | `src/text/selection_normalizer.dart`, `src/text_book/selection_context.dart`, `src/text_book/highlight_merge.dart`, `src/text_book/text_selection_details.dart` | a selection's whole words, sentence context and highlight merge: the payload text actions get |
 | (browser `Intl.Segmenter`) | `src/text/sentence_breaks.dart` | Unicode sentence boundaries (UAX #29), as ICU gives them |
 | (browser `hyphens: auto`) | `src/text/hyphenator.dart`, `hyphenation_patterns*.dart` | Liang's hyphenation over the TeX patterns (hyph-utf8) Android's hyphenator is built from: en (US, GB), ru, uk, de, fr, es, it, pt |
-| `readflex_document_normalizer.js` | `src/text_book/document_normalizer.dart` | the book's language and direction on the root, the code block class |
+| `readflex_document_normalizer.js` | `src/text_book/document_normalizer.dart` | missing language/direction from metadata and text, the code block class |
 | `progress.js` | `src/progress/` | section fractions, locations, time left, table of contents position |
 | `footnotes.js`, link handling in `view.js` | `src/text_book/footnotes.dart`, `src/text_book/text_links.dart`, `src/layout/text_fragment_view.dart` | note references, note extraction and popups, internal and external links |
 | `article-html/index.html`, `readflex_content_security.js` (the article shell) | `src/article/`, `src/text_book/text_scroll_controller.dart`, `text_scroll_view.dart` | a saved article: its markup cleaned, contents, sentence anchors, selection payloads and search; one scrolling column |
 
 ## Layers
 
-`container`, `formats`, `epubcfi` and `document` are pure Dart (no
-`dart:ui`): they run in isolates and are tested without a Flutter binding.
+`container`, `epubcfi`, `document` and the format parsers have no
+`dart:ui` dependency: they run in isolates and are tested without a Flutter
+binding. MOBI text-record I/O and decoding use `vellum_mobi_native`;
 `formats/pdf/pdf_book.dart` talks to pdfium through `pdfrx_engine` and one
 FFI call of its own; `formats/pdf/pdf_engine.dart` is the Flutter side of
 that (loading the library the app bundles). `metadata`, `layout`,
@@ -81,7 +80,8 @@ that (loading the library the app bundles). `metadata`, `layout`,
 framework's own primitives:
 `TextPainter` metrics, `RenderBox` layout, `PageView` physics,
 `SelectableRegion` handles, `ImageProvider`/`ImageCache`, `ChangeNotifier`
-controllers. There is no DOM or CSS engine emulation on top of Flutter.
+controllers. Layout and painting use Flutter directly, without an embedded
+WebView or browser runtime.
 
 ## Containers
 
@@ -120,7 +120,7 @@ Ten thousand saved anchors parse and sort in well under a second (test).
 `cfisFromElements`) through `CfiNode`/`CfiDocument` (`cfi_node.dart`), the
 slice of a tree CFIs need: elements and character data with children,
 parent, id and attributes. Any format's tree implements it; the reader's
-own document model will, and `XmlCfiDocument` wraps a `package:xml` tree
+own `ContentDocument` does, and `XmlCfiDocument` wraps a `package:xml` tree
 for XHTML, FB2 and package documents (one wrapper per node, ids indexed
 once). Resolution follows the spec's indexing the way the browser did:
 a parent's children read as `[element, text, element, ..., element]`, so
@@ -232,7 +232,7 @@ as in the browser; prefixed FB2 names are matched by local name.
 
 The first body's top-level elements each become a section, every further
 body one non-linear section with the `notesBodyType` class, each wrapped
-in the WebView's XHTML template (`Fb2Section.xhtml`, without the
+in the former WebView reader's XHTML template (`Fb2Section.xhtml`, without the
 stylesheet link) so saved CFIs resolve in the same elements. A section's
 label is the first title, subtitle or paragraph, its direct subsections'
 titles are numbered with `data-foliate-id` for `index#n` links, its size
@@ -455,11 +455,12 @@ foliate-js's `epub.js` rewrote it (`rewriteEpubCss`, which
 `EpubTextSource.cssRewrite` hands the preparer): `-epub-` prefixes
 dropped, `vw`/`vh` fixed to the window, every `px` turned into `em` at
 16 px, so publisher sizes follow the reader's text size; MOBI and FB2
-sheets are read as they are (`cssRewrite` null). Before it the document gets what the
-WebView's normalizer gave a loaded section
-(`normalizeLanguageAndDirection`, `markCodeLikeBlocks`: the book's
-language and direction on the root, the code block class on
-monospaced `pre` and `div`s).
+sheets are read as they are (`cssRewrite` null). Before style resolution,
+`normalizeLanguageAndDirection` fills missing language and direction attributes
+from book metadata and section text. After the first cascade,
+`markCodeLikeBlocks` marks matching `div`, `p`, `section`, `article` and `li`
+blocks by their class/id or monospaced code content; blocks inside `pre` are
+already treated as code. Marking a block triggers another cascade.
 
 Tests: a table per layer in `test/css/`, a fuzz test that mutates real
 stylesheets 1500 times and tokenizes random code points, and the corpus
@@ -650,7 +651,7 @@ Selection (`src/layout/text_page_selection.dart`, `src/document/text_point.dart`
 `src/text_book/selection_context.dart`): inside a `SelectionArea` or
 `SelectableRegion` each paragraph shown on a `TextColumnPage` registers as
 a `Selectable` (`PageParagraphSelectable`, the lines whole on that page),
-so selection uses the platform's own gestures, handles, magnifier, toolbar
+so selection uses Flutter's adaptive gestures, handles, magnifier, toolbar
 and keys, as `Text` does: word on long press, words while dragging (the
 pressed word stays selected when the drag goes back), select all,
 character, word and line extension from the keyboard. Each page is its
@@ -793,7 +794,7 @@ line); turning back toward the boundary takes the spread whole, and on
 the boundary's own spread the selection ends at it. The edges are moved
 with the selection area's own `SelectionEdgeUpdateEvent`s, as a dragged
 handle moves them (`RenderTextColumnPage.selectionEdgeAt`, `lineEdge`),
-so the platform's handles stay on them; the reported
+so Flutter's selection handles stay on them; the reported
 `TextPagesSelection` spans every page turned over and its text has the
 paragraphs' line breaks. Moving the edge the selection came in by
 starts it over on the page; another tap, a jump or another section

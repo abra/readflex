@@ -51,7 +51,7 @@ a strict pass/fail test without platform-specific thresholds.
 
 ## MOBI Dart/Rust experiment
 
-Record the production Dart decoder in host AOT, with Node.js 20+ and the pinned SDK:
+Record the retained Dart reference decoder in host AOT, with Node.js 20+ and the pinned SDK:
 
 ```sh
 make benchmark-mobi
@@ -193,10 +193,11 @@ CST/DCO Rust dylib is 915,024 bytes and its Dart executable 6,178,784 bytes,
 versus 6,079,712 bytes for the Dart worker. CLI bundles also contain Vellum's
 PDFium/Objective-C assets; these figures do not measure an APK/IPA size delta.
 
-The selected experimental configuration is CST/DCO/NOM. Production continues
-using Dart: PalmDOC merits a real-book/device experiment, while real HUFF books,
-book-open/first-page time, batch-size/memory tradeoffs, cancellation and mobile
-packaging remain unverified.
+This historical experiment selected CST/DCO/NOM. Production now uses the
+separate `vellum_mobi_native` Rust backend for MOBI/KF8 record I/O and decoding;
+the [reader part comparison](reader_native/README.md) uses that backend against
+the retained Dart reference. The measurements above do not establish
+book-open/first-page time, batch-size/memory tradeoffs or mobile FPS.
 An optimized Dart decoder has not been measured; these results compare the
 current implementation with this Rust candidate.
 

@@ -42,7 +42,7 @@ class ComicPageImage extends ImageProvider<ComicPageImage> {
   /// The width the WebView reader rendered previews at.
   static const thumbnailWidth = 240;
 
-  /// Previews skip pages above this size, as the WebView reader does.
+  /// Previews skip pages above this size, as the former WebView reader did.
   static const thumbnailMaxBytes = 16 * 1024 * 1024;
 
   @override

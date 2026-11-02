@@ -28,7 +28,7 @@ class DictionaryRepository {
   final DictionaryDao _dao;
   final _changes = StreamController<void>.broadcast(sync: true);
 
-  /// Emits after a dictionary row is added, updated, or deleted.
+  /// Emits after a dictionary entry or source anchor is changed.
   ///
   /// Feature blocs use this to stay fresh when another feature, such as the
   /// reader translate sheet, changes the dictionary through this repository.

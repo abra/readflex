@@ -29,9 +29,6 @@ const bookExtensions = [
   'cbz',
 ];
 
-/// Formats whose metadata the native engine reads; grows as `vellum`
-/// takes formats over from the WebView.
-
 /// Opens the platform file picker filtered to [bookExtensions]. Returns
 /// the selected [File] or `null` when the user cancels (or picks a file
 /// without a usable path).
