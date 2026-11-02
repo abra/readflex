@@ -308,7 +308,12 @@ selects the collection scope; the Scaffold rebuilds for its visibility alone.
 The capsule appears only once the library has loaded items: the empty
 library offers its own two import commands, while an empty collection keeps
 it so it can be left. Selection mode gives the bottom to the selection bar,
-and the Scaffold scales the capsule out and back in. The header keeps
+and the floating controls hide/show immediately at their resting position.
+The Scaffold slot stays mounted with a `Visibility` wrapper and
+`FloatingActionButtonAnimator.noAnimation`, so it cannot cache exiting controls
+or scale/rotate the whole group. Hidden controls leave layout, input and
+semantics; collection-name changes still use the capsule's `AnimatedSize`.
+The header keeps
 orientation (the title and count) and the rare Display action. See the
 thumb-reach rule in the root `test/ui/README.md`.
 

@@ -45,8 +45,7 @@ Future<void> _expireToasts(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// Opens the Collections picker from the bottom capsule once the Scaffold's
-/// entrance scale has settled; mid-scale the capsule is not hit-testable.
+/// Opens the Collections picker after pending layout work settles.
 Future<void> _openCollections(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(_collectionsButton);
@@ -129,6 +128,7 @@ void main() {
     bool openImportOnStart = false,
     LibraryImportLauncher? onAddPressed,
     ValueChanged<LibrarySource>? onSourcePressed,
+    Future<void> Function()? onPracticePressed,
   }) => PreferencesScope(
     service: preferencesService,
     child: Builder(
@@ -152,6 +152,7 @@ void main() {
           onAddPressed:
               onAddPressed ??
               ({required onImported, entry = LibraryImportEntry.menu}) async {},
+          onPracticePressed: onPracticePressed,
         ),
       ),
     ),
@@ -1529,6 +1530,76 @@ void main() {
       expect(_collectionsButton, findsOneWidget);
       expect(_addButton, findsOneWidget);
     });
+
+    for (final (code, width, scale, reducedMotion) in [
+      ('en', 390.0, 1.0, false),
+      ('ar', 320.0, 2.0, false),
+      ('en', 390.0, 1.0, true),
+    ]) {
+      testWidgets(
+        'selection toggles floating actions without transforms: '
+        '$code, text $scale, reduced motion $reducedMotion',
+        (tester) async {
+          tester.view.physicalSize = Size(width, 844);
+          tester.view.devicePixelRatio = 1;
+          tester.view.padding = const FakeViewPadding(bottom: 34);
+          tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          tester.platformDispatcher.accessibilityFeaturesTestValue =
+              FakeAccessibilityFeatures(disableAnimations: reducedMotion);
+          addTearDown(tester.view.reset);
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          addTearDown(
+            tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+          );
+          await preferencesService.update(
+            (p) => p.copyWith(locale: Locale(code)),
+          );
+          bookRepository.seedBooks([_book]);
+          await tester.pumpWidget(
+            buildSubject(
+              theme: code == 'ar' ? AppTheme.dark() : AppTheme.light(),
+              onPracticePressed: () async {},
+            ),
+          );
+          await tester.pumpAndSettle();
+          final strings = tester.element(find.byType(LibraryScreen)).l10n;
+          final practice = find.byIcon(AppIcons.practiceFloating);
+          final controls = [_capsule, _addButton, _collectionsButton, practice];
+          final bounds = [
+            for (final control in controls) tester.getRect(control),
+          ];
+          final reads = bookRepository.getBooksCallCount;
+
+          // Both settled selection and a cancel before the old 200ms exit ends.
+          for (final settleSelection in [true, false]) {
+            await tester.longPress(find.text(_book.title));
+            await tester.pump();
+            expect(_capsule, findsNothing);
+            expect(practice, findsNothing);
+            expect(_addButton.hitTestable(), findsNothing);
+            if (settleSelection) await tester.pumpAndSettle();
+            await tester.tap(find.byTooltip(strings.libraryCancelSelection));
+            await tester.pump();
+            for (var frame = 0; frame <= 25; frame++) {
+              for (var index = 0; index < controls.length; index++) {
+                final actual = tester.getRect(controls[index]);
+                final expected = bounds[index];
+                expect(actual.left, closeTo(expected.left, .01));
+                expect(actual.top, closeTo(expected.top, .01));
+                expect(actual.width, closeTo(expected.width, .01));
+                expect(actual.height, closeTo(expected.height, .01));
+              }
+              expect(_addButton.hitTestable(), findsOneWidget);
+              await tester.pump(const Duration(milliseconds: 16));
+            }
+            expect(find.byType(LibrarySelectionBar), findsNothing);
+          }
+          expect(bookRepository.getBooksCallCount, reads);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
   });
 
   testWidgets('an empty library has no "+": its body offers both imports', (
@@ -1539,10 +1610,7 @@ void main() {
     expect(_addButton, findsNothing);
     // Nothing to narrow either: Collections hides with "+".
     expect(_collectionsButton, findsNothing);
-    expect(
-      tester.widget<Scaffold>(find.byType(Scaffold)).floatingActionButton,
-      isNull,
-    );
+    expect(_capsule, findsNothing);
     expect(
       find.byKey(const ValueKey('libraryEmptyUploadFile')),
       findsOneWidget,
@@ -1930,7 +1998,7 @@ void main() {
     expect(bookRepository.getBooksCallCount, 2);
 
     notifyPositionSaved!(0.3);
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(card, findsOneWidget);
     expect(
       find.descendant(of: card, matching: find.text('30%')),
@@ -1938,7 +2006,7 @@ void main() {
     );
 
     notifyPositionSaved!(0.4);
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(
       find.descendant(of: card, matching: find.text('40%')),
       findsOneWidget,

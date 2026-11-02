@@ -39,8 +39,7 @@ class LibraryFloatingActionsLocation extends StandardFabLocation
     adjustment,
   );
 
-  // The Scaffold animates the button to every new location, so rebuilds
-  // with the same inset must compare equal.
+  // Equal insets avoid restarting Scaffold's location controller on rebuilds.
   @override
   bool operator ==(Object other) =>
       other is LibraryFloatingActionsLocation &&

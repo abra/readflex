@@ -515,56 +515,56 @@ class _LibraryViewState extends State<_LibraryView> {
                   floatingActionButtonLocation: LibraryFloatingActionsLocation(
                     bottomViewPadding: MediaQuery.viewPaddingOf(context).bottom,
                   ),
-                  // The selection bar takes the bottom while selecting.
-                  // Swapping to null lets the Scaffold scale the capsule out
-                  // and back in.
-                  // Toasts float above the floating actions and selection bar.
-                  floatingActionButton: hasItems && !selectionActive
-                      ? ToastAvoidArea(
-                          child: Padding(
-                            padding: const EdgeInsetsDirectional.only(
-                              bottom: kLibraryFloatingActionsLift,
+                  floatingActionButtonAnimator:
+                      FloatingActionButtonAnimator.noAnimation,
+                  // Keep the slot stable so Scaffold cannot retain exiting
+                  // controls while the selection bar takes their place.
+                  floatingActionButton: Visibility(
+                    visible: hasItems && !selectionActive,
+                    child: ToastAvoidArea(
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                          bottom: kLibraryFloatingActionsLift,
+                        ),
+                        // Only the actions follow the scope and the due
+                        // count; the Scaffold rebuilds for visibility
+                        // alone.
+                        child:
+                            BlocSelector<
+                              LibraryBloc,
+                              LibraryState,
+                              (LibraryCollectionScope?, int)
+                            >(
+                              selector: (state) => (
+                                state.selectedCollectionScope,
+                                state.practice?.due ?? 0,
+                              ),
+                              builder: (context, selected) {
+                                final (scope, practiceDue) = selected;
+                                return LibraryFloatingActions(
+                                  scope: scope,
+                                  practiceDue: practiceDue,
+                                  onCollectionsPressed: () =>
+                                      _handleCollectionScopePressed(
+                                        context,
+                                        context.read<LibraryBloc>().state,
+                                      ),
+                                  onPracticePressed:
+                                      widget.onPracticePressed == null
+                                      ? null
+                                      : () => _handlePracticePressed(context),
+                                  onAddPressed: _addInFlight
+                                      ? null
+                                      : () => _handleAdd(
+                                          context,
+                                          LibraryImportEntry.menu,
+                                        ),
+                                );
+                              },
                             ),
-                            // Only the actions follow the scope and the due
-                            // count; the Scaffold rebuilds for visibility
-                            // alone.
-                            child:
-                                BlocSelector<
-                                  LibraryBloc,
-                                  LibraryState,
-                                  (LibraryCollectionScope?, int)
-                                >(
-                                  selector: (state) => (
-                                    state.selectedCollectionScope,
-                                    state.practice?.due ?? 0,
-                                  ),
-                                  builder: (context, selected) {
-                                    final (scope, practiceDue) = selected;
-                                    return LibraryFloatingActions(
-                                      scope: scope,
-                                      practiceDue: practiceDue,
-                                      onCollectionsPressed: () =>
-                                          _handleCollectionScopePressed(
-                                            context,
-                                            context.read<LibraryBloc>().state,
-                                          ),
-                                      onPracticePressed:
-                                          widget.onPracticePressed == null
-                                          ? null
-                                          : () =>
-                                                _handlePracticePressed(context),
-                                      onAddPressed: _addInFlight
-                                          ? null
-                                          : () => _handleAdd(
-                                              context,
-                                              LibraryImportEntry.menu,
-                                            ),
-                                    );
-                                  },
-                                ),
-                          ),
-                        )
-                      : null,
+                      ),
+                    ),
+                  ),
                   body: SafeArea(
                     bottom: false,
                     child: BlocBuilder<LibraryBloc, LibraryState>(
