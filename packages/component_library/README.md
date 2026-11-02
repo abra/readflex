@@ -239,10 +239,12 @@ Keep localized tooltips specific to the action and preserve existing save,
 confirmation and Undo behavior when changing an icon.
 Use `AppIcons.undo` for reversing a deletion, not the refresh/retry icon.
 `AppIcons.practice` is Lucide's `playing-cards-fan`, the review deck, wherever
-Practice is named: the Library capsule and row, Start review, the empty hub.
+Practice is named: the Library row, Start review, the empty hub.
+The separate 32dp floating action uses `AppIcons.practiceFloating`, the same
+glyph at weight 300 so its strokes stay close to the usual 2dp thickness.
 Icons come from `lucide_icons_flutter` 4 (Lucide 1.56+); regular glyphs and
 their `Dir` variants keep the 3.x API, weighted variants live in separate
-libraries and are not used. A Lucide bump can refine glyphs, so compare every
+libraries. A Lucide bump can refine glyphs, so compare every
 golden diff against an icon-sized box before updating baselines.
 Inline deletion/restoration actions use the same icon-only button and target;
 do not replace an icon with a variable-width text label. The localized tooltip

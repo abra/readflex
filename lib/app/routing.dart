@@ -1,6 +1,7 @@
 import 'dart:async' show Stream, unawaited;
 
 import 'package:article_extraction_service/article_extraction_service.dart';
+import 'package:component_library/component_library.dart';
 import 'package:connectivity_service/connectivity_service.dart'
     show ConnectivityScope, ConnectivityStatus;
 import 'package:library_feature/library_feature.dart';
@@ -179,21 +180,38 @@ GoRoute _buildPracticeRoute(DependenciesContainer deps) => GoRoute(
           ReviewSessionArguments arguments => arguments,
           _ => const ReviewSessionArguments(),
         };
-        return MaterialPage(
+        final reviewScreen = ReviewSessionScreen(
+          fsrsRepository: deps.fsrsRepository,
+          dictionaryRepository: deps.dictionaryRepository,
+          highlightRepository: deps.highlightRepository,
+          bookRepository: deps.bookRepository,
+          articleRepository: deps.articleRepository,
+          preferencesService: deps.preferencesService,
+          sourceId: arguments.sourceId,
+          ahead: arguments.ahead,
+          onOpenInSource: (sourceId, cfiRange) =>
+              _openAtCfi(context, sourceId: sourceId, cfiRange: cfiRange),
+        );
+        final platform = Theme.of(context).platform;
+        if (platform == TargetPlatform.iOS ||
+            platform == TargetPlatform.macOS) {
+          final duration = context.motion(AppMotion.short);
+          // A modal slide moves the outgoing page's background over the hub's
+          // bottom button. Fade in place so returning reveals it evenly.
+          return CustomTransitionPage<void>(
+            key: state.pageKey,
+            fullscreenDialog: true,
+            transitionDuration: duration,
+            reverseTransitionDuration: duration,
+            transitionsBuilder: (_, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child),
+            child: reviewScreen,
+          );
+        }
+        return MaterialPage<void>(
           key: state.pageKey,
           fullscreenDialog: true,
-          child: ReviewSessionScreen(
-            fsrsRepository: deps.fsrsRepository,
-            dictionaryRepository: deps.dictionaryRepository,
-            highlightRepository: deps.highlightRepository,
-            bookRepository: deps.bookRepository,
-            articleRepository: deps.articleRepository,
-            preferencesService: deps.preferencesService,
-            sourceId: arguments.sourceId,
-            ahead: arguments.ahead,
-            onOpenInSource: (sourceId, cfiRange) =>
-                _openAtCfi(context, sourceId: sourceId, cfiRange: cfiRange),
-          ),
+          child: reviewScreen,
         );
       },
     ),

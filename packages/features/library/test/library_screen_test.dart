@@ -3469,8 +3469,8 @@ void main() {
         expect(listed(reading.id), findsNothing);
         expect(tester.getRect(listed(earlier.id)), firstListed);
 
-        // A tap toggles it like a row, without opening the reader.
-        await tester.tap(listed(_book.id));
+        // The first visible item also toggles selection without opening.
+        await tester.tap(listed(earlier.id));
         await tester.pumpAndSettle();
         expect(find.text('Selected: 2'), findsOneWidget);
         await tester.tap(card);

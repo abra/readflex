@@ -512,14 +512,14 @@ class _LibraryViewState extends State<_LibraryView> {
                   // The selection bar takes the bottom while selecting.
                   // Swapping to null lets the Scaffold scale the capsule out
                   // and back in.
-                  // Toasts float above the capsule and the selection bar.
+                  // Toasts float above the floating actions and selection bar.
                   floatingActionButton: hasItems && !selectionActive
                       ? ToastAvoidArea(
                           child: Padding(
                             padding: const EdgeInsetsDirectional.only(
                               bottom: kLibraryFloatingActionsLift,
                             ),
-                            // Only the capsule follows the scope and the due
+                            // Only the actions follow the scope and the due
                             // count; the Scaffold rebuilds for visibility
                             // alone.
                             child:

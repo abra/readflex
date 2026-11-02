@@ -105,7 +105,10 @@ void main() {
     expect(ready(), isTrue, reason: 'timed out');
   }
 
-  Future<void> pumpReader(WidgetTester tester) async {
+  Future<void> pumpReader(
+    WidgetTester tester, {
+    ValueChanged<HighlightColor>? onHighlightSaved,
+  }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -121,7 +124,7 @@ void main() {
           highlightRepository: highlights,
           preferencesService: preferences,
           screenControlService: _ScreenControlService(),
-          textActions: [_FakeHighlightAction()],
+          textActions: [_FakeHighlightAction(onSaved: onHighlightSaved)],
           onOpenExternalLink: externalLinks.add,
         ),
       ),
@@ -427,6 +430,89 @@ void main() {
     await close(tester);
   });
 
+  testWidgets('ordinary article selection does not preview an annotation', (
+    tester,
+  ) async {
+    await pumpReader(tester);
+    final view = find.byType(TextScrollView);
+    final quick = offsetOf(tester, 'The quick brown', 'quick');
+    await tester.longPressAt(at(tester, 'The quick brown', quick + 1));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextScrollView>(view)
+          .highlights
+          .where(
+            (highlight) => highlight.id == 'readflex-selection-preview',
+          ),
+      isEmpty,
+    );
+
+    final region = tester.state<SelectableRegionState>(
+      find.descendant(of: view, matching: find.byType(SelectableRegion)),
+    );
+    region.selectAll();
+    await tester.pumpAndSettle();
+    final selection = tester.element(view).read<ReaderSelectionCubit>().state;
+    expect(selection.selectedText.length, greaterThan('quick'.length));
+    expect(
+      tester
+          .widget<TextScrollView>(view)
+          .highlights
+          .where(
+            (highlight) => highlight.id == 'readflex-selection-preview',
+          ),
+      isEmpty,
+      reason: 'expanding a selection does not choose an annotation colour',
+    );
+    expect(highlights.addedHighlights, isEmpty);
+    await close(tester);
+  });
+
+  testWidgets('the first Yellow tap previews and follows the selected range '
+      'without saving', (tester) async {
+    final saved = <HighlightColor>[];
+    await pumpReader(tester, onHighlightSaved: saved.add);
+    final view = find.byType(TextScrollView);
+    final quick = offsetOf(tester, 'The quick brown', 'quick');
+    await tester.longPressAt(at(tester, 'The quick brown', quick + 1));
+    await tester.pumpAndSettle();
+    final strings = tester.element(view).l10n;
+    await tester.tap(find.byTooltip(strings.highlightColorYellow));
+    await tester.pumpAndSettle();
+    TextHighlight preview() => tester
+        .widget<TextScrollView>(view)
+        .highlights
+        .singleWhere(
+          (highlight) => highlight.id == 'readflex-selection-preview',
+        );
+    final doc = controller(tester).section!.prepared.document;
+    expect(doc.textOfRange(preview().range), 'quick');
+    expect(saved, isEmpty);
+    expect(highlights.addedHighlights, isEmpty);
+
+    tester
+        .state<SelectableRegionState>(
+          find.descendant(of: view, matching: find.byType(SelectableRegion)),
+        )
+        .selectAll();
+    await tester.pumpAndSettle();
+    final selection = tester.element(view).read<ReaderSelectionCubit>().state;
+    expect(selection.selectedText.length, greaterThan('quick'.length));
+    expect(
+      preview().range,
+      ArticleAnchor.decode(selection.cfiRange)!.rangeIn(doc),
+    );
+    expect(saved, isEmpty);
+
+    await tester.tap(find.byTooltip('Highlight'));
+    await tester.pumpAndSettle();
+    expect(saved, [HighlightColor.yellow]);
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+    await close(tester);
+  });
+
   testWidgets('saved highlights are tinted on their text; a tap focuses '
       'one', (tester) async {
     final doc = ContentDocument.parseHtml(
@@ -570,6 +656,10 @@ class _ScreenControlService implements ScreenControlService {
 
 /// The highlight action, which the selection popup needs to appear.
 class _FakeHighlightAction extends ColorHighlightTextAction {
+  _FakeHighlightAction({this.onSaved});
+
+  final ValueChanged<HighlightColor>? onSaved;
+
   @override
   String get label => 'Highlight';
 
@@ -587,5 +677,5 @@ class _FakeHighlightAction extends ColorHighlightTextAction {
     BuildContext context,
     TextSelectionContext selection,
     HighlightColor color,
-  ) async {}
+  ) async => onSaved?.call(color);
 }

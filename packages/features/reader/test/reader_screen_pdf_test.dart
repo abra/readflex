@@ -9,6 +9,7 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_highlight_controls.dart';
+import 'package:reader/src/reader_highlight_color.dart';
 import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -186,7 +187,8 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('a tap outside the selection clears it and its popup', (
+  testWidgets('PDF annotation colour previews only after an explicit choice '
+      'and clears with the selection', (
     tester,
   ) async {
     await pumpReader(tester);
@@ -199,9 +201,50 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
     expect(find.byType(ReaderHighlightControls), findsOneWidget);
-    // The popup previews its colour from its first build; the overlay must
-    // take that without a build-phase error.
+    final selectionState = tester
+        .widget<PdfTextOverlay>(find.byType(PdfTextOverlay).first)
+        .selection;
+    expect(selectionState.color, PdfTextSelection.defaultColor);
+    expect(highlights.addedHighlights, isEmpty);
     expect(tester.takeException(), isNull);
+
+    await tester.runAsync(
+      () => preferences.update(
+        (p) => p.copyWith(readerThemeId: ReaderThemePreset.night.id),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      selectionState.color,
+      PdfTextSelection.defaultColor,
+      reason: 'a theme change does not activate an annotation preview',
+    );
+
+    await tester.tap(find.byTooltip(l10n(tester).highlightColorYellow));
+    await tester.pumpAndSettle();
+    final darkTheme = ReaderThemePreset.night.data;
+    expect(
+      selectionState.color,
+      readerHighlightColor(HighlightColor.yellow, darkTheme).withValues(
+        alpha: readerHighlightOpacity(darkTheme),
+      ),
+    );
+    expect(highlights.addedHighlights, isEmpty);
+
+    await tester.runAsync(
+      () => preferences.update(
+        (p) => p.copyWith(readerThemeId: ReaderThemePreset.paper.id),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final paperTheme = ReaderThemePreset.paper.data;
+    expect(
+      selectionState.color,
+      readerHighlightColor(HighlightColor.yellow, paperTheme).withValues(
+        alpha: readerHighlightOpacity(paperTheme),
+      ),
+      reason: 'an explicitly chosen preview follows theme changes',
+    );
 
     await tester.tapAt(Offset(300, top + 400));
     await tester.pumpAndSettle();
@@ -210,6 +253,7 @@ void main() {
         .read<ReaderSelectionCubit>()
         .state;
     expect(selection.hasSelection, isFalse);
+    expect(selectionState.color, PdfTextSelection.defaultColor);
     expect(find.byType(ReaderHighlightControls), findsNothing);
     expect(tester.takeException(), isNull);
 

@@ -77,16 +77,19 @@ Practice has no tab; the Library is its one way in, in two places:
   review highlights (`practiceReviewHighlights`), read from
   `PreferencesService` at each load, so the row and the badge agree with the
   hub.
-- `LibraryPracticeButton` sits in the bottom capsule between the collection
-  switcher and "+", behind a hairline, always: Practice stays reachable before
-  the first save (it opens the empty section), and the due count is its
-  badge. One semantics node: "Practice, N cards due today".
-- The badge is Material's 16dp pill with a 2dp ring in the capsule's colour,
-  centred on the glyph's top-end corner (Flutter's `Badge` offsets suit a
-  24dp icon and would cover a third of this 20dp glyph); a wider count grows
-  inwards and stops at "99+", so it never reaches "+". The ring is the
-  convention for a badge laid over strokes or artwork; Material and iOS put
-  bare badges on icon corners.
+- `LibraryPracticeButton` sits separately above "+", outside the bottom
+  capsule, with a transparent background. Its 32dp glyph uses weight 300 to
+  keep the strokes close to 2dp and has the same shadow as the capsule,
+  painted around the strokes, in a 48dp touch target.
+  Practice stays reachable before the first save (it opens the empty
+  section), and the due count is its badge. One semantics node:
+  "Practice, N cards due today".
+- The badge is Material's 16dp pill with a 2dp ring in the app surface's colour,
+  anchored at the glyph's top-end corner with an 8dp outset; a wider count
+  grows inwards. Zero hides it, 1–99 shows the exact count, and 100 or more
+  shows "99+". Its width and height stay within the 48dp touch target; at
+  enlarged text the single-line number scales down only when needed to fit.
+  The full count remains in the row, the Practice section and button semantics.
 
 Both call `onPracticePressed`; the screen suspends search focus like opening
 the reader and dispatches `LibraryRefreshRequested` when Practice pops.
@@ -257,6 +260,9 @@ popover shadow, as the reader chrome), `kLibraryFloatingActionsHeight` (56dp)
 tall and lifted `kLibraryFloatingActionsLift` (8dp) above the Scaffold's
 margin. Two 48dp controls sit 4dp inside it and 4dp apart; the row follows
 the reading direction, so "+" keeps the outer corner in RTL too.
+When Practice is available, its plain 48dp action sits 8dp above the capsule,
+centred over "+" in both directions. The floating group keeps its bottom
+anchor, so adding Practice does not move the capsule or "+".
 
 `LibraryFloatingActionsLocation` places it like `endFloat`, 16dp above the
 bottom safe inset or the keyboard, whichever is higher. `endFloat` alone
@@ -373,16 +379,17 @@ inset, and both layouts start their first cover `kLibraryContentTopPadding`
 (12dp) below the header's band, 24dp under the search field: the list row's
 own padding supplies it, the grid adds it as top padding. Content bottom
 padding comes from `libraryContentBottomPadding(context)`: the bottom capsule
-(56dp), its 8dp lift, the Scaffold's 16dp margin and a 16dp gap over the
-body's bottom padding (the safe inset the keyboard leaves uncovered), so the
-last row ends 16dp above the capsule with or without a home indicator and on
-every keyboard frame. "No results"
+(56dp), another 56dp when Practice is available (48dp target plus 8dp gap),
+its 8dp lift, the Scaffold's 16dp margin and a 16dp gap over the body's bottom
+padding (the safe inset the keyboard leaves uncovered), so the last row ends
+16dp above the highest floating action with or without a home indicator and
+on every keyboard frame. "No results"
 pads its scroll view the same way so its command can scroll clear of it;
 the empty library has no capsule and no padding. The selection bar is mounted
 in `bottomNavigationBar` only while selecting, because an occupied slot
 strips the body's bottom inset; while selecting the bar owns the safe area
 and the capsule's space stays reserved, so the end of the list never moves.
-The capsule and the selection bar are `ToastAvoidArea`s: toasts float above
+The floating group and the selection bar are `ToastAvoidArea`s: toasts float above
 whichever is on screen and leave both tappable.
 
 ### Continue reading
@@ -397,21 +404,34 @@ the list and grid below, so the book is never shown twice; searching or a
 collection drops the card and lists the source in its place again. The item
 count still includes it.
 
-The card is a full-width band in the card surface (`surfaceContainerLow`), no
-radius, 12dp above and below its content, `kLibraryContentTopPadding` below
+The card is a full-width band in the card surface (`surfaceContainerLow`),
+with no radius, 12dp above and below its 90dp content,
+`kLibraryContentTopPadding` below
 the header's band and `kLibraryContinueReadingGap` (16dp) above the first
 cover; it scrolls with the content. Its content sits on the list rows' lines:
 the row's `LibraryListCoverSlot` (60×90) on the 16dp gutter, then
 `kLibraryListCoverToTextGap` (14dp), so in the grid its cover lines up with the
-first column. The text column holds the Continue reading overline, a serif
-`titleMedium` title (at most three lines; a longer one shrinks in 5% steps to
-80% before it ellipsizes, see `resolveContinueReadingTitleLayout`), the muted
-author, a 4dp rounded
+first column. The text column holds a header with the Continue reading label
+and progress/time caption, a serif `titleMedium` title (the largest font that
+fits the complete title in the available width and height, with wrapping and
+no ellipsis; see `resolveContinueReadingTitleLayout`), the muted
+author and a 4dp rounded
 `actionForeground` progress bar on a muted track (a `LibraryProgressFill`,
-keyed by source, so another book taking the card does not animate) and a
-"{percent}% · {time left}" caption. Time left is
+keyed by source, so another book taking the card does not animate). The
+caption reads "{percent}% · {time left}". Time left is
 `readingTimeLeft(LibrarySource.estimatedMinutesLeft)` and is omitted when
 unknown (books have no character count).
+
+The text stays between the 60×90 cover's top and bottom edges; the band
+keeps its 12dp outer vertical padding.
+Title fitting checks both the available width and height, using the actual
+scaled font metrics and a bounded binary search when the theme size does
+not fit; the progress bar ends at the cover's bottom edge.
+The title and author stay together, with unused space below. At large text
+sizes the author shares the header with the caption instead of taking a
+separate line. If even that header cannot fit,
+only the title and bar remain visible. System text scaling stays enabled,
+and the button's semantics retain the full title, progress and time estimate.
 
 It behaves like a row through the same `onSourcePressed` /
 `onSourceLongPressed`: tap opens the source, long-press starts selection with

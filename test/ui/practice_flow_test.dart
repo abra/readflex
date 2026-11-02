@@ -51,24 +51,27 @@ void main() {
     );
   }
 
-  testWidgets('before the first save only the capsule leads to Practice', (
-    tester,
-  ) async {
-    await launch(tester);
-    expect(row, findsNothing);
-    expect(badge, findsNothing);
+  testWidgets(
+    'before the first save only the floating icon leads to Practice',
+    (
+      tester,
+    ) async {
+      await launch(tester);
+      expect(row, findsNothing);
+      expect(badge, findsNothing);
 
-    await tapUi(tester, button);
-    expect(find.byType(PracticeScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('practiceEmptyState')), findsOneWidget);
-    expect(find.byKey(const ValueKey('practiceStartReview')), findsNothing);
+      await tapUi(tester, button);
+      expect(find.byType(PracticeScreen), findsOneWidget);
+      expect(find.byKey(const ValueKey('practiceEmptyState')), findsOneWidget);
+      expect(find.byKey(const ValueKey('practiceStartReview')), findsNothing);
 
-    await tapUi(tester, find.byType(AppBackButton));
-    await tester.pumpAndSettle();
-    expect(find.byType(PracticeScreen), findsNothing);
-    expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
-    await unmountUi(tester);
-  });
+      await tapUi(tester, find.byType(AppBackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(PracticeScreen), findsNothing);
+      expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
+      await unmountUi(tester);
+    },
+  );
 
   testWidgets('after a session the Library shows the new counts', (
     tester,

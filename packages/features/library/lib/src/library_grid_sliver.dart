@@ -55,11 +55,15 @@ class LibraryGridSliver extends StatelessWidget {
     required this.semanticIndexOffset,
     required this.onSourcePressed,
     required this.onSourceLongPressed,
+    this.hasPracticeAction = false,
     super.key,
   });
 
   final List<LibrarySource> sources;
   final LibrarySelectionState selection;
+
+  /// Keeps the last cover clear of the Practice action above the capsule.
+  final bool hasPracticeAction;
 
   /// Something scrolls above the covers, so the gap below it applies.
   final bool hasContentAbove;
@@ -79,7 +83,10 @@ class LibraryGridSliver extends StatelessWidget {
             ? kLibraryContinueReadingGap
             : kLibraryContentTopPadding,
         AppSpacing.lg,
-        libraryContentBottomPadding(context),
+        libraryContentBottomPadding(
+          context,
+          hasPracticeAction: hasPracticeAction,
+        ),
       ),
       sliver: SliverGrid(
         gridDelegate: _LibraryGridDelegate(textScale: textScale),

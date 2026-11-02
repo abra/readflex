@@ -30,6 +30,7 @@ class LibraryContentScrollView extends StatelessWidget {
     required this.onSourcePressed,
     required this.onSourceLongPressed,
     required this.onConfirmSwipeDelete,
+    this.hasPracticeAction = false,
     this.leading,
     this.continueReadingSource,
     super.key,
@@ -41,6 +42,9 @@ class LibraryContentScrollView extends StatelessWidget {
   /// Leads the content inside the gutters, such as the Practice row.
   final Widget? leading;
   final LibrarySource? continueReadingSource;
+
+  /// Reserves space for the upper floating action, including during selection.
+  final bool hasPracticeAction;
   final LibrarySelectionState selection;
   final ScrollController scrollController;
   final void Function(LibrarySource source) onSourcePressed;
@@ -101,6 +105,7 @@ class LibraryContentScrollView extends StatelessWidget {
           sliver: switch (layoutMode) {
             LibraryLayoutMode.list => LibraryListSliver(
               sources: sources,
+              hasPracticeAction: hasPracticeAction,
               selection: selection,
               hasContentAbove: leading != null || hasCard,
               semanticIndexOffset: cardCount,
@@ -110,6 +115,7 @@ class LibraryContentScrollView extends StatelessWidget {
             ),
             LibraryLayoutMode.grid => LibraryGridSliver(
               sources: sources,
+              hasPracticeAction: hasPracticeAction,
               selection: selection,
               hasContentAbove: leading != null || hasCard,
               semanticIndexOffset: cardCount,

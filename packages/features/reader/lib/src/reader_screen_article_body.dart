@@ -841,21 +841,23 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
     return Stack(
       children: [
         Positioned.fill(
-          child: TextScrollView(
-            controller: controller,
-            backgroundColor: theme.backgroundColor,
-            highlights: _highlightsFor(highlights),
-            onTap: (_) {
-              context.read<ReaderSelectionCubit>().deselect();
-              context.read<ReaderUiCubit>().toggleChrome();
-            },
-            onLinkTap: _onLinkTap,
-            onHighlightTap: _onHighlightTap,
-            onSelectionChanged: _onSelectionChanged,
-            // The reader shows its own context panel for a selection.
-            contextMenuBuilder: (context, state) => const SizedBox.shrink(),
-            trackedHighlight: _searchActiveHighlightId,
-            onHighlightRects: (rects) => _activeHitRects.value = rects,
+          child: ReaderTextSelectionStyle(
+            child: TextScrollView(
+              controller: controller,
+              backgroundColor: theme.backgroundColor,
+              highlights: _highlightsFor(highlights),
+              onTap: (_) {
+                context.read<ReaderSelectionCubit>().deselect();
+                context.read<ReaderUiCubit>().toggleChrome();
+              },
+              onLinkTap: _onLinkTap,
+              onHighlightTap: _onHighlightTap,
+              onSelectionChanged: _onSelectionChanged,
+              // The reader shows its own context panel for a selection.
+              contextMenuBuilder: (context, state) => const SizedBox.shrink(),
+              trackedHighlight: _searchActiveHighlightId,
+              onHighlightRects: (rects) => _activeHitRects.value = rects,
+            ),
           ),
         ),
         Positioned.fill(

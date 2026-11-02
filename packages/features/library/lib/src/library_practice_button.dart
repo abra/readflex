@@ -2,16 +2,18 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-/// Material's large badge is 16dp; the ring around it is the capsule's own
+/// Material's large badge is 16dp; the ring around it is the app surface's
 /// colour, so the count stays legible where it crosses the glyph's strokes.
 const double _badgeRing = 2;
 const double _badgeHeight = 16 + _badgeRing * 2;
+const double _practiceIconSize = 32;
+const double _badgeOutset = (AppSizes.buttonHeight - _practiceIconSize) / 2;
 
-/// Counts above this show as "99+": the capsule has no room for more digits.
+/// Counts above this show as "99+" to stay inside the touch target.
 const int _badgeMaxCount = 99;
 
-/// Practice in the Library's bottom capsule, between the collection switcher
-/// and "+": always there, so Practice has one stable entry under the thumb
+/// A plain Practice icon above "+", outside the Library's bottom capsule:
+/// Practice has one stable entry under the thumb
 /// even before anything is saved, with the due count as a badge once cards
 /// are waiting.
 ///
@@ -38,20 +40,29 @@ class LibraryPracticeButton extends StatelessWidget {
         child: AppPlainIconButton(
           tooltip: l10n.practiceTitle,
           color: colors.onSurface,
+          iconSize: _practiceIconSize,
           onPressed: onPressed,
           iconWidget: Stack(
             clipBehavior: Clip.none,
             children: [
-              const Icon(AppIcons.practice, size: AppIconSize.sm),
+              Icon(
+                AppIcons.practiceFloating,
+                size: _practiceIconSize,
+                shadows: [
+                  for (final shadow in AppShadows.popover)
+                    Shadow(
+                      color: shadow.color,
+                      offset: shadow.offset,
+                      blurRadius: shadow.blurRadius,
+                    ),
+                ],
+              ),
               if (due > 0)
-                // Centred on the glyph's top-end corner, as Material places
-                // a badge on a 24dp icon; Flutter's defaults would cover a
-                // third of this 20dp glyph. A wider count grows inwards, so
-                // it stays within the 48dp target. The value already says
-                // the number in words.
+                // Offset to the corner while staying inside the 48dp target.
+                // A wider count grows inwards; semantics say the full count.
                 PositionedDirectional(
-                  top: -_badgeHeight / 2,
-                  end: -_badgeHeight / 2,
+                  top: -_badgeOutset,
+                  end: -_badgeOutset,
                   child: ExcludeSemantics(child: _DueBadge(count: due)),
                 ),
             ],
@@ -62,7 +73,7 @@ class LibraryPracticeButton extends StatelessWidget {
   }
 }
 
-/// The count in a primary stadium with a ring in the capsule's colour.
+/// The count in a primary stadium with a ring in the surface's colour.
 class _DueBadge extends StatelessWidget {
   const _DueBadge({required this.count});
 
@@ -83,15 +94,21 @@ class _DueBadge extends StatelessWidget {
         constraints: const BoxConstraints(
           minWidth: _badgeHeight,
           minHeight: _badgeHeight,
+          maxWidth: AppSizes.buttonHeight,
+          maxHeight: AppSizes.buttonHeight,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: _badgeRing + AppSpacing.xs,
+            vertical: _badgeRing,
           ),
-          child: Center(
-            widthFactor: 1,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
             child: Text(
               count > _badgeMaxCount ? '$_badgeMaxCount+' : '$count',
+              maxLines: 1,
+              softWrap: false,
+              textDirection: TextDirection.ltr,
               style: context.text.labelSmall.copyWith(color: colors.onPrimary),
             ),
           ),

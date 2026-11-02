@@ -39,11 +39,15 @@ class LibraryListSliver extends StatelessWidget {
     required this.onSourcePressed,
     required this.onSourceLongPressed,
     required this.onConfirmSwipeDelete,
+    this.hasPracticeAction = false,
     super.key,
   });
 
   final List<LibrarySource> sources;
   final LibrarySelectionState selection;
+
+  /// Keeps the last row clear of the Practice action above the capsule.
+  final bool hasPracticeAction;
 
   /// Something scrolls above the rows, so the gap below it is completed.
   final bool hasContentAbove;
@@ -67,7 +71,10 @@ class LibraryListSliver extends StatelessWidget {
         top: hasContentAbove
             ? kLibraryContinueReadingGap - kLibraryContentTopPadding
             : 0,
-        bottom: libraryContentBottomPadding(context),
+        bottom: libraryContentBottomPadding(
+          context,
+          hasPracticeAction: hasPracticeAction,
+        ),
       ),
       sliver: SliverList(
         // A line can hold two sources, so screen readers count the sources,

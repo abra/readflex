@@ -75,12 +75,16 @@ class LibraryBody extends StatelessWidget {
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
-          // "No results" keeps the "+" button: its command must scroll clear
-          // of it, like the last row of a list. An empty library has no
-          // button.
+          // "No results" keeps the floating actions: its command must scroll
+          // clear of them, like the last row. An empty library has none.
           padding: state.isEmpty
               ? null
-              : EdgeInsets.only(bottom: libraryContentBottomPadding(context)),
+              : EdgeInsets.only(
+                  bottom: libraryContentBottomPadding(
+                    context,
+                    hasPracticeAction: onPracticePressed != null,
+                  ),
+                ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: MediaQuery.sizeOf(context).height * 0.6,
@@ -115,8 +119,8 @@ class LibraryBody extends StatelessWidget {
               final practice = state.practice;
               final onPracticePressed = this.onPracticePressed;
               // Appears after the first save and then stays: a stable entry
-              // up here besides the capsule, only in the default view like
-              // the card.
+              // up here besides the floating action, only in the default
+              // view like the card.
               final leading =
                   state.isDefaultView &&
                       practice != null &&
@@ -132,6 +136,7 @@ class LibraryBody extends StatelessWidget {
                 sources: state.listedItems,
                 leading: leading,
                 continueReadingSource: continueReadingSource,
+                hasPracticeAction: onPracticePressed != null,
                 selection: selection,
                 scrollController: scrollController,
                 onSourcePressed: onSourcePressed,

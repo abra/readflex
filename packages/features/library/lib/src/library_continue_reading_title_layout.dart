@@ -4,41 +4,31 @@ import 'package:flutter/painting.dart';
 
 import 'library_title_layout.dart';
 
-/// The title never takes more lines than this, so the Continue reading card
-/// stays bounded however long the title is.
-const int kContinueReadingTitleMaxLines = 3;
-
-/// Smallest title font relative to the theme role: about the author line's
-/// size, so the title never reads smaller than its metadata.
-const double kContinueReadingTitleMinFontScale = 0.8;
-
-const double _fontScaleStep = 0.05;
+const int _fitSearchSteps = 16;
 
 /// How the Continue reading card fits its title.
 class ContinueReadingTitleLayout {
   const ContinueReadingTitleLayout({
     required this.fontScale,
-    required this.truncated,
+    required this.maxLines,
   });
 
   /// Multiplier for the title role's font size.
   final double fontScale;
 
-  /// The title is still too long at the minimum scale and is ellipsized.
-  final bool truncated;
+  /// Lines that fit the available cover height at [fontScale].
+  final int maxLines;
 }
 
-/// Measures [title] once per card layout.
-///
-/// The title keeps its size while it fits in [kContinueReadingTitleMaxLines]
-/// lines; otherwise it shrinks, down to [kContinueReadingTitleMinFontScale],
-/// until it does. Only a title that overflows even then is ellipsized.
+/// Keeps the full title inside both bounds at the largest fitting font size.
+/// Short titles keep the theme's size; longer titles wrap and scale down.
 ContinueReadingTitleLayout resolveContinueReadingTitleLayout({
   required String title,
   required TextStyle style,
   required TextScaler textScaler,
   required TextDirection textDirection,
   required double maxWidth,
+  required double maxHeight,
   Locale? locale,
 }) {
   final painter = TextPainter(
@@ -46,23 +36,46 @@ ContinueReadingTitleLayout resolveContinueReadingTitleLayout({
     textDirection: textDirection,
     textScaler: textScaler,
     locale: locale,
-    maxLines: kContinueReadingTitleMaxLines,
   );
   try {
-    var scale = 1.0;
-    while (true) {
+    bool fits(double scale) {
+      painter.text = TextSpan(
+        text: title,
+        style: libraryTitleStyle(style, scale),
+      );
+      final lineHeight = painter.preferredLineHeight;
       painter
-        ..text = TextSpan(text: title, style: libraryTitleStyle(style, scale))
+        ..maxLines = lineHeight > 0
+            ? math.max(1, (maxHeight / lineHeight).floor())
+            : null
         ..layout(maxWidth: maxWidth);
-      final fits = !painter.didExceedMaxLines;
-      if (fits || scale <= kContinueReadingTitleMinFontScale) {
-        return ContinueReadingTitleLayout(fontScale: scale, truncated: !fits);
-      }
-      scale = math.max(
-        kContinueReadingTitleMinFontScale,
-        scale - _fontScaleStep,
+      return !painter.didExceedMaxLines &&
+          painter.height <= maxHeight &&
+          painter.computeLineMetrics().every((line) => line.width <= maxWidth);
+    }
+
+    if (fits(1)) {
+      return ContinueReadingTitleLayout(
+        fontScale: 1,
+        maxLines: painter.maxLines ?? 1,
       );
     }
+    var lower = 0.0;
+    var upper = 1.0;
+    for (var step = 0; step < _fitSearchSteps; step++) {
+      final candidate = (lower + upper) / 2;
+      if (fits(candidate)) {
+        lower = candidate;
+      } else {
+        upper = candidate;
+      }
+    }
+    final scale = lower > 0 ? lower : upper;
+    fits(scale);
+    return ContinueReadingTitleLayout(
+      fontScale: scale,
+      maxLines: painter.maxLines ?? 1,
+    );
   } finally {
     painter.dispose();
   }

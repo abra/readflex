@@ -1,7 +1,10 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fsrs_repository/fsrs_repository.dart';
+import 'package:library_feature/library_feature.dart';
 import 'package:readflex/app/routing.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
@@ -10,8 +13,8 @@ import 'golden_support.dart';
 /// The Library with its Practice entry, the Practice section and a review
 /// session, in every visual profile.
 ///
-/// The app is pumped whole (router, real repositories) so each screen is
-/// captured as the reader reaches it.
+/// Navigation flows pump the whole app; large-count coverage substitutes only
+/// the Practice stats to avoid seeding a million review items.
 void main() {
   setUpAll(loadUiFonts);
 
@@ -121,6 +124,51 @@ void main() {
       await unmountUi(tester);
     }, tags: ['golden']);
 
+    testWidgets('library with large card count $name', (tester) async {
+      final app = await createApp(tester);
+      await pumpGoldenSurface(
+        tester,
+        profile,
+        (_) => LibraryScreen(
+          bookRepository: app.bookRepository,
+          articleRepository: app.articleRepository,
+          collectionRepository: app.collectionRepository,
+          preferencesService: app.preferencesService,
+          fsrsRepository: _LargeCountFsrsRepository(),
+          onSourcePressed:
+              (_, {onSourceOpened, onReadingPositionSaved}) async {},
+          onAddPressed:
+              ({required onImported, entry = LibraryImportEntry.menu}) async {},
+          onPracticePressed: () async {},
+        ),
+        surfaceSize: size,
+        locale: locale,
+      );
+      final badge = find.byKey(const ValueKey('libraryPracticeBadge'));
+      await waitForUi(
+        tester,
+        () => badge.evaluate().isNotEmpty,
+        description: 'large Practice count',
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(of: badge, matching: find.text('99+')),
+        findsOneWidget,
+      );
+      final button = find.byKey(const ValueKey('libraryPracticeButton'));
+      final l10n = ReadflexLocalizations.of(tester.element(button))!;
+      final fullCount = l10n.practiceDueToday(_LargeCountFsrsRepository.count);
+      expect(find.text(fullCount), findsOneWidget);
+      final semantics = tester.ensureSemantics();
+      try {
+        expect(tester.getSemantics(button).value, fullCount);
+      } finally {
+        semantics.dispose();
+      }
+      await snapshot(tester, 'library-practice-large-count');
+      await unmountUi(tester);
+    }, tags: ['golden']);
+
     testWidgets('practice section $name', (tester) async {
       final app = await createApp(tester);
       await seedPractice(app);
@@ -203,4 +251,17 @@ void main() {
       await unmountUi(tester);
     }, tags: ['golden']);
   }
+}
+
+class _LargeCountFsrsRepository implements FsrsRepository {
+  static const count = 1000000;
+
+  @override
+  Future<ReviewStats> getStats() async => const ReviewStats(
+    totalByType: {ReviewableType.dictionary: count},
+    dueByType: {ReviewableType.dictionary: count},
+  );
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

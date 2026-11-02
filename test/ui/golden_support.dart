@@ -44,6 +44,12 @@ Future<void> loadUiFonts() async {
         rootBundle.load('packages/lucide_icons_flutter/assets/lucide.ttf'),
       ))
       .load();
+  await (FontLoader('packages/lucide_icons_flutter/Lucide300')..addFont(
+        rootBundle.load(
+          'packages/lucide_icons_flutter/assets/build_font/LucideVariable-w300.ttf',
+        ),
+      ))
+      .load();
   for (final family in AppTypography.fontFamilyFallback) {
     if (bundledFonts.containsKey(family)) continue;
     final bytes = await File(

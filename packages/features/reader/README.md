@@ -843,8 +843,14 @@ storage work. Color/note updates patch only their own SQL fields, and source
 reloads do not replace newer annotation state. Mutation success/failure is a
 typed `ReaderHighlightEffect`, rendered by `ReaderHighlightEffectListener`
 without rebuilding its content child. A queued command alone never produces a
-success toast. Selecting a color for a new text selection remains a preview;
-the Highlight action still explicitly saves it.
+success toast. A new text selection keeps its platform-adaptive selection
+tint; opening the action panel does not preview the default annotation
+colour. Explicitly choosing a colour starts the preview, including the first
+tap on the already-selected Yellow swatch. The Highlight action saves it.
+For books and articles `ReaderTextSelectionStyle` derives the temporary fill
+from the same accent as the current Cupertino/Material handles. On iOS this
+avoids inheriting MaterialApp's primary tint for Cupertino's blue handles.
+The saved annotation palette is separate.
 
 `ReaderSurfaceFailed` reports a page that cannot open or lay out its document,
 with the error, through the bloc's error pipeline and switches to the shared

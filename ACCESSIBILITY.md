@@ -82,6 +82,12 @@ collection; it has no tap action. The capsule's height is fixed, so its text
 scales to 200% and no further; at 320dp and 200% it still fits within the
 gutters, truncating a long collection name rather than clipping.
 
+The separate Practice icon announces the full due count on its button node.
+Its decorative badge is hidden at zero and shows at most "99+" visually.
+The number follows text scaling until it reaches the 48dp target's bounds,
+then scales down to fit on one line; the row and Practice section retain the
+full count with normal text scaling.
+
 When behavior changes accessibility output, add focused tests:
 
 - Use `tester.ensureSemantics()` and dispose the handle before the widget test

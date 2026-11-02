@@ -14,12 +14,13 @@ void main() {
     double viewPadding = safeInset,
     Size snackBar = Size.zero,
     Size bottomSheet = Size.zero,
+    Size floatingActions = fab,
     TextDirection textDirection = TextDirection.ltr,
   }) => ScaffoldPrelayoutGeometry(
     bottomSheetSize: bottomSheet,
     contentBottom: scaffold.height - keyboard,
     contentTop: 0,
-    floatingActionButtonSize: fab,
+    floatingActionButtonSize: floatingActions,
     minInsets: EdgeInsets.only(bottom: keyboard),
     minViewPadding: EdgeInsets.only(bottom: keyboard == 0 ? viewPadding : 0),
     scaffoldSize: scaffold,
@@ -65,6 +66,29 @@ void main() {
               fab.height),
       1 + kFloatingActionButtonMargin,
     );
+  });
+
+  test('a taller Practice stack preserves the bottom and end anchors', () {
+    const withPractice = Size(220, 120);
+    for (final direction in TextDirection.values) {
+      for (final keyboard in [0.0, 20.0, 320.0]) {
+        final shortOffset = location.getOffset(
+          geometry(textDirection: direction, keyboard: keyboard),
+        );
+        final tallOffset = location.getOffset(
+          geometry(
+            textDirection: direction,
+            keyboard: keyboard,
+            floatingActions: withPractice,
+          ),
+        );
+        expect(tallOffset.dx, shortOffset.dx);
+        expect(
+          tallOffset.dy + withPractice.height,
+          closeTo(shortOffset.dy + fab.height, 0.01),
+        );
+      }
+    }
   });
 
   test('keeps endFloat clear of snack bars and bottom sheets', () {

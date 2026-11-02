@@ -56,6 +56,11 @@ session as a full-screen dialog page. The hub reloads after each of them
 closes; there is no tab to return to. Nothing else is public;
 tests reach cubits and `PracticeItem` through `src/` imports.
 
+On iOS and macOS the session uses a short fade (`AppMotion.short`), skipped
+with reduced motion. Sliding its full-screen background down leaves a moving
+edge over Review ahead when returning to the hub. Other platforms retain the
+theme's page transition; the session stays a full-screen dialog.
+
 ## Settings
 
 The hub's app bar ends with Practice settings (`AppIcons.settings`), a sheet
@@ -165,6 +170,8 @@ follows the same setting.
 - `test/review_interval_label_test.dart` pins the rounding and due labels.
 - Root goldens (`test/ui/practice_golden_test.dart`) cover `practice`,
   `practice-empty` and the `review-*` states.
+- `test/ui/practice_review_transition_test.dart` checks intermediate frames
+  while closing a completed session and the refreshed hub after returning.
 
 ## Not here
 

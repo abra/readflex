@@ -842,7 +842,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
     );
     return Stack(
       children: [
-        Positioned.fill(child: pages),
+        Positioned.fill(child: ReaderTextSelectionStyle(child: pages)),
         Positioned.fill(
           child: ReaderSearchOcclusionMarker(
             rects: _activeHitRects,

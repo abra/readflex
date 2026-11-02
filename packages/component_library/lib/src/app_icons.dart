@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons_300.dart';
 
 /// Centralized icon constants backed by Lucide Icons.
 ///
@@ -50,6 +51,8 @@ abstract final class AppIcons {
   static const IconData home = LucideIcons.house;
   // A fan of cards: the review deck. Lucide 4 (Lucide 1.56+).
   static const IconData practice = LucideIcons.playingCardsFan;
+  // Lighter strokes keep the larger floating glyph near the usual 2dp weight.
+  static const IconData practiceFloating = LucideIcons300.playingCardsFan;
   static const IconData settings = LucideIcons.settings;
   static const IconData profile = LucideIcons.user;
 

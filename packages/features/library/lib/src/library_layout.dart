@@ -30,6 +30,13 @@ const double kLibraryListCoverToTextGap = AppSpacing.md + AppSpacing.xxs;
 /// regular floating action height, holding 48dp controls 4dp from its edge.
 const double kLibraryFloatingActionsHeight = AppSizes.floatingActionButton;
 
+/// Space between the separate Practice action and the capsule below it.
+const double kLibraryPracticeActionGap = AppSpacing.sm;
+
+/// Extra height above the capsule when Practice is available.
+const double kLibraryPracticeActionExtent =
+    AppSizes.buttonHeight + kLibraryPracticeActionGap;
+
 /// Lift of the bottom capsule above the Scaffold's own 16dp margin.
 const double kLibraryFloatingActionsLift = AppSpacing.sm;
 
@@ -44,7 +51,8 @@ const double kLibraryFloatingActionsMaxWidth = 320;
 const double kLibraryFloatingActionsMaxTextScale = 2;
 
 /// Bottom padding for Library grid/list content: the last row ends a 16dp
-/// gap above the bottom capsule.
+/// gap above the highest floating action: Practice when available, otherwise
+/// the bottom capsule.
 ///
 /// The capsule (56dp) is lifted 8dp above the Scaffold's 16dp margin, which
 /// sits on the bottom safe inset or the keyboard, whichever is higher
@@ -52,10 +60,14 @@ const double kLibraryFloatingActionsMaxTextScale = 2;
 /// which already ends at the keyboard and whose bottom padding is the part
 /// of the safe inset the keyboard leaves uncovered, so the gap holds on every
 /// keyboard frame. The space stays reserved while selecting, when the
-/// selection bar replaces the capsule, so entering selection never reflows
-/// the end of the list.
-double libraryContentBottomPadding(BuildContext context) =>
+/// selection bar replaces the floating actions, so entering selection never
+/// reflows the end of the list.
+double libraryContentBottomPadding(
+  BuildContext context, {
+  bool hasPracticeAction = false,
+}) =>
     kLibraryFloatingActionsHeight +
+    (hasPracticeAction ? kLibraryPracticeActionExtent : 0) +
     kLibraryFloatingActionsLift +
     AppSpacing.lg +
     AppSpacing.lg +

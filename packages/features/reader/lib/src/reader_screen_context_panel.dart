@@ -837,6 +837,7 @@ class _HighlightSelectionPopup extends StatefulWidget {
 
 class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   HighlightColor _selectedColor = HighlightColor.yellow;
+  bool _hasColorPreview = false;
   bool _saving = false;
   bool _executingExtraAction = false;
   Future<TextSelectionContext>? _selectionAtInteractionStart;
@@ -844,20 +845,14 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
   bool get _busy => _saving || _executingExtraAction;
 
   @override
-  void initState() {
-    super.initState();
-    widget.onPreviewColorChanged(_selectedColor);
-  }
-
-  @override
   void didUpdateWidget(covariant _HighlightSelectionPopup oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.selection.cfiRange != widget.selection.cfiRange) {
       _selectionAtInteractionStart = null;
-      widget.onPreviewColorChanged(_selectedColor);
+      if (_hasColorPreview) widget.onPreviewColorChanged(_selectedColor);
       return;
     }
-    if (oldWidget.readerTheme != widget.readerTheme) {
+    if (_hasColorPreview && oldWidget.readerTheme != widget.readerTheme) {
       widget.onPreviewColorChanged(_selectedColor);
     }
   }
@@ -963,7 +958,9 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                 dividerColor: widget.dividerColor,
                 onInteractionStarted: _captureSelectionAtInteractionStart,
                 onColorChanged: (color) {
-                  if (_busy || _selectedColor == color) return;
+                  if (_busy || (_hasColorPreview && _selectedColor == color)) {
+                    return;
+                  }
                   _debugTraceReaderHighlight(
                     'preview-color '
                     'source=${widget.selection.sourceId} '
@@ -971,7 +968,10 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                     'anchor=${_readerHighlightTraceAnchor(widget.selection.cfiRange)} '
                     'color=${color.name}',
                   );
-                  setState(() => _selectedColor = color);
+                  setState(() {
+                    _selectedColor = color;
+                    _hasColorPreview = true;
+                  });
                   widget.onPreviewColorChanged(color);
                 },
                 highlightAction: ReaderHighlightAction(

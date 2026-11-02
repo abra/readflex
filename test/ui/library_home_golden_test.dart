@@ -153,8 +153,8 @@ void main() {
     }, tags: ['golden']);
   }
 
-  // A long title shrinks to fit three lines instead of growing the card or
-  // ending in an ellipsis; at double text size it ellipsizes at the floor.
+  // The cover bounds the text: the full title wraps and scales down to fit,
+  // including at double text size, without changing the cover or outer padding.
   for (final profile in [VisualProfile.phone, VisualProfile.largeText]) {
     testWidgets('continue reading long title ${profile.name}', (tester) async {
       const longTitle =

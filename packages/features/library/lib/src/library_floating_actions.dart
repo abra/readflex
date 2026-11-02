@@ -14,10 +14,8 @@ import 'library_practice_button.dart';
 const double _controlInset =
     (kLibraryFloatingActionsHeight - AppSizes.buttonHeight) / 2;
 
-/// The Library's bottom capsule, where the thumb rests: the collection
-/// switcher naming what the Library shows, Practice behind a hairline with
-/// its due badge, then the filled "+" at the outer end. The row follows the
-/// reading direction, so "+" keeps the outer corner in RTL as well.
+/// The collection switcher and "+" share a bottom capsule. Practice is a
+/// separate plain icon above "+", aligned with it in both LTR and RTL.
 ///
 /// Mounted in the Scaffold's floating action slot. That slot strips the safe
 /// insets, so the width bound uses the 16dp gutters only; side insets exist
@@ -42,7 +40,7 @@ class LibraryFloatingActions extends StatelessWidget {
   /// Cards due in Practice, shown as a badge.
   final int practiceDue;
 
-  /// Opens Practice; `null` leaves the capsule without it.
+  /// Opens Practice; `null` omits the separate icon.
   final VoidCallback? onPracticePressed;
 
   @override
@@ -57,15 +55,6 @@ class LibraryFloatingActions extends StatelessWidget {
             onPressed: onCollectionsPressed,
           ),
         ),
-        if (onPracticePressed != null) ...[
-          const SizedBox(width: _controlInset),
-          const _ControlDivider(),
-          const SizedBox(width: _controlInset),
-          LibraryPracticeButton(
-            due: practiceDue,
-            onPressed: onPracticePressed,
-          ),
-        ],
         const SizedBox(width: _controlInset),
         LibraryAddButton(onPressed: onAddPressed),
       ],
@@ -83,43 +72,45 @@ class LibraryFloatingActions extends StatelessWidget {
           constraints: BoxConstraints(maxWidth: maxWidth),
           child: MediaQuery.withClampedTextScaling(
             maxScaleFactor: kLibraryFloatingActionsMaxTextScale,
-            child: AppFloatingCapsule(
-              key: const ValueKey('libraryFloatingActions'),
-              height: kLibraryFloatingActionsHeight,
-              child: Padding(
-                padding: const EdgeInsets.all(_controlInset),
-                // A new collection name resizes the capsule smoothly, "+"
-                // anchored at the outer end. Reduced motion skips the
-                // widget: a zero-duration AnimatedSize re-dirties itself
-                // during its own layout.
-                child: context.reduceMotion
-                    ? controls
-                    : AnimatedSize(
-                        duration: AppMotion.short,
-                        curve: Curves.easeOutCubic,
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: controls,
-                      ),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (onPracticePressed != null)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      end: _controlInset,
+                      bottom: kLibraryPracticeActionGap,
+                    ),
+                    child: LibraryPracticeButton(
+                      due: practiceDue,
+                      onPressed: onPracticePressed,
+                    ),
+                  ),
+                AppFloatingCapsule(
+                  key: const ValueKey('libraryFloatingActions'),
+                  height: kLibraryFloatingActionsHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(_controlInset),
+                    // A new collection name resizes the capsule smoothly, "+"
+                    // anchored at the outer end. Reduced motion skips the
+                    // widget: a zero-duration AnimatedSize re-dirties itself
+                    // during its own layout.
+                    child: context.reduceMotion
+                        ? controls
+                        : AnimatedSize(
+                            duration: AppMotion.short,
+                            curve: Curves.easeOutCubic,
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: controls,
+                          ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
       },
     );
   }
-}
-
-/// Hairline between the collection switcher and Practice, so the two
-/// unfilled controls do not read as one.
-class _ControlDivider extends StatelessWidget {
-  const _ControlDivider();
-
-  static const double _height = AppSpacing.xl;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 1 / MediaQuery.devicePixelRatioOf(context),
-    height: _height,
-    child: ColoredBox(color: context.colors.outlineVariant),
-  );
 }
