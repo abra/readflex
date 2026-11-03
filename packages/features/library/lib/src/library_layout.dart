@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:component_library/component_library.dart';
 import 'package:flutter/widgets.dart';
 
@@ -59,15 +61,18 @@ const double kLibraryFloatingActionsMaxTextScale = 2;
 /// (`LibraryFloatingActionsLocation`). [context] is inside the Scaffold body,
 /// which already ends at the keyboard and whose bottom padding is the part
 /// of the safe inset the keyboard leaves uncovered, so the gap holds on every
-/// keyboard frame. The space stays reserved while selecting, when the
-/// selection bar replaces the floating actions, so entering selection never
-/// reflows the end of the list.
+/// keyboard frame. Selection controls keep at least this clearance and add
+/// space when enlarged text makes their capsule taller.
 double libraryContentBottomPadding(
   BuildContext context, {
   bool hasPracticeAction = false,
+  double selectionActionsHeight = kLibraryFloatingActionsHeight,
 }) =>
-    kLibraryFloatingActionsHeight +
-    (hasPracticeAction ? kLibraryPracticeActionExtent : 0) +
+    math.max(
+      kLibraryFloatingActionsHeight +
+          (hasPracticeAction ? kLibraryPracticeActionExtent : 0),
+      selectionActionsHeight,
+    ) +
     kLibraryFloatingActionsLift +
     AppSpacing.lg +
     AppSpacing.lg +

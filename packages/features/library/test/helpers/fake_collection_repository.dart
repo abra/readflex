@@ -37,12 +37,19 @@ class FakeCollectionRepository implements CollectionRepository {
   }
 
   @override
+  Future<LibraryCollection> createCollection(String name) =>
+      createCollectionWithSources(name: name, sourceIds: const []);
+
+  @override
   Future<LibraryCollection> createCollectionWithSources({
     required String name,
     required Iterable<String> sourceIds,
   }) async {
     await writeGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
+    if (name.trim().isEmpty) {
+      throw ArgumentError.value(name, 'name', 'Collection name is empty');
+    }
     final collection = LibraryCollection(
       id: 'collection-${_collections.length + 1}',
       name: name.trim(),
@@ -53,6 +60,21 @@ class FakeCollectionRepository implements CollectionRepository {
     _collections.add(collection);
     addedSourceIdsByCollection[collection.id] = sourceIds.toSet();
     return collection;
+  }
+
+  @override
+  Future<void> addSourcesToCollections({
+    required Iterable<String> collectionIds,
+    required Iterable<String> sourceIds,
+  }) async {
+    await writeGate?.future;
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    final ids = sourceIds.toSet();
+    for (final collectionId in collectionIds.toSet()) {
+      addedSourceIdsByCollection
+          .putIfAbsent(collectionId, () => <String>{})
+          .addAll(ids);
+    }
   }
 
   @override

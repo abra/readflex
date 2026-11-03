@@ -48,7 +48,7 @@ void main() {
         home: BlocProvider.value(
           value: cubit,
           child: Scaffold(
-            bottomNavigationBar: LibrarySelectionBar(
+            floatingActionButton: LibrarySelectionBar(
               onAddToCollection: () {},
               onDelete: () {},
             ),
@@ -58,8 +58,14 @@ void main() {
     );
   }
 
-  RenderParagraph paragraph(WidgetTester tester, Finder text) => tester
-      .renderObject(find.descendant(of: text, matching: find.byType(RichText)));
+  RenderParagraph paragraph(WidgetTester tester, Finder text) =>
+      tester.renderObject(
+        find.descendant(
+          of: text,
+          matching: find.byType(RichText),
+          matchRoot: true,
+        ),
+      );
 
   // Fallback fonts (Arabic, Devanagari, CJK) give boxes on one line
   // different tops, so a line is a run of vertically overlapping boxes.
@@ -102,31 +108,69 @@ void main() {
           locale: locale,
         );
         expect(tester.takeException(), isNull);
-        final l10n = tester.element(find.byType(LibrarySelectionBar)).l10n;
-        final label = paragraph(
-          tester,
-          find.descendant(
-            of: find.byType(FilledButton),
-            matching: find.byType(AppButtonLabel),
-          ),
-        );
-        final count = paragraph(
-          tester,
-          find.text(l10n.librarySelectedCount(2)),
-        );
-        // Large text and narrow phones may wrap the command onto its second
-        // line; nothing ends in an ellipsis.
-        expect(label.didExceedMaxLines, isFalse);
-        if (textScale == 1) expect(lines(count), 1);
-        if (window.width < smallestWide.width) return;
-
-        final close = find.widgetWithIcon(AppPlainIconButton, AppIcons.close);
-        expect(
-          tester.getRect(find.byType(FilledButton)).center.dy,
-          closeTo(tester.getRect(close).center.dy, .5),
-          reason: 'one row',
-        );
-        if (textScale == 1) expect(lines(label), 1);
+        final semantics = tester.ensureSemantics();
+        try {
+          final l10n = tester.element(find.byType(LibrarySelectionBar)).l10n;
+          final add = find.byKey(
+            const ValueKey('libraryAddToCollectionButton'),
+          );
+          final cancel = find.byKey(
+            const ValueKey('libraryCancelSelectionFab'),
+          );
+          final count = paragraph(
+            tester,
+            find.byKey(const ValueKey('librarySelectedCount')),
+          );
+          final label = find.text(l10n.libraryCollectionsTitle);
+          // Tight layouts may expose an icon-only action. Its full localized
+          // purpose stays in the tooltip; every displayed label remains whole.
+          expect(find.byTooltip(l10n.libraryAddToCollection), findsOneWidget);
+          expect(find.byTooltip(l10n.libraryCancelSelection), findsOneWidget);
+          expect(
+            find.bySemanticsLabel(l10n.librarySelectedCount(2)),
+            findsOneWidget,
+          );
+          if (label.evaluate().isNotEmpty) {
+            final command = paragraph(tester, label);
+            expect(command.didExceedMaxLines, isFalse);
+            if (textScale == 1) expect(lines(command), 1);
+          }
+          expect(count.didExceedMaxLines, isFalse);
+          if (textScale == 1) expect(lines(count), 1);
+          for (final control in [
+            cancel,
+            add,
+            find.widgetWithIcon(AppPlainIconButton, AppIcons.delete),
+          ]) {
+            final bounds = tester.getRect(control);
+            final size = tester.getSize(control);
+            expect(size.width, greaterThanOrEqualTo(48));
+            expect(size.height, greaterThanOrEqualTo(48));
+            expect(bounds.left, greaterThanOrEqualTo(0));
+            expect(bounds.right, lessThanOrEqualTo(window.width));
+            expect(bounds.bottom, lessThanOrEqualTo(window.height));
+            expect(control.hitTestable(), findsOneWidget);
+          }
+          final capsule = tester.getRect(
+            find.byKey(const ValueKey('librarySelectionCapsule')),
+          );
+          final cancelBounds = tester.getRect(cancel);
+          final rtl =
+              Directionality.of(tester.element(add)) == TextDirection.rtl;
+          expect(
+            rtl ? window.width - cancelBounds.right : cancelBounds.left,
+            closeTo(AppSpacing.lg, .5),
+          );
+          expect(
+            rtl
+                ? cancelBounds.left - capsule.right
+                : capsule.left - cancelBounds.right,
+            greaterThanOrEqualTo(AppSpacing.md),
+          );
+          expect(capsule.bottom, closeTo(cancelBounds.bottom, .5));
+        } finally {
+          semantics.dispose();
+        }
       });
     }
   }

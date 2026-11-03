@@ -1,8 +1,12 @@
 import 'dart:async';
 
+import 'package:collection_repository/collection_repository.dart';
 import 'package:component_library/component_library.dart';
+import 'package:component_library/src/app_sheet_drag_handle.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/add_to_collection_cubit.dart';
 import 'package:library_feature/src/add_to_collection_sheet.dart';
@@ -11,677 +15,788 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'helpers/fake_collection_repository.dart';
 
 void main() {
-  Future<AddToCollectionCubit> open(
-    WidgetTester tester,
-    FakeCollectionRepository repository, {
-    double inset = 0,
-    double scale = 1,
-    int count = 7,
-    Locale locale = const Locale('en'),
-  }) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    repository.seedCollections(
-      List.generate(
-        count,
-        (i) => LibraryCollection(
-          id: '$i',
-          name: 'Collection $i',
-          sourceCount: 0,
-          createdAt: DateTime(2026),
-          updatedAt: DateTime(2026),
-        ),
-      ),
-    );
-    final cubit = AddToCollectionCubit(collectionRepository: repository);
-    addTearDown(cubit.close);
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        locale: locale,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
-        supportedLocales: ReadflexSupportedLocales.locales,
-        builder: (context, child) => MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            viewInsets: EdgeInsets.only(bottom: inset),
-            textScaler: TextScaler.linear(scale),
-          ),
-          child: child!,
-        ),
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              onPressed: () => showAddToCollectionSheet(
-                context: context,
-                cubit: cubit,
-                sourceIds: {'book'},
-              ),
-              child: const Text('Open'),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
-    return cubit;
-  }
-
-  for (final scale in [1.0, 2.0]) {
-    testWidgets('collection actions stay above keyboard at $scale', (
-      tester,
-    ) async {
-      await open(tester, FakeCollectionRepository(), inset: 320, scale: scale);
-      await tester.tap(find.text('New collection'));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.text('Create and add').hitTestable(), findsOneWidget);
-      expect(find.byType(OutlinedButton), findsNothing);
-      expect(
-        tester.getBottomLeft(find.text('Create and add')).dy,
-        lessThan(844 - 320),
-      );
-      await tester.ensureVisible(find.byType(TextField));
-      await tester.pumpAndSettle();
-      expect(find.byType(TextField).hitTestable(), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-  }
-
-  testWidgets('load failure has retry, not an empty creation form', (
-    tester,
-  ) async {
-    final repository = FakeCollectionRepository()..shouldThrow = true;
-    await open(tester, repository);
-    expect(find.byType(TextField), findsNothing);
-    expect(find.text('Retry'), findsOneWidget);
-    repository.shouldThrow = false;
-    await tester.tap(find.text('Retry'));
-    await tester.pumpAndSettle();
-    expect(find.text('Retry'), findsNothing);
-    expect(find.byType(TextField), findsNothing);
-    expect(find.text('New collection'), findsOneWidget);
-  });
-
-  testWidgets('existing membership is explicit and does not add again', (
-    tester,
-  ) async {
-    final repository = FakeCollectionRepository()
-      ..seedCollectionSourceIds({
-        '0': {'book'},
-      });
-    await open(tester, repository);
-    final row = find
-        .ancestor(of: find.text('Collection 0'), matching: find.byType(InkWell))
-        .first;
-    expect(tester.widget<InkWell>(row).onTap, isNull);
-    expect(
-      find.descendant(of: row, matching: find.byIcon(AppIcons.check)),
-      findsOneWidget,
-    );
-    expect(find.byIcon(AppIcons.add), findsNothing);
-    expect(find.text('Collection 1').hitTestable(), findsOneWidget);
-  });
-
-  for (final label in ['Favourites', 'Collection 0']) {
-    testWidgets('destination rows omit plus and stay tappable: $label', (
+  testWidgets(
+    'standard bottom sheet confirms destinations and returns their count',
+    (
       tester,
     ) async {
       final repository = FakeCollectionRepository();
-      await open(tester, repository, count: 2);
-      expect(find.byIcon(AppIcons.add), findsNothing);
-      final row = find
-          .ancestor(of: find.text(label), matching: find.byType(InkWell))
-          .first;
-      final bounds = tester.getRect(row);
-      await tester.tapAt(Offset(bounds.right - 2, bounds.center.dy));
+      final harness = await _openModal(tester, repository);
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(tester.getRect(find.byType(BottomSheet)).bottom, 844);
+      expect(find.byType(AppSheetDragHandle), findsOneWidget);
+      await tester.tap(_destination('reading'));
       await tester.pumpAndSettle();
-      expect(
-        label == 'Favourites'
-            ? repository.favouriteSourceIds
-            : repository.addedSourceIdsByCollection['0'],
-        {'book'},
-      );
+      expect(repository.addedSourceIdsByCollection, isEmpty);
+      await tester.tap(_submit());
+      await tester.pumpAndSettle();
+      expect(harness.result, 1);
+      expect(repository.addedSourceIdsByCollection['reading'], {'book'});
       expect(find.byType(BottomSheet), findsNothing);
-    });
-  }
+    },
+  );
 
-  testWidgets('Back returns to destinations while Close leaves the flow', (
+  testWidgets('modal Back and scrim protect the collection name draft', (
     tester,
   ) async {
-    await open(tester, FakeCollectionRepository());
-    await tester.tap(find.text('New collection'));
+    await _openModal(tester, FakeCollectionRepository());
+    await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Draft');
-    await tester.binding.handlePopRoute();
+    await tester.enterText(_nameField(), 'Draft');
     await tester.pumpAndSettle();
-    expect(find.text('Collection 0'), findsOneWidget);
-    await tester.tap(find.text('New collection'));
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      'Draft',
+    expect(find.byType(AppSheetDragHandle), findsNothing);
+    await tester.drag(
+      find.byType(BottomSheetHeader).hitTestable(),
+      const Offset(0, 240),
     );
-    // Close with a typed name asks first; Discard leaves the flow.
-    await tester.tap(find.byTooltip('Close').hitTestable());
     await tester.pumpAndSettle();
     expect(find.byType(BottomSheet), findsOneWidget);
+    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Draft');
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Reading').hitTestable(), findsOneWidget);
+    await tester.tapAt(const Offset(4, 16));
+    await tester.pumpAndSettle();
     expect(find.text('Discard changes?'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Draft');
+    final close = find.descendant(
+      of: find.byKey(const ValueKey('addToCollectionCreateStep')),
+      matching: find.byTooltip('Close'),
+    );
+    await tester.tap(close);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Discard'));
     await tester.pumpAndSettle();
     expect(find.byType(BottomSheet), findsNothing);
   });
 
-  testWidgets('long collections remain lazy', (tester) async {
-    await open(tester, FakeCollectionRepository(), count: 1000);
-    expect(find.textContaining('Collection ').evaluate().length, lessThan(30));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('creation is a stable separate step and retains its draft', (
+  testWidgets('modal busy guard blocks Back and scrim until saving finishes', (
     tester,
   ) async {
     final repository = FakeCollectionRepository();
-    await open(tester, repository, count: 3);
-    expect(find.byType(TextField), findsNothing);
-    final bounds = tester.getRect(find.byType(BottomSheet));
-    await tester.tap(find.text('New collection'));
+    final harness = await _openModal(tester, repository);
+    await tester.tap(_destination('reading'));
     await tester.pumpAndSettle();
-    expect(tester.getRect(find.byType(BottomSheet)), bounds);
+    repository.writeGate = Completer<void>();
+    await tester.tap(_submit());
+    await tester.pump();
+    expect(harness.cubit.state.status, AddToCollectionStatus.submitting);
+    await tester.tapAt(const Offset(4, 16));
+    await tester.pump();
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    repository.writeGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(harness.result, 1);
+  });
+
+  testWidgets('destinations are staged and confirmed together', (tester) async {
+    final repository = FakeCollectionRepository();
+    final harness = await _open(tester, repository);
+    expect(_submitButton(tester).onPressed, isNull);
+
+    await tester.tap(_destination('reading'));
+    await tester.tap(
+      _destination(CollectionRepository.favouritesCollectionId),
+    );
+    await tester.pumpAndSettle();
+    expect(harness.cubit.state.selectedDestinationCount, 2);
+    expect(repository.addedSourceIdsByCollection, isEmpty);
+    expect(find.text('Add to 2 collections'), findsOneWidget);
+
+    await tester.tap(_submit());
+    await tester.pumpAndSettle();
+    expect(harness.added, [2]);
+    expect(repository.addedSourceIdsByCollection['reading'], {'book'});
+    expect(repository.favouriteSourceIds, {'book'});
+    expect(harness.closeCount, 0);
+  });
+
+  testWidgets('existing membership is checked and cannot be removed', (
+    tester,
+  ) async {
+    final repository = FakeCollectionRepository()
+      ..seedCollectionSourceIds({
+        'reading': {'book'},
+      });
+    final harness = await _open(tester, repository);
+    final row = tester.widget<CheckboxListTile>(_destination('reading'));
+    expect(row.value, isTrue);
+    expect(row.onChanged, isNull);
+    expect(find.text('Added to collection'), findsOneWidget);
+    expect(harness.cubit.state.selectedDestinationCount, 0);
+    expect(_submitButton(tester).onPressed, isNull);
+    await tester.tap(_destination('research'));
+    await tester.pumpAndSettle();
+    expect(harness.cubit.state.selectedDestinationCount, 1);
+  });
+
+  testWidgets('search filters manual and localized favourite destinations', (
+    tester,
+  ) async {
+    final harness = await _open(tester, FakeCollectionRepository());
+    await tester.tap(_destination('reading'));
+    await tester.enterText(_searchField(), 'RESEARCH');
+    await tester.pumpAndSettle();
+    expect(find.text('Research'), findsOneWidget);
+    expect(find.text('Reading'), findsNothing);
+    expect(find.text('Favourites'), findsNothing);
+    expect(harness.cubit.state.selectedCollectionIds, {'reading'});
+
+    await tester.enterText(_searchField(), 'not a collection');
+    await tester.pumpAndSettle();
+    expect(find.text('No matching collections'), findsOneWidget);
     expect(
-      tester
-          .widget<FilledButton>(
-            find.widgetWithText(FilledButton, 'Create and add'),
-          )
-          .onPressed,
+      find.byKey(const ValueKey('libraryNewCollectionRow')),
+      findsOneWidget,
+    );
+    expect(_submitButton(tester).onPressed, isNotNull);
+    await tester.enterText(_searchField(), 'fAVourites');
+    await tester.pumpAndSettle();
+    expect(find.text('Favourites'), findsOneWidget);
+    expect(find.text('Research'), findsNothing);
+  });
+
+  testWidgets('load failure retries without losing the selected source ids', (
+    tester,
+  ) async {
+    final repository = FakeCollectionRepository()..shouldThrow = true;
+    final harness = await _open(tester, repository);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(_submitButton(tester).onPressed, isNull);
+    repository.shouldThrow = false;
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text('Retry'), findsNothing);
+    await tester.tap(_destination('reading'));
+    await tester.pumpAndSettle();
+    await tester.tap(_submit());
+    await tester.pumpAndSettle();
+    expect(harness.added, [1]);
+    expect(repository.addedSourceIdsByCollection['reading'], {'book'});
+  });
+
+  testWidgets('loading shows progress and prevents commands', (tester) async {
+    final repository = _DelayedLoadRepository();
+    final harness = await _open(tester, repository, waitForLoad: false);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(_submitButton(tester).onPressed, isNull);
+    harness.key.currentState!.requestClose();
+    harness.key.currentState!.handleBack();
+    expect(harness.closeCount, 0);
+    repository.ready.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.text('Research'), findsOneWidget);
+  });
+
+  testWidgets('write failure keeps selected destinations and supports retry', (
+    tester,
+  ) async {
+    final repository = FakeCollectionRepository();
+    final harness = await _open(tester, repository);
+    await tester.tap(_destination('reading'));
+    await tester.pumpAndSettle();
+    repository.shouldThrow = true;
+    await tester.tap(_submit());
+    await tester.pumpAndSettle();
+    expect(harness.added, isEmpty);
+    expect(find.text('Failed to add to collections'), findsOneWidget);
+    expect(harness.cubit.state.selectedCollectionIds, {'reading'});
+    expect(
+      tester.widget<CheckboxListTile>(_destination('reading')).value,
+      isTrue,
+    );
+
+    repository.shouldThrow = false;
+    await tester.tap(_submit());
+    await tester.pumpAndSettle();
+    expect(harness.added, [1]);
+  });
+
+  testWidgets('pending writes guard close, Back and duplicate submission', (
+    tester,
+  ) async {
+    final repository = FakeCollectionRepository();
+    final harness = await _open(tester, repository);
+    await tester.tap(_destination('reading'));
+    await tester.pumpAndSettle();
+    repository.writeGate = Completer<void>();
+    await tester.tap(_submit());
+    await tester.pump();
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(_submitButton(tester).onPressed, isNull);
+    expect(
+      tester.widget<CheckboxListTile>(_destination('research')).onChanged,
       isNull,
     );
-    await tester.enterText(find.byType(TextField), 'Research');
-    await tester.tap(find.byTooltip('Back'));
+    harness.key.currentState!.requestClose();
+    harness.key.currentState!.handleBack();
+    expect(harness.closeCount, 0);
+    repository.writeGate!.complete();
     await tester.pumpAndSettle();
-    expect(tester.getRect(find.byType(BottomSheet)), bounds);
-    await tester.tap(find.text('New collection'));
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      'Research',
-    );
-    await tester.tap(find.text('Create and add'));
-    await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(repository.addedSourceIdsByCollection.values.single, {'book'});
+    expect(harness.added, [1]);
   });
 
-  testWidgets('existing collection still adds with one tap', (tester) async {
-    final repository = FakeCollectionRepository();
-    await open(tester, repository);
-    await tester.tap(find.text('Collection 0'));
-    await tester.pumpAndSettle();
-    expect(repository.addedSourceIdsByCollection['0'], {'book'});
-    expect(find.byType(BottomSheet), findsNothing);
-  });
-
-  testWidgets('creation failure retains draft and height; retry creates once', (
+  testWidgets('creation selects the new collection but waits for final Add', (
     tester,
   ) async {
     final repository = FakeCollectionRepository();
-    await open(tester, repository, count: 2);
-    final bounds = tester.getRect(find.byType(BottomSheet));
-    await tester.tap(find.text('New collection'));
+    final harness = await _open(tester, repository);
+    await tester.tap(_destination('reading'));
+    final bounds = tester.getRect(find.byType(AddToCollectionSheet));
+    await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Research');
-    await tester.pump();
+    expect(tester.getRect(find.byType(AddToCollectionSheet)), bounds);
+    expect(
+      tester.widget<FilledButton>(_createButton()).onPressed,
+      isNull,
+    );
+    await tester.enterText(_nameField(), 'Design');
+    await tester.pumpAndSettle();
+    await tester.tap(_createButton());
+    await tester.pumpAndSettle();
+    expect(harness.created, 1);
+    expect(harness.added, isEmpty);
+    expect(harness.closeCount, 0);
+    expect(find.text('Design'), findsOneWidget);
+    final newId = harness.cubit.state.collections.first.id;
+    expect(harness.cubit.state.selectedCollectionIds, {'reading', newId});
+    expect(repository.addedSourceIdsByCollection[newId], isEmpty);
+
+    await tester.tap(_submit());
+    await tester.pumpAndSettle();
+    expect(harness.added, [2]);
+    expect(repository.addedSourceIdsByCollection[newId], {'book'});
+  });
+
+  testWidgets('creation failure retains the name and selected destinations', (
+    tester,
+  ) async {
+    final repository = FakeCollectionRepository();
+    final harness = await _open(tester, repository);
+    await tester.tap(_destination('reading'));
+    await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
+    await tester.pumpAndSettle();
+    await tester.enterText(_nameField(), 'Design');
+    await tester.pumpAndSettle();
     repository.shouldThrow = true;
-    await tester.tap(find.text('Create and add'));
+    await tester.tap(_createButton());
     await tester.pumpAndSettle();
-    expect(tester.getRect(find.byType(BottomSheet)), bounds);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      'Research',
-    );
-    final context = tester.element(find.byType(TextField));
-    expect(
-      find.text(context.l10n.libraryCreateCollectionFailed),
-      findsOneWidget,
-    );
-    repository.shouldThrow = false;
-    await tester.tap(find.text('Create and add'));
-    await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(repository.addedSourceIdsByCollection.values.single, {'book'});
+    expect(harness.created, 0);
+    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Design');
+    expect(harness.cubit.state.selectedCollectionIds, {'reading'});
+    expect(find.text('Failed to create collection'), findsOneWidget);
   });
 
-  testWidgets('load failure renders the shared error state', (tester) async {
-    final repository = FakeCollectionRepository()..shouldThrow = true;
-    await open(tester, repository);
-    expect(find.byType(ErrorState), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
-    expect(find.byIcon(AppIcons.refresh), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('new collection is a drill-in row that opens the form', (
-    tester,
-  ) async {
-    final semantics = tester.ensureSemantics();
-    await open(tester, FakeCollectionRepository());
-    final row = find.byKey(const ValueKey('libraryNewCollectionRow'));
-    expect(tester.widget(row), isA<AppDrillInRow>());
-    expect(
-      tester.getSemantics(row),
-      matchesSemantics(
-        label: 'New collection',
-        isButton: true,
-        hasEnabledState: true,
-        isEnabled: true,
-        hasTapAction: true,
-      ),
-    );
-    expect(
-      find.descendant(of: row, matching: find.byIcon(AppIcons.chevronRight)),
-      findsOneWidget,
-    );
-    expect(
-      tester
-          .widget<Icon>(
-            find.descendant(
-              of: row,
-              matching: find.byIcon(AppIcons.collectionAdd),
-            ),
-          )
-          .color,
-      tester.element(row).actionForeground,
-    );
-    await tester.tap(row);
+  testWidgets('repeated Close retains the discard decision', (tester) async {
+    final harness = await _open(tester, FakeCollectionRepository());
+    await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
     await tester.pumpAndSettle();
-    expect(find.byType(TextField), findsOneWidget);
-    semantics.dispose();
-  });
-
-  testWidgets('destination rows clip their ripple to the shared radius', (
-    tester,
-  ) async {
-    await open(tester, FakeCollectionRepository());
-    final row = find.ancestor(
-      of: find.text('Favourites'),
-      matching: find.byType(InkWell),
-    );
-    expect(
-      tester.widget<InkWell>(row.first).borderRadius,
-      BorderRadius.circular(AppRadius.sm),
-    );
-    final colors = tester.element(row.first).colors;
-    expect(
-      tester.widget<Text>(find.text('Favourites')).style!.color,
-      colors.onSurface,
-    );
-  });
-
-  Future<void> openForm(WidgetTester tester, {String draft = ''}) async {
-    await open(tester, FakeCollectionRepository());
-    await tester.tap(find.text('New collection'));
-    await tester.pumpAndSettle();
-    if (draft.isNotEmpty) {
-      await tester.enterText(find.byType(TextField), draft);
-      tester.testTextInput.hide();
-    }
-    // The dismiss guard publishes after the frame.
-    await tester.pumpAndSettle();
-  }
-
-  Finder dragHandle() => find.byWidgetPredicate(
-    (w) => w is Container && w.constraints?.maxWidth == 32,
-  );
-
-  testWidgets('typed name: scrim tap asks to discard and Discard closes', (
-    tester,
-  ) async {
-    await openForm(tester, draft: 'Draft');
-    expect(dragHandle(), findsNothing);
-    await tester.tapAt(const Offset(10, 20));
-    await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.text('Discard changes?'), findsOneWidget);
-    final discard = find.widgetWithText(OutlinedButton, 'Discard');
-    final style = tester.widget<OutlinedButton>(discard).style!;
-    expect(
-      style.foregroundColor!.resolve({}),
-      Theme.of(tester.element(discard)).colorScheme.error,
-    );
-    expect(find.widgetWithText(FilledButton, 'Keep editing'), findsOneWidget);
-    // Another scrim tap keeps the decision visible.
-    await tester.tapAt(const Offset(10, 20));
+    await tester.enterText(_nameField(), 'Draft');
+    harness.key.currentState!.requestClose();
     await tester.pumpAndSettle();
     expect(find.text('Discard changes?'), findsOneWidget);
-    await tester.tap(discard);
+    expect(harness.closeCount, 0);
+    harness.key.currentState!.requestClose();
     await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(tester.takeException(), isNull);
+    expect(find.text('Discard changes?'), findsOneWidget);
+    await tester.tap(find.text('Discard'));
+    await tester.pumpAndSettle();
+    expect(harness.closeCount, 1);
   });
 
-  testWidgets('typed name: Keep editing returns to the form with the draft', (
+  testWidgets('Back unwinds and Keep editing retains a hidden draft', (
     tester,
   ) async {
-    await openForm(tester, draft: 'Draft');
-    await tester.tapAt(const Offset(10, 20));
+    final harness = await _open(tester, FakeCollectionRepository());
+    await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
+    await tester.pumpAndSettle();
+    await tester.enterText(_nameField(), 'Draft');
+    harness.key.currentState!.handleBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Research').hitTestable(), findsOneWidget);
+    harness.key.currentState!.requestClose();
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsOneWidget);
+    harness.key.currentState!.handleBack();
+    await tester.pumpAndSettle();
+    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Draft');
+    harness.key.currentState!.requestClose();
     await tester.pumpAndSettle();
     await tester.tap(find.text('Keep editing'));
     await tester.pumpAndSettle();
-    expect(find.text('Discard changes?'), findsNothing);
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
-      'Draft',
-    );
-    // Header Back from the decision also keeps the draft.
-    await tester.tapAt(const Offset(10, 20));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
-    expect(find.text('Discard changes?'), findsNothing);
-    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
+    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Draft');
+    expect(harness.closeCount, 0);
   });
 
-  testWidgets('empty name: scrim tap and drag-down close the flow', (
+  testWidgets('an empty form closes without a discard decision', (
     tester,
   ) async {
-    await openForm(tester);
-    expect(dragHandle(), findsOneWidget);
-    await tester.tapAt(const Offset(10, 20));
+    final harness = await _open(tester, FakeCollectionRepository());
+    await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
     await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
-
-    await openForm(tester);
-    final sheet = tester.getRect(find.byType(BottomSheet));
-    await tester.dragFrom(
-      Offset(sheet.center.dx, sheet.top + 10),
-      const Offset(0, 450),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
+    harness.key.currentState!.requestClose();
+    expect(harness.closeCount, 1);
+    expect(find.text('Discard changes?'), findsNothing);
   });
 
-  testWidgets('typed name: drag-down is swallowed and the draft survives', (
-    tester,
-  ) async {
-    await openForm(tester, draft: 'Draft');
-    final sheet = tester.getRect(find.byType(BottomSheet));
-    await tester.dragFrom(
-      Offset(sheet.center.dx, sheet.top + 10),
-      const Offset(0, 450),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(tester.getRect(find.byType(BottomSheet)), sheet);
-    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
+  testWidgets('a thousand destinations remain lazy', (tester) async {
+    final repository = FakeCollectionRepository()
+      ..seedCollections([
+        for (var i = 0; i < 1000; i++) _collection('$i', 'Collection $i'),
+      ]);
+    await _open(tester, repository, seed: false);
+    expect(find.byType(CheckboxListTile).evaluate().length, lessThan(30));
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('destination step: scrim and drag-down wait for the write', (
+  testWidgets('short content shrinks and has no false list overflow', (
     tester,
   ) async {
-    final repository = FakeCollectionRepository();
-    final cubit = await open(tester, repository);
-    final gate = Completer<void>();
-    repository.writeGate = gate;
-    await tester.tap(find.text('Favourites'));
-    // The guard publishes after the frame.
-    await tester.pump();
-    await tester.pump();
-    expect(cubit.state.status, AddToCollectionStatus.submitting);
-    expect(dragHandle(), findsNothing);
-
-    await tester.tapAt(const Offset(10, 20));
-    await tester.pump();
-    final sheet = tester.getRect(find.byType(BottomSheet));
-    await tester.dragFrom(
-      Offset(sheet.center.dx, sheet.top + 10),
-      const Offset(0, 450),
+    final repository = FakeCollectionRepository()..seedCollections([]);
+    await _open(tester, repository, seed: false);
+    final panel = tester.getRect(find.byType(AddToCollectionSheet));
+    expect(panel.height, lessThan(620));
+    final scrollable = tester.state<ScrollableState>(
+      find.descendant(
+        of: find.byKey(const ValueKey('addToCollectionDestinationList')),
+        matching: find.byType(Scrollable),
+      ),
     );
-    await tester.pump();
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(tester.getRect(find.byType(BottomSheet)), sheet);
-    expect(cubit.state.status, AddToCollectionStatus.submitting);
-    expect(tester.takeException(), isNull);
-
-    gate.complete();
-    await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(repository.favouriteSourceIds, {'book'});
+    expect(scrollable.position.maxScrollExtent, 0);
   });
 
-  testWidgets('destination step: a failed write restores dismissal', (
-    tester,
-  ) async {
-    final repository = FakeCollectionRepository();
-    final cubit = await open(tester, repository);
-    repository.shouldThrow = true;
-    await tester.tap(find.text('Favourites'));
-    await tester.pumpAndSettle();
-    expect(cubit.state.status, AddToCollectionStatus.failure);
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(dragHandle(), findsOneWidget);
-
-    await tester.tapAt(const Offset(10, 20));
-    await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
-  });
-
-  testWidgets('system Back from the decision keeps editing the draft', (
-    tester,
-  ) async {
-    await openForm(tester, draft: 'Draft');
-    await tester.tapAt(const Offset(10, 20));
-    await tester.pumpAndSettle();
-    expect(find.text('Discard changes?'), findsOneWidget);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.text('Discard changes?'), findsNothing);
-    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
-    // System Back from the form is a step back that keeps the draft.
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    expect(find.text('Collection 0'), findsOneWidget);
-    expect(find.byType(BottomSheet), findsOneWidget);
-  });
-
-  for (final locale in [const Locale('en'), const Locale('ar')]) {
-    testWidgets('destination rows, dividers and counts share the picker\'s '
-        'gutters ($locale)', (tester) async {
-      final repository = FakeCollectionRepository()
-        ..seedCollectionSourceIds({
-          '0': {'book'},
-        });
-      await open(tester, repository, count: 2, locale: locale);
-      final rtl = locale.languageCode == 'ar';
-      final sheet = tester.getRect(find.byType(BottomSheet));
-      double start(Rect r) => rtl ? sheet.right - r.right : r.left - sheet.left;
-      double end(Rect r) => rtl ? r.left - sheet.left : sheet.right - r.right;
-      final strings = tester.element(find.byType(BottomSheet)).l10n;
-
-      final title = tester.getRect(
-        find.text(strings.libraryAddToCollectionTitle),
+  for (final (locale, width, scale) in [
+    (const Locale('en'), 390.0, 1.0),
+    (const Locale('ru'), 320.0, 2.0),
+    (const Locale('ar'), 390.0, 2.0),
+  ]) {
+    testWidgets('all steps fit a 120dp host: $locale/$width/$scale', (
+      tester,
+    ) async {
+      final harness = await _open(
+        tester,
+        FakeCollectionRepository(),
+        locale: locale,
+        width: width,
+        scale: scale,
+        height: 120,
       );
-      final favouritesIcon = tester.getRect(
-        find.byIcon(AppIcons.collectionFavourites),
-      );
-      final collectionIcon = tester.getRect(
-        find.byIcon(AppIcons.collection).first,
-      );
-      final newRow = find.byKey(const ValueKey('libraryNewCollectionRow'));
-      final newIcon = tester.getRect(
-        find.descendant(
-          of: newRow,
-          matching: find.byIcon(AppIcons.collectionAdd),
-        ),
-      );
-      expect(start(title), AppSpacing.xl);
-      expect(start(favouritesIcon), closeTo(AppSpacing.xl, .01));
-      expect(start(collectionIcon), closeTo(AppSpacing.xl, .01));
-      expect(start(newIcon), closeTo(AppSpacing.xl, .01));
-      final dividers = find.byType(Divider).evaluate().toList();
-      expect(dividers, hasLength(2));
-      for (final element in dividers) {
-        final box = element.renderObject! as RenderBox;
-        final rect = box.localToGlobal(Offset.zero) & box.size;
-        expect(start(rect), closeTo(AppSpacing.xl, .01));
-        expect(end(rect), closeTo(AppSpacing.xl, .01));
-      }
-      // Ink bleeds 4dp past the content on both sides.
-      final row = find
-          .ancestor(
-            of: find.text('Collection 1'),
-            matching: find.byType(InkWell),
-          )
-          .first;
-      final rowRect = tester.getRect(row);
-      expect(start(rowRect), closeTo(AppSpacing.xl - AppSpacing.xs, .01));
-      expect(
-        end(rowRect),
-        closeTo(AppSpacing.xl - AppSpacing.xs - AppSizes.iconActionOutset, .01),
-      );
-      // The check glyph ends on the gutter like the picker's menu glyph and
-      // counts end 12dp before that 48dp slot.
-      final check = tester.getRect(find.byIcon(AppIcons.check));
-      expect(end(check), closeTo(AppSpacing.xl, .01));
-      final countEnd =
-          AppSpacing.xl +
-          AppIconSize.sm +
-          AppSizes.iconActionOutset +
-          AppSpacing.md;
-      for (final count in tester.widgetList<Text>(find.text('0'))) {
-        expect(
-          end(tester.getRect(find.byWidget(count))),
-          closeTo(countEnd, .01),
-        );
-      }
       expect(tester.takeException(), isNull);
+      await tester.ensureVisible(_submit());
+      await tester.pumpAndSettle();
+      expect(_submit().hitTestable(), findsOneWidget);
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('libraryNewCollectionRow')),
+      );
+      await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(_nameField());
+      await tester.enterText(_nameField(), 'Draft');
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(_createButton());
+      await tester.pumpAndSettle();
+      expect(_createButton().hitTestable(), findsOneWidget);
+      harness.key.currentState!.requestClose();
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final context = tester.element(find.byType(AddToCollectionSheet));
+      await tester.ensureVisible(find.text(context.l10n.commonKeepEditing));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(context.l10n.commonKeepEditing).hitTestable(),
+        findsOneWidget,
+      );
     });
   }
 
-  testWidgets('Create and add shows a busy spinner instead of a progress '
-      'strip and disables the command without resizing it', (tester) async {
-    final repository = FakeCollectionRepository();
-    final cubit = await open(tester, repository);
-    final gate = Completer<void>();
-    repository.writeGate = gate;
-    await tester.tap(find.text('New collection'));
+  testWidgets('keyboard resizing retains form focus and text', (tester) async {
+    final height = ValueNotifier(620.0);
+    addTearDown(height.dispose);
+    final harness = await _open(
+      tester,
+      FakeCollectionRepository(),
+      hostHeight: height,
+    );
+    await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
     await tester.pumpAndSettle();
-    final layout = tester.widget<ActionBottomSheetLayout>(
-      find.byKey(const ValueKey('addToCollectionCreateStep')),
+    await tester.enterText(_nameField(), 'Focused draft');
+    final editable = tester.element(
+      find.descendant(of: _nameField(), matching: find.byType(EditableText)),
     );
-    expect(layout.footer, isNotNull);
-    expect(layout.footerPadding, ActionBottomSheetLayout.defaultFooterPadding);
-    expect(layout.bodyPadding.vertical, AppSpacing.lg);
-    await tester.enterText(find.byType(TextField), 'Research');
-    await tester.pump();
-    final create = find.widgetWithText(FilledButton, 'Create and add');
-    expect(find.byType(OutlinedButton), findsNothing);
-    expect(tester.widget<FilledButton>(create).onPressed, isNotNull);
-    final createRect = tester.getRect(create);
-    await tester.tap(find.text('Create and add'));
-    await tester.pump();
-    expect(cubit.state.isBusy, isTrue);
-    // No strip over the form; the hidden destination step keeps its own.
+    final focus = tester
+        .widget<EditableText>(
+          find.descendant(
+            of: _nameField(),
+            matching: find.byType(EditableText),
+          ),
+        )
+        .focusNode;
+    expect(focus.hasFocus, isTrue);
+    height.value = 140;
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
     expect(
-      find.descendant(
-        of: find.byKey(const ValueKey('addToCollectionCreateStep')),
-        matching: find.byType(LinearProgressIndicator),
+      tester.element(
+        find.descendant(of: _nameField(), matching: find.byType(EditableText)),
       ),
-      findsNothing,
+      same(editable),
     );
+    expect(focus.hasFocus, isTrue);
     expect(
-      find.descendant(
-        of: create,
-        matching: find.byType(ButtonLoadingIndicator),
-      ),
+      tester.widget<TextField>(_nameField()).controller!.text,
+      'Focused draft',
+    );
+    height.value = 620;
+    await tester.pumpAndSettle();
+    expect(focus.hasFocus, isTrue);
+    harness.key.currentState!.handleBack();
+    await tester.pumpAndSettle();
+    expect(find.text('Research').hitTestable(), findsOneWidget);
+  });
+
+  testWidgets('step navigation resets a compact viewport to its header', (
+    tester,
+  ) async {
+    final harness = await _open(
+      tester,
+      FakeCollectionRepository(),
+      locale: const Locale('de'),
+      width: 320,
+      scale: 2,
+      height: 300,
+    );
+    final context = tester.element(find.byType(AddToCollectionSheet));
+    final l10n = context.l10n;
+    final outer = tester
+        .widget<SingleChildScrollView>(
+          find.byKey(const ValueKey('addToCollectionPanelViewport')),
+        )
+        .controller!;
+
+    await tester.ensureVisible(_submit());
+    await tester.pumpAndSettle();
+    expect(outer.offset, greaterThan(0));
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('libraryNewCollectionRow')),
+    );
+    await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
+    await tester.pumpAndSettle();
+    expect(outer.offset, closeTo(0, .01));
+    expect(
+      find
+          .descendant(
+            of: find.byKey(const ValueKey('addToCollectionCreateStep')),
+            matching: find.text(l10n.libraryNewCollection),
+          )
+          .hitTestable(),
       findsOneWidget,
     );
+    expect(_nameField().hitTestable(), findsOneWidget);
+
+    await tester.enterText(_nameField(), 'Draft');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(_createButton());
+    await tester.pumpAndSettle();
+    expect(outer.offset, greaterThan(0));
+    harness.key.currentState!.requestClose();
+    await tester.pumpAndSettle();
+    expect(outer.offset, closeTo(0, .01));
     expect(
-      tester
-          .widget<AppBusyButtonLabel>(
-            find.descendant(
-              of: create,
-              matching: find.byType(AppBusyButtonLabel),
-            ),
-          )
-          .busy,
-      isTrue,
+      find.text(l10n.libraryDiscardChangesTitle).hitTestable(),
+      findsOneWidget,
     );
-    expect(tester.widget<FilledButton>(create).onPressed, isNull);
-    expect(tester.getRect(create), createRect);
-    gate.complete();
+
+    await tester.ensureVisible(find.text(l10n.commonKeepEditing));
+    await tester.tap(find.text(l10n.commonKeepEditing));
     await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
-    expect(repository.addedSourceIdsByCollection.values.single, {'book'});
+    expect(outer.offset, closeTo(0, .01));
+    expect(_nameField().hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
-  testWidgets('create step shows one full-width command on the 24dp gutters '
-      'and no secondary', (tester) async {
-    final semantics = tester.ensureSemantics();
-    try {
-      await openForm(tester);
-      final step = find.byKey(const ValueKey('addToCollectionCreateStep'));
-      final layout = tester.widget<ActionBottomSheetLayout>(step);
-      expect(layout.footer, isA<Widget>());
-      expect(
-        layout.footerPadding,
-        ActionBottomSheetLayout.defaultFooterPadding,
-      );
-      expect(
-        find.descendant(of: step, matching: find.byType(FilledButton)),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: step, matching: find.byType(OutlinedButton)),
-        findsNothing,
-      );
-      expect(
-        find.descendant(of: step, matching: find.byType(AppSheetActions)),
-        findsNothing,
-      );
-      expect(find.text('Cancel'), findsNothing);
-      final create = tester.getRect(
-        find.widgetWithText(FilledButton, 'Create and add'),
-      );
-      expect(create.left, closeTo(AppSpacing.xl, .01));
-      expect(create.right, closeTo(390 - AppSpacing.xl, .01));
-      expect(create.height, AppSizes.buttonHeight);
-      // 16dp footer inset plus the route's max(16, safe inset).
-      expect(844 - create.bottom, closeTo(AppSpacing.lg * 2, .01));
-      // Leaving stays with the header: Back and Close are both present (the
-      // offstage destination step keeps its own, non-interactive Close).
-      expect(find.byTooltip('Back').hitTestable(), findsOneWidget);
-      expect(find.byTooltip('Close').hitTestable(), findsOneWidget);
-      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-    } finally {
-      semantics.dispose();
-    }
+  testWidgets('large German action labels wrap in full', (tester) async {
+    final harness = await _open(
+      tester,
+      FakeCollectionRepository(),
+      locale: const Locale('de'),
+      width: 320,
+      scale: 2,
+    );
+    harness.cubit.toggleCollection('reading');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(_submit());
+    await tester.pumpAndSettle();
+    final submitParagraph = tester.renderObject<RenderParagraph>(
+      find.descendant(of: _submit(), matching: find.byType(RichText)),
+    );
+    expect(submitParagraph.didExceedMaxLines, isFalse);
+    expect(submitParagraph.maxLines, isNull);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('libraryNewCollectionRow')),
+    );
+    await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(_nameField());
+    await tester.enterText(_nameField(), 'Design');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(_createButton());
+    await tester.pumpAndSettle();
+    final createParagraph = tester.renderObject<RenderParagraph>(
+      find.descendant(of: _createButton(), matching: find.byType(RichText)),
+    );
+    expect(createParagraph.didExceedMaxLines, isFalse);
+    expect(createParagraph.maxLines, isNull);
+    expect(tester.takeException(), isNull);
   });
 
-  testWidgets('create step: Close with a draft still asks, Keep editing '
-      'closes only the decision', (tester) async {
-    await openForm(tester, draft: 'Draft');
-    await tester.tap(find.byTooltip('Close').hitTestable());
+  testWidgets('compact German results show a complete destination row', (
+    tester,
+  ) async {
+    final repository = FakeCollectionRepository()
+      ..seedCollections([_collection('research', 'Research')])
+      ..seedCollectionSourceIds({
+        CollectionRepository.favouritesCollectionId: {'book'},
+      });
+    await _open(
+      tester,
+      repository,
+      seed: false,
+      locale: const Locale('de'),
+      width: 320,
+      windowHeight: 568,
+      scale: 2,
+      height: 360,
+    );
+    final list = find.byKey(const ValueKey('addToCollectionDestinationList'));
+    final scrollable = find.descendant(
+      of: list,
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(
+      _destination('research'),
+      80,
+      scrollable: scrollable,
+    );
+    await Scrollable.ensureVisible(
+      tester.element(_destination('research')),
+      alignment: .5,
+    );
     await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.text('Discard changes?'), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Keep editing'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Discard'), findsOneWidget);
-    await tester.tap(find.text('Keep editing'));
-    await tester.pumpAndSettle();
-    expect(find.text('Discard changes?'), findsNothing);
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
-    // Header Back from the form is a step back that keeps the draft.
-    await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
-    expect(find.text('Discard changes?'), findsNothing);
-    expect(find.text('Collection 0'), findsOneWidget);
-    await tester.tap(find.text('New collection'));
-    await tester.pumpAndSettle();
-    expect(find.widgetWithText(TextField, 'Draft'), findsOneWidget);
+
+    final viewport = tester.getRect(list);
+    final row = tester.getRect(_destination('research'));
+    expect(row.height, lessThanOrEqualTo(viewport.height + .01));
+    expect(row.top, greaterThanOrEqualTo(viewport.top - .01));
+    expect(row.bottom, lessThanOrEqualTo(viewport.bottom + .01));
+    final visibleViewport = viewport.intersect(
+      tester.getRect(find.byType(AddToCollectionSheet)),
+    );
+    expect(visibleViewport.contains(row.center), isTrue);
+    final title = find.descendant(
+      of: _destination('research'),
+      matching: find.text('Research'),
+    );
+    final titleRect = tester.getRect(title);
+    expect(titleRect.top, greaterThanOrEqualTo(visibleViewport.top - .01));
+    expect(titleRect.bottom, lessThanOrEqualTo(visibleViewport.bottom + .01));
+    expect(_destination('research').hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
+}
+
+Finder _destination(String id) =>
+    find.byKey(ValueKey('addToCollectionDestination-$id'));
+
+Finder _submit() => find.byKey(const ValueKey('addToCollectionsSubmitButton'));
+
+FilledButton _submitButton(WidgetTester tester) =>
+    tester.widget<FilledButton>(_submit());
+
+Finder _nameField() => find.byKey(const ValueKey('newCollectionNameField'));
+
+Finder _createButton() =>
+    find.byKey(const ValueKey('createCollectionSubmitButton'));
+
+Finder _searchField() => find.descendant(
+  of: find.byKey(const ValueKey('addToCollectionsSearch')),
+  matching: find.byType(TextField),
+);
+
+Future<_SheetHarness> _open(
+  WidgetTester tester,
+  FakeCollectionRepository repository, {
+  bool seed = true,
+  bool waitForLoad = true,
+  double height = 620,
+  double width = 390,
+  double windowHeight = 844,
+  double scale = 1,
+  Locale locale = const Locale('en'),
+  ValueNotifier<double>? hostHeight,
+}) async {
+  tester.view
+    ..physicalSize = Size(width, windowHeight)
+    ..devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  if (seed) {
+    repository.seedCollections([
+      _collection('reading', 'Reading'),
+      _collection('research', 'Research'),
+      _collection('long', 'A collection with a long name that wraps naturally'),
+    ]);
+  }
+  final harness = _SheetHarness(
+    AddToCollectionCubit(collectionRepository: repository),
+  );
+  addTearDown(harness.cubit.close);
+  final loading = harness.cubit.load(sourceIds: {'book'});
+  if (waitForLoad) await loading;
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.light(),
+      locale: locale,
+      supportedLocales: ReadflexSupportedLocales.locales,
+      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(scale),
+        ),
+        child: child!,
+      ),
+      home: Scaffold(
+        resizeToAvoidBottomInset: false,
+        body: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: BlocProvider.value(
+              value: harness.cubit,
+              child: _SheetHost(
+                harness: harness,
+                height: height,
+                hostHeight: hostHeight,
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  if (waitForLoad) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+  }
+  return harness;
+}
+
+class _SheetHost extends StatelessWidget {
+  const _SheetHost({
+    required this.harness,
+    required this.height,
+    this.hostHeight,
+  });
+
+  final _SheetHarness harness;
+  final double height;
+  final ValueNotifier<double>? hostHeight;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<double>(
+    valueListenable: hostHeight ?? AlwaysStoppedAnimation(height),
+    child: AddToCollectionSheet(
+      key: harness.key,
+      sourceIds: const {'book'},
+      onClose: () => harness.closeCount++,
+      onAdded: harness.added.add,
+      onCollectionCreated: () => harness.created++,
+    ),
+    builder: (context, height, child) => ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: height),
+      child: child,
+    ),
+  );
+}
+
+class _SheetHarness {
+  _SheetHarness(this.cubit);
+
+  final AddToCollectionCubit cubit;
+  final key = GlobalKey<AddToCollectionSheetState>();
+  int closeCount = 0;
+  final added = <int>[];
+  int created = 0;
+}
+
+LibraryCollection _collection(String id, String name) => LibraryCollection(
+  id: id,
+  name: name,
+  sourceCount: 0,
+  createdAt: DateTime(2026),
+  updatedAt: DateTime(2026),
+);
+
+class _DelayedLoadRepository extends FakeCollectionRepository {
+  final ready = Completer<void>();
+
+  @override
+  Future<List<LibraryCollection>> getCollections() async {
+    await ready.future;
+    return super.getCollections();
+  }
+}
+
+Future<_ModalHarness> _openModal(
+  WidgetTester tester,
+  FakeCollectionRepository repository,
+) async {
+  tester.view
+    ..physicalSize = const Size(390, 844)
+    ..devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  repository.seedCollections([_collection('reading', 'Reading')]);
+  final cubit = AddToCollectionCubit(collectionRepository: repository);
+  final harness = _ModalHarness(cubit);
+  addTearDown(cubit.close);
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.light(),
+      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      supportedLocales: ReadflexSupportedLocales.locales,
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () async {
+              harness.result = await showAddToCollectionSheet(
+                context: context,
+                cubit: cubit,
+                sourceIds: const {'book'},
+                onCollectionCreated: () {},
+              );
+            },
+            child: const Text('Open'),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('Open'));
+  await tester.pumpAndSettle();
+  return harness;
+}
+
+class _ModalHarness {
+  _ModalHarness(this.cubit);
+
+  final AddToCollectionCubit cubit;
+  int? result;
 }

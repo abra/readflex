@@ -1,4 +1,5 @@
 import 'package:collection_repository/collection_repository.dart';
+import 'package:domain_models/domain_models.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:local_storage/local_storage.dart';
@@ -129,6 +130,130 @@ void main() {
 
     expect(collections.single.sourceCount, 1);
   });
+
+  test('adds sources to manual collections and favourites together', () async {
+    final first = await repository.createCollectionWithSources(
+      name: 'Research',
+      sourceIds: ['existing-book'],
+    );
+    final second = await repository.createCollection('Weekend');
+
+    await repository.addSourcesToCollections(
+      collectionIds: [
+        first.id,
+        second.id,
+        CollectionRepository.favouritesCollectionId,
+      ],
+      sourceIds: ['book-1', 'article-1'],
+    );
+
+    expect(await repository.getCollectionSourceIds(), {
+      first.id: {'existing-book', 'book-1', 'article-1'},
+      second.id: {'book-1', 'article-1'},
+      CollectionRepository.favouritesCollectionId: {'book-1', 'article-1'},
+    });
+    expect(await repository.getCollections(), hasLength(2));
+  });
+
+  test(
+    'multi-destination add deduplicates and fills missing memberships',
+    () async {
+      final collection = await repository.createCollectionWithSources(
+        name: 'Reading',
+        sourceIds: ['book-1'],
+      );
+      final destinations = [
+        collection.id,
+        collection.id,
+        CollectionRepository.favouritesCollectionId,
+        CollectionRepository.favouritesCollectionId,
+      ];
+      for (var attempt = 0; attempt < 2; attempt++) {
+        await repository.addSourcesToCollections(
+          collectionIds: destinations,
+          sourceIds: ['book-1', 'book-1', 'book-2'],
+        );
+      }
+
+      expect(await repository.getCollectionSourceIds(), {
+        collection.id: {'book-1', 'book-2'},
+        CollectionRepository.favouritesCollectionId: {'book-1', 'book-2'},
+      });
+      expect((await repository.getCollections()).single.sourceCount, 2);
+    },
+  );
+
+  test('empty multi-destination input does not create favourites', () async {
+    await repository.addSourcesToCollections(
+      collectionIds: [CollectionRepository.favouritesCollectionId],
+      sourceIds: [],
+    );
+    await repository.addSourcesToCollections(
+      collectionIds: [],
+      sourceIds: ['book-1'],
+    );
+
+    expect(await db.select(db.collectionsTable).get(), isEmpty);
+    expect(await repository.getCollectionSourceIds(), isEmpty);
+  });
+
+  test('a missing destination fails without creating memberships', () async {
+    final collection = await repository.createCollection('Research');
+
+    await expectLater(
+      repository.addSourcesToCollections(
+        collectionIds: [
+          collection.id,
+          CollectionRepository.favouritesCollectionId,
+          'deleted-collection',
+        ],
+        sourceIds: ['book-1'],
+      ),
+      throwsA(isA<StorageException>()),
+    );
+
+    expect(await db.select(db.collectionsTable).get(), hasLength(1));
+    expect(await repository.getCollectionSourceIds(), isEmpty);
+  });
+
+  test(
+    'a later write failure rolls back every destination and favourites',
+    () async {
+      final first = await repository.createCollectionWithSources(
+        name: 'Research',
+        sourceIds: ['existing-book'],
+      );
+      final blocked = await repository.createCollection('Blocked');
+      await db.customStatement('''
+      CREATE TRIGGER reject_blocked_membership
+      BEFORE INSERT ON collection_sources_table
+      WHEN NEW.collection_id IN (
+        SELECT id FROM collections_table WHERE name = 'Blocked'
+      )
+      BEGIN
+        SELECT RAISE(ABORT, 'simulated membership write failure');
+      END
+    ''');
+
+      await expectLater(
+        repository.addSourcesToCollections(
+          collectionIds: [
+            CollectionRepository.favouritesCollectionId,
+            first.id,
+            blocked.id,
+          ],
+          sourceIds: ['book-1', 'article-1'],
+        ),
+        throwsA(isA<StorageException>()),
+      );
+
+      expect(await repository.getCollectionSourceIds(), {
+        first.id: {'existing-book'},
+      });
+      expect(await db.select(db.collectionsTable).get(), hasLength(2));
+      expect(await repository.getFavouriteSourceIds(), isEmpty);
+    },
+  );
 
   test('getCollectionSourceIds returns memberships by collection id', () async {
     final first = await repository.createCollectionWithSources(

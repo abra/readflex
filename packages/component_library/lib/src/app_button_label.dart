@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 /// Button labels live in tight surfaces and translations can be longer than
 /// English. Keep them centered, allow a second line where the parent can grow,
 /// and fall back to ellipsis only when the available width is still too small.
+/// Parents that can grow may pass `maxLines: null` to wrap the complete label.
 class AppButtonLabel extends StatelessWidget {
   const AppButtonLabel(
     this.text, {
@@ -13,7 +14,7 @@ class AppButtonLabel extends StatelessWidget {
   });
 
   final String text;
-  final int maxLines;
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +22,7 @@ class AppButtonLabel extends StatelessWidget {
       text,
       textAlign: TextAlign.center,
       maxLines: maxLines,
-      overflow: TextOverflow.ellipsis,
+      overflow: maxLines == null ? TextOverflow.visible : TextOverflow.ellipsis,
       softWrap: true,
     );
   }

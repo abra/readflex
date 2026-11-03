@@ -429,6 +429,39 @@ class ReadflexLocalizationsHi extends ReadflexLocalizations {
   String get libraryAddToCollectionTitle => 'कलेक्शन में जोड़ें';
 
   @override
+  String get libraryChooseCollectionsSubtitle => 'एक या अधिक कलेक्शन चुनें';
+
+  @override
+  String libraryAddToCollections(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count कलेक्शन में जोड़ें',
+      one: '1 कलेक्शन में जोड़ें',
+      zero: 'कलेक्शन में जोड़ें',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryCreateCollection => 'कलेक्शन बनाएं';
+
+  @override
+  String get libraryAddToCollectionsFailed =>
+      'कलेक्शन में जोड़ना संभव नहीं हुआ';
+
+  @override
+  String libraryAddedToCollections(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count कलेक्शन में जोड़ा गया',
+      one: '1 कलेक्शन में जोड़ा गया',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get libraryFavourites => 'पसंदीदा';
 
   @override

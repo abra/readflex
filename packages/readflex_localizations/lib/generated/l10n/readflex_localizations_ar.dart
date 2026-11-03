@@ -439,6 +439,44 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get libraryAddToCollectionTitle => 'إضافة إلى مجموعة';
 
   @override
+  String get libraryChooseCollectionsSubtitle => 'اختر مجموعة واحدة أو أكثر';
+
+  @override
+  String libraryAddToCollections(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'إضافة إلى $count مجموعة',
+      many: 'إضافة إلى $count مجموعة',
+      few: 'إضافة إلى $count مجموعات',
+      two: 'إضافة إلى مجموعتين',
+      one: 'إضافة إلى مجموعة واحدة',
+      zero: 'إضافة إلى المجموعات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryCreateCollection => 'إنشاء مجموعة';
+
+  @override
+  String get libraryAddToCollectionsFailed => 'تعذرت الإضافة إلى المجموعات';
+
+  @override
+  String libraryAddedToCollections(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تمت الإضافة إلى $count مجموعة',
+      many: 'تمت الإضافة إلى $count مجموعة',
+      few: 'تمت الإضافة إلى $count مجموعات',
+      two: 'تمت الإضافة إلى مجموعتين',
+      one: 'تمت الإضافة إلى مجموعة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get libraryFavourites => 'المفضلة';
 
   @override

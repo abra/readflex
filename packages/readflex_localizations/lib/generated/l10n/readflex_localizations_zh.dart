@@ -417,6 +417,36 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get libraryAddToCollectionTitle => '添加到收藏集';
 
   @override
+  String get libraryChooseCollectionsSubtitle => '选择一个或多个收藏集';
+
+  @override
+  String libraryAddToCollections(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '添加到 $count 个收藏集',
+      zero: '添加到收藏集',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryCreateCollection => '创建收藏集';
+
+  @override
+  String get libraryAddToCollectionsFailed => '无法添加到收藏集';
+
+  @override
+  String libraryAddedToCollections(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已添加到 $count 个收藏集',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get libraryFavourites => '收藏';
 
   @override

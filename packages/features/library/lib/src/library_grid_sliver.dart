@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'library_grid_tile.dart';
+import 'library_selection_bar.dart';
 import 'library_selection_cubit.dart';
 import 'library_layout.dart';
 
@@ -56,11 +57,13 @@ class LibraryGridSliver extends StatelessWidget {
     required this.onSourcePressed,
     required this.onSourceLongPressed,
     this.hasPracticeAction = false,
+    this.selectionActionsHeight,
     super.key,
   });
 
   final List<LibrarySource> sources;
   final LibrarySelectionState selection;
+  final double? selectionActionsHeight;
 
   /// Keeps the last cover clear of the Practice action above the capsule.
   final bool hasPracticeAction;
@@ -86,6 +89,13 @@ class LibraryGridSliver extends StatelessWidget {
         libraryContentBottomPadding(
           context,
           hasPracticeAction: hasPracticeAction,
+          selectionActionsHeight: selection.isActive
+              ? selectionActionsHeight ??
+                    LibrarySelectionBar.heightOf(
+                      context,
+                      viewPadding: MediaQuery.viewPaddingOf(context),
+                    )
+              : kLibraryFloatingActionsHeight,
         ),
       ),
       sliver: SliverGrid(

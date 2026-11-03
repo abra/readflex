@@ -430,6 +430,39 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
   String get libraryAddToCollectionTitle => 'Add to collection';
 
   @override
+  String get libraryChooseCollectionsSubtitle =>
+      'Choose one or more collections';
+
+  @override
+  String libraryAddToCollections(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Add to $count collections',
+      one: 'Add to 1 collection',
+      zero: 'Add to collections',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryCreateCollection => 'Create collection';
+
+  @override
+  String get libraryAddToCollectionsFailed => 'Failed to add to collections';
+
+  @override
+  String libraryAddedToCollections(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Added to $count collections',
+      one: 'Added to 1 collection',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get libraryFavourites => 'Favourites';
 
   @override

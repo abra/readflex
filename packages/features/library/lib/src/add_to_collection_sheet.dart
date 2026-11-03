@@ -2,72 +2,76 @@ import 'dart:math' as math;
 
 import 'package:collection_repository/collection_repository.dart';
 import 'package:component_library/component_library.dart';
-import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'add_to_collection_cubit.dart';
 
-// Destination rows keep a 4dp inset for their ink and end with a 48dp slot
-// whose fixed 20dp check lands on the gutter; the list subtracts both from
-// the 24dp sheet gutter, independently of adaptive utility button glyphs.
-const double _destinationRowInset = AppSpacing.xs;
-const EdgeInsetsDirectional _destinationListPadding =
-    EdgeInsetsDirectional.only(
-      start: AppSpacing.xl - _destinationRowInset,
-      end: AppSpacing.xl - _destinationRowInset - AppSizes.iconActionOutset,
-    );
-// Dividers and messages inside that list sit on the 24dp gutter.
-const EdgeInsetsDirectional _destinationLinePadding =
-    EdgeInsetsDirectional.only(
-      start: _destinationRowInset,
-      end: _destinationRowInset + AppSizes.iconActionOutset,
-    );
-
-Future<bool?> showAddToCollectionSheet({
+Future<int?> showAddToCollectionSheet({
   required BuildContext context,
   required AddToCollectionCubit cubit,
   required Set<String> sourceIds,
+  required VoidCallback onCollectionCreated,
 }) {
   cubit.load(sourceIds: sourceIds);
-  return showAppBottomSheet<bool>(
+  return showAppBottomSheet<int>(
     context,
     scrimClosesFlow: true,
-    builder: (_) => BlocProvider.value(
+    builder: (sheetContext) => BlocProvider.value(
       value: cubit,
-      child: _AddToCollectionSheet(sourceIds: sourceIds),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: math.min(
+            600,
+            MediaQuery.sizeOf(sheetContext).height * .75,
+          ),
+        ),
+        child: AddToCollectionSheet(
+          sourceIds: sourceIds,
+          onClose: () => Navigator.of(sheetContext).pop(),
+          onAdded: (count) => Navigator.of(sheetContext).pop(count),
+          onCollectionCreated: onCollectionCreated,
+        ),
+      ),
     ),
   );
 }
 
-/// Sheet that adds the selected source ids to favourites, an existing
-/// collection, or a newly created collection.
-class _AddToCollectionSheet extends StatefulWidget {
-  const _AddToCollectionSheet({required this.sourceIds});
+/// Modal collection destinations and their guarded creation step.
+class AddToCollectionSheet extends StatefulWidget {
+  const AddToCollectionSheet({
+    required this.sourceIds,
+    required this.onClose,
+    required this.onAdded,
+    required this.onCollectionCreated,
+    super.key,
+  });
 
   final Set<String> sourceIds;
 
+  final VoidCallback onClose;
+  final ValueChanged<int> onAdded;
+  final VoidCallback onCollectionCreated;
+
   @override
-  State<_AddToCollectionSheet> createState() => _AddToCollectionSheetState();
+  State<AddToCollectionSheet> createState() => AddToCollectionSheetState();
 }
 
-class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
+class AddToCollectionSheetState extends State<AddToCollectionSheet>
     with SingleTickerProviderStateMixin {
+  final _searchController = TextEditingController();
+  final _panelScroll = ScrollController();
+  final _searchFocus = FocusNode(debugLabel: 'Collection destination search');
   late final _nameController = TextEditingController()
     ..addListener(_onDraftChanged);
+  bool _hasDraft = false;
   bool _creating = false;
   bool _confirmingDiscard = false;
-  late final _transition =
-      AnimationController(
-        vsync: this,
-        duration: AppMotion.medium,
-      )..addStatusListener((status) {
-        if (status == AnimationStatus.completed ||
-            status == AnimationStatus.dismissed) {
-          setState(() {});
-        }
-      });
+  late final _transition = AnimationController(
+    vsync: this,
+    duration: AppMotion.medium,
+  )..addStatusListener(_onTransitionStatus);
   late final _curve = CurvedAnimation(
     parent: _transition,
     curve: Curves.easeInOutCubic,
@@ -81,27 +85,60 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
     end: Offset.zero,
   ).animate(_curve);
 
-  bool get _hasDraft => _nameController.text.trim().isNotEmpty;
-
-  // The guard follows the typed name, so the sheet must rebuild on edits.
-  void _onDraftChanged() => setState(() {});
-
-  /// Close, scrim and drag-down: a typed name asks before leaving the flow.
-  void _requestClose() {
-    if (context.read<AddToCollectionCubit>().state.isBusy) return;
-    if (!_creating || !_hasDraft) {
-      Navigator.of(context).pop(false);
-      return;
-    }
-    // Repeated attempts keep the decision visible until the user chooses.
-    if (_confirmingDiscard) return;
-    FocusScope.of(context).unfocus();
-    setState(() => _confirmingDiscard = true);
+  void _onDraftChanged() {
+    final hasDraft = _nameController.text.trim().isNotEmpty;
+    if (hasDraft != _hasDraft) setState(() => _hasDraft = hasDraft);
   }
 
-  void _keepEditing() => setState(() => _confirmingDiscard = false);
+  void _onTransitionStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed ||
+        status == AnimationStatus.dismissed) {
+      setState(() {});
+    }
+  }
 
-  void _discardDraft() => Navigator.of(context).pop(false);
+  /// Close and guarded scrim/drag attempts preserve a typed name.
+  void requestClose() {
+    if (context.read<AddToCollectionCubit>().state.isBusy) return;
+    if (_hasDraft) {
+      if (_confirmingDiscard) return;
+      FocusScope.of(context).unfocus();
+      if (!_creating) _showCreation(true);
+      setState(() {
+        _confirmingDiscard = true;
+      });
+      _resetOuterScroll();
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    widget.onClose();
+  }
+
+  /// Back unwinds the current step before leaving the destination list.
+  void handleBack() {
+    if (context.read<AddToCollectionCubit>().state.isBusy) return;
+    if (_confirmingDiscard) {
+      _keepEditing();
+    } else if (_creating) {
+      _showCreation(false);
+    } else {
+      requestClose();
+    }
+  }
+
+  void _keepEditing() {
+    setState(() => _confirmingDiscard = false);
+    _resetOuterScroll();
+  }
+
+  void _resetOuterScroll() {
+    if (_panelScroll.hasClients) _panelScroll.jumpTo(0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _panelScroll.hasClients) _panelScroll.jumpTo(0);
+    });
+  }
+
+  void _discardDraft() => widget.onClose();
 
   void _showCreation(bool creating) {
     if (_creating == creating ||
@@ -114,6 +151,7 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
       _creating = creating;
       _confirmingDiscard = false;
     });
+    _resetOuterScroll();
     if (context.reduceMotion) {
       _transition.value = creating ? 1 : 0;
     } else {
@@ -121,201 +159,136 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
     }
   }
 
+  Future<void> _submit() async {
+    final cubit = context.read<AddToCollectionCubit>();
+    if (!cubit.state.canSubmit) return;
+    final destinationCount = cubit.state.selectedDestinationCount;
+    FocusScope.of(context).unfocus();
+    final added = await cubit.submitSelected(sourceIds: widget.sourceIds);
+    if (mounted && added) widget.onAdded(destinationCount);
+  }
+
+  Future<void> _createCollection() async {
+    final cubit = context.read<AddToCollectionCubit>();
+    if (cubit.state.isBusy || !_hasDraft) return;
+    final created = await cubit.createCollection(name: _nameController.text);
+    if (!mounted || !created) return;
+    _nameController.clear();
+    _searchController.clear();
+    _showCreation(false);
+    widget.onCollectionCreated();
+  }
+
   @override
   void dispose() {
     _curve.dispose();
     _transition.dispose();
+    _searchController.dispose();
+    _panelScroll.dispose();
+    _searchFocus.dispose();
     _nameController
       ..removeListener(_onDraftChanged)
       ..dispose();
     super.dispose();
   }
 
-  Future<void> _addToCollection(LibraryCollection collection) async {
-    final cubit = context.read<AddToCollectionCubit>();
-    if (cubit.state.isBusy) return;
-    await cubit.addToCollection(
-      collectionId: collection.id,
-      sourceIds: widget.sourceIds,
-    );
-    if (!mounted || cubit.state.status == AddToCollectionStatus.failure) return;
-    Navigator.of(context).pop(true);
-  }
-
-  Future<void> _addToFavourites() async {
-    final cubit = context.read<AddToCollectionCubit>();
-    if (cubit.state.isBusy) return;
-    await cubit.addToFavourites(sourceIds: widget.sourceIds);
-    if (!mounted || cubit.state.status == AddToCollectionStatus.failure) return;
-    Navigator.of(context).pop(true);
-  }
-
-  Future<void> _createAndAdd() async {
-    final cubit = context.read<AddToCollectionCubit>();
-    if (cubit.state.isBusy) return;
-    await cubit.createAndAdd(
-      name: _nameController.text,
-      sourceIds: widget.sourceIds,
-    );
-    if (!mounted || cubit.state.status == AddToCollectionStatus.failure) return;
-    Navigator.of(context).pop(true);
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AddToCollectionCubit, AddToCollectionState>(
       builder: (context, state) => PopScope(
-        canPop: !_creating && !state.isBusy,
+        canPop: !_creating && !_hasDraft && !state.isBusy,
         onPopInvokedWithResult: (didPop, _) {
-          if (didPop || !_creating) return;
-          // Back is a step back, not a dismissal: the draft stays in place.
-          if (_confirmingDiscard) {
-            _keepEditing();
-          } else {
-            _showCreation(false);
-          }
+          if (!didPop) handleBack();
         },
-        child: ClipRect(
-          child: Stack(
-            children: [
-              // Keep the complete destination step's size, including a wrapping
-              // header. The form fills it without changing the sheet's top edge.
-              AppSheetStep(
-                active: !_creating,
-                visible: !_creating || _transition.isAnimating,
-                position: _listOffset,
-                maintainSize: true,
-                // Scrim and drag-down wait for the write like Close and
-                // system Back do; there is no decision to show.
-                child: AppSheetDismissGuard(
-                  enabled: state.isBusy,
-                  onDismissAttempt: _ignoreDismissAttempt,
-                  child: ActionBottomSheetLayout(
-                    title: context.l10n.libraryAddToCollectionTitle,
-                    closeLabel: context.l10n.commonClose,
-                    onClose: state.isBusy ? null : _requestClose,
-                    constrainBody: true,
-                    bodyPadding: const EdgeInsets.only(
-                      bottom: AppSpacing.lg,
-                    ),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        child: AppSheetDismissGuard(
+          enabled: state.isBusy || _hasDraft,
+          onDismissAttempt: requestClose,
+          child: _PanelViewport(
+            controller: _panelScroll,
+            creating: _creating || _transition.isAnimating,
+            destinationCount: state.selectedDestinationCount,
+            favouritesSourceCount: state.favouritesSourceCount,
+            child: ClipRect(
+              child: Stack(
+                children: [
+                  AppSheetStep(
+                    active: !_creating,
+                    visible: !_creating || _transition.isAnimating,
+                    maintainSize: true,
+                    position: _listOffset,
+                    child: ActionBottomSheetLayout(
+                      title: context.l10n.libraryAddToCollectionTitle,
+                      closeLabel: context.l10n.commonClose,
+                      onClose: state.isBusy ? null : requestClose,
+                      constrainBody: true,
+                      bodyPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl,
                       ),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final content = switch (state.status) {
-                            AddToCollectionStatus.initial ||
-                            AddToCollectionStatus.loading => const Padding(
-                              padding: EdgeInsets.symmetric(
-                                vertical: AppSpacing.xl,
-                              ),
-                              child: CenteredCircularProgressIndicator(),
-                            ),
-                            AddToCollectionStatus.failure
-                                when state.errorCode ==
-                                    AddToCollectionErrorCode
-                                        .loadCollectionsFailed =>
-                              SingleChildScrollView(
-                                child: ErrorState(
-                                  message:
-                                      context.l10n.libraryLoadCollectionsFailed,
-                                  retryLabel: context.l10n.commonRetry,
-                                  onRetry: context
-                                      .read<AddToCollectionCubit>()
-                                      .load,
-                                ),
-                              ),
-                            _ => ConstrainedBox(
-                              constraints: BoxConstraints(
-                                minHeight: math.min(
-                                  constraints.maxHeight,
-                                  2 * 48 +
-                                      2 * AppSpacing.lg +
-                                      2 * AppSpacing.md +
-                                      MediaQuery.textScalerOf(
-                                        context,
-                                      ).scale(32),
-                                ),
-                              ),
-                              child: _CollectionContent(
-                                state: state,
-                                sourceCount: widget.sourceIds.length,
-                                onCollectionPressed: _addToCollection,
-                                onFavouritesPressed: state.isBusy
-                                    ? null
-                                    : _addToFavourites,
-                                onCreatePressed: state.isBusy
-                                    ? null
-                                    : () => _showCreation(true),
-                              ),
-                            ),
-                          };
-
-                          return content;
-                        },
+                      footer: _AddToCollectionsAction(
+                        state: state,
+                        onSubmit: _submit,
+                      ),
+                      child: _DestinationContent(
+                        state: state,
+                        sourceCount: widget.sourceIds.length,
+                        searchController: _searchController,
+                        searchFocus: _searchFocus,
+                        onCreate: () => _showCreation(true),
                       ),
                     ),
                   ),
-                ),
+                  if (_creating || _transition.isAnimating)
+                    Positioned.fill(
+                      child: AppSheetStep(
+                        active: _creating,
+                        visible: true,
+                        position: _formOffset,
+                        child: AnimatedSwitcher(
+                          duration: context.motion(AppMotion.short),
+                          layoutBuilder: (currentChild, previousChildren) =>
+                              Stack(
+                                fit: StackFit.expand,
+                                children: [...previousChildren, ?currentChild],
+                              ),
+                          child: _confirmingDiscard
+                              ? _DiscardCollectionDraft(
+                                  key: const ValueKey(
+                                    'addToCollectionDiscardStep',
+                                  ),
+                                  onKeepEditing: _keepEditing,
+                                  onDiscard: _discardDraft,
+                                  onClose: requestClose,
+                                )
+                              : ActionBottomSheetLayout(
+                                  key: const ValueKey(
+                                    'addToCollectionCreateStep',
+                                  ),
+                                  title: context.l10n.libraryNewCollection,
+                                  closeLabel: context.l10n.commonClose,
+                                  onClose: state.isBusy ? null : requestClose,
+                                  backLabel: context.l10n.commonBack,
+                                  onBack: state.isBusy ? null : handleBack,
+                                  constrainBody: true,
+                                  bodyPadding: const EdgeInsets.only(
+                                    bottom: AppSpacing.lg,
+                                  ),
+                                  footer: _CreateCollectionAction(
+                                    state: state,
+                                    controller: _nameController,
+                                    onCreate: _createCollection,
+                                  ),
+                                  child: _CreateCollectionContent(
+                                    state: state,
+                                    controller: _nameController,
+                                    onCreate: _createCollection,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              if (_creating || _transition.isAnimating)
-                Positioned.fill(
-                  child: AppSheetStep(
-                    active: _creating,
-                    visible: true,
-                    position: _formOffset,
-                    child: AppSheetDismissGuard(
-                      enabled: _creating && _hasDraft,
-                      onDismissAttempt: _requestClose,
-                      child: AnimatedSwitcher(
-                        duration: context.motion(AppMotion.short),
-                        // The default switcher layout centres the shorter
-                        // form inside the destination step's frame; every
-                        // step fills it so its command sits on the footer line.
-                        layoutBuilder: (currentChild, previousChildren) =>
-                            Stack(
-                              fit: StackFit.expand,
-                              children: [...previousChildren, ?currentChild],
-                            ),
-                        child: _confirmingDiscard
-                            ? _DiscardDraftStep(
-                                key: const ValueKey(
-                                  'addToCollectionDiscardStep',
-                                ),
-                                onKeepEditing: _keepEditing,
-                                onDiscard: _discardDraft,
-                                onClose: _requestClose,
-                              )
-                            : ActionBottomSheetLayout(
-                                key: const ValueKey(
-                                  'addToCollectionCreateStep',
-                                ),
-                                title: context.l10n.libraryNewCollection,
-                                onBack: () => _showCreation(false),
-                                backLabel: context.l10n.commonBack,
-                                closeLabel: context.l10n.commonClose,
-                                onClose: state.isBusy ? null : _requestClose,
-                                constrainBody: true,
-                                bodyPadding: const EdgeInsets.only(
-                                  bottom: AppSpacing.lg,
-                                ),
-                                footer: _CreateCollectionAction(
-                                  state: state,
-                                  controller: _nameController,
-                                  onCreate: _createAndAdd,
-                                ),
-                                child: _CreateCollectionContent(
-                                  state: state,
-                                  controller: _nameController,
-                                  onCreate: _createAndAdd,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -323,182 +296,479 @@ class _AddToCollectionSheetState extends State<_AddToCollectionSheet>
   }
 }
 
-/// Discard decision for a typed collection name; same copy and safe-default
-/// pairing as the Manage flow. Close keeps the decision visible.
-class _DiscardDraftStep extends StatelessWidget {
-  const _DiscardDraftStep({
-    required this.onKeepEditing,
-    required this.onDiscard,
-    required this.onClose,
-    super.key,
+/// Keep one scroll subtree through keyboard/rotation changes. Only short hosts
+/// scroll the whole frame; destination rows retain their own lazy viewport.
+class _PanelViewport extends StatefulWidget {
+  const _PanelViewport({
+    required this.controller,
+    required this.creating,
+    required this.destinationCount,
+    required this.favouritesSourceCount,
+    required this.child,
   });
 
-  final VoidCallback onKeepEditing;
-  final VoidCallback onDiscard;
-  final VoidCallback onClose;
+  final ScrollController controller;
+  final bool creating;
+  final int destinationCount;
+  final int favouritesSourceCount;
+  final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return ActionBottomSheetLayout(
-      title: l10n.libraryDiscardChangesTitle,
-      onBack: onKeepEditing,
-      backLabel: l10n.commonBack,
-      onClose: onClose,
-      closeLabel: l10n.commonClose,
-      constrainBody: true,
-      footer: AppSheetActions(
-        primaryLabel: l10n.commonKeepEditing,
-        onPrimary: onKeepEditing,
-        secondaryLabel: l10n.commonDiscardChanges,
-        onSecondary: onDiscard,
-        destructiveSecondary: true,
-      ),
-      child: SingleChildScrollView(
-        child: Text(
-          l10n.libraryDiscardChangesBody,
-          style: context.text.bodyMedium,
+  State<_PanelViewport> createState() => _PanelViewportState();
+}
+
+class _PanelViewportState extends State<_PanelViewport> {
+  Object? _layoutKey;
+  ({double destinations, double forms})? _minimums;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final layoutKey = (
+        constraints.maxWidth,
+        MediaQuery.textScalerOf(context),
+        Localizations.localeOf(context),
+        Theme.of(context),
+        widget.destinationCount,
+        widget.favouritesSourceCount,
+      );
+      if (_layoutKey != layoutKey) {
+        _layoutKey = layoutKey;
+        _minimums = _measureMinimums(context, constraints.maxWidth);
+      }
+      final minimums = _minimums!;
+      final minimumHeight = math.max(minimums.destinations, minimums.forms);
+      final fits = constraints.maxHeight >= minimumHeight;
+      return SingleChildScrollView(
+        key: const ValueKey('addToCollectionPanelViewport'),
+        controller: widget.controller,
+        primary: false,
+        physics: fits ? const NeverScrollableScrollPhysics() : null,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: widget.creating ? minimums.forms : 0,
+            maxHeight: math.max(constraints.maxHeight, minimumHeight),
+          ),
+          child: widget.child,
         ),
+      );
+    },
+  );
+
+  // Measure only the fixed chrome when its geometry changes. Collection rows
+  // remain lazy and are never measured to determine the panel's height.
+  ({double destinations, double forms}) _measureMinimums(
+    BuildContext context,
+    double width,
+  ) {
+    final l10n = context.l10n;
+    final text = context.text;
+    final contentWidth = math.max(1.0, width - 2 * AppSpacing.xl);
+    final buttonWidth = math.max(1.0, contentWidth - 2 * AppSpacing.lg);
+    final subtitle = _textHeight(
+      l10n.libraryChooseCollectionsSubtitle,
+      text.bodySmall,
+      contentWidth,
+    );
+    final search = math.max(
+      AppSizes.buttonHeight,
+      _textHeight('M', text.bodyMedium, contentWidth) + 2 * AppSpacing.sm,
+    );
+    final newCollection = math.max(
+      AppSizes.buttonHeight,
+      _textHeight(
+        l10n.libraryNewCollection,
+        text.bodyMedium,
+        math.max(1.0, contentWidth - 2 * (AppIconSize.sm + AppSpacing.md)),
       ),
     );
+    final submit = _buttonHeight(
+      l10n.libraryAddToCollections(widget.destinationCount),
+      buttonWidth,
+    );
+    // Keep at least one complete wrapped destination in the inner viewport.
+    // Budget the fixed Favourites/status labels, never the collection catalog.
+    final rowTextWidth = math.max(
+      1.0,
+      contentWidth - AppSpacing.xl - 2 * AppSpacing.lg - AppSizes.buttonHeight,
+    );
+    final rowLabelWidth = math.max(
+      1.0,
+      rowTextWidth -
+          AppSpacing.sm -
+          _textWidth('${widget.favouritesSourceCount}', text.bodyMedium),
+    );
+    final destinationRow = math.max(
+      AppSizes.buttonHeight,
+      math.max(
+            _textHeight(l10n.libraryFavourites, text.bodyLarge, rowLabelWidth),
+            3 * _textHeight('M', text.bodyLarge, double.infinity),
+          ) +
+          _textHeight(
+            l10n.libraryAddedToCollection,
+            text.bodySmall,
+            rowTextWidth,
+          ) +
+          2 * AppSpacing.sm,
+    );
+    final destinations =
+        math.max(
+          AppSizes.buttonHeight,
+          _textHeight(
+            l10n.libraryAddToCollectionTitle,
+            text.titleMedium,
+            math.max(1.0, width - 2 * AppSpacing.xl - AppSizes.buttonHeight),
+          ),
+        ) +
+        AppSpacing.sm +
+        subtitle +
+        AppSpacing.md +
+        search +
+        AppSpacing.sm +
+        destinationRow +
+        AppSpacing.sm +
+        newCollection +
+        AppSpacing.sm +
+        submit +
+        AppSpacing.lg;
+    // Back/title/Close can stack in narrow windows, as BottomSheetHeader does.
+    final creation =
+        AppSizes.buttonHeight +
+        AppSpacing.sm +
+        _textHeight(l10n.libraryNewCollection, text.titleMedium, contentWidth) +
+        AppSpacing.sm +
+        math.max(
+          AppSizes.buttonHeight,
+          _textHeight('M', text.bodyLarge, contentWidth) + AppSpacing.xl,
+        ) +
+        AppSpacing.lg +
+        AppSpacing.sm +
+        _buttonHeight(l10n.libraryCreateCollection, buttonWidth) +
+        AppSpacing.lg;
+    final stacked = AppSheetActions.stacks(
+      context,
+      maxWidth: contentWidth,
+      primaryLabel: l10n.commonKeepEditing,
+      secondaryLabel: l10n.commonDiscardChanges,
+    );
+    final actionWidth = stacked
+        ? buttonWidth
+        : math.max(1.0, (contentWidth - AppSpacing.md) / 2 - 2 * AppSpacing.lg);
+    final keep = _buttonHeight(
+      l10n.commonKeepEditing,
+      actionWidth,
+      maxLines: 2,
+    );
+    final discard = _buttonHeight(
+      l10n.commonDiscardChanges,
+      actionWidth,
+      maxLines: 2,
+    );
+    final confirmation =
+        AppSizes.buttonHeight +
+        AppSpacing.sm +
+        _textHeight(
+          l10n.libraryDiscardChangesTitle,
+          text.titleMedium,
+          contentWidth,
+        ) +
+        AppSpacing.sm +
+        _textHeight(
+          l10n.libraryDiscardChangesBody,
+          text.bodyMedium,
+          contentWidth,
+        ) +
+        AppSpacing.lg +
+        AppSpacing.sm +
+        (stacked ? keep + AppSpacing.sm + discard : math.max(keep, discard)) +
+        AppSpacing.lg;
+    return (
+      destinations: destinations,
+      forms: math.max(creation, confirmation),
+    );
+  }
+
+  double _buttonHeight(String label, double width, {int? maxLines}) => math.max(
+    AppSizes.buttonHeight,
+    _textHeight(label, context.text.labelLarge, width, maxLines: maxLines) +
+        2 * AppSpacing.md,
+  );
+
+  double _textHeight(
+    String value,
+    TextStyle style,
+    double width, {
+    int? maxLines,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(text: value, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.localeOf(context),
+      maxLines: maxLines,
+    )..layout(maxWidth: width);
+    final height = painter.height;
+    painter.dispose();
+    return height;
+  }
+
+  double _textWidth(String value, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: value, style: style),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      locale: Localizations.localeOf(context),
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
   }
 }
 
-/// Destination choices. Membership is supplied by the cubit, not queried per row.
-class _CollectionContent extends StatelessWidget {
-  const _CollectionContent({
+class _DestinationContent extends StatelessWidget {
+  const _DestinationContent({
     required this.state,
     required this.sourceCount,
-    required this.onCollectionPressed,
-    required this.onFavouritesPressed,
-    required this.onCreatePressed,
+    required this.searchController,
+    required this.searchFocus,
+    required this.onCreate,
   });
 
   final AddToCollectionState state;
   final int sourceCount;
-  final ValueChanged<LibraryCollection> onCollectionPressed;
-  final VoidCallback? onFavouritesPressed;
-  final VoidCallback? onCreatePressed;
+  final TextEditingController searchController;
+  final FocusNode searchFocus;
+  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.text;
     final l10n = context.l10n;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height: 2,
-          child: state.status == AddToCollectionStatus.submitting
-              ? const LinearProgressIndicator()
-              : null,
-        ),
-        Flexible(
-          child: ScrollEdgeFadeStack(
-            child: CustomScrollView(
-              shrinkWrap: true,
-              slivers: [
-                SliverPadding(
-                  padding: _destinationListPadding,
-                  sliver: SliverMainAxisGroup(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (state.errorCode ==
-                                    AddToCollectionErrorCode
-                                        .updateCollectionFailed ||
-                                state.errorCode ==
-                                    AddToCollectionErrorCode
-                                        .updateFavouritesFailed) ...[
-                              Padding(
-                                padding: _destinationLinePadding,
-                                child: Text(
-                                  _addToCollectionErrorMessage(
-                                    l10n,
-                                    state.errorCode!,
-                                  ),
-                                  style: text.bodyMedium.copyWith(
-                                    color: colors.error,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.md),
-                            ],
-                            _CollectionRow(
-                              icon: AppIcons.collectionFavourites,
-                              included: state.containingAll.contains(
-                                CollectionRepository.favouritesCollectionId,
-                              ),
-                              label: l10n.libraryFavourites,
-                              sourceCount: state.favouritesSourceCount,
-                              enabled: !state.isBusy,
-                              onPressed: onFavouritesPressed,
-                            ),
-                            const _DestinationDivider(),
-                            if (state.collections.isEmpty)
-                              Padding(
-                                padding: _destinationLinePadding.add(
-                                  const EdgeInsets.symmetric(
-                                    vertical: AppSpacing.lg,
-                                  ),
-                                ),
-                                child: Text(
-                                  l10n.libraryCreateCollectionPrompt(
-                                    sourceCount,
-                                  ),
-                                  style: text.bodyMedium.copyWith(
-                                    color: colors.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      if (state.collections.isNotEmpty)
-                        SliverList.separated(
-                          itemCount: state.collections.length,
-                          separatorBuilder: (_, _) =>
-                              const _DestinationDivider(),
-                          itemBuilder: (context, index) {
-                            final collection = state.collections[index];
-                            return _CollectionRow(
-                              icon: AppIcons.collection,
-                              included: state.containingAll.contains(
-                                collection.id,
-                              ),
-                              label: collection.name,
-                              sourceCount: collection.sourceCount,
-                              enabled: !state.isBusy,
-                              onPressed: () => onCollectionPressed(collection),
-                            );
-                          },
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+        Text(
+          l10n.libraryChooseCollectionsSubtitle,
+          style: context.text.bodySmall.copyWith(
+            color: context.colors.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: AppDrillInRow(
-            key: const ValueKey('libraryNewCollectionRow'),
-            icon: AppIcons.collectionAdd,
-            title: l10n.libraryNewCollection,
-            enabled: onCreatePressed != null,
-            onTap: onCreatePressed,
+        AbsorbPointer(
+          absorbing: state.isBusy,
+          child: ExcludeFocus(
+            excluding: state.isBusy,
+            child: SearchField(
+              key: const ValueKey('addToCollectionsSearch'),
+              hintText: l10n.librarySearchCollectionsHint,
+              compactHintText: l10n.commonSearch,
+              clearButtonSemanticsLabel: l10n.commonClearSearch,
+              controller: searchController,
+              focusNode: searchFocus,
+              onChanged: context.read<AddToCollectionCubit>().searchCollections,
+            ),
           ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Flexible(
+          child: _DestinationResults(state: state, sourceCount: sourceCount),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AppDrillInRow(
+          key: const ValueKey('libraryNewCollectionRow'),
+          icon: AppIcons.collectionAdd,
+          title: l10n.libraryNewCollection,
+          enabled:
+              !state.isBusy &&
+              state.errorCode != AddToCollectionErrorCode.loadCollectionsFailed,
+          onTap: onCreate,
         ),
       ],
     );
   }
+}
+
+class _DestinationResults extends StatelessWidget {
+  const _DestinationResults({required this.state, required this.sourceCount});
+
+  final AddToCollectionState state;
+  final int sourceCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    if (state.status == AddToCollectionStatus.initial ||
+        state.status == AddToCollectionStatus.loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+        child: CenteredCircularProgressIndicator(),
+      );
+    }
+    if (state.errorCode == AddToCollectionErrorCode.loadCollectionsFailed) {
+      return SingleChildScrollView(
+        primary: false,
+        child: ErrorState(
+          message: l10n.libraryLoadCollectionsFailed,
+          retryLabel: l10n.commonRetry,
+          onRetry: context.read<AddToCollectionCubit>().load,
+        ),
+      );
+    }
+
+    final collections = state.visibleCollections;
+    final showFavourites = state.matchesSearch(l10n.libraryFavourites);
+    final resultCount = collections.length + (showFavourites ? 1 : 0);
+    return ScrollEdgeFadeStack(
+      child: CustomScrollView(
+        key: const ValueKey('addToCollectionDestinationList'),
+        primary: false,
+        shrinkWrap: true,
+        slivers: [
+          if (state.errorCode ==
+              AddToCollectionErrorCode.updateCollectionFailed)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    _collectionErrorMessage(l10n, state.errorCode!),
+                    style: context.text.bodySmall.copyWith(
+                      color: context.colors.error,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          if (resultCount == 0)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xl),
+                child: Text(
+                  l10n.libraryNoMatchingCollections,
+                  style: context.text.bodyMedium.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverList.separated(
+              itemCount: resultCount,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                if (showFavourites && index == 0) {
+                  return _DestinationRow(
+                    id: CollectionRepository.favouritesCollectionId,
+                    icon: AppIcons.collectionFavourites,
+                    label: l10n.libraryFavourites,
+                    sourceCount: state.favouritesSourceCount,
+                    state: state,
+                  );
+                }
+                final collection =
+                    collections[index - (showFavourites ? 1 : 0)];
+                return _DestinationRow(
+                  id: collection.id,
+                  icon: AppIcons.collection,
+                  label: collection.name,
+                  sourceCount: collection.sourceCount,
+                  state: state,
+                );
+              },
+            ),
+          if (state.collections.isEmpty && state.searchQuery.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: Text(
+                  l10n.libraryCreateCollectionPrompt(sourceCount),
+                  style: context.text.bodyMedium.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DestinationRow extends StatelessWidget {
+  const _DestinationRow({
+    required this.id,
+    required this.icon,
+    required this.label,
+    required this.sourceCount,
+    required this.state,
+  });
+
+  final String id;
+  final IconData icon;
+  final String label;
+  final int sourceCount;
+  final AddToCollectionState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final included = state.containingAll.contains(id);
+    return CheckboxListTile(
+      key: ValueKey('addToCollectionDestination-$id'),
+      contentPadding: EdgeInsets.zero,
+      controlAffinity: ListTileControlAffinity.trailing,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      secondary: Icon(
+        icon,
+        size: AppIconSize.sm,
+        color: context.colors.onSurfaceVariant,
+      ),
+      title: Row(
+        children: [
+          Expanded(child: Text(label, style: context.text.bodyLarge)),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            '$sourceCount',
+            style: context.text.bodyMedium.copyWith(
+              color: context.colors.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+      subtitle: included
+          ? Text(
+              context.l10n.libraryAddedToCollection,
+              style: context.text.bodySmall.copyWith(
+                color: context.colors.onSurfaceVariant,
+              ),
+            )
+          : null,
+      value: included || state.selectedCollectionIds.contains(id),
+      onChanged: included || state.isBusy
+          ? null
+          : (_) => context.read<AddToCollectionCubit>().toggleCollection(id),
+    );
+  }
+}
+
+class _AddToCollectionsAction extends StatelessWidget {
+  const _AddToCollectionsAction({required this.state, required this.onSubmit});
+
+  final AddToCollectionState state;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) => FilledButton(
+    key: const ValueKey('addToCollectionsSubmitButton'),
+    onPressed: state.canSubmit ? onSubmit : null,
+    child: AppBusyButtonLabel(
+      context.l10n.libraryAddToCollections(state.selectedDestinationCount),
+      busy: state.status == AddToCollectionStatus.submitting,
+      maxLines: null,
+    ),
+  );
 }
 
 class _CreateCollectionContent extends StatelessWidget {
@@ -507,25 +777,30 @@ class _CreateCollectionContent extends StatelessWidget {
     required this.controller,
     required this.onCreate,
   });
+
   final AddToCollectionState state;
   final TextEditingController controller;
   final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
+    final creationError =
+        state.errorCode == AddToCollectionErrorCode.collectionNameRequired ||
+        state.errorCode == AddToCollectionErrorCode.createCollectionFailed;
     return ScrollEdgeFadeStack(
       child: SingleChildScrollView(
+        primary: false,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             TextField(
+              key: const ValueKey('newCollectionNameField'),
               controller: controller,
               enabled: !state.isBusy,
               textInputAction: TextInputAction.done,
               decoration: InputDecoration(
-                hintText: l10n.libraryNewCollectionName,
+                hintText: context.l10n.libraryNewCollectionName,
               ),
               onSubmitted: (_) {
                 if (!state.isBusy && controller.text.trim().isNotEmpty) {
@@ -533,11 +808,11 @@ class _CreateCollectionContent extends StatelessWidget {
                 }
               },
             ),
-            if (state.errorCode != null)
+            if (creationError)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(
-                  _addToCollectionErrorMessage(l10n, state.errorCode!),
+                  _collectionErrorMessage(context.l10n, state.errorCode!),
                   style: context.text.bodySmall.copyWith(
                     color: context.colors.error,
                   ),
@@ -550,9 +825,6 @@ class _CreateCollectionContent extends StatelessWidget {
   }
 }
 
-/// Single footer command of the name form; leaving is the header's job
-/// (Back/Close). The write shows as a spinner in the button rather than a
-/// progress strip over the field.
 class _CreateCollectionAction extends StatelessWidget {
   const _CreateCollectionAction({
     required this.state,
@@ -565,125 +837,70 @@ class _CreateCollectionAction extends StatelessWidget {
   final VoidCallback onCreate;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: controller,
-      builder: (context, value, _) => FilledButton(
-        onPressed: state.isBusy || value.text.trim().isEmpty ? null : onCreate,
-        child: AppBusyButtonLabel(l10n.libraryCreateAndAdd, busy: state.isBusy),
-      ),
-    );
-  }
-}
-
-class _DestinationDivider extends StatelessWidget {
-  const _DestinationDivider();
-
-  @override
   Widget build(BuildContext context) =>
-      const Padding(padding: _destinationLinePadding, child: Divider());
-}
-
-// Guarded only while a write is in flight: the attempt is simply ignored.
-void _ignoreDismissAttempt() {}
-
-String _addToCollectionErrorMessage(
-  ReadflexLocalizations l10n,
-  AddToCollectionErrorCode errorCode,
-) {
-  return switch (errorCode) {
-    AddToCollectionErrorCode.loadCollectionsFailed =>
-      l10n.libraryLoadCollectionsFailed,
-    AddToCollectionErrorCode.updateCollectionFailed =>
-      l10n.libraryUpdateCollectionFailed,
-    AddToCollectionErrorCode.updateFavouritesFailed =>
-      l10n.libraryUpdateFavouritesFailed,
-    AddToCollectionErrorCode.collectionNameRequired =>
-      l10n.libraryCollectionNameRequired,
-    AddToCollectionErrorCode.createCollectionFailed =>
-      l10n.libraryCreateCollectionFailed,
-  };
-}
-
-class _CollectionRow extends StatelessWidget {
-  const _CollectionRow({
-    this.included = false,
-    required this.icon,
-    required this.label,
-    required this.sourceCount,
-    required this.enabled,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final bool included;
-  final String label;
-  final int sourceCount;
-  final bool enabled;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final text = context.text;
-    // Included rows stay readable; only a busy sheet mutes the destination.
-    final titleColor = enabled ? colors.onSurface : colors.onSurfaceVariant;
-
-    return Semantics(
-      label: included ? context.l10n.libraryAddedToCollection : null,
-      selected: included,
-      child: InkWell(
-        onTap: enabled && !included ? onPressed : null,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.md,
-            horizontal: _destinationRowInset,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                size: AppIconSize.sm,
-                color: colors.onSurfaceVariant,
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.bodyLarge.copyWith(color: titleColor),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Text(
-                '$sourceCount',
-                style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              // A 48dp slot like the picker's menu column keeps counts
-              // aligned across both sheets, marked or not.
-              SizedBox(
-                width: AppSizes.buttonHeight,
-                child: Center(
-                  child: SizedBox.square(
-                    dimension: AppIconSize.sm,
-                    child: included
-                        ? Icon(
-                            AppIcons.check,
-                            size: AppIconSize.sm,
-                            color: context.actionForeground,
-                          )
-                        : null,
-                  ),
-                ),
-              ),
-            ],
+      ValueListenableBuilder<TextEditingValue>(
+        valueListenable: controller,
+        builder: (context, value, _) => FilledButton(
+          key: const ValueKey('createCollectionSubmitButton'),
+          onPressed: state.isBusy || value.text.trim().isEmpty
+              ? null
+              : onCreate,
+          child: AppBusyButtonLabel(
+            context.l10n.libraryCreateCollection,
+            busy: state.status == AddToCollectionStatus.submitting,
+            maxLines: null,
           ),
         ),
-      ),
-    );
-  }
+      );
 }
+
+class _DiscardCollectionDraft extends StatelessWidget {
+  const _DiscardCollectionDraft({
+    required this.onKeepEditing,
+    required this.onDiscard,
+    required this.onClose,
+    super.key,
+  });
+
+  final VoidCallback onKeepEditing;
+  final VoidCallback onDiscard;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => ActionBottomSheetLayout(
+    title: context.l10n.libraryDiscardChangesTitle,
+    onBack: onKeepEditing,
+    backLabel: context.l10n.commonBack,
+    onClose: onClose,
+    closeLabel: context.l10n.commonClose,
+    constrainBody: true,
+    footer: AppSheetActions(
+      primaryLabel: context.l10n.commonKeepEditing,
+      onPrimary: onKeepEditing,
+      secondaryLabel: context.l10n.commonDiscardChanges,
+      onSecondary: onDiscard,
+      destructiveSecondary: true,
+    ),
+    child: SingleChildScrollView(
+      primary: false,
+      child: Text(
+        context.l10n.libraryDiscardChangesBody,
+        style: context.text.bodyMedium,
+      ),
+    ),
+  );
+}
+
+String _collectionErrorMessage(
+  ReadflexLocalizations l10n,
+  AddToCollectionErrorCode code,
+) => switch (code) {
+  AddToCollectionErrorCode.loadCollectionsFailed =>
+    l10n.libraryLoadCollectionsFailed,
+  AddToCollectionErrorCode.updateCollectionFailed =>
+    l10n.libraryAddToCollectionsFailed,
+  AddToCollectionErrorCode.collectionNameRequired =>
+    l10n.libraryCollectionNameRequired,
+  AddToCollectionErrorCode.createCollectionFailed =>
+    l10n.libraryCreateCollectionFailed,
+};

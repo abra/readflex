@@ -6,6 +6,7 @@ import 'package:component_library/component_library.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_bloc.dart';
 import 'package:library_feature/src/library_body.dart';
+import 'package:library_feature/src/add_to_collection_sheet.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
 import 'package:library_feature/src/library_grid_tile.dart';
 import 'package:library_feature/src/library_content_scroll_view.dart';
@@ -169,16 +170,16 @@ void main() {
     await tester.pumpAndSettle();
     await tester.longPress(find.text(_book.title));
     await tester.pumpAndSettle();
-    expect(find.text('Selected: 1'), findsOneWidget);
+    expect(find.byTooltip('Selected: 1'), findsOneWidget);
     expect(_addButton, findsNothing);
     await tester.ensureVisible(find.text(_secondBook.title));
     await tester.pumpAndSettle();
     await tester.tap(find.text(_secondBook.title));
     await tester.pumpAndSettle();
-    expect(find.text('Selected: 2'), findsOneWidget);
+    expect(find.byTooltip('Selected: 2'), findsOneWidget);
     await tester.tap(find.byTooltip('Cancel selection'));
     await tester.pumpAndSettle();
-    expect(find.text('Selected: 2'), findsNothing);
+    expect(find.byTooltip('Selected: 2'), findsNothing);
     expect(_addButton, findsOneWidget);
     expect(bookRepository.getBooksCallCount, 1);
   });
@@ -2037,7 +2038,7 @@ void main() {
     );
   });
 
-  testWidgets('selection mode shows collection and delete actions in a bar', (
+  testWidgets('selection mode shows a separate cancel FAB and action capsule', (
     tester,
   ) async {
     bookRepository.seedBooks([_book]);
@@ -2049,13 +2050,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_capsule, findsNothing);
-    expect(find.text('Add to collection'), findsOneWidget);
+    final collectionAction = find.byKey(
+      const ValueKey('libraryAddToCollectionButton'),
+    );
+    expect(collectionAction, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('libraryCancelSelectionFab')),
+      findsOneWidget,
+    );
     expect(find.byIcon(AppIcons.collectionAdd), findsOneWidget);
     expect(find.byIcon(AppIcons.delete), findsOneWidget);
     expect(find.byIcon(AppIcons.add), findsNothing);
     final screenWidth = tester.getSize(find.byType(Scaffold)).width;
     expect(
-      tester.getCenter(find.text('Add to collection')).dx,
+      tester.getCenter(collectionAction).dx,
       lessThan(tester.getCenter(find.byIcon(AppIcons.delete)).dx),
     );
     expect(
@@ -2082,15 +2090,12 @@ void main() {
     await tester.pumpAndSettle();
 
     final actionRect = tester.getRect(
-      find.ancestor(
-        of: find.text('Dans une collection'),
-        matching: find.byType(FilledButton),
-      ),
+      find.byKey(const ValueKey('libraryAddToCollectionButton')),
     );
     final scaffoldWidth = tester.getSize(find.byType(Scaffold)).width;
 
     expect(actionRect.left, greaterThanOrEqualTo(0));
-    expect(actionRect.right, lessThanOrEqualTo(scaffoldWidth - 48));
+    expect(actionRect.right, lessThanOrEqualTo(scaffoldWidth - AppSpacing.lg));
     expect(tester.takeException(), isNull);
   });
 
@@ -3261,7 +3266,7 @@ void main() {
     expect(find.text('Manage collection'), findsNothing);
   });
 
-  testWidgets('adds selected source to favourites from add collection sheet', (
+  testWidgets('stages favourites until the collection sheet is confirmed', (
     tester,
   ) async {
     bookRepository.seedBooks([_book]);
@@ -3282,10 +3287,42 @@ void main() {
     await tester.tap(favouritesRow);
     await tester.pumpAndSettle();
 
+    expect(collectionRepository.favouriteSourceIds, isEmpty);
+    expect(find.byType(AddToCollectionSheet), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('addToCollectionsSubmitButton')),
+    );
+    await tester.pumpAndSettle();
+
     expect(collectionRepository.favouriteSourceIds, {_book.id});
     expect(find.text('Add to collection'), findsNothing);
 
     await _expireToasts(tester);
+  });
+
+  testWidgets('opening collection choices dismisses previous feedback', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(ToastWrapper(child: buildSubject()));
+    await tester.pumpAndSettle();
+    showToast(
+      tester.element(find.byType(LibraryScreen)),
+      type: NotificationType.error,
+      message: 'Previous import failed',
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Previous import failed'), findsOneWidget);
+    await tester.longPress(find.text(_book.title));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('libraryAddToCollectionButton')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Previous import failed'), findsNothing);
+    expect(find.byType(AddToCollectionSheet), findsOneWidget);
   });
 
   testWidgets('creates collection from selected source', (tester) async {
@@ -3304,10 +3341,13 @@ void main() {
     final nameField = find.widgetWithText(TextField, 'New collection name');
     expect(find.text('Cancel'), findsNothing);
     expect(find.byType(OutlinedButton), findsNothing);
-    expect(find.widgetWithText(FilledButton, 'Create and add'), findsOneWidget);
+    expect(
+      find.widgetWithText(FilledButton, 'Create collection'),
+      findsOneWidget,
+    );
     expect(
       tester.getCenter(nameField).dy,
-      lessThan(tester.getCenter(find.text('Create and add')).dy),
+      lessThan(tester.getCenter(find.text('Create collection')).dy),
     );
 
     await tester.enterText(
@@ -3315,7 +3355,18 @@ void main() {
       'Dune',
     );
     await tester.pump();
-    await tester.tap(find.text('Create and add'));
+    await tester.tap(find.text('Create collection'));
+    await tester.pumpAndSettle();
+
+    expect(await collectionRepository.getCollections(), hasLength(1));
+    expect(
+      collectionRepository.addedSourceIdsByCollection.values.single,
+      isEmpty,
+    );
+    expect(find.byType(AddToCollectionSheet), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('addToCollectionsSubmitButton')),
+    );
     await tester.pumpAndSettle();
 
     expect(collectionRepository.addedSourceIdsByCollection, isNotEmpty);
@@ -3325,6 +3376,164 @@ void main() {
     );
     await _expireToasts(tester);
   });
+
+  testWidgets(
+    'adds the selection to several destinations in one confirmation',
+    (
+      tester,
+    ) async {
+      bookRepository.seedBooks([_book, _secondBook]);
+      collectionRepository.seedCollections([
+        LibraryCollection(
+          id: 'research',
+          name: 'Research',
+          sourceCount: 0,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+      ]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await tester.longPress(find.text(_book.title));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(_secondBook.title));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('libraryAddToCollectionButton')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(InkWell, 'Research'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(InkWell, 'Favourites'));
+      await tester.pumpAndSettle();
+
+      expect(collectionRepository.addedSourceIdsByCollection, isEmpty);
+      expect(find.byType(AddToCollectionSheet), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('addToCollectionsSubmitButton')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(collectionRepository.addedSourceIdsByCollection['research'], {
+        _book.id,
+        _secondBook.id,
+      });
+      expect(collectionRepository.favouriteSourceIds, {
+        _book.id,
+        _secondBook.id,
+      });
+      expect(find.byType(AddToCollectionSheet), findsNothing);
+      expect(find.byType(LibrarySelectionBar), findsNothing);
+      expect(_addButton, findsOneWidget);
+      await _expireToasts(tester);
+    },
+  );
+
+  for (final (window, locale, keyboard, safeBottom, safeSide) in const [
+    (Size(390, 844), Locale('en'), 0.0, 34.0, 0.0),
+    (Size(390, 844), Locale('en'), 320.0, 34.0, 0.0),
+    (Size(390, 844), Locale('ar'), 0.0, 0.0, 0.0),
+    (Size(844, 390), Locale('en'), 0.0, 24.0, 44.0),
+    (Size(844, 390), Locale('ar'), 0.0, 24.0, 44.0),
+    (Size(800, 1280), Locale('en'), 0.0, 24.0, 0.0),
+    (Size(1280, 800), Locale('ar'), 0.0, 24.0, 0.0),
+  ]) {
+    testWidgets(
+      'collection sheet respects viewport $window/$locale/$keyboard',
+      (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = window
+          ..devicePixelRatio = 1
+          ..padding = FakeViewPadding(
+            bottom: safeBottom,
+            left: safeSide,
+            right: safeSide,
+          )
+          ..viewPadding = FakeViewPadding(
+            bottom: safeBottom,
+            left: safeSide,
+            right: safeSide,
+          );
+        addTearDown(tester.view.reset);
+        await preferencesService.update((p) => p.copyWith(locale: locale));
+        bookRepository.seedBooks([_book]);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        await tester.longPress(find.text(_book.title));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('libraryAddToCollectionButton')),
+        );
+        await tester.pumpAndSettle();
+        if (keyboard > 0) {
+          tester.view
+            ..viewInsets = FakeViewPadding(bottom: keyboard)
+            ..padding = const FakeViewPadding();
+          await tester.pumpAndSettle();
+        }
+        final sheet = find.byType(AddToCollectionSheet);
+        final sheetBounds = tester.getRect(sheet);
+        final routeBounds = tester.getRect(find.byType(BottomSheet));
+        expect(routeBounds.bottom, closeTo(window.height, .5));
+        expect(sheetBounds.top, greaterThanOrEqualTo(0));
+        expect(sheetBounds.left, greaterThanOrEqualTo(safeSide - .5));
+        expect(
+          sheetBounds.right,
+          lessThanOrEqualTo(window.width - safeSide + .5),
+        );
+        expect(
+          sheetBounds.bottom,
+          lessThanOrEqualTo(window.height - keyboard + .5),
+        );
+        expect(find.byType(AnimatedModalBarrier), findsOneWidget);
+        final cancel = find.byKey(const ValueKey('libraryCancelSelectionFab'));
+        expect(cancel.hitTestable(), findsNothing);
+
+        // Closing a modal sheet retains the book selection behind its barrier.
+        final close = find.descendant(
+          of: sheet,
+          matching: find.byTooltip(tester.element(sheet).l10n.commonClose),
+        );
+        await tester.tap(close);
+        await tester.pumpAndSettle();
+        expect(find.byType(AddToCollectionSheet), findsNothing);
+        expect(find.byType(LibrarySelectionBar), findsOneWidget);
+        expect(cancel.hitTestable(), findsOneWidget);
+        await tester.tap(cancel);
+        await tester.pumpAndSettle();
+        expect(find.byType(LibrarySelectionBar), findsNothing);
+        expect(_addButton, findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'Back closes collection choices before cancelling selected books',
+    (
+      tester,
+    ) async {
+      bookRepository.seedBooks([_book]);
+      await tester.pumpWidget(buildSubject());
+      await tester.pumpAndSettle();
+      await tester.longPress(find.text(_book.title));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('libraryAddToCollectionButton')),
+      );
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(AddToCollectionSheet), findsNothing);
+      expect(find.byType(LibrarySelectionBar), findsOneWidget);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(LibrarySelectionBar), findsNothing);
+      expect(_addButton, findsOneWidget);
+    },
+  );
 
   // Swipe-delete waits for the real write: the row only leaves the tree
   // once storage confirms, and a failure springs it back with a toast.
@@ -3536,7 +3745,7 @@ void main() {
 
         await tester.longPress(card);
         await tester.pumpAndSettle();
-        expect(find.text('Selected: 1'), findsOneWidget);
+        expect(find.byTooltip('Selected: 1'), findsOneWidget);
         expect(opened, isEmpty);
         expect(
           tester.widget<LibraryContinueReadingCard>(card).isSelected,
@@ -3548,10 +3757,10 @@ void main() {
         // The first visible item also toggles selection without opening.
         await tester.tap(listed(earlier.id));
         await tester.pumpAndSettle();
-        expect(find.text('Selected: 2'), findsOneWidget);
+        expect(find.byTooltip('Selected: 2'), findsOneWidget);
         await tester.tap(card);
         await tester.pumpAndSettle();
-        expect(find.text('Selected: 1'), findsOneWidget);
+        expect(find.byTooltip('Selected: 1'), findsOneWidget);
         expect(
           tester.widget<LibraryContinueReadingCard>(card).isSelected,
           isFalse,
@@ -3655,7 +3864,7 @@ void main() {
 
         await tester.longPress(listed(_book.id));
         await tester.pumpAndSettle();
-        expect(find.text('Selected: 1'), findsOneWidget);
+        expect(find.byTooltip('Selected: 1'), findsOneWidget);
         expect(tester.getRect(card), cardRect);
         expect(tester.getRect(listed(_book.id)), bookRect);
         expect(listed(reading.id), findsNothing);
@@ -3807,9 +4016,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(LibrarySelectionBar), findsOneWidget);
       expect(_addButton, findsNothing);
-      // The bar owns the inset; the button's space is kept, so the end of
-      // the list does not move.
-      expect(bottomPadding(), clearance);
+      // Both floating modes keep the body's safe inset and scroll clearance.
+      expect(bottomPadding(), clearance + 34);
 
       await tester.tap(find.byTooltip('Cancel selection'));
       await tester.pumpAndSettle();

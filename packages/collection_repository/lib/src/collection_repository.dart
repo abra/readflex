@@ -208,6 +208,47 @@ class CollectionRepository {
     }
   }
 
+  /// Adds to every destination together; existing memberships are retained.
+  Future<void> addSourcesToCollections({
+    required Iterable<String> collectionIds,
+    required Iterable<String> sourceIds,
+  }) async {
+    final destinations = collectionIds.toSet();
+    final ids = sourceIds.toSet();
+    if (destinations.isEmpty || ids.isEmpty) return;
+
+    try {
+      final now = DateTime.now().toIso8601String();
+      await _db.transaction(() async {
+        final manualIds = destinations
+            .where((id) => !_isFavouritesCollection(id))
+            .toList(growable: false);
+        // A destination may have been deleted since the picker loaded.
+        for (var start = 0; start < manualIds.length; start += 500) {
+          final batch = manualIds.skip(start).take(500).toList(growable: false);
+          final rows = await (_db.select(
+            _db.collectionsTable,
+          )..where((table) => table.id.isIn(batch))).get();
+          if (rows.length != batch.length) {
+            throw StateError('One or more collections no longer exist');
+          }
+        }
+        if (destinations.contains(favouritesCollectionId)) {
+          await _ensureFavouritesCollection(now);
+        }
+        for (final collectionId in destinations) {
+          await _dao.addSources(
+            collectionId: collectionId,
+            sourceIds: ids,
+            addedAt: now,
+          );
+        }
+      });
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<void> removeSourcesFromCollection({
     required String collectionId,
     required Iterable<String> sourceIds,

@@ -33,6 +33,7 @@ class LibraryContentScrollView extends StatelessWidget {
     this.hasPracticeAction = false,
     this.leading,
     this.continueReadingSource,
+    this.selectionActionsHeight,
     super.key,
   });
 
@@ -46,6 +47,7 @@ class LibraryContentScrollView extends StatelessWidget {
   /// Reserves space for the upper floating action, including during selection.
   final bool hasPracticeAction;
   final LibrarySelectionState selection;
+  final double? selectionActionsHeight;
   final ScrollController scrollController;
   final void Function(LibrarySource source) onSourcePressed;
   final void Function(LibrarySource source) onSourceLongPressed;
@@ -91,6 +93,7 @@ class LibraryContentScrollView extends StatelessWidget {
               sources: sources,
               hasPracticeAction: hasPracticeAction,
               selection: selection,
+              selectionActionsHeight: selectionActionsHeight,
               hasContentAbove: leading != null || hasCard,
               semanticIndexOffset: cardCount,
               onSourcePressed: onSourcePressed,
@@ -101,6 +104,7 @@ class LibraryContentScrollView extends StatelessWidget {
               sources: sources,
               hasPracticeAction: hasPracticeAction,
               selection: selection,
+              selectionActionsHeight: selectionActionsHeight,
               hasContentAbove: leading != null || hasCard,
               semanticIndexOffset: cardCount,
               onSourcePressed: onSourcePressed,

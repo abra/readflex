@@ -843,6 +843,36 @@ abstract class ReadflexLocalizations {
   /// **'Add to collection'**
   String get libraryAddToCollectionTitle;
 
+  /// No description provided for @libraryChooseCollectionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose one or more collections'**
+  String get libraryChooseCollectionsSubtitle;
+
+  /// Add action; count is the number of pending destination collections. Zero is the disabled label.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Add to collections} one{Add to 1 collection} other{Add to {count} collections}}'**
+  String libraryAddToCollections(int count);
+
+  /// No description provided for @libraryCreateCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Create collection'**
+  String get libraryCreateCollection;
+
+  /// No description provided for @libraryAddToCollectionsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to add to collections'**
+  String get libraryAddToCollectionsFailed;
+
+  /// Success message; count is the number of destination collections, not the number of books or articles.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Added to 1 collection} other{Added to {count} collections}}'**
+  String libraryAddedToCollections(int count);
+
   /// No description provided for @libraryFavourites.
   ///
   /// In en, this message translates to:

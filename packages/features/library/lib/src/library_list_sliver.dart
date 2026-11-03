@@ -3,6 +3,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 
 import 'library_list_tile.dart';
+import 'library_selection_bar.dart';
 import 'library_selection_cubit.dart';
 import 'library_layout.dart';
 
@@ -40,11 +41,13 @@ class LibraryListSliver extends StatelessWidget {
     required this.onSourceLongPressed,
     required this.onConfirmSwipeDelete,
     this.hasPracticeAction = false,
+    this.selectionActionsHeight,
     super.key,
   });
 
   final List<LibrarySource> sources;
   final LibrarySelectionState selection;
+  final double? selectionActionsHeight;
 
   /// Keeps the last row clear of the Practice action above the capsule.
   final bool hasPracticeAction;
@@ -74,6 +77,13 @@ class LibraryListSliver extends StatelessWidget {
         bottom: libraryContentBottomPadding(
           context,
           hasPracticeAction: hasPracticeAction,
+          selectionActionsHeight: selection.isActive
+              ? selectionActionsHeight ??
+                    LibrarySelectionBar.heightOf(
+                      context,
+                      viewPadding: MediaQuery.viewPaddingOf(context),
+                    )
+              : kLibraryFloatingActionsHeight,
         ),
       ),
       sliver: SliverList(

@@ -17,6 +17,7 @@ memberships.
 | `updateCollection(...)` | Renames and/or removes sources from a manual collection |
 | `addSourcesToCollection(...)` | Adds sources to a manual collection |
 | `addSourcesToFavourites(...)` | Adds sources to the built-in favourites collection |
+| `addSourcesToCollections(...)` | Adds sources to multiple manual collections and/or favourites in one transaction |
 | `removeSourcesFromCollection(...)` | Removes sources from a manual collection |
 | `removeSourcesFromFavourites(...)` | Removes sources from favourites |
 | `createCollectionWithSources(...)` | Creates a collection and fills it in one transaction |
@@ -35,6 +36,12 @@ Membership checks for Add to collection use a grouped SQL count over only the
 selected IDs, including Favourites. Inputs are deduplicated and split into
 500-parameter batches; counts are combined by collection. Empty input returns
 an empty set. This avoids loading every membership or querying once per row.
+
+The multi-destination add deduplicates source and destination IDs, validates
+manual destinations inside the write transaction, and creates Favourites only
+when selected. Existing memberships stay intact; any destination/write failure
+rolls back the entire operation, including Favourites creation. Empty input does
+not write anything. The operation does not reload memberships after saving.
 
 ## Dependencies
 

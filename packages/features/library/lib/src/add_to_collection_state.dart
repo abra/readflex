@@ -5,7 +5,6 @@ enum AddToCollectionStatus { initial, loading, success, submitting, failure }
 enum AddToCollectionErrorCode {
   loadCollectionsFailed,
   updateCollectionFailed,
-  updateFavouritesFailed,
   collectionNameRequired,
   createCollectionFailed,
 }
@@ -17,6 +16,8 @@ class AddToCollectionState extends Equatable {
     this.favouritesSourceCount = 0,
     this.errorCode,
     this.containingAll = const {},
+    this.selectedCollectionIds = const {},
+    this.searchQuery = '',
   });
 
   final AddToCollectionStatus status;
@@ -24,6 +25,21 @@ class AddToCollectionState extends Equatable {
   final int favouritesSourceCount;
   final AddToCollectionErrorCode? errorCode;
   final Set<String> containingAll;
+  final Set<String> selectedCollectionIds;
+  final String searchQuery;
+
+  int get selectedDestinationCount => selectedCollectionIds.length;
+
+  bool get canSubmit => !isBusy && selectedCollectionIds.isNotEmpty;
+
+  List<LibraryCollection> get visibleCollections => searchQuery.isEmpty
+      ? collections
+      : collections
+            .where((collection) => matchesSearch(collection.name))
+            .toList(growable: false);
+
+  bool matchesSearch(String label) =>
+      searchQuery.isEmpty || label.toLowerCase().contains(searchQuery);
 
   bool get isBusy =>
       status == AddToCollectionStatus.loading ||
@@ -36,6 +52,8 @@ class AddToCollectionState extends Equatable {
     AddToCollectionErrorCode? errorCode,
     bool clearError = false,
     Set<String>? containingAll,
+    Set<String>? selectedCollectionIds,
+    String? searchQuery,
   }) {
     return AddToCollectionState(
       status: status ?? this.status,
@@ -44,6 +62,9 @@ class AddToCollectionState extends Equatable {
           favouritesSourceCount ?? this.favouritesSourceCount,
       errorCode: clearError ? null : errorCode ?? this.errorCode,
       containingAll: containingAll ?? this.containingAll,
+      selectedCollectionIds:
+          selectedCollectionIds ?? this.selectedCollectionIds,
+      searchQuery: searchQuery ?? this.searchQuery,
     );
   }
 
@@ -54,5 +75,7 @@ class AddToCollectionState extends Equatable {
     favouritesSourceCount,
     errorCode,
     containingAll,
+    selectedCollectionIds,
+    searchQuery,
   ];
 }

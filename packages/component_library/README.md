@@ -176,6 +176,8 @@ source quote and translated sentence for native screenshot inspection.
   label with the spinner while a write is in flight; `AppSheetActions(busy:)`
   and `ErrorState(busy:)` use it, and single `FilledButton`s pass it as their
   child instead of swapping children.
+  Labels default to two lines; growing footers may pass `maxLines: null` to
+  `AppButtonLabel` or `AppBusyButtonLabel` to display the full label.
 - **Icon glyph colour follows the action's role, not the surface.** Inline
   delete/remove in a row: `onSurfaceVariant`; undo: `context.actionForeground`;
   overflow "more": `onSurfaceVariant`, or `selectedControlForeground` on a
@@ -196,7 +198,7 @@ Reusable presentation-only widgets used across features:
 | `AppActionCard`                     | Reusable command card for action pickers       |
 | `AppDrillInRow`                     | Row that opens a nested step: accent leading icon (or a caller-framed `leading` widget, e.g. the import menu's tinted tile), `bodyMedium` title, muted subtitle, directional chevron, 48dp minimum, muted and ripple-free when disabled |
 | `AppBottomSafeArea`                 | Bottom inset handling for app-owned surfaces   |
-| `AppButtonLabel`                    | Bounded label for localized button text        |
+| `AppButtonLabel`                    | Localized button text with two-line or full wrapping |
 | `AppBusyButtonLabel`                | Button child that swaps the label for a live-region spinner without changing the button size |
 | `AppSheetDismissGuard`              | Per-step scrim/drag guard inside `showAppBottomSheet` flows |
 | `AppSheetStep`                      | One step of a sheet flow that slides in place (Display/Language, Appearance/Font, Add to collection/New collection): an inactive step stops tickers and drops semantics, focus and input; hidden steps stay offstage or keep their size (`maintainSize`) |

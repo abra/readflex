@@ -162,10 +162,9 @@ use the extra width without stretching anything:
   and selection work per row as in one column, and screen readers count
   sources, not lines: each row and the Continue reading card carry their own
   index, as in the grid.
-- The selection bar keeps cancel, the count, Add to collection and delete in
-  one row; the command keeps its own width, at most half the row, so large
-  text wraps its label rather than squeezing the count. Phones keep the two
-  rows described below.
+- Selection keeps cancellation in a separate circular floating button and
+  the selected count, collection action and delete in a contextual capsule.
+  The same controls adapt to narrow and wide windows.
 
 `AppContentFrame` bounds the successful Library header and scroll content to
 1200dp, with an extra 8dp outer inset in wide windows in addition to the 16dp
@@ -176,7 +175,8 @@ localized Display options label in wide windows.
 At 600dp width and 480dp height, utility and collection actions use 24dp
 glyphs, while the item count and Continue reading metadata use the existing
 15sp text roles. Narrow windows keep their compact roles. Touch targets,
-cover-only grid geometry, capsule height and source actions are unchanged;
+cover-only grid geometry, normal import/filter capsule height and source actions
+are unchanged;
 the Display action measures the same glyph/text sizes it paints.
 
 Continue reading is an inset rounded, outlined tonal panel with a compact
@@ -337,8 +337,9 @@ selects the collection scope; the Scaffold rebuilds for its visibility alone.
 
 The capsule appears only once the library has loaded items: the empty
 library offers its own two import commands, while an empty collection keeps
-it so it can be left. Selection mode gives the bottom to the selection bar,
-and the floating controls hide/show immediately at their resting position.
+it so it can be left. Selection replaces this group with the separate cancel
+button and contextual action capsule at the same bottom anchor.
+The floating controls switch immediately at their resting position.
 The Scaffold slot stays mounted with a `Visibility` wrapper and
 `FloatingActionButtonAnimator.noAnimation`, so it cannot cache exiting controls
 or scale/rotate the whole group. Hidden controls leave layout, input and
@@ -392,8 +393,8 @@ menu target; the list subtracts the adaptive glyph's outset
 padding, so the pill bleeds 8dp into both gutters (16dp from the sheet edges)
 and the target extends into the trailing gutter without shrinking. Labels and
 counts in rows without a menu keep its slot, so every count ends 12dp before
-the same 48dp menu column. Insets mirror in RTL; Add to collection retains its
-fixed 20dp check slot, whose target column matches this one in narrow windows.
+the same 48dp menu column. Insets mirror in RTL. The separate Add to collection
+panel uses checkboxes to stage destinations rather than row menus.
 Selection includes a check, paired theme colors and selected semantics; the
 menu glyph is `onSurfaceVariant`, or `selectedControlForeground` on the
 selected row. Row press/focus feedback remains enabled.
@@ -427,12 +428,10 @@ bottom padding (the safe inset the keyboard leaves uncovered), so the last row e
 16dp above the highest floating action with or without a home indicator and
 on every keyboard frame. "No results"
 pads its scroll view the same way so its command can scroll clear of it;
-the empty library has no capsule and no padding. The selection bar is mounted
-in `bottomNavigationBar` only while selecting, because an occupied slot
-strips the body's bottom inset; while selecting the bar owns the safe area
-and the capsule's space stays reserved, so the end of the list never moves.
-The floating group and the selection bar are `ToastAvoidArea`s: toasts float above
-whichever is on screen and leave both tappable.
+the empty library has no capsule and no padding. Selection also uses floating
+controls, preserving the body's safe inset and content geometry when it starts
+or ends. The floating groups are `ToastAvoidArea`s: toasts float above the
+visible controls and leave them tappable.
 
 ### Continue reading
 
@@ -503,15 +502,15 @@ load failure use `EmptyState(compact: true)` / `ErrorState` rather than ad hoc
 text and buttons.
 Source repositories, not LibraryBloc, own atomic membership cleanup on deletion.
 
-Selection hides the bottom capsule and shows a bottom action bar: selected count,
-explicit cancel, add to collection, and secondary delete. On a phone the count
-sits above the command, which spans the row up to the trash; a wide window puts
-everything in one row (see above). Scaffold reserves its height, including
-`AppBottomSafeArea` and 16dp below the phone commands. Cancel/trash
-glyphs align with the screen's 16dp gutter while retaining 48dp targets
-(`AppSizes.iconActionOutset`); the trash stays `error` as the bar's bulk
-destructive command and the filled label goes through `AppButtonLabel`.
-System Back still clears selection. Display and
+Selection replaces the import/filter capsule with a separate circular cancel
+FAB at the directional start and a contextual capsule at the end. The capsule
+holds the selected source count, the collection action and secondary delete;
+the trash uses `error`, while cancel remains neutral. The two floating controls
+share a bottom anchor and retain their touch targets when labels grow.
+Counts above 999 show `999+`; semantics and the tooltip retain the exact count.
+The collection action opens a modal bottom sheet; it changes destinations,
+not the Library's current filter. Closing that sheet leaves book selection
+active. System Back closes the sheet before it clears selection. Display and
 selection changes reuse loaded sources instead of querying storage again.
 
 Display shares `ActionBottomSheetLayout.scrollable`, `AppSettingsSection` and
@@ -622,45 +621,43 @@ The preferred height includes the source rows' 48dp action targets, row and list
 padding, dividers, and footer. A short list must fit without scrolling or edge
 shadows when the viewport permits; shadows only indicate real hidden content.
 
-Add to collection opens on destinations: Favourites and a lazy list of manual
-collections. The whole row adds sources, without a separate plus icon. A
-checkmark marks disabled destinations already containing every selected source;
-partially matching destinations still accept the missing sources. The checkmark
-slot remains reserved so item counts stay aligned.
-One grouped membership query (bounded parameter batches) supplies this state,
-not a query per visible row or a read of every collection's source IDs.
-New collection is an `AppDrillInRow`; it opens a separate name form in the
-same route. Destination rows clip their ripple to `AppRadius.sm` and keep a
-4dp ink inset that bleeds past the 24dp gutter, so their icons sit with the
-New collection icon and the dividers span 24…24. Their trailing 48dp slot
-keeps a fixed 20dp check on the gutter; counts end 12dp before that slot.
-Its target column matches the Collections picker's menu in narrow windows;
-medium-window menus use larger 24dp glyphs with their own gutter outset.
-The name form's
-footer is one full-width filled "Create and add" (`FilledButton` with
-`AppBusyButtonLabel`, busy from the cubit, disabled while the name is empty)
-in the layout's `footer` slot: the step's header has Back and Close, so no
-Cancel sits beside it. The write shows a spinner in that button rather than a
-progress strip over the field; the destination step keeps its 2dp strip while
-a row write is in flight because it has no command button to host a spinner.
-The complete destination step, including its wrapping header, determines both
-steps' height. Back returns to destinations and preserves the draft; Close
-dismisses the flow. While the name field is non-empty the form wraps itself in
-`AppSheetDismissGuard`: Close, a scrim tap and drag-down do not dismiss but show
-the same Keep editing / Discard decision as Manage (`commonKeepEditing` filled,
-`commonDiscardChanges` outlined in the error color); Discard leaves the flow, Keep editing or
-header/system Back return to the form with the draft intact, and repeated
-Close/scrim attempts keep the decision visible. An empty form keeps the handle
-and dismisses freely. System Back from the form remains a step back to
-destinations, not a dismissal, so it never asks. Slide direction follows the
-locale, with an immediate reduced-motion transition. Hidden steps retain layout but expose no input, focus or semantics.
-The keyboard and enlarged text leave actions reachable, with full-width fades
-only for genuinely overflowing content. A failed initial load shows Retry;
-mutation failures retain the current step and draft. Busy guards prevent double
-submission; while a write is in flight the destination step also holds
-`AppSheetDismissGuard`, so scrim tap and drag-down wait like Close and system
-Back. Closing during a write does not emit late state or reload its snapshot.
-Shared headers/actions remain in `component_library`.
+Add to collection opens `AddToCollectionSheet` through the shared
+`showAppBottomSheet` route. The modal scrim covers the Library, including the
+contextual capsule and separate cancel FAB. The shared sheet owns its width,
+safe-area margins, drag handle and keyboard offset. The destination list remains
+lazy and bounded. When the keyboard or large text leaves too little space for
+its controls, the whole sheet content scrolls; search, destinations and the
+primary action remain reachable. Step changes reset that outer scroll to the
+header; keyboard resizing preserves form focus.
+
+The searchable destinations are Favourites and manual collections. Checkboxes
+stage one or more destinations; the primary action names their count and is
+disabled until there is a pending destination. Rows already containing every
+selected source are checked and disabled. Other destinations accept the missing
+sources without removing any existing memberships. One grouped membership query
+with bounded parameter batches supplies this state, rather than a read per row
+or a read of every collection's source IDs. Filtering and checking destinations
+only change cubit state.
+
+Add writes every pending destination in one repository transaction, including
+Favourites when selected. Failure retains the choices for retry; success closes
+the sheet, clears book selection and refreshes Library. The write does not depend
+on a subsequent snapshot read to report success. Busy guards prevent duplicate
+submissions and dismissal during persistence. A failed initial load offers Retry.
+
+New collection opens a name form within the same sheet. Create collection explicitly
+persists an empty collection, returns to the list and selects that destination.
+The selected sources are added only by the final Add action. Closing afterward
+keeps the explicitly created collection and discards the pending destination
+choices. Sheet Close, the scrim or a downward dismissal retains the selected
+books. The separate cancel FAB ends book selection after the sheet is closed.
+Header/system Back from the name form returns to the list with the typed name
+intact; Back from the destination list dismisses the sheet. A typed name remains
+protected after Back: Close or scrim asks Keep editing / Discard; downward
+dismissal is disabled while a typed name or write needs protection. Pending
+destination checkboxes alone require no discard decision.
+Opening the sheet dismisses prior feedback so it cannot cover the commands.
+Shared controls remain in `component_library`.
 
 ## Dependencies
 
@@ -669,7 +666,7 @@ Shared headers/actions remain in `component_library`.
 - `collection_repository` — manual collection and favourites persistence
 - `fsrs_repository` — review counts for the Practice entry
 - `preferences_service` — layout, theme, locale, and global reader animation persistence
-- `toast_service` — feedback placement above the floating actions and selection bar
+- `toast_service` — feedback placement above the visible floating controls
 - `domain_models` — `Book`, `Article`, `LibrarySource`
 - `component_library` — theme, `SearchField`, `ScrollEdgeFadeStack`, `EmptyState`,
   `ErrorState`, `AppDrillInRow`, `AppPlainIconButton`, `AppSheetActions`,

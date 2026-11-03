@@ -192,6 +192,7 @@ class _LibraryViewState extends State<_LibraryView>
   /// the current import flow is open.
   bool _addInFlight = false;
   final _scrollController = ScrollController();
+  bool _collectionSheetOpen = false;
 
   /// Swipe deletes awaiting their write, keyed by source id. Each completer
   /// is resolved by the matching [LibraryDeletionEffect] so `Dismissible`
@@ -353,25 +354,34 @@ class _LibraryViewState extends State<_LibraryView>
   }
 
   Future<void> _handleAddSelectedToCollection(BuildContext context) async {
+    if (_collectionSheetOpen) return;
     final selection = context.read<LibrarySelectionCubit>();
     final ids = selection.state.selectedIds;
     if (ids.isEmpty) return;
-
-    final added = await showAddToCollectionSheet(
-      context: context,
-      cubit: context.read<AddToCollectionCubit>(),
-      sourceIds: ids,
-    );
-    if (added != true || !context.mounted) return;
-    selection.clear();
-    context.read<LibraryBloc>().add(const LibraryRefreshRequested());
-    showToast(
-      context,
-      type: NotificationType.success,
-      message: ids.length == 1
-          ? context.l10n.libraryAddedToCollection
-          : context.l10n.libraryItemsAddedToCollection(ids.length),
-    );
+    _dismissCurrentFocus();
+    setState(() => _collectionSheetOpen = true);
+    try {
+      final destinationCount = await showAddToCollectionSheet(
+        context: context,
+        cubit: context.read<AddToCollectionCubit>(),
+        sourceIds: Set.unmodifiable(ids),
+        onCollectionCreated: () =>
+            context.read<LibraryBloc>().add(const LibraryRefreshRequested()),
+      );
+      if (!context.mounted || destinationCount == null) return;
+      selection.clear();
+      context.read<LibraryBloc>().add(const LibraryRefreshRequested());
+      showToast(
+        context,
+        type: NotificationType.success,
+        message: context.l10n.libraryAddedToCollections(destinationCount),
+      );
+    } finally {
+      if (mounted) {
+        _dismissCurrentFocus();
+        setState(() => _collectionSheetOpen = false);
+      }
+    }
   }
 
   Future<void> _handleCollectionScopePressed(
@@ -497,6 +507,8 @@ class _LibraryViewState extends State<_LibraryView>
 
   @override
   Widget build(BuildContext context) {
+    // The Scaffold's floating-action slot removes these insets from its scope.
+    final viewPadding = MediaQuery.viewPaddingOf(context);
     return BlocListener<LibraryBloc, LibraryState>(
       listenWhen: (prev, curr) =>
           prev.deletionEffect != curr.deletionEffect &&
@@ -512,68 +524,71 @@ class _LibraryViewState extends State<_LibraryView>
                 selector: (state) =>
                     state.status == LibraryStatus.success && !state.isEmpty,
                 builder: (context, hasItems) => Scaffold(
-                  // Mounted only while selecting: an occupied bottom slot
-                  // strips the body's bottom safe inset, which the content
-                  // padding relies on.
-                  bottomNavigationBar: selectionActive
-                      ? ToastAvoidArea(
-                          child: LibrarySelectionBar(
-                            onAddToCollection: () =>
-                                _handleAddSelectedToCollection(context),
-                            onDelete: () => _handleDeleteSelected(context),
-                          ),
-                        )
-                      : null,
                   floatingActionButtonLocation: LibraryFloatingActionsLocation(
-                    bottomViewPadding: MediaQuery.viewPaddingOf(context).bottom,
+                    bottomViewPadding: viewPadding.bottom,
                   ),
                   floatingActionButtonAnimator:
                       FloatingActionButtonAnimator.noAnimation,
-                  // Keep the slot stable so Scaffold cannot retain exiting
-                  // controls while the selection bar takes their place.
                   floatingActionButton: Visibility(
-                    visible: hasItems && !selectionActive,
+                    visible: hasItems,
                     child: ToastAvoidArea(
                       child: Padding(
                         padding: const EdgeInsetsDirectional.only(
                           bottom: kLibraryFloatingActionsLift,
                         ),
-                        // Only the actions follow the scope and the due
-                        // count; the Scaffold rebuilds for visibility
-                        // alone.
-                        child:
-                            BlocSelector<
-                              LibraryBloc,
-                              LibraryState,
-                              (LibraryCollectionScope?, int)
-                            >(
-                              selector: (state) => (
-                                state.selectedCollectionScope,
-                                state.practice?.due ?? 0,
-                              ),
-                              builder: (context, selected) {
-                                final (scope, practiceDue) = selected;
-                                return LibraryFloatingActions(
-                                  scope: scope,
-                                  practiceDue: practiceDue,
-                                  onCollectionsPressed: () =>
-                                      _handleCollectionScopePressed(
-                                        context,
-                                        context.read<LibraryBloc>().state,
-                                      ),
-                                  onPracticePressed:
-                                      widget.onPracticePressed == null
-                                      ? null
-                                      : () => _handlePracticePressed(context),
-                                  onAddPressed: _addInFlight
-                                      ? null
-                                      : () => _handleAdd(
+                        child: selectionActive
+                            ? BlocBuilder<
+                                AddToCollectionCubit,
+                                AddToCollectionState
+                              >(
+                                builder: (context, collectionState) =>
+                                    LibrarySelectionBar(
+                                      viewPadding: viewPadding,
+                                      collectionPickerOpen:
+                                          _collectionSheetOpen,
+                                      busy:
+                                          _collectionSheetOpen &&
+                                          collectionState.isBusy,
+                                      onAddToCollection: () =>
+                                          _handleAddSelectedToCollection(
+                                            context,
+                                          ),
+                                      onDelete: () =>
+                                          _handleDeleteSelected(context),
+                                    ),
+                              )
+                            : BlocSelector<
+                                LibraryBloc,
+                                LibraryState,
+                                (LibraryCollectionScope?, int)
+                              >(
+                                selector: (state) => (
+                                  state.selectedCollectionScope,
+                                  state.practice?.due ?? 0,
+                                ),
+                                builder: (context, selected) {
+                                  final (scope, practiceDue) = selected;
+                                  return LibraryFloatingActions(
+                                    scope: scope,
+                                    practiceDue: practiceDue,
+                                    onCollectionsPressed: () =>
+                                        _handleCollectionScopePressed(
                                           context,
-                                          LibraryImportEntry.menu,
+                                          context.read<LibraryBloc>().state,
                                         ),
-                                );
-                              },
-                            ),
+                                    onPracticePressed:
+                                        widget.onPracticePressed == null
+                                        ? null
+                                        : () => _handlePracticePressed(context),
+                                    onAddPressed: _addInFlight
+                                        ? null
+                                        : () => _handleAdd(
+                                            context,
+                                            LibraryImportEntry.menu,
+                                          ),
+                                  );
+                                },
+                              ),
                       ),
                     ),
                   ),
@@ -629,6 +644,12 @@ class _LibraryViewState extends State<_LibraryView>
                                   child: ScrollEdgeFadeStack(
                                     child: LibraryBody(
                                       state: state,
+                                      selectionActionsHeight: selectionActive
+                                          ? LibrarySelectionBar.heightOf(
+                                              context,
+                                              viewPadding: viewPadding,
+                                            )
+                                          : null,
                                       scrollController: _scrollController,
                                       onSourcePressed: (source) =>
                                           _handleSourceTap(context, source),
@@ -658,7 +679,9 @@ class _LibraryViewState extends State<_LibraryView>
                                         _searchController.clear();
                                         _searchFocusNode.unfocus();
                                         bloc.add(
-                                          const LibrarySearchQueryChanged(''),
+                                          const LibrarySearchQueryChanged(
+                                            '',
+                                          ),
                                         );
                                       },
                                       onShowWholeLibrary: () => bloc.add(
@@ -669,8 +692,9 @@ class _LibraryViewState extends State<_LibraryView>
                                       onPracticePressed:
                                           widget.onPracticePressed == null
                                           ? null
-                                          : () =>
-                                                _handlePracticePressed(context),
+                                          : () => _handlePracticePressed(
+                                              context,
+                                            ),
                                     ),
                                   ),
                                 ),

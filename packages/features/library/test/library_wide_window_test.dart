@@ -405,7 +405,7 @@ void main() {
           home: BlocProvider.value(
             value: cubit,
             child: Scaffold(
-              bottomNavigationBar: LibrarySelectionBar(
+              floatingActionButton: LibrarySelectionBar(
                 onAddToCollection: () {},
                 onDelete: () {},
               ),
@@ -415,94 +415,103 @@ void main() {
       );
     }
 
-    final close = find.widgetWithIcon(AppPlainIconButton, AppIcons.close);
+    final close = find.byKey(const ValueKey('libraryCancelSelectionFab'));
     final delete = find.widgetWithIcon(AppPlainIconButton, AppIcons.delete);
-    final add = find.byType(FilledButton);
+    final add = find.byKey(const ValueKey('libraryAddToCollectionButton'));
+    final capsule = find.byKey(const ValueKey('librarySelectionCapsule'));
 
-    Finder count(WidgetTester tester) => find.text(
-      tester
-          .element(find.byType(LibrarySelectionBar))
-          .l10n
-          .librarySelectedCount(2),
-    );
+    final count = find.byKey(const ValueKey('librarySelectedCount'));
 
     for (final window in const [
       _tabletPortrait,
       _tabletLandscape,
       smallestWide,
     ]) {
-      testWidgets('a wide window keeps bulk actions in one row ($window)', (
-        tester,
-      ) async {
-        await pumpBar(tester, window: window);
-        final closeRect = tester.getRect(close);
-        for (final item in [count(tester), add, delete]) {
+      testWidgets(
+        'a wide window separates cancel from the action capsule ($window)',
+        (
+          tester,
+        ) async {
+          await pumpBar(tester, window: window);
+          final closeRect = tester.getRect(close);
+          final capsuleRect = tester.getRect(capsule);
+          for (final item in [count, add, delete]) {
+            final bounds = tester.getRect(item);
+            expect(bounds.left, greaterThanOrEqualTo(capsuleRect.left));
+            expect(bounds.right, lessThanOrEqualTo(capsuleRect.right));
+            expect(
+              bounds.bottom,
+              lessThanOrEqualTo(capsuleRect.bottom),
+              reason: '$item',
+            );
+          }
+          expect(closeRect.left, closeTo(AppSpacing.lg, .5));
           expect(
-            tester.getRect(item).center.dy,
-            closeTo(closeRect.center.dy, .5),
-            reason: '$item',
+            window.width - capsuleRect.right,
+            closeTo(AppSpacing.lg, .5),
           );
-        }
-        expect(tester.getRect(find.byIcon(AppIcons.close)).left, AppSpacing.lg);
-        expect(
-          window.width - tester.getRect(find.byIcon(AppIcons.delete)).right,
-          AppSpacing.lg,
-        );
-        // The command keeps its own width beside Delete, not the row's.
-        final addRect = tester.getRect(add);
-        expect(
-          addRect.width,
-          closeTo(
-            tester
-                .renderObject<RenderBox>(add)
-                .getMaxIntrinsicWidth(
-                  double.infinity,
-                ),
-            .5,
-          ),
-        );
-        expect(tester.getRect(delete).left - addRect.right, AppSpacing.md);
-        expect(
-          tester.getRect(find.byType(LibrarySelectionBar)).height,
-          1 + AppSpacing.sm * 2 + closeRect.height + AppSpacing.lg,
-          reason: 'divider, one padded row, the safe footer',
-        );
-        expect(tester.takeException(), isNull);
-      });
+          expect(
+            capsuleRect.left - closeRect.right,
+            greaterThanOrEqualTo(AppSpacing.md),
+          );
+          expect(capsuleRect.bottom, closeTo(closeRect.bottom, .5));
+          expect(closeRect.width, greaterThanOrEqualTo(56));
+          expect(closeRect.height, greaterThanOrEqualTo(56));
+          for (final control in [add, delete]) {
+            expect(tester.getSize(control).width, greaterThanOrEqualTo(48));
+            expect(tester.getSize(control).height, greaterThanOrEqualTo(48));
+            expect(control.hitTestable(), findsOneWidget);
+          }
+          expect(
+            find.descendant(
+              of: find.byType(LibrarySelectionBar),
+              matching: find.byType(Divider),
+            ),
+            findsNothing,
+            reason: 'floating actions do not reserve a bottom navigation bar',
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
     }
 
     testWidgets('right-to-left mirrors the row', (tester) async {
       await pumpBar(tester, window: _tabletLandscape, locale: 'ar');
       expect(
-        _tabletLandscape.width -
-            tester.getRect(find.byIcon(AppIcons.close)).right,
-        AppSpacing.lg,
+        _tabletLandscape.width - tester.getRect(close).right,
+        closeTo(AppSpacing.lg, .5),
       );
-      expect(tester.getRect(find.byIcon(AppIcons.delete)).left, AppSpacing.lg);
+      expect(tester.getRect(capsule).left, closeTo(AppSpacing.lg, .5));
       expect(
-        tester.getRect(add).left - tester.getRect(delete).right,
-        AppSpacing.md,
+        tester.getRect(close).left - tester.getRect(capsule).right,
+        greaterThanOrEqualTo(AppSpacing.md),
       );
       expect(
-        tester.getRect(count(tester)).right,
+        tester.getRect(count).right,
         lessThan(tester.getRect(close).left),
       );
+      expect(tester.getRect(delete).right, lessThan(tester.getRect(add).left));
     });
 
     for (final window in const [_phonePortrait, _phoneLandscape]) {
-      testWidgets('a phone keeps the count above the command ($window)', (
-        tester,
-      ) async {
-        await pumpBar(tester, window: window);
-        final addRect = tester.getRect(add);
-        expect(tester.getRect(count(tester)).bottom, lessThan(addRect.top));
-        expect(addRect.left, AppSpacing.lg);
-        expect(tester.getRect(delete).left - addRect.right, AppSpacing.md);
-        expect(
-          window.width - tester.getRect(find.byIcon(AppIcons.delete)).right,
-          AppSpacing.lg,
-        );
-      });
+      testWidgets(
+        'a phone keeps cancel separate from the floating capsule ($window)',
+        (
+          tester,
+        ) async {
+          await pumpBar(tester, window: window);
+          final closeRect = tester.getRect(close);
+          final capsuleRect = tester.getRect(capsule);
+          expect(closeRect.left, closeTo(AppSpacing.lg, .5));
+          expect(capsuleRect.left, greaterThan(closeRect.right));
+          expect(capsuleRect.bottom, closeTo(closeRect.bottom, .5));
+          expect(
+            window.width - capsuleRect.right,
+            closeTo(AppSpacing.lg, .5),
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
     }
 
     for (final locale in ReadflexSupportedLocales.locales) {
@@ -526,17 +535,17 @@ void main() {
               locale: locale.toLanguageTag(),
             );
             expect(tester.takeException(), isNull);
-            // A wide window keeps the command in the count's row at every text
-            // size. Whether labels wrap depends on the font: the test font is
-            // about twice as wide as Geist, so root
-            // `library_selection_bar_test.dart` checks text with the app's
-            // fonts.
-            if (window.width >= smallestWide.width) {
-              expect(
-                tester.getRect(add).center.dy,
-                closeTo(tester.getRect(close).center.dy, .5),
-              );
+            // Synthetic glyphs are wider than the app font; the root suite
+            // checks real label wrapping. Here every action stays reachable.
+            for (final control in [close, add, delete]) {
+              expect(tester.getSize(control).width, greaterThanOrEqualTo(48));
+              expect(tester.getSize(control).height, greaterThanOrEqualTo(48));
+              expect(control.hitTestable(), findsOneWidget);
             }
+            expect(
+              tester.getRect(capsule).bottom,
+              closeTo(tester.getRect(close).bottom, .5),
+            );
           },
         );
       }

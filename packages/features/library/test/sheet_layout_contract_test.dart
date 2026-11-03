@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_bloc.dart';
+import 'package:library_feature/src/library_floating_actions_location.dart';
+import 'package:library_feature/src/library_layout.dart';
 import 'package:library_feature/src/library_selection_bar.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:library_feature/src/manage_collection_cubit.dart';
@@ -100,56 +102,91 @@ void main() {
   }
 
   for (final locale in ['en', 'ar']) {
-    testWidgets('bulk actions share screen gutters and safe footer ($locale)', (
-      tester,
-    ) async {
-      _viewport(tester);
-      final cubit = LibrarySelectionCubit()..toggle('book');
-      addTearDown(cubit.close);
-      await tester.pumpWidget(
-        _app(
-          BlocProvider.value(
-            value: cubit,
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: LibrarySelectionBar(
-                onAddToCollection: () {},
-                onDelete: () {},
+    for (final bottom in [0.0, 24.0, 34.0]) {
+      for (final keyboard in [0.0, 280.0]) {
+        testWidgets(
+          'floating bulk actions keep gutters and safe anchor '
+          '($locale, bottom=$bottom, keyboard=$keyboard)',
+          (tester) async {
+            _viewport(tester, bottom: bottom, keyboard: keyboard);
+            final cubit = LibrarySelectionCubit()..toggle('book');
+            addTearDown(cubit.close);
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: AppTheme.light(),
+                locale: Locale(locale),
+                supportedLocales: ReadflexSupportedLocales.locales,
+                localizationsDelegates:
+                    ReadflexLocalizations.localizationsDelegates,
+                home: BlocProvider.value(
+                  value: cubit,
+                  child: Scaffold(
+                    floatingActionButtonLocation:
+                        LibraryFloatingActionsLocation(
+                          bottomViewPadding: bottom,
+                        ),
+                    floatingActionButton: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: kLibraryFloatingActionsLift,
+                      ),
+                      child: LibrarySelectionBar(
+                        onAddToCollection: () {},
+                        onDelete: () {},
+                      ),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
-          locale: locale,
-        ),
-      );
-      final close = tester.getRect(find.byIcon(AppIcons.close));
-      final trash = tester.getRect(find.byIcon(AppIcons.delete));
-      final rtl = locale == 'ar';
-      expect(rtl ? 390 - close.right : close.left, AppSpacing.lg);
-      expect(rtl ? trash.left : 390 - trash.right, AppSpacing.lg);
-      final action = find.widgetWithIcon(AppPlainIconButton, AppIcons.delete);
-      expect(tester.getSize(action), const Size(48, 48));
-      expect(
-        tester.widget<AppPlainIconButton>(action).color,
-        tester.element(action).colors.error,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(FilledButton),
-          matching: find.byType(AppButtonLabel),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        844 - tester.getBottomLeft(find.byType(FilledButton)).dy,
-        AppSpacing.lg * 2,
-      );
-      expect(
-        844 - tester.getBottomLeft(action).dy,
-        greaterThanOrEqualTo(AppSpacing.lg * 2),
-        reason: 'Icons remain centered beside a taller localized command',
-      );
-      expect(tester.takeException(), isNull);
-    });
+            );
+            final cancel = find.byKey(
+              const ValueKey('libraryCancelSelectionFab'),
+            );
+            final close = tester.getRect(cancel);
+            final capsule = tester.getRect(
+              find.byKey(const ValueKey('librarySelectionCapsule')),
+            );
+            final rtl = locale == 'ar';
+            expect(
+              rtl ? 390 - close.right : close.left,
+              closeTo(AppSpacing.lg, .1),
+            );
+            expect(
+              rtl ? capsule.left : 390 - capsule.right,
+              closeTo(AppSpacing.lg, .1),
+            );
+            expect(
+              rtl ? close.left - capsule.right : capsule.left - close.right,
+              greaterThanOrEqualTo(AppSpacing.md),
+            );
+            expect(close.bottom, closeTo(capsule.bottom, .1));
+            final expectedBottom =
+                844 -
+                math.max(bottom, keyboard) -
+                AppSpacing.lg -
+                kLibraryFloatingActionsLift;
+            expect(close.bottom, closeTo(expectedBottom, .1));
+            final action = find.widgetWithIcon(
+              AppPlainIconButton,
+              AppIcons.delete,
+            );
+            expect(tester.getSize(action), const Size(48, 48));
+            expect(
+              tester.widget<AppPlainIconButton>(action).color,
+              tester.element(action).colors.error,
+            );
+            final add = find.byKey(
+              const ValueKey('libraryAddToCollectionButton'),
+            );
+            expect(tester.getSize(add).width, greaterThanOrEqualTo(48));
+            expect(tester.getSize(add).height, greaterThanOrEqualTo(48));
+            for (final control in [cancel, add, action]) {
+              expect(control.hitTestable(), findsOneWidget);
+            }
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+    }
   }
 }
 

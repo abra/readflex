@@ -42,6 +42,7 @@ class LibraryBody extends StatelessWidget {
     required this.onClearSearch,
     required this.onShowWholeLibrary,
     this.onPracticePressed,
+    this.selectionActionsHeight,
     super.key,
   });
 
@@ -64,6 +65,9 @@ class LibraryBody extends StatelessWidget {
   /// Opens Practice from its row; `null` leaves the content without it.
   final VoidCallback? onPracticePressed;
 
+  /// Selection clearance computed before SafeArea removes window insets.
+  final double? selectionActionsHeight;
+
   @override
   Widget build(BuildContext context) {
     final visibleItems = state.visibleItems;
@@ -85,6 +89,8 @@ class LibraryBody extends StatelessWidget {
                   bottom: libraryContentBottomPadding(
                     context,
                     hasPracticeAction: hasPracticeAction,
+                    selectionActionsHeight:
+                        selectionActionsHeight ?? kLibraryFloatingActionsHeight,
                   ),
                 ),
           child: ConstrainedBox(
@@ -139,6 +145,7 @@ class LibraryBody extends StatelessWidget {
                 continueReadingSource: continueReadingSource,
                 hasPracticeAction: hasPracticeAction,
                 selection: selection,
+                selectionActionsHeight: selectionActionsHeight,
                 scrollController: scrollController,
                 onSourcePressed: onSourcePressed,
                 onSourceLongPressed: onSourceLongPressed,
