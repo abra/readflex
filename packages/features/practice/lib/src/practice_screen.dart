@@ -127,7 +127,7 @@ class _PracticeViewState extends State<_PracticeView> {
                 key: const ValueKey('practiceSettingsButton'),
                 icon: AppIcons.settings,
                 tooltip: l10n.practiceSettingsTitle,
-                color: context.colors.onSurface,
+                color: context.colors.onSurfaceVariant,
                 onPressed: _openSettings,
               ),
             ),
