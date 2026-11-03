@@ -18,7 +18,6 @@ const _gutter = AppSpacing.xl;
 const _compactControls = [
   'reader-text-scale-control',
   'reader-line-height-control',
-  'reader-margin-control',
 ];
 const _labeledControls = [
   'reader-text-alignment-control',
@@ -79,6 +78,7 @@ void main() {
       // Labeled choices span the gutters below their label.
       for (final (key, label) in [
         (_labeledControls[0], l10n.readerTextAlignment),
+        ('reader-margin-control', l10n.readerPageMargins),
         (_labeledControls[1], l10n.readerPageTurn),
       ]) {
         final control = rectOf(key);
@@ -87,7 +87,7 @@ void main() {
         expect(trailing(control), _gutter, reason: key);
         expect(control.top - title.bottom, AppSpacing.sm, reason: key);
       }
-      // Compact rows 8dp apart; the captioned choices 16dp below them.
+      // Text settings stay together; layout starts a distinct group.
       final rows = [
         rectOf('reader-font-picker'),
         for (final key in _compactControls) rectOf(key),
@@ -97,12 +97,17 @@ void main() {
       }
       expect(
         tester.getRect(find.text(l10n.readerTextAlignment)).top -
-            rectOf('reader-margin-control').bottom,
+            rectOf('reader-line-height-control').bottom,
+        AppSpacing.xl,
+      );
+      expect(
+        tester.getRect(find.text(l10n.readerPageMargins)).top -
+            rectOf(_labeledControls[0]).bottom,
         AppSpacing.lg,
       );
       expect(
         tester.getRect(find.text(l10n.readerPageTurn)).top -
-            rectOf(_labeledControls[0]).bottom,
+            rectOf('reader-margin-control').bottom,
         AppSpacing.lg,
       );
       // Small "A" leads, large "A" trails, mirrored in RTL.
@@ -251,7 +256,7 @@ void main() {
       for (final (key, label) in [
         (_compactControls[0], l10n.readerFontSize),
         (_compactControls[1], l10n.readerLineSpacing),
-        (_compactControls[2], l10n.readerPageMargins),
+        ('reader-margin-control', l10n.readerPageMargins),
       ]) {
         final control = tester.getRect(find.byKey(ValueKey(key)));
         expect(

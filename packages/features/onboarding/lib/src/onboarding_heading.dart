@@ -23,13 +23,20 @@ final _breaksAnywhere = RegExp(
 /// it shrinks just enough for that piece to fit instead of breaking it
 /// mid-word.
 class OnboardingHeading extends StatelessWidget {
-  const OnboardingHeading(this.text, {super.key});
+  const OnboardingHeading(
+    this.text, {
+    this.textAlign = TextAlign.center,
+    this.style,
+    super.key,
+  });
 
   final String text;
+  final TextAlign textAlign;
+  final TextStyle? style;
 
   @override
   Widget build(BuildContext context) {
-    final style = context.text.headlineSmall;
+    final style = this.style ?? context.text.headlineSmall;
     final textScaler = MediaQuery.textScalerOf(context);
     final textDirection = Directionality.of(context);
     final locale = Localizations.maybeLocaleOf(context);
@@ -50,7 +57,7 @@ class OnboardingHeading extends StatelessWidget {
             style: scale == 1
                 ? style
                 : style.copyWith(fontSize: style.fontSize! * scale),
-            textAlign: TextAlign.center,
+            textAlign: textAlign,
           ),
         );
       },

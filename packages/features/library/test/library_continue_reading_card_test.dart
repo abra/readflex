@@ -72,16 +72,18 @@ void main() {
         home: Directionality(
           textDirection: direction,
           child: Scaffold(
-            body: Align(
-              alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: width,
-                child: LibraryContinueReadingCard(
-                  source: source,
-                  isSelectionMode: isSelectionMode,
-                  isSelected: isSelected,
-                  onPressed: onPressed ?? () {},
-                  onLongPressed: onLongPressed ?? () {},
+            body: SingleChildScrollView(
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: SizedBox(
+                  width: width,
+                  child: LibraryContinueReadingCard(
+                    source: source,
+                    isSelectionMode: isSelectionMode,
+                    isSelected: isSelected,
+                    onPressed: onPressed ?? () {},
+                    onLongPressed: onLongPressed ?? () {},
+                  ),
                 ),
               ),
             ),
@@ -93,33 +95,40 @@ void main() {
 
   group('LibraryContinueReadingCard', () {
     for (final theme in [AppTheme.light(), AppTheme.dark()]) {
-      testWidgets('a full-width band with the row cover on the 16dp gutter: '
+      testWidgets('an inset rounded panel with a compact source cover: '
           '${theme.brightness}', (tester) async {
         await pumpCard(tester, _article, theme: theme);
         final material = tester.widget<Material>(
           find.byKey(const ValueKey('libraryContinueReadingCard')),
         );
         expect(material.color, theme.colorScheme.surfaceContainerLow);
-        expect(material.borderRadius, isNull);
+        final shape = material.shape! as RoundedRectangleBorder;
+        expect(shape.borderRadius, BorderRadius.circular(AppRadius.lg));
+        expect(shape.side.color, theme.colorScheme.outlineVariant);
         final ink = tester.widget<InkWell>(
           find.descendant(of: _card, matching: find.byType(InkWell)),
         );
-        expect(ink.borderRadius, isNull);
+        expect(ink.borderRadius, BorderRadius.circular(AppRadius.lg));
 
         final card = tester.getRect(_card);
         final cover = tester.getRect(
           find.byKey(const ValueKey('libraryContinueReadingCover')),
         );
         expect(card.width, 390);
-        expect(card.height, kLibraryListCoverHeight + AppSpacing.md * 2);
+        expect(card.height, kLibraryListCoverHeight + AppSpacing.lg * 2);
+        final panel = tester.getRect(
+          find.byKey(const ValueKey('libraryContinueReadingCard')),
+        );
+        expect(panel.left - card.left, AppSpacing.lg);
+        expect(card.right - panel.right, AppSpacing.lg);
         expect(
           cover.size,
           const Size(kLibraryListCoverWidth, kLibraryListCoverHeight),
         );
-        expect(cover.left - card.left, AppSpacing.lg);
+        expect(cover.left - panel.left, AppSpacing.lg);
         expect(cover.center.dy, closeTo(card.center.dy, .01));
-        expect(cover.top - card.top, AppSpacing.md);
-        expect(card.bottom - cover.bottom, AppSpacing.md);
+        expect(cover.top - card.top, AppSpacing.lg);
+        expect(card.bottom - cover.bottom, AppSpacing.lg);
         expect(
           find.descendant(
             of: _card,
@@ -173,9 +182,74 @@ void main() {
       );
     });
 
+    testWidgets('wide windows give reading a larger cover and title', (
+      tester,
+    ) async {
+      await pumpCard(tester, _article, width: 1032);
+      expect(
+        tester.getSize(
+          find.byKey(const ValueKey('libraryContinueReadingCover')),
+        ),
+        const Size(80, 120),
+      );
+      final title = tester.widget<Text>(find.text(_article.title));
+      expect(
+        title.style!.fontSize,
+        AppTheme.light().textTheme.titleLarge!.fontSize,
+      );
+      expect(
+        tester.getSize(_card).height,
+        120 + AppSpacing.lg * 2,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final width in [800.0, 1280.0]) {
+      for (final scale in [1.0, 2.0]) {
+        for (final direction in TextDirection.values) {
+          testWidgets('tablet reading metadata remains readable and tappable: '
+              '$width / $scale / $direction', (tester) async {
+            var opened = 0;
+            await pumpCard(
+              tester,
+              _article,
+              width: width,
+              textScale: scale,
+              direction: direction,
+              onPressed: () => opened++,
+            );
+            final context = tester.element(_card);
+            for (final finder in [
+              find.byKey(const ValueKey('libraryContinueReadingContext')),
+              _caption,
+            ]) {
+              final paragraph = tester.renderObject<RenderParagraph>(finder);
+              expect(paragraph.didExceedMaxLines, isFalse);
+              expect(
+                tester.getRect(_card).contains(tester.getCenter(finder)),
+                isTrue,
+              );
+            }
+            expect(
+              tester.widget<Text>(_caption).style!.fontSize,
+              Theme.of(context).textTheme.bodyMedium!.fontSize,
+            );
+            final expanded = find.byKey(
+              const ValueKey('libraryContinueReadingExpandedContent'),
+            );
+            expect(expanded, scale == 2 ? findsOneWidget : findsNothing);
+            await tester.tap(_card);
+            await tester.pump();
+            expect(opened, 1);
+            expect(tester.takeException(), isNull);
+          });
+        }
+      }
+    }
+
     group('long titles', () {
-      // The square test font at titleMedium: 16 glyphs per 284dp line.
-      const twoLineTitle = 'Flutter Patterns and Apps';
+      // The square test font at titleMedium: 14 glyphs per 252dp line.
+      const twoLineTitle = 'Flutter Patterns Apps';
       const longTitle = 'Flutter Patterns and Best Practices';
       final absurdTitle = List.filled(40, 'Very').join(' ');
       final titleFinder = find.byKey(
@@ -308,34 +382,44 @@ void main() {
         },
       );
 
-      testWidgets('large text fits the title and author inside the cover', (
-        tester,
-      ) async {
-        await pumpCard(
+      testWidgets(
+        'large text gives the full title its own space at its role size',
+        (
           tester,
-          bookTitled(longTitle),
-          textScale: 2,
-        );
-        final cover = tester.getRect(
-          find.byKey(const ValueKey('libraryContinueReadingCover')),
-        );
-        final title = tester.getRect(titleFinder);
-        final author = tester.getRect(find.text('Ada Writer'));
-        expect(title.top, greaterThanOrEqualTo(cover.top));
-        expect(title.bottom, lessThanOrEqualTo(cover.bottom));
-        expect(author.top, greaterThanOrEqualTo(cover.top));
-        expect(author.bottom, lessThanOrEqualTo(title.top));
-        expect(
-          tester.renderObject<RenderParagraph>(titleFinder).didExceedMaxLines,
-          isFalse,
-        );
-        expect(tester.widget<Text>(titleFinder).overflow, isNull);
-        expect(
-          tester.getSize(_card).height,
-          kLibraryListCoverHeight + AppSpacing.md * 2,
-        );
-        expect(tester.takeException(), isNull);
-      });
+        ) async {
+          await pumpCard(
+            tester,
+            bookTitled(longTitle),
+            textScale: 2,
+          );
+          final cover = tester.getRect(
+            find.byKey(const ValueKey('libraryContinueReadingCover')),
+          );
+          final title = tester.getRect(titleFinder);
+          final author = tester.getRect(find.text('Ada Writer'));
+          expect(title.top, greaterThan(cover.bottom));
+          expect(author.top, greaterThan(title.bottom));
+          final role = AppTheme.light().textTheme.titleMedium!;
+          final titleText = tester.widget<Text>(titleFinder);
+          final paragraph = tester.renderObject<RenderParagraph>(titleFinder);
+          expect(titleText.style!.fontSize, role.fontSize);
+          expect(titleText.maxLines, isNull);
+          expect(
+            paragraph.textScaler.scale(titleText.style!.fontSize!),
+            role.fontSize! * 2,
+          );
+          expect(
+            tester.renderObject<RenderParagraph>(titleFinder).didExceedMaxLines,
+            isFalse,
+          );
+          expect(tester.widget<Text>(titleFinder).overflow, isNull);
+          expect(
+            tester.getSize(_card).height,
+            greaterThan(kLibraryListCoverHeight + AppSpacing.lg * 2),
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
     });
 
     testWidgets('omits the author line without an author', (tester) async {
@@ -361,9 +445,9 @@ void main() {
     });
 
     for (final direction in TextDirection.values) {
-      for (final textScale in [1.0, 2.0]) {
+      for (final textScale in [1.0, 1.3]) {
         testWidgets(
-          'card geometry stays stable on a 320dp phone '
+          'compact card geometry stays stable on a 320dp phone '
           '$direction textScale=$textScale',
           (tester) async {
             final anonymous = LibrarySource.fromBook(
@@ -418,10 +502,10 @@ void main() {
               progressTop ??= progress.top;
               captionTop ??= caption.top;
               expect(card.width, 320);
-              expect(card.height, kLibraryListCoverHeight + AppSpacing.md * 2);
+              expect(card.height, kLibraryListCoverHeight + AppSpacing.lg * 2);
               expect(card.height, closeTo(height, 0.01));
-              expect(cover.top - card.top, AppSpacing.md);
-              expect(card.bottom - cover.bottom, AppSpacing.md);
+              expect(cover.top - card.top, AppSpacing.lg);
+              expect(card.bottom - cover.bottom, AppSpacing.lg);
               expect(cover.center.dy, closeTo(card.center.dy, 0.01));
               expect(
                 cover.size,
@@ -435,7 +519,7 @@ void main() {
                 direction == TextDirection.ltr
                     ? cover.left - card.left
                     : card.right - cover.right,
-                AppSpacing.lg,
+                AppSpacing.lg * 2,
               );
               expect(
                 direction == TextDirection.ltr
@@ -493,14 +577,19 @@ void main() {
           final progress = tester.getRect(
             find.byKey(const ValueKey('libraryContinueReadingProgress')),
           );
-          expect(
-            tester.getSize(_card).height,
-            kLibraryListCoverHeight + AppSpacing.md * 2,
-          );
-          expect(title.top, greaterThanOrEqualTo(cover.top));
+          expect(tester.getSize(_card).height, greaterThan(cover.height));
+          expect(title.top, greaterThan(cover.bottom));
           expect(title.bottom, lessThanOrEqualTo(progress.top));
-          expect(progress.bottom, cover.bottom);
-          expect(_caption, findsNothing);
+          expect(progress.bottom, tester.getRect(_card).bottom - AppSpacing.lg);
+          expect(_caption, findsOneWidget);
+          final titleText = tester.widget<Text>(
+            find.byKey(const ValueKey('libraryContinueReadingTitle')),
+          );
+          expect(
+            titleText.style!.fontSize,
+            AppTheme.light().textTheme.titleMedium!.fontSize,
+          );
+          expect(titleText.maxLines, isNull);
           expect(
             tester
                 .renderObject<RenderParagraph>(
@@ -518,6 +607,86 @@ void main() {
         }
       },
     );
+
+    for (final direction in TextDirection.values) {
+      testWidgets(
+        'expanded 200% card keeps long title, context and source actions: '
+        '$direction',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            final source = LibrarySource.fromBook(
+              Book(
+                id: 'long-expanded',
+                title: direction == TextDirection.rtl
+                    ? List.filled(12, 'كتاب عن القراءة والتعلّم').join(' ')
+                    : List.filled(12, 'Reading and learning').join(' '),
+                author: 'Ada Writer',
+                filePath: '/long-expanded.epub',
+                format: BookFormat.epub,
+                addedAt: DateTime(2026),
+                readingProgress: .42,
+              ),
+            );
+            var opened = 0;
+            var selected = 0;
+            await pumpCard(
+              tester,
+              source,
+              width: 320,
+              textScale: 2,
+              direction: direction,
+              isSelectionMode: true,
+              isSelected: true,
+              onPressed: () => opened++,
+              onLongPressed: () => selected++,
+            );
+            final title = find.byKey(
+              const ValueKey('libraryContinueReadingTitle'),
+            );
+            final contextLabel = find.byKey(
+              const ValueKey('libraryContinueReadingContext'),
+            );
+            final progress = find.byKey(
+              const ValueKey('libraryContinueReadingProgress'),
+            );
+            final role = AppTheme.light().textTheme.titleMedium!;
+            final titleText = tester.widget<Text>(title);
+            final paragraph = tester.renderObject<RenderParagraph>(title);
+            expect(titleText.data, source.title);
+            expect(titleText.maxLines, isNull);
+            expect(titleText.overflow, isNull);
+            expect(titleText.style!.fontSize, role.fontSize);
+            expect(
+              paragraph.textScaler.scale(role.fontSize!),
+              role.fontSize! * 2,
+            );
+            expect(paragraph.didExceedMaxLines, isFalse);
+            expect(
+              tester
+                  .renderObject<RenderParagraph>(contextLabel)
+                  .didExceedMaxLines,
+              isFalse,
+            );
+            expect(tester.widget<Text>(contextLabel).maxLines, isNull);
+            expect(tester.widget<Text>(_caption).maxLines, isNull);
+            expect(tester.widget<Text>(_caption).overflow, isNull);
+            expect(tester.getSemantics(_card).label, source.title);
+            await tester.tap(contextLabel);
+            await tester.longPress(contextLabel);
+            await tester.pumpAndSettle();
+            expect(opened, 1);
+            expect(selected, 1);
+            await tester.ensureVisible(progress);
+            await tester.pumpAndSettle();
+            expect(progress.hitTestable(), findsOneWidget);
+            expect(tester.takeException(), isNull);
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
+    }
 
     testWidgets('caption shows percent and time left', (tester) async {
       await pumpCard(tester, _article);
@@ -907,15 +1076,16 @@ void main() {
         find.byKey(const ValueKey('libraryListCoverSlot')).first,
       );
       expect(firstCover.top - card.bottom, kLibraryContinueReadingGap);
-      // The card's cover and title sit on the rows' cover and title lines.
+      // The inset panel keeps one inner gutter around its cover and title.
       final cardCover = tester.getRect(
         find.byKey(const ValueKey('libraryContinueReadingCover')),
       );
-      expect(cardCover.left, firstCover.left);
+      expect(cardCover.left - firstCover.left, AppSpacing.lg);
       expect(cardCover.size, firstCover.size);
       expect(
-        tester.getRect(find.text('The Long Read')).left,
-        tester.getRect(find.text('Row r-1')).left,
+        tester.getRect(find.text('The Long Read')).left -
+            tester.getRect(find.text('Row r-1')).left,
+        AppSpacing.lg,
       );
       // The first source row still has no top hairline.
       expect(
@@ -996,10 +1166,10 @@ void main() {
         expect(firstCover.top - card.bottom, kLibraryContinueReadingGap);
         if (direction == TextDirection.ltr) {
           expect(firstCover.left, AppSpacing.lg);
-          expect(cardCover.left, firstCover.left);
+          expect(cardCover.left - firstCover.left, AppSpacing.lg);
         } else {
           expect(firstCover.right, 390 - AppSpacing.lg);
-          expect(cardCover.right, firstCover.right);
+          expect(firstCover.right - cardCover.right, AppSpacing.lg);
         }
         await tester.tap(_card);
         expect(opened, _article);

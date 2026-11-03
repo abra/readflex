@@ -20,17 +20,30 @@ void main() {
     ReaderThemePreset selected = ReaderThemePreset.paper,
     Locale locale = const Locale('en'),
     TextDirection? direction,
+    Size size = const Size(800, 390),
+    double scale = 1,
     ValueChanged<ReaderThemePreset>? onSelected,
   }) async {
+    tester.view
+      ..physicalSize = size
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       MaterialApp(
         locale: locale,
         supportedLocales: ReadflexSupportedLocales.locales,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         theme: AppTheme.light(),
-        builder: (context, child) => direction == null
-            ? child!
-            : Directionality(textDirection: direction, child: child!),
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(scale),
+          ),
+          child: Directionality(
+            textDirection: direction ?? Directionality.of(context),
+            child: child!,
+          ),
+        ),
         home: Scaffold(
           body: Align(
             alignment: Alignment.topCenter,
@@ -65,6 +78,45 @@ void main() {
   ScrollEdgeFade fade(WidgetTester tester, ScrollFadeEdge edge) => tester
       .widgetList<ScrollEdgeFade>(find.byType(ScrollEdgeFade))
       .singleWhere((fade) => fade.edge == edge);
+
+  for (final size in [const Size(800, 1280), const Size(1280, 800)]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'tablet theme names measure the rendered label role $size x$scale',
+        (
+          tester,
+        ) async {
+          await pumpSwatches(
+            tester,
+            width: 420 - AppSpacing.lg * 2,
+            size: size,
+            scale: scale,
+            locale: const Locale('ru'),
+          );
+          final paper = find.text('Бумага');
+          final context = tester.element(paper);
+          expect(
+            tester.widget<Text>(paper).style!.fontSize,
+            context.text.labelLarge.fontSize,
+          );
+          expectOneLineNames(tester, [
+            'Снег',
+            'Бумага',
+            'Теплая',
+            'Графит',
+            'Ночь',
+          ]);
+          for (final preset in ReaderThemePreset.values) {
+            final rect = swatchRect(tester, preset);
+            expect(rect.width, greaterThanOrEqualTo(AppSizes.buttonHeight));
+            expect(rect.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
+          }
+          if (scale == 2) expect(find.byType(Scrollable), findsOneWidget);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
   testWidgets('all five sit in one row when every name fits', (tester) async {
     await pumpSwatches(tester, width: 600);

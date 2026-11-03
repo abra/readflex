@@ -10,8 +10,8 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'add_to_collection_cubit.dart';
 
 // Destination rows keep a 4dp inset for their ink and end with a 48dp slot
-// whose 20dp check lands on the gutter, matching the Collections picker's
-// menu column; the list subtracts both from the 24dp sheet gutter.
+// whose fixed 20dp check lands on the gutter; the list subtracts both from
+// the 24dp sheet gutter, independently of adaptive utility button glyphs.
 const double _destinationRowInset = AppSpacing.xs;
 const EdgeInsetsDirectional _destinationListPadding =
     EdgeInsetsDirectional.only(

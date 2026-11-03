@@ -69,6 +69,7 @@ void main() {
     bool disableAnimations = false,
     double scale = 1,
     bool dark = false,
+    Locale locale = const Locale('en'),
     BookFormat format = BookFormat.epub,
     Size size = _phone,
     VoidCallback? onClose,
@@ -83,6 +84,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: dark ? AppTheme.dark() : AppTheme.light(),
+        locale: locale,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         builder: (context, child) => MediaQuery(
@@ -127,26 +129,87 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  for (final size in [const Size(800, 1280), const Size(1280, 800)]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'tablet tabs measure their larger translated labels $size x$scale',
+        (
+          tester,
+        ) async {
+          await load(tester);
+          await pump(
+            tester,
+            size: size,
+            scale: scale,
+            locale: const Locale('ar'),
+            rtl: true,
+          );
+          final tabs = tester.widget<TabBar>(find.byType(TabBar));
+          final context = tester.element(find.byType(TabBar));
+          expect(tabs.labelStyle!.fontSize, context.text.labelLarge.fontSize);
+          expect(
+            tabs.unselectedLabelStyle!.fontSize,
+            context.text.labelLarge.fontSize,
+          );
+          final icon = find.descendant(
+            of: find.byType(TabBar),
+            matching: find.byIcon(AppIcons.toc),
+          );
+          expect(tester.widget<Icon>(icon).size, AppIconSize.md);
+          for (final text
+              in find
+                  .descendant(
+                    of: find.byType(TabBar),
+                    matching: find.byType(Text),
+                  )
+                  .evaluate()) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.byElementPredicate((element) => element == text),
+            );
+            expect(paragraph.didExceedMaxLines, isFalse);
+          }
+          if (scale == 2) expect(tabs.isScrollable, isTrue);
+          final l10n = context.l10n;
+          await tester.ensureVisible(find.text(l10n.readerBookmarks));
+          await openTab(tester, l10n.readerBookmarks);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   testWidgets('every tab shows the shared compact EmptyState', (tester) async {
-    await load(tester);
-    await pump(tester);
-    final l10n = tester.element(find.byType(Scaffold)).l10n;
-    final empty = tester.widget<EmptyState>(find.byType(EmptyState));
-    expect(empty.compact, isTrue);
-    expect(empty.icon, AppIcons.toc);
+    final semantics = tester.ensureSemantics();
+    try {
+      await load(tester);
+      await pump(tester);
+      final l10n = tester.element(find.byType(Scaffold)).l10n;
+      expect(
+        tester
+            .getSemantics(find.text(l10n.readerContents))
+            .flagsCollection
+            .isHeader,
+        isTrue,
+      );
+      final empty = tester.widget<EmptyState>(find.byType(EmptyState));
+      expect(empty.compact, isTrue);
+      expect(empty.icon, AppIcons.toc);
 
-    await openTab(tester, l10n.readerBookmarks);
-    expect(
-      tester.widget<EmptyState>(find.byType(EmptyState)).message,
-      l10n.readerNoBookmarksYet,
-    );
+      await openTab(tester, l10n.readerBookmarks);
+      expect(
+        tester.widget<EmptyState>(find.byType(EmptyState)).message,
+        l10n.readerNoBookmarksYet,
+      );
 
-    await openTab(tester, l10n.readerHighlights);
-    expect(
-      tester.widget<EmptyState>(find.byType(EmptyState)).message,
-      l10n.readerNoHighlightsYet,
-    );
-    expect(find.byType(AppFilterChip), findsNothing);
+      await openTab(tester, l10n.readerHighlights);
+      expect(
+        tester.widget<EmptyState>(find.byType(EmptyState)).message,
+        l10n.readerNoHighlightsYet,
+      );
+      expect(find.byType(AppFilterChip), findsNothing);
+    } finally {
+      semantics.dispose();
+    }
   });
 
   testWidgets('highlight "All" filter is a selected filter chip', (
@@ -302,13 +365,17 @@ void main() {
       final row = tester.getRect(nested);
       final text = tester.getRect(find.text('Chapter one'));
       final tile = tester.widget<ListTile>(nested);
-      // Full-bleed active row: the themed 16dp tile radius must not apply.
-      expect(tile.shape, const RoundedRectangleBorder());
+      expect(
+        tile.shape,
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+      );
       expect(
         tile.contentPadding,
         const EdgeInsetsDirectional.only(
-          start: AppSpacing.lg + AppSpacing.md,
-          end: AppSpacing.lg,
+          start: AppSpacing.lg + AppSpacing.md - AppSpacing.sm,
+          end: AppSpacing.lg - AppSpacing.sm,
           top: AppSpacing.xxs,
           bottom: AppSpacing.xxs,
         ),
@@ -316,7 +383,7 @@ void main() {
       // Indent, then the constant 16dp mark slot and its 8dp gap.
       expect(
         rtl ? row.right - text.right : text.left - row.left,
-        AppSpacing.lg + AppSpacing.md + AppIconSize.xs + AppSpacing.sm,
+        AppSpacing.lg + AppSpacing.md + AppIconSize.xs,
       );
       // The chapter title keeps the book direction regardless of locale.
       expect(
@@ -325,23 +392,39 @@ void main() {
       );
     });
 
-    testWidgets('close glyph sits on the 16dp gutter rtl=$rtl', (tester) async {
-      await load(tester);
-      await pump(tester, rtl: rtl);
-      final l10n = tester.element(find.byType(Scaffold)).l10n;
-      final close = find.byTooltip(l10n.commonClose);
-      final icon = find.byIcon(AppIcons.close);
-      final width = tester.getSize(find.byType(Scaffold)).width;
-      expect(tester.getSize(close), const Size.square(AppSizes.buttonHeight));
-      expect(tester.getSize(icon), const Size.square(AppIconSize.sm));
-      final iconRect = tester.getRect(icon);
-      expect(rtl ? iconRect.left : width - iconRect.right, AppSpacing.lg);
-      final field = tester.getRect(find.byType(SearchField));
-      expect(
-        rtl ? iconRect.left : iconRect.right,
-        rtl ? field.left : field.right,
-      );
-    });
+    for (final size in [
+      _phone,
+      const Size(800, 1280),
+      const Size(1280, 800),
+    ]) {
+      testWidgets('close glyph keeps the 16dp gutter $size rtl=$rtl', (
+        tester,
+      ) async {
+        await load(tester);
+        await pump(tester, rtl: rtl, size: size);
+        final context = tester.element(find.byType(Scaffold));
+        final close = find.byTooltip(context.l10n.commonClose);
+        final icon = find.byIcon(AppIcons.close);
+        final sheet = tester.getRect(_sheetSurface);
+        expect(tester.getSize(close), const Size.square(AppSizes.buttonHeight));
+        expect(
+          tester.getSize(icon),
+          Size.square(
+            AppWindowSize.isMedium(context) ? AppIconSize.md : AppIconSize.sm,
+          ),
+        );
+        final iconRect = tester.getRect(icon);
+        expect(
+          rtl ? iconRect.left - sheet.left : sheet.right - iconRect.right,
+          AppSpacing.lg,
+        );
+        final field = tester.getRect(find.byType(SearchField));
+        expect(
+          rtl ? iconRect.left : iconRect.right,
+          rtl ? field.left : field.right,
+        );
+      });
+    }
 
     testWidgets('opens as a sheet at 60% of the height rtl=$rtl', (
       tester,
@@ -741,10 +824,10 @@ void main() {
             );
             expect(position.bottom, lessThanOrEqualTo(titleRect.bottom));
           }
-          // The active fill still runs edge to edge.
+          // The active fill is inset while the text keeps its content gutter.
           final activeRow = tester.getRect(row('Chapter two'));
-          expect(activeRow.left, 0);
-          expect(activeRow.right, 390);
+          expect(activeRow.left, AppSpacing.sm);
+          expect(activeRow.right, 390 - AppSpacing.sm);
         },
       );
 
@@ -914,8 +997,8 @@ void main() {
       tester,
     ) async {
       await load(tester);
-      // The test font's square glyphs make "Contents" overflow here by a
-      // margin the fit absorbs, like "Содержание" at 2x on a real phone.
+      // A compact heading can fit without shrinking; a longer one still
+      // stays within the same minimum scale and one-line bounds.
       await pump(tester, scale: 1.8, size: const Size(320, 568));
       final l10n = tester.element(find.byType(TabBar)).l10n;
       final title = find.text(l10n.readerContents);
@@ -923,11 +1006,13 @@ void main() {
       final text = tester.widget<Text>(title);
       expect(paragraph.didExceedMaxLines, isFalse);
       final scaled = const TextScaler.linear(1.8).scale(
-        Theme.of(tester.element(title)).textTheme.titleLarge!.fontSize!,
+        Theme.of(tester.element(title)).textTheme.titleMedium!.fontSize!,
       );
-      expect(text.style!.fontSize, lessThan(scaled));
-      expect(text.style!.fontSize, greaterThanOrEqualTo(scaled * 0.8));
-      expect(text.textScaler, TextScaler.noScaling);
+      final actual =
+          (text.textScaler ?? MediaQuery.textScalerOf(tester.element(title)))
+              .scale(text.style!.fontSize!);
+      expect(actual, lessThanOrEqualTo(scaled));
+      expect(actual, greaterThanOrEqualTo(scaled * 0.8));
 
       await pump(tester, size: const Size(800, 600));
       final roomy = tester.widget<Text>(find.text(l10n.readerContents));

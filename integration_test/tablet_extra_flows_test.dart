@@ -17,9 +17,12 @@ import '../test/support/reading_fixture.dart';
 import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 
-/// Tablet-only reader direction and Practice checks on the native viewport.
-void main() {
+/// Reader direction and Practice checks on the native viewport.
+void main() => runExtraFlows();
+
+void runExtraFlows({bool requireTablet = true}) {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final deviceKind = requireTablet ? 'tablet' : 'phone';
 
   tearDownAll(() {
     binding.reportData = {
@@ -32,10 +35,10 @@ void main() {
     };
   });
 
-  testWidgets('Arabic EPUB turns right to left on a native tablet', (
+  testWidgets('Arabic EPUB turns right to left on a native $deviceKind', (
     tester,
   ) async {
-    _expectNativeTablet(tester);
+    _expectNativeWindow(tester, requireTablet: requireTablet);
     final app = await UiTestApp.create(withBook: false);
     addTearDown(() async {
       await unmountUi(tester);
@@ -75,7 +78,7 @@ void main() {
     expect(controller().rtl, isTrue);
     expect(Directionality.of(tester.element(pages)), TextDirection.rtl);
     final initial = controller().position!;
-    await takeDeviceScreenshot(binding, 'tablet-rtl-epub');
+    await takeDeviceScreenshot(binding, '$deviceKind-rtl-epub');
 
     final bounds = tester.getRect(pages);
     await tester.tapAt(bounds.centerLeft + Offset(bounds.width * .08, 0));
@@ -88,7 +91,7 @@ void main() {
     expect(controller().position!.section, initial.section);
     final advanced = controller().position!;
     expect(advanced.cfi, isNot(initial.cfi));
-    await takeDeviceScreenshot(binding, 'tablet-rtl-epub-next');
+    await takeDeviceScreenshot(binding, '$deviceKind-rtl-epub-next');
 
     await tester.tapAt(bounds.centerRight - Offset(bounds.width * .08, 0));
     await waitForUi(
@@ -112,111 +115,115 @@ void main() {
     await unmountUi(tester);
   });
 
-  testWidgets('Practice completes a word and highlight session on a tablet', (
-    tester,
-  ) async {
-    _expectNativeTablet(tester);
-    final app = await UiTestApp.create();
-    addTearDown(() async {
-      await unmountUi(tester);
-      await app.dispose();
-    });
-    tester.platformDispatcher.defaultRouteNameTestValue = '/';
-    addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
-    await tester.pumpWidget(app.widget);
-    await waitForUi(
+  testWidgets(
+    'Practice completes a word and highlight session on a $deviceKind',
+    (
       tester,
-      () => find.text(ReadingFixture.bookTitle).evaluate().isNotEmpty,
-      description: 'Library before saving vocabulary',
-    );
-    await tester.runAsync(() async {
-      await app.dictionaryRepository.addEntry(
-        word: 'power',
-        translation: 'Strom',
-        sourceId: app.book!.id,
-        sourceType: SourceType.book,
-        anchorText: 'power',
-        anchorCfiRange: 'epubcfi(/6/2!/4/2,/1:0,/1:5)',
+    ) async {
+      _expectNativeWindow(tester, requireTablet: requireTablet);
+      final app = await UiTestApp.create();
+      addTearDown(() async {
+        await unmountUi(tester);
+        await app.dispose();
+      });
+      tester.platformDispatcher.defaultRouteNameTestValue = '/';
+      addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
+      await tester.pumpWidget(app.widget);
+      await waitForUi(
+        tester,
+        () => find.text(ReadingFixture.bookTitle).evaluate().isNotEmpty,
+        description: 'Library before saving vocabulary',
       );
-      await app.highlightRepository.addHighlight(
-        sourceId: app.book!.id,
-        sourceType: SourceType.book,
-        text: ReadingFixture.sentence,
-        cfiRange: 'epubcfi(/6/2!/4/4,/1:0,/1:40)',
-      );
-    });
+      await tester.runAsync(() async {
+        await app.dictionaryRepository.addEntry(
+          word: 'power',
+          translation: 'Strom',
+          sourceId: app.book!.id,
+          sourceType: SourceType.book,
+          anchorText: 'power',
+          anchorCfiRange: 'epubcfi(/6/2!/4/2,/1:0,/1:5)',
+        );
+        await app.highlightRepository.addHighlight(
+          sourceId: app.book!.id,
+          sourceType: SourceType.book,
+          text: ReadingFixture.sentence,
+          cfiRange: 'epubcfi(/6/2!/4/4,/1:0,/1:40)',
+        );
+      });
 
-    final hub = find.byKey(const ValueKey('practiceTodayCard'));
-    await tapUi(tester, find.byKey(const ValueKey('libraryPracticeButton')));
-    await waitForUi(
-      tester,
-      () => hub.evaluate().isNotEmpty,
-      description: 'Practice with two due items',
-    );
-    await tapUi(tester, find.byKey(const ValueKey('practiceStartReview')));
-    await waitForUi(
-      tester,
-      () => find.byKey(const ValueKey('reviewWord')).evaluate().isNotEmpty,
-      description: 'word review card',
-    );
-    await takeDeviceScreenshot(binding, 'tablet-practice-word');
-    await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
-    await tapUi(tester, find.byKey(const ValueKey('reviewRate-good')));
-    await waitForUi(
-      tester,
-      () => find.byKey(const ValueKey('reviewQuote')).evaluate().isNotEmpty,
-      description: 'highlight review card',
-    );
-    await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
-    await tapUi(tester, find.byKey(const ValueKey('reviewRate-keep')));
-    final summary = find.byKey(const ValueKey('reviewSummaryTitle'));
-    await waitForUi(
-      tester,
-      () => summary.evaluate().isNotEmpty,
-      description: 'Session complete',
-    );
-    await takeDeviceScreenshot(binding, 'tablet-practice-summary');
-    await tapUi(tester, find.byKey(const ValueKey('reviewDone')));
-    await waitForUi(
-      tester,
-      () =>
-          find.text('Review ahead').hitTestable().evaluate().isNotEmpty &&
-          find.byType(ReviewSessionScreen).evaluate().isEmpty,
-      description: 'completed review returns to Practice',
-    );
-    await tester.pumpAndSettle();
-    final resting = tester.getRect(hub);
-    for (var frame = 0; frame < 6; frame++) {
-      await tester.pump(const Duration(milliseconds: 32));
-      expect(tester.getRect(hub), resting);
-      expect(summary, findsNothing);
-      expect(tester.takeException(), isNull);
-    }
-    final stats = (await tester.runAsync(app.fsrsRepository.getStats))!;
-    expect(stats.due, 0);
-    await takeDeviceScreenshot(binding, 'tablet-practice-returned');
-    await tapUi(tester, find.byType(AppBackButton));
-    await waitForUi(
-      tester,
-      () => find
-          .byKey(const ValueKey('libraryPracticeRow'))
-          .evaluate()
-          .isNotEmpty,
-      description: 'Library refreshes completed Practice counts',
-    );
-    expect(find.byKey(const ValueKey('libraryPracticeBadge')), findsNothing);
-    binding.reportData = {
-      ...?binding.reportData,
-      'tabletPractice': {'reviewedItems': 2, 'dueAfterSession': stats.due},
-    };
-    await unmountUi(tester);
-  });
+      final hub = find.byKey(const ValueKey('practiceTodayCard'));
+      await tapUi(tester, find.byKey(const ValueKey('libraryPracticeButton')));
+      await waitForUi(
+        tester,
+        () => hub.evaluate().isNotEmpty,
+        description: 'Practice with two due items',
+      );
+      await tapUi(tester, find.byKey(const ValueKey('practiceStartReview')));
+      await waitForUi(
+        tester,
+        () => find.byKey(const ValueKey('reviewWord')).evaluate().isNotEmpty,
+        description: 'word review card',
+      );
+      await takeDeviceScreenshot(binding, '$deviceKind-practice-word');
+      await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
+      await tapUi(tester, find.byKey(const ValueKey('reviewRate-good')));
+      await waitForUi(
+        tester,
+        () => find.byKey(const ValueKey('reviewQuote')).evaluate().isNotEmpty,
+        description: 'highlight review card',
+      );
+      await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
+      await tapUi(tester, find.byKey(const ValueKey('reviewRate-keep')));
+      final summary = find.byKey(const ValueKey('reviewSummaryTitle'));
+      await waitForUi(
+        tester,
+        () => summary.evaluate().isNotEmpty,
+        description: 'Session complete',
+      );
+      await takeDeviceScreenshot(binding, '$deviceKind-practice-summary');
+      await tapUi(tester, find.byKey(const ValueKey('reviewDone')));
+      await waitForUi(
+        tester,
+        () =>
+            find.text('Review ahead').hitTestable().evaluate().isNotEmpty &&
+            find.byType(ReviewSessionScreen).evaluate().isEmpty,
+        description: 'completed review returns to Practice',
+      );
+      await tester.pumpAndSettle();
+      final resting = tester.getRect(hub);
+      for (var frame = 0; frame < 6; frame++) {
+        await tester.pump(const Duration(milliseconds: 32));
+        expect(tester.getRect(hub), resting);
+        expect(summary, findsNothing);
+        expect(tester.takeException(), isNull);
+      }
+      final stats = (await tester.runAsync(app.fsrsRepository.getStats))!;
+      expect(stats.due, 0);
+      await takeDeviceScreenshot(binding, '$deviceKind-practice-returned');
+      await tapUi(tester, find.byType(AppBackButton));
+      await waitForUi(
+        tester,
+        () => find
+            .byKey(const ValueKey('libraryPracticeRow'))
+            .evaluate()
+            .isNotEmpty,
+        description: 'Library refreshes completed Practice counts',
+      );
+      expect(find.byKey(const ValueKey('libraryPracticeBadge')), findsNothing);
+      binding.reportData = {
+        ...?binding.reportData,
+        'tabletPractice': {'reviewedItems': 2, 'dueAfterSession': stats.due},
+      };
+      await unmountUi(tester);
+    },
+  );
 }
 
-void _expectNativeTablet(WidgetTester tester) {
+void _expectNativeWindow(WidgetTester tester, {required bool requireTablet}) {
   expect(Platform.isIOS || Platform.isAndroid, isTrue);
   final size = tester.view.physicalSize / tester.view.devicePixelRatio;
-  expect(size.shortestSide, greaterThanOrEqualTo(600));
+  expect(size.shortestSide, greaterThanOrEqualTo(requireTablet ? 600 : 320));
+  if (!requireTablet) expect(size.shortestSide, lessThan(600));
 }
 
 Uint8List _arabicEpub() {

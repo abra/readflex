@@ -4,6 +4,8 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'reader_control_styles.dart';
+
 const double _sampleMinHeight = 36;
 const double _swatchGap = AppSpacing.xs;
 
@@ -248,7 +250,7 @@ class _ThemeSwatch extends StatelessWidget {
 }
 
 TextStyle _labelStyle(BuildContext context, {required bool active}) =>
-    context.text.labelSmall.copyWith(
+    readerControlCaptionStyle(context).copyWith(
       color: active
           ? context.actionForeground
           : context.colors.onSurfaceVariant,

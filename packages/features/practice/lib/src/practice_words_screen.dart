@@ -9,6 +9,7 @@ import 'package:intl/intl.dart' show Bidi;
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'practice_item.dart';
+import 'practice_page_header.dart';
 import 'practice_word_sheet.dart';
 import 'practice_words_cubit.dart';
 import 'review_interval_label.dart';
@@ -94,103 +95,140 @@ class _PracticeWordsViewState extends State<_PracticeWordsView> {
     final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        leading: const AppBackButton(),
-        title: Text(l10n.practiceWordsTitle),
+        automaticallyImplyLeading: false,
+        excludeHeaderSemantics: true,
+        titleSpacing: 0,
+        title: PracticePageHeader(title: l10n.practiceWordsTitle),
       ),
-      body: BlocBuilder<PracticeWordsCubit, PracticeWordsState>(
-        builder: (context, state) {
-          final cubit = context.read<PracticeWordsCubit>();
-          return switch (state.status) {
-            PracticeWordsStatus.initial || PracticeWordsStatus.loading =>
-              const CenteredCircularProgressIndicator(),
-            PracticeWordsStatus.failure => ErrorState(
-              message: l10n.practiceLoadFailed,
-              retryLabel: l10n.commonRetry,
-              onRetry: cubit.load,
-            ),
-            PracticeWordsStatus.ready => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.md,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SearchField(
-                        hintText: l10n.practiceSearchWords,
-                        clearButtonSemanticsLabel: l10n.commonClearSearch,
-                        controller: _search,
-                        onChanged: cubit.setQuery,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      AppChoiceControl<PracticeWordsFilter>(
-                        key: const ValueKey('practiceWordsFilter'),
-                        selected: state.filter,
-                        onChanged: cubit.setFilter,
-                        options: [
-                          AppChoiceOption(
-                            value: PracticeWordsFilter.all,
-                            label: l10n.practiceFilterAll,
-                          ),
-                          AppChoiceOption(
-                            value: PracticeWordsFilter.learning,
-                            label: l10n.practiceFilterLearning,
-                          ),
-                          AppChoiceOption(
-                            value: PracticeWordsFilter.mastered,
-                            label: l10n.practiceFilterMastered,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: AppContentFrame(
+          maxWidth: 960,
+          child: BlocBuilder<PracticeWordsCubit, PracticeWordsState>(
+            builder: (context, state) {
+              final cubit = context.read<PracticeWordsCubit>();
+              final visible = state.visible;
+              return switch (state.status) {
+                PracticeWordsStatus.initial || PracticeWordsStatus.loading =>
+                  const CenteredCircularProgressIndicator(),
+                PracticeWordsStatus.failure => ErrorState(
+                  message: l10n.practiceLoadFailed,
+                  retryLabel: l10n.commonRetry,
+                  onRetry: cubit.load,
                 ),
-                Expanded(
-                  child: state.words.isEmpty
-                      ? EmptyState(
-                          icon: AppIcons.words,
-                          message: l10n.practiceWordsEmptyTitle,
-                          subtitle: l10n.practiceWordsEmptyBody,
-                        )
-                      : state.visible.isEmpty
-                      ? EmptyState(
-                          message: l10n.practiceNoMatches,
-                          compact: true,
-                        )
-                      : ListView.separated(
-                          key: const ValueKey('practiceWordsList'),
-                          padding: EdgeInsets.only(
-                            bottom: appBottomSafeInset(context),
-                          ),
-                          itemCount: state.visible.length,
-                          separatorBuilder: (_, _) => const Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                            ),
-                            child: Divider(height: 1),
-                          ),
-                          itemBuilder: (context, index) => PracticeWordRow(
-                            word: state.visible[index],
-                            onPressed: () => _openWord(state.visible[index]),
-                          ),
+                PracticeWordsStatus.ready => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                      ),
+                      child: _PracticeWordsToolbar(
+                        search: SearchField(
+                          hintText: l10n.practiceSearchWords,
+                          clearButtonSemanticsLabel: l10n.commonClearSearch,
+                          controller: _search,
+                          onChanged: cubit.setQuery,
                         ),
+                        filter: AppChoiceControl<PracticeWordsFilter>(
+                          key: const ValueKey('practiceWordsFilter'),
+                          selected: state.filter,
+                          onChanged: cubit.setFilter,
+                          options: [
+                            AppChoiceOption(
+                              value: PracticeWordsFilter.all,
+                              label: l10n.practiceFilterAll,
+                            ),
+                            AppChoiceOption(
+                              value: PracticeWordsFilter.learning,
+                              label: l10n.practiceFilterLearning,
+                            ),
+                            AppChoiceOption(
+                              value: PracticeWordsFilter.mastered,
+                              label: l10n.practiceFilterMastered,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: state.words.isEmpty
+                          ? EmptyState(
+                              icon: AppIcons.words,
+                              message: l10n.practiceWordsEmptyTitle,
+                              subtitle: l10n.practiceWordsEmptyBody,
+                            )
+                          : visible.isEmpty
+                          ? EmptyState(
+                              message: l10n.practiceNoMatches,
+                              compact: true,
+                            )
+                          : ListView.separated(
+                              key: const ValueKey('practiceWordsList'),
+                              padding: EdgeInsets.only(
+                                bottom: appBottomSafeInset(context),
+                              ),
+                              itemCount: visible.length,
+                              separatorBuilder: (_, _) => const Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.lg,
+                                ),
+                                child: Divider(height: 1),
+                              ),
+                              itemBuilder: (context, index) => PracticeWordRow(
+                                word: visible[index],
+                                onPressed: () => _openWord(visible[index]),
+                              ),
+                            ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          };
-        },
+              };
+            },
+          ),
+        ),
       ),
     );
   }
 }
 
-/// One saved word: the word with its meaning on the first line, where it
-/// came from and when it is due on the second.
+class _PracticeWordsToolbar extends StatelessWidget {
+  const _PracticeWordsToolbar({required this.search, required this.filter});
+
+  final Widget search;
+  final Widget filter;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final horizontal =
+          constraints.maxWidth >= 760 &&
+          MediaQuery.textScalerOf(context).scale(1) <= 1.3;
+      return Flex(
+        direction: horizontal ? Axis.horizontal : Axis.vertical,
+        crossAxisAlignment: horizontal
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.stretch,
+        spacing: horizontal ? AppSpacing.xl : AppSpacing.md,
+        children: [
+          for (final child in [search, filter])
+            Flexible(
+              flex: horizontal ? 1 : 0,
+              fit: horizontal ? FlexFit.tight : FlexFit.loose,
+              child: child,
+            ),
+        ],
+      );
+    },
+  );
+}
+
+/// Each saved word keeps its own reading direction, separate from its meaning
+/// and the source and due date below.
 class PracticeWordRow extends StatelessWidget {
   const PracticeWordRow({
     required this.word,
@@ -219,8 +257,10 @@ class PracticeWordRow extends StatelessWidget {
     final meta = [?word.sourceTitle, due].join(' · ');
     return Semantics(
       button: true,
+      enabled: true,
       label: '${entry.word} · ${entry.translation}',
       value: meta,
+      onTap: onPressed,
       excludeSemantics: true,
       child: InkWell(
         key: ValueKey('practiceWord-${entry.id}'),
@@ -233,27 +273,25 @@ class PracticeWordRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: entry.word,
-                      style: text.titleMedium.copyWith(
-                        letterSpacing: 0,
-                        color: colors.onSurface,
-                      ),
-                    ),
-                    TextSpan(
-                      text: ' · ${entry.translation}',
-                      style: text.bodyMedium.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+              Text(
+                entry.word,
+                style: text.titleMedium.copyWith(
+                  letterSpacing: 0,
+                  color: colors.onSurface,
                 ),
                 textDirection: direction,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                entry.translation,
+                textDirection: Bidi.detectRtlDirectionality(entry.translation)
+                    ? TextDirection.rtl
+                    : TextDirection.ltr,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
               ),
               const SizedBox(height: AppSpacing.xxs),
               Text(

@@ -28,8 +28,11 @@ The `/onboarding` redirect for a first launch lives in the router as well.
   break between characters and never shrink.
 - The feature list names the reader's real selection menu labels (Translate,
   Define) so the copy matches the buttons the reader will see.
-- Content and actions stop at 480dp, so tablets keep the phone's single
-  column. At large text the content scrolls and the actions stay below it.
+- Narrow windows keep a 480dp column with a grouped feature card. At large
+  text the content scrolls and both actions remain pinned below it.
+- Expanded windows place the greeting and actions beside the feature card
+  in a centered workspace. The entire workspace scrolls when its content
+  needs more height; RTL mirrors the two columns.
 - Nothing animates.
 
 Selecting text is taught in the reader by its one-time tip, not here.

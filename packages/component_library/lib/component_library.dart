@@ -8,6 +8,7 @@ export 'src/app_bottom_safe_area.dart';
 export 'src/app_busy_button_label.dart';
 export 'src/app_button_label.dart';
 export 'src/app_choice_control.dart';
+export 'src/app_content_frame.dart';
 export 'src/app_settings_section.dart';
 export 'src/app_sheet_action_row.dart';
 export 'src/app_sheet_section.dart';

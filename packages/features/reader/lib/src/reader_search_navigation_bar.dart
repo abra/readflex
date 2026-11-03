@@ -4,6 +4,8 @@ import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'reader_control_styles.dart';
+import 'reader_drawer_layout.dart';
 import 'reader_search_cubit.dart';
 
 double _lineHeight(BuildContext context, TextStyle style) =>
@@ -14,7 +16,7 @@ double _lineHeight(BuildContext context, TextStyle style) =>
 double _navigationRowHeight(BuildContext context) => math.max(
   AppSizes.buttonHeight + AppSpacing.sm * 2,
   _lineHeight(context, context.text.bodyMedium) +
-      _lineHeight(context, context.text.labelSmall) +
+      _lineHeight(context, readerControlCaptionStyle(context)) +
       AppSpacing.xs +
       AppSpacing.sm * 2,
 );
@@ -71,10 +73,10 @@ class ReaderSearchNavigationBar extends StatelessWidget {
             child: Padding(
               // The trailing Close target extends into the gutter so its glyph
               // ends on 16 like the return row's percentage.
-              padding: const EdgeInsetsDirectional.fromSTEB(
+              padding: EdgeInsetsDirectional.fromSTEB(
                 AppSpacing.sm,
                 0,
-                AppSpacing.lg - AppSizes.iconActionOutset,
+                readerDrawerActionEndPadding(context),
                 0,
               ),
               child: Row(
@@ -92,7 +94,7 @@ class ReaderSearchNavigationBar extends StatelessWidget {
                           // accent-coloured.
                           Icon(
                             AppIcons.search,
-                            size: AppIconSize.sm,
+                            size: readerControlIconSize(context),
                             color: context.colors.onSurfaceVariant,
                           ),
                           const SizedBox(width: AppSpacing.md),
@@ -115,10 +117,11 @@ class ReaderSearchNavigationBar extends StatelessWidget {
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: context.text.labelSmall.copyWith(
-                                    color: context.colors.onSurfaceVariant,
-                                    fontWeight: FontWeight.w400,
-                                  ),
+                                  style: readerControlCaptionStyle(context)
+                                      .copyWith(
+                                        color: context.colors.onSurfaceVariant,
+                                        fontWeight: FontWeight.w400,
+                                      ),
                                 ),
                               ],
                             ),
@@ -163,7 +166,10 @@ class ReaderSearchNavigationBar extends StatelessWidget {
                 onPressed: onReturn,
                 child: Row(
                   children: [
-                    const Icon(AppIcons.returnToReading, size: AppIconSize.sm),
+                    Icon(
+                      AppIcons.returnToReading,
+                      size: readerControlIconSize(context),
+                    ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Text(
@@ -177,7 +183,7 @@ class ReaderSearchNavigationBar extends StatelessWidget {
                     const SizedBox(width: AppSpacing.md),
                     Text(
                       '${(origin.fraction.clamp(0, 1) * 100).round()}%',
-                      style: context.text.labelSmall.copyWith(
+                      style: readerControlCaptionStyle(context).copyWith(
                         color: context.colors.onSurfaceVariant,
                       ),
                     ),

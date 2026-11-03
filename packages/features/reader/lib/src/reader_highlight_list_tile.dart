@@ -99,7 +99,7 @@ class ReaderHighlightListTile extends StatelessWidget {
             child: Padding(
               padding: EdgeInsetsDirectional.only(
                 top: AppSpacing.lg,
-                end: removed ? readerDrawerActionEndPadding : 0,
+                end: removed ? readerDrawerActionEndPadding(context) : 0,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,

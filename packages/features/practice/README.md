@@ -93,7 +93,9 @@ follows the same setting.
   `PracticeHighlightItem` with one batch query per type, keeps the due order
   and drops rows whose content was deleted. `PracticeSourceIndex` names
   where items came from; a missing source leaves `sourceTitle` null.
-- Views read only state and dispatch events or callbacks. The hub reloads
+- Views read only state and dispatch events or callbacks. `PracticeScreen`
+  owns the settings-sheet callback, so its view never receives a service.
+  The hub reloads
   after each pushed destination (Vocabulary, Highlights, a session) closes.
 
 ### Session rules
@@ -117,12 +119,12 @@ follows the same setting.
 
 ## Layout
 
-- The hub, Vocabulary and Highlights share one app bar: the screen's name as the
-  title and `AppBackButton` (the app's directional chevron, not Material's
-  platform arrow) in the leading slot. The hub has no serif hero under it:
-  the Today card is its headline, so a back arrow never floats above a
-  heading.
-- The hub floats Start review at the bottom where Library floats "+": one
+- The hub, Vocabulary and Highlights use `PracticePageHeader`: the directional
+  `AppBackButton`, a semantic heading and optional settings action, aligned
+  with the shared `AppContentFrame` (maximum 1200dp). Vocabulary and Highlights
+  keep their search and lists within 960dp; the Vocabulary toolbar puts search
+  and filters alongside each other when space and text size allow it.
+- On phones the hub floats Start review at the bottom where Library floats "+": one
   filled stadium (`PracticeStartButton`) on the capsule's soft shadow, with
   no capsule around it. It appears in the same frame as the content, at
   full size (`FloatingActionButtonAnimator.noAnimation`): Material's default
@@ -132,23 +134,53 @@ follows the same setting.
   practice glyph, Nothing to practice yet, no command), the same frame as
   the empty Library, centred in the space under the app bar and scrolling
   at large text. Back leads to the Library, where saving starts.
+- At widths of at least 840dp and heights of at least 480dp, the populated hub
+  places the due overview and its review command beside the collections and
+  source list. Each side scrolls independently. Text above 150% returns to one
+  column, at most 720dp wide, so translated labels retain usable space. RTL
+  mirrors the columns. The embedded command follows the due count, ahead of
+  supporting statistics.
+  The source list alone owns primary keyboard/status-bar scrolling; the due
+  overview uses its own scroll position. The Vocabulary toolbar keeps its
+  search editor mounted when its axis changes, retaining query and focus.
+  A feature-local `PageStorageKey` retains the source-list offset across the
+  one-column/two-column reparenting without changing its automation key.
 - `PracticeTodayCard` shows the due count large with its words/highlights
-  split, then new today, the streak and totals in one muted line, in the
-  outlined frame of the Library's Practice row.
+  split and new today, then streak and totals below a divider. These supporting
+  labels wrap independently inside the quiet surface, including at large text.
 - `PracticeSourceRow` shows a cover, title (the Library list's title role),
-  counts and what is due; tapping it starts a session over that source.
+  counts and what is due; tapping it starts a session over that source. Source
+  and highlight lists build visible rows lazily.
 - Word rows show the word, its meaning, the source title and when it is
-  next due (`reviewDueLabel`: New, Due, or a rounded interval). Tapping opens
+  next due (`reviewDueLabel`: New, Due, or a rounded interval). The word and
+  meaning each keep their own reading direction. Tapping opens
   `PracticeWordSheet` with the saved meaning, the sentence, Open in book and
-  Remove.
+  Remove. Details scroll above pinned actions, with one shared content gutter.
 - Highlight rows quote the passage on its colour (`practiceHighlightTint`)
   and open it in its source.
+- Composite source, word and highlight rows and rating buttons expose one
+  labelled, enabled semantics node with their tap action and metadata. Their
+  replacement semantics keep assistive activation available.
 - The session has Close, the card's position and an overflow menu (Open in
   book, Remove from review) on one row with a thin progress line under it. A word card
   shows the word large with reading and part of speech and the sentence with
   the word in bold; the answer adds the meaning in context, the word's own
   meaning and the sentence translation. A highlight card shows the quote and
   its origin; the answer is the note, or that there is none.
+- The session workspace is at most 960dp wide. A vertically centred study
+  surface and the bottom controls share a 640dp reading measure; a long answer
+  scrolls without moving the controls. Word ratings stack at narrow widths or
+  large text instead of clipping their labels. The completion surface is at
+  most 480dp and scrolls when needed, with Done in the same quiet panel.
+- A word heading fits its longest unbreakable piece with `appFitLongestWord`,
+  at the current locale, direction and text scale. It stays at least as large
+  as `titleLarge`; unusually long words can wrap at that floor. The full text
+  and heading semantics remain, and the context keeps normal body scaling.
+- Medium windows (at least 600×480dp) use the existing 15sp roles for rating
+  intervals, the session position, the Today label and due breakdown, and each
+  source's due label. Summary counts already use 15sp. Narrow windows keep
+  their compact roles; supporting statistics and source metadata stay small.
+  Accessibility text scaling still applies to every role.
 - `reviewIntervalLabel` rounds intervals to one unit: minutes under an hour,
   then hours, days, weeks, months and years.
 
@@ -167,8 +199,19 @@ follows the same setting.
 - `test/practice_screens_test.dart` covers the hub, Vocabulary, Highlights and
   the session end to end with fakes, the app bar of each pushed screen
   (title, `AppBackButton`, localized Back, pop), plus 200% text at 320×568
-  in every locale.
+  in every locale. It also checks tablet columns and RTL, focused session and
+  summary widths, reachable phone RTL ratings, lazy long highlight lists and
+  scrollable word details with pinned commands, plus tap semantics on composite
+  controls. These are widget geometry and
+  interaction checks; they do not establish native accessibility or FPS.
 - `test/review_interval_label_test.dart` pins the rounding and due labels.
+- `test/review_word_card_test.dart` uses the shipped Literata font to keep
+  `reading` whole and legible at 320dp/200%, before and after revealing its
+  answer, while context text retains accessibility scaling.
+- `test/practice_tablet_controls_test.dart` checks these control roles with
+  the app fonts and multilingual golden-test fallbacks: 800×1280 and 1280×800,
+  all ten locales at 200%, compact phone defaults, text/tap/semantics bounds,
+  and exact pointer and assistive activation callbacks.
 - Root goldens (`test/ui/practice_golden_test.dart`) cover `practice`,
   `practice-empty` and the `review-*` states.
 - `test/ui/practice_review_transition_test.dart` checks intermediate frames

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'reader_control_styles.dart';
 import 'reader_drawer_layout.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_search_cubit.dart';
@@ -170,7 +171,7 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
                       alignment: AlignmentDirectional.centerStart,
                       child: Text(
                         l10n.readerSearchMatches(state.results.length),
-                        style: context.text.bodySmall.copyWith(
+                        style: readerChromeLabelStyle(context).copyWith(
                           color: context.colors.onSurfaceVariant,
                         ),
                       ),
@@ -365,20 +366,23 @@ class _ReaderSearchHeader extends StatelessWidget {
     final l10n = context.l10n;
     return Padding(
       // The sheet's grab handle supplies the gap above the title.
-      padding: const EdgeInsetsDirectional.fromSTEB(
+      padding: EdgeInsetsDirectional.fromSTEB(
         AppSpacing.lg,
         0,
-        readerDrawerActionEndPadding,
+        readerDrawerActionEndPadding(context),
         AppSpacing.xs,
       ),
       child: Row(
         children: [
           Expanded(
-            child: Text(
-              l10n.readerSearchAction,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.text.titleLarge,
+            child: Semantics(
+              header: true,
+              child: Text(
+                l10n.readerSearchAction,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.text.titleMedium,
+              ),
             ),
           ),
           AppPlainIconButton(

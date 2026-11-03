@@ -5,7 +5,8 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_selection_cubit.dart';
 
-const _actionInset = AppSpacing.lg - AppSizes.iconActionOutset;
+double _actionInset(BuildContext context) =>
+    AppSpacing.lg - AppPlainIconButton.defaultIconOutsetOf(context);
 
 /// Scaffold reserves this bar's height so bulk actions never cover sources.
 ///
@@ -72,8 +73,8 @@ class _SelectionToolbarRows extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     children: [
       Padding(
-        padding: const EdgeInsetsDirectional.only(
-          start: _actionInset,
+        padding: EdgeInsetsDirectional.only(
+          start: _actionInset(context),
           end: AppSpacing.lg,
         ),
         child: Row(
@@ -85,10 +86,10 @@ class _SelectionToolbarRows extends StatelessWidget {
         ),
       ),
       Padding(
-        padding: const EdgeInsetsDirectional.fromSTEB(
+        padding: EdgeInsetsDirectional.fromSTEB(
           AppSpacing.lg,
           0,
-          _actionInset,
+          _actionInset(context),
           AppSpacing.lg,
         ),
         child: Row(
@@ -118,8 +119,8 @@ class _SelectionToolbarRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsetsDirectional.symmetric(
-      horizontal: _actionInset,
+    padding: EdgeInsetsDirectional.symmetric(
+      horizontal: _actionInset(context),
       vertical: AppSpacing.sm,
     ),
     child: LayoutBuilder(
@@ -177,7 +178,10 @@ class _AddToCollectionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FilledButton.icon(
     onPressed: onPressed,
-    icon: const Icon(AppIcons.collectionAdd, size: AppIconSize.sm),
+    icon: Icon(
+      AppIcons.collectionAdd,
+      size: AppPlainIconButton.defaultIconSizeOf(context),
+    ),
     label: AppButtonLabel(context.l10n.libraryAddToCollection),
   );
 }

@@ -69,39 +69,33 @@ class PracticeWordSheet extends StatelessWidget {
         onSecondary: onRemove,
         destructiveSecondary: true,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        spacing: AppSpacing.md,
-        children: [
-          if (!metadata.isEmpty) metadata,
-          AppSheetSection(
-            title: l10n.translationInContext,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: SingleChildScrollView(
+        key: const ValueKey('practiceWordDetails'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: AppSpacing.xl,
+          children: [
+            if (!metadata.isEmpty) metadata,
+            _PracticeWordDetailSection(
+              title: l10n.translationInContext,
               child: SelectableText(
                 entry.translation,
                 textDirection: _direction(entry.translation),
                 style: text.titleMedium.copyWith(letterSpacing: 0),
               ),
             ),
-          ),
-          if (base != null && base.isNotEmpty)
-            AppSheetSection(
-              title: l10n.translationWordMeaning,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            if (base != null && base.isNotEmpty)
+              _PracticeWordDetailSection(
+                title: l10n.translationWordMeaning,
                 child: SelectableText(
                   base,
                   textDirection: _direction(base),
                   style: text.bodyLarge,
                 ),
               ),
-            ),
-          if (sentence != null && sentence.isNotEmpty)
-            AppSheetSection(
-              title: l10n.translationSentence,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+            if (sentence != null && sentence.isNotEmpty)
+              _PracticeWordDetailSection(
+                title: l10n.translationSentence,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -127,19 +121,42 @@ class PracticeWordSheet extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          if (word.sourceTitle case final title?)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-              child: Text(
+            if (word.sourceTitle case final title?)
+              Text(
                 title,
+                textDirection: _direction(title),
                 style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
+
+class _PracticeWordDetailSection extends StatelessWidget {
+  const _PracticeWordDetailSection({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    spacing: AppSpacing.sm,
+    children: [
+      Semantics(
+        header: true,
+        child: Text(
+          title,
+          style: context.text.labelMedium.copyWith(
+            color: context.colors.onSurfaceVariant,
+          ),
+        ),
+      ),
+      child,
+    ],
+  );
 }
 
 TextDirection _direction(String value) =>

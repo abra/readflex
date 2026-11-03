@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 
 import 'app_inline_sheet_geometry.dart';
 import 'app_sheet_drag_handle.dart';
+import 'app_window_size.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_motion.dart';
 import 'theme/tokens/app_radius.dart';
+import 'theme/tokens/app_sizes.dart';
+import 'theme/tokens/app_spacing.dart';
 
-/// Material's bottom sheet width limit, so tablets get a centered sheet.
+/// Caps the centered bottom sheet when a trailing panel does not fit.
 const double _kMaxWidth = 640;
 
 /// A release faster than this (logical pixels per second) moves one rest
@@ -23,16 +26,16 @@ const double _kPullToCollapseDistance = 64;
 
 const double _kRestTolerance = 0.001;
 
-/// A bottom sheet drawn inside the current screen's [Stack] instead of pushed
+/// An adaptive panel drawn inside the current screen's [Stack] instead of pushed
 /// as a route, for panels whose content must survive being closed: search
 /// queries, scroll offsets, tab state. Place it as a full-size child, e.g. in
 /// [Positioned.fill].
 ///
-/// It opens at 60% of the height above the keyboard so its header lands in
-/// the middle of the screen, and grows to just below the status bar; on short
-/// screens and with large text it opens at full ([AppInlineSheetGeometry]). The grab handle and [header] drag it; in
-/// [body], scrolling forward from half grows it and pulling a list down past
-/// its top steps it down. A non-scrolling body drags like the header.
+/// In narrow windows it opens at 60% of the height above the keyboard and grows
+/// to just below the status bar. Short windows and large text open at full
+/// ([AppInlineSheetGeometry]). The grab handle and [header] drag it; in [body],
+/// scrolling forward from half grows it and pulling a list down past its top
+/// steps it down. A non-scrolling body drags like the header.
 ///
 /// Dumb by design: a tap on the scrim, a downward fling from half and a pull
 /// past the top call [onClose], and the owner closes the sheet by setting
@@ -42,6 +45,8 @@ const double _kRestTolerance = 0.001;
 /// the keyboard inset, so lists pad only for the visible system inset. A
 /// hidden sheet stays mounted offstage: no paint, tickers, focus or
 /// semantics.
+/// Expanded windows use a full-height panel at the interface's trailing edge;
+/// resizing preserves the same header, body, query and scroll state.
 class AppInlineSheet extends StatefulWidget {
   const AppInlineSheet({
     required this.visible,
@@ -58,7 +63,7 @@ class AppInlineSheet extends StatefulWidget {
   /// Names the sheet for assistive technology, like a route title.
   final String semanticsLabel;
 
-  /// Title row and fixed controls under the grab handle; drags the sheet.
+  /// Title row and fixed controls; drags the sheet in narrow windows.
   final Widget header;
 
   /// Fills the rest of the sheet.
@@ -89,6 +94,7 @@ class _AppInlineSheetState extends State<AppInlineSheet>
 
   /// Whether the latest layout scrolls the sheet's content as a whole.
   bool _compact = false;
+  bool _sidePanel = false;
 
   @override
   void didUpdateWidget(AppInlineSheet oldWidget) {
@@ -197,6 +203,7 @@ class _AppInlineSheetState extends State<AppInlineSheet>
 
   bool _handleBodyScroll(ScrollNotification notification) {
     if (!widget.visible ||
+        _sidePanel ||
         _compact ||
         notification.metrics.axis != Axis.vertical) {
       return false;
@@ -236,12 +243,28 @@ class _AppInlineSheetState extends State<AppInlineSheet>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final geometry = _geometry = AppInlineSheetGeometry.resolve(
-          maxHeight: constraints.maxHeight,
-          keyboardInset: keyboardInset,
-          topInset: padding.top,
-          textScale: textScale,
+        final sidePanel = _sidePanel = AppWindowSize.isWide(context);
+        final rtl = Directionality.of(context) == TextDirection.rtl;
+        final trailingGap = math.max(
+          AppSpacing.xl,
+          rtl ? padding.left : padding.right,
         );
+        final bottomGap = sidePanel
+            ? math.max(AppSpacing.xl, padding.bottom)
+            : 0.0;
+        final topGap = sidePanel ? padding.top + AppSpacing.xl : 0.0;
+        final panelHeight = math.max(
+          0.0,
+          constraints.maxHeight - keyboardInset - topGap - bottomGap,
+        );
+        final geometry = _geometry = sidePanel
+            ? AppInlineSheetGeometry(half: panelHeight, full: panelHeight)
+            : AppInlineSheetGeometry.resolve(
+                maxHeight: constraints.maxHeight,
+                keyboardInset: keyboardInset,
+                topInset: padding.top,
+                textScale: textScale,
+              );
         // Less room than the content's minimum (a landscape phone with the
         // keyboard up): it scrolls as a whole (see _AppInlineSheetMinHeight).
         // Dragging would fight that scroll and has no second position to
@@ -253,15 +276,17 @@ class _AppInlineSheetState extends State<AppInlineSheet>
           0.0,
           double.infinity,
         );
-        final sideInsets = EdgeInsets.only(
-          left: math.max(0, padding.left - side / 2),
-          right: math.max(0, padding.right - side / 2),
-        );
+        final sideInsets = sidePanel
+            ? EdgeInsets.zero
+            : EdgeInsets.only(
+                left: math.max(0, padding.left - side / 2),
+                right: math.max(0, padding.right - side / 2),
+              );
 
         final content = Column(
           children: [
             _AppInlineSheetDragRegion(
-              enabled: !compact,
+              enabled: !compact && !sidePanel,
               onStart: _handleDragStart,
               onUpdate: _handleDragUpdate,
               onEnd: _handleDragEnd,
@@ -269,12 +294,18 @@ class _AppInlineSheetState extends State<AppInlineSheet>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [const AppSheetDragHandle(), widget.header],
+                children: [
+                  if (sidePanel)
+                    const SizedBox(height: AppSpacing.md)
+                  else
+                    const AppSheetDragHandle(),
+                  widget.header,
+                ],
               ),
             ),
             Expanded(
               child: _AppInlineSheetDragRegion(
-                enabled: !compact,
+                enabled: !compact && !sidePanel,
                 onStart: _handleDragStart,
                 onUpdate: _handleDragUpdate,
                 onEnd: _handleDragEnd,
@@ -295,10 +326,18 @@ class _AppInlineSheetState extends State<AppInlineSheet>
           label: widget.semanticsLabel,
           child: Material(
             color: sheetTheme.backgroundColor ?? colors.surface,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(AppRadius.xl),
-              ),
+            shape: RoundedRectangleBorder(
+              side: sidePanel
+                  ? BorderSide(
+                      color: colors.outlineVariant,
+                      width: 1 / MediaQuery.devicePixelRatioOf(context),
+                    )
+                  : BorderSide.none,
+              borderRadius: sidePanel
+                  ? BorderRadius.circular(AppRadius.xl)
+                  : const BorderRadius.vertical(
+                      top: Radius.circular(AppRadius.xl),
+                    ),
             ),
             clipBehavior: Clip.antiAlias,
             child: Padding(
@@ -307,7 +346,11 @@ class _AppInlineSheetState extends State<AppInlineSheet>
               // from the outer data and undo the other.
               child: MediaQuery(
                 data: MediaQuery.of(context)
-                    .removePadding(removeLeft: true, removeRight: true)
+                    .removePadding(
+                      removeLeft: true,
+                      removeRight: true,
+                      removeBottom: sidePanel,
+                    )
                     .removeViewInsets(removeBottom: true),
                 child: _AppInlineSheetMinHeight(
                   minHeight: AppInlineSheetGeometry.minHalfHeight,
@@ -343,10 +386,10 @@ class _AppInlineSheetState extends State<AppInlineSheet>
                     ),
             ),
             Positioned(
-              left: 0,
-              right: 0,
-              top: 0,
-              bottom: keyboardInset,
+              left: sidePanel ? math.max(AppSpacing.xl, padding.left) : 0,
+              right: sidePanel ? math.max(AppSpacing.xl, padding.right) : 0,
+              top: topGap,
+              bottom: keyboardInset + bottomGap,
               child: Offstage(
                 offstage: _offstage,
                 child: TickerMode(
@@ -356,10 +399,14 @@ class _AppInlineSheetState extends State<AppInlineSheet>
                     child: IgnorePointer(
                       ignoring: !widget.visible,
                       child: Align(
-                        alignment: Alignment.bottomCenter,
+                        alignment: sidePanel
+                            ? AlignmentDirectional.bottomEnd
+                            : Alignment.bottomCenter,
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: _kMaxWidth,
+                          constraints: BoxConstraints(
+                            maxWidth: sidePanel
+                                ? AppSizes.sidePanelWidth
+                                : _kMaxWidth,
                           ),
                           child: AnimatedBuilder(
                             animation: _position,
@@ -367,7 +414,15 @@ class _AppInlineSheetState extends State<AppInlineSheet>
                             builder: (context, surface) {
                               final position = _position.value;
                               return Transform.translate(
-                                offset: Offset(0, geometry.slideAt(position)),
+                                offset: sidePanel
+                                    ? Offset(
+                                        (AppSizes.sidePanelWidth +
+                                                trailingGap) *
+                                            (1 - math.min(position, 1)) *
+                                            (rtl ? -1 : 1),
+                                        0,
+                                      )
+                                    : Offset(0, geometry.slideAt(position)),
                                 child: SizedBox(
                                   height: geometry.heightAt(position),
                                   child: surface,

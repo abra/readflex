@@ -13,8 +13,7 @@ import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
 
-/// Wide windows: a 13-inch iPad in both orientations. Phone profiles keep
-/// their own goldens unchanged.
+/// Wide Library and Appearance windows complement the phone visual profiles.
 void main() {
   setUpAll(loadUiFonts);
   const portrait = Size(1032, 1376);

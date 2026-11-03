@@ -73,8 +73,8 @@ derived author/site smart collections.
 
 Practice has no tab; the Library is its one way in, in two places:
 
-- `LibraryPracticeRow` leads the content in the default view (no search or
-  collection), above the Continue reading band, once something is saved for
+- `LibraryPracticeRow` follows the Continue reading panel in the default view
+  (no search or collection), once something is saved for
   review: "N cards due today" with the accent-tinted glyph, or "All caught
   up" with the totals, muted. It scrolls with the rows, so a short window at
   large text keeps its list. A reader who never saves sees no row.
@@ -125,7 +125,7 @@ Favourite membership reads are scoped in SQLite rather than loading every
 manual collection's memberships a second time.
 
 The screen scrolls one `LibraryContentScrollView` in both layouts: the
-Practice row and the Continue reading card are its own slivers, the sources
+Continue reading panel and the secondary Practice row share its leading sliver, the sources
 follow as `LibraryListSliver` or `LibraryGridSliver`. Switching List and Grid
 swaps only the sources sliver, which fades in over `AppMotion.short` (nothing
 slides: a slide would move the covers under the still row and card); the row
@@ -143,8 +143,8 @@ use the extra width without stretching anything:
 
 - The grid keeps its phone rule (as many 88dp tiles as fit, up to six; text
   scales the tile up to 150%) and adds a column whenever covers would pass
-  160dp, so a 13-inch iPad shows eight covers in landscape instead of six
-  huge ones (`libraryGridColumnCount`). Every phone width gives the same
+  160dp (`libraryGridColumnCount`). A full 1200dp content frame shows seven
+  covers instead of stretching the artwork. Every phone width gives the same
   count as before.
 - The list lays its rows out in two columns, read across then down, with the
   screen gutters outside and the grid's 12dp gap between them
@@ -158,8 +158,29 @@ use the extra width without stretching anything:
   text wraps its label rather than squeezing the count. Phones keep the two
   rows described below.
 
-The header, search field and Continue reading band span the window in both
-layouts.
+`AppContentFrame` bounds the successful Library header and scroll content to
+1200dp, with an extra 8dp outer inset in wide windows in addition to the 16dp
+inner gutters. The grid computes its columns from the space it receives,
+including Split View. The header exposes a settings glyph on phones and the
+localized Display options label in wide windows.
+
+At 600dp width and 480dp height, utility and collection actions use 24dp
+glyphs, while the item count and Continue reading metadata use the existing
+15sp text roles. Narrow windows keep their compact roles. Touch targets,
+cover-only grid geometry, capsule height and source actions are unchanged;
+the Display action measures the same glyph/text sizes it paints.
+
+Continue reading is an inset rounded, outlined tonal panel with a compact
+60×90 phone cover, native progress fill and the full-title fitting behavior. Selection
+keeps the panel in place and uses the shared selected color pair.
+
+Grid sources use the original cover-only 2:3 tiles (`BookLibraryGridTile`),
+with 12dp gaps in both directions and no metadata below the artwork. Embedded
+images fill the cover; generated artwork shows the title and the book's author
+or article's site on the cover. New/finished badges, selection and progress
+remain cover overlays. The whole cover opens or selects one source and exposes
+one semantics node. The lazy grid keeps its original 88dp minimum tile width
+at normal text size and scales the width limits up to 150% for enlarged text.
 
 Empty-state is handled twice: truly empty library vs. a search or collection
 that shows nothing.
@@ -357,11 +378,13 @@ collection search, and pops `LibraryCollectionScopeCleared`, which the screen
 turns into `LibraryCollectionScopeChanged(null)`. Row icons and section titles
 sit on the 24dp sheet gutter with the search field, and row menu glyphs end where the close glyph
 does. Rows keep an 8dp inset for their selection pill and a trailing 48dp
-menu target; the list subtracts both (`AppSizes.iconActionOutset`) from its
+menu target; the list subtracts the adaptive glyph's outset
+(`AppPlainIconButton.defaultIconOutsetOf(context)`, 14dp narrow, 12dp medium) from its
 padding, so the pill bleeds 8dp into both gutters (16dp from the sheet edges)
 and the target extends into the trailing gutter without shrinking. Labels and
 counts in rows without a menu keep its slot, so every count ends 12dp before
-the same 48dp column as Add to collection's check slot. Insets mirror in RTL.
+the same 48dp menu column. Insets mirror in RTL; Add to collection retains its
+fixed 20dp check slot, whose target column matches this one in narrow windows.
 Selection includes a check, paired theme colors and selected semantics; the
 menu glyph is `onSurfaceVariant`, or `selectedControlForeground` on the
 selected row. Row press/focus feedback remains enabled.
@@ -405,8 +428,9 @@ whichever is on screen and leave both tappable.
 ### Continue reading
 
 In the default view (no search, no collection scope),
-`LibraryContinueReadingCard` follows the Practice row, when present, and
-precedes the sources in both layouts. It shows
+`LibraryContinueReadingCard` precedes Practice and the sources in both layouts.
+Wide windows place the secondary Practice row beside it; without Practice,
+the reading module stops growing at 800dp. It shows
 `LibraryState.continueReadingCardSource`: `continueReadingSource`, the source
 with the latest `lastOpenedAt` among unfinished sources with
 `0 < readingProgress < 1`, computed once per state. The card is that source's
@@ -415,15 +439,15 @@ the list and grid below, so the book is never shown twice; searching or a
 collection drops the card and lists the source in its place again. The item
 count still includes it.
 
-The card is a full-width band in the card surface (`surfaceContainerLow`),
-with no radius, 12dp above and below its 90dp content,
+The card uses the tonal surface (`surfaceContainerLow`), an outline and the
+16dp radius, with 16dp outer horizontal insets and 16dp inner padding,
 `kLibraryContentTopPadding` below
 the header's band and `kLibraryContinueReadingGap` (16dp) above the first
-cover; it scrolls with the content. Its content sits on the list rows' lines:
-the row's `LibraryListCoverSlot` (60×90) on the 16dp gutter, then
-`kLibraryListCoverToTextGap` (14dp), so in the grid its cover lines up with the
-first column. The text column holds a header with the Continue reading label
-and progress/time caption, a serif `titleMedium` title (the largest font that
+cover; it scrolls with the content. The `LibraryListCoverSlot` stays 60×90 on
+phones and grows to 80×120 in wide windows, followed by
+`kLibraryListCoverToTextGap` (14dp). The text column holds a header with the Continue reading label
+and progress/time caption, a serif `titleMedium` title (`titleLarge` in wide
+windows; the largest font that
 fits the complete title in the available width and height, with wrapping and
 no ellipsis; see `resolveContinueReadingTitleLayout`), the muted
 author and a 4dp rounded
@@ -433,16 +457,19 @@ caption reads "{percent}% · {time left}". Time left is
 `readingTimeLeft(LibrarySource.estimatedMinutesLeft)` and is omitted when
 unknown (books have no character count).
 
-The text stays between the 60×90 cover's top and bottom edges; the band
-keeps its 12dp outer vertical padding.
-Title fitting checks both the available width and height, using the actual
-scaled font metrics and a bounded binary search when the theme size does
-not fit; the progress bar ends at the cover's bottom edge.
-The title and author stay together, with unused space below. At large text
-sizes the author shares the header with the caption instead of taking a
-separate line. If even that header cannot fit,
-only the title and bar remain visible. System text scaling stays enabled,
-and the button's semantics retain the full title, progress and time estimate.
+Up to 130% text, the compact text stays between the cover's top and bottom
+edges, with 16dp inner vertical padding. Title fitting checks both the
+available width and height, using the actual scaled font metrics and a bounded
+binary search when the theme size does not fit; the progress bar ends at the
+cover's bottom edge. The title and author stay together, with unused space below.
+
+Above 130% text, the card grows with its content. Its first row keeps the cover
+beside the complete Continue reading label and progress/time caption, both
+wrapping naturally. The full title follows at the unchanged `titleMedium`
+(`titleLarge` in wide windows), then the author and progress bar. No title
+fitting, line limit or ellipsis reduces the requested text size in this layout;
+the Library scroll view keeps its last content reachable. Both layouts retain
+the full title, progress and time estimate in the source button's semantics.
 
 It behaves like a row through the same `onSourcePressed` /
 `onSourceLongPressed`: tap opens the source, long-press starts selection with
@@ -501,8 +528,12 @@ labels and checkmarks sit on the content edge with the title while the tinted
 pill bleeds into the gutter. At standard text size all ten options fit without scrolling on
 320dp and wider portrait phones, without enlarging Display. Oversized text or
 insufficient viewport space retains scrolling rather than clipping choices or
-shrinking targets. Step navigation preserves the height. Changing the locale, text
-scale or available viewport can resize Display when its controls wrap.
+shrinking targets. Step navigation preserves the height. While Language is
+active, hidden Display keeps the locale and language-row value it had on entry,
+so translated choice labels cannot enlarge the active picker. Language itself
+uses the live app locale. Back adopts the chosen locale in Display and lets its
+controls determine their new natural height. Text scale or available viewport
+changes still resize the flow when its controls wrap.
 Choosing a language applies and persists it immediately through
 `LibraryLocaleCubit`, keeping Language open for further choices. Reselecting the
 current language also stays on this step. Header Back and system Back return to
@@ -527,7 +558,7 @@ without intrinsic sizing or per-scroll text measurement.
 Collection source rows use the shared trash icon to remove membership, not
 delete the book or article from the library. Their localized tooltips name the
 source; the close icon is reserved for dismissing the sheet.
-The 20dp trash glyph aligns with the header close glyph at the 24dp content
+The adaptive 20/24dp trash glyph aligns with the header close glyph at the 24dp content
 gutter. Its 48dp target extends into that gutter without changing text insets;
 the geometry mirrors in RTL. Source-row hairlines span 24…24.
 "Delete collection" is a compact destructive `TextButton` (no icon,
@@ -593,8 +624,10 @@ New collection is an `AppDrillInRow`; it opens a separate name form in the
 same route. Destination rows clip their ripple to `AppRadius.sm` and keep a
 4dp ink inset that bleeds past the 24dp gutter, so their icons sit with the
 New collection icon and the dividers span 24…24. Their trailing 48dp slot
-matches the Collections picker's menu column: the check glyph ends on the
-gutter and counts end 12dp before the slot in both sheets. The name form's
+keeps a fixed 20dp check on the gutter; counts end 12dp before that slot.
+Its target column matches the Collections picker's menu in narrow windows;
+medium-window menus use larger 24dp glyphs with their own gutter outset.
+The name form's
 footer is one full-width filled "Create and add" (`FilledButton` with
 `AppBusyButtonLabel`, busy from the cubit, disabled while the name is empty)
 in the layout's `footer` slot: the step's header has Back and Close, so no

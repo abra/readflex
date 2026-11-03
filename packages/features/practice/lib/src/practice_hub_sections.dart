@@ -1,19 +1,19 @@
 part of 'practice_screen.dart';
 
-/// Start review as one filled stadium floating over the content, the
-/// Library "+" circle stretched to carry a label: no capsule around it, so
-/// nothing peeks out from under the button. When nothing is due it offers
-/// Review ahead instead.
+/// Review command, floating on phones and embedded in the tablet overview.
+/// When nothing is due it offers Review ahead instead.
 class PracticeStartButton extends StatelessWidget {
   const PracticeStartButton({
     required this.ahead,
     required this.onPressed,
+    this.floating = true,
     super.key,
   });
 
   /// Nothing is due: the button offers to review ahead instead.
   final bool ahead;
   final VoidCallback onPressed;
+  final bool floating;
 
   static const double _maxTextScale = 1.5;
   static const double _iconTextScale = 1.3;
@@ -24,7 +24,11 @@ class PracticeStartButton extends StatelessWidget {
     final label = ahead ? l10n.practiceReviewAhead : l10n.practiceStartReview;
     final icon = Icon(ahead ? AppIcons.reviewAgain : AppIcons.practice);
     final style = FilledButton.styleFrom(
-      shape: const StadiumBorder(),
+      shape: floating
+          ? const StadiumBorder()
+          : RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+            ),
       minimumSize: const Size(0, AppSizes.buttonHeight),
     );
     // The button keeps its height: the label scales up to 1.5× and drops
@@ -39,11 +43,11 @@ class PracticeStartButton extends StatelessWidget {
         maxScaleFactor: _maxTextScale,
         child: DecoratedBox(
           // The same soft shadow the Library capsule floats on.
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.all(
               Radius.circular(AppSizes.buttonHeight / 2),
             ),
-            boxShadow: AppShadows.popover,
+            boxShadow: floating ? AppShadows.popover : const [],
           ),
           child: scale > _iconTextScale
               ? FilledButton(
@@ -65,8 +69,7 @@ class PracticeStartButton extends StatelessWidget {
   }
 }
 
-/// Today's numbers: the due count large, its split, then the streak and
-/// totals in one muted line.
+/// Today's due count, its split and wrapping review statistics.
 class PracticeTodayCard extends StatelessWidget {
   const PracticeTodayCard({
     required this.due,
@@ -76,6 +79,7 @@ class PracticeTodayCard extends StatelessWidget {
     required this.streakDays,
     required this.reviewedLast7Days,
     required this.total,
+    this.action,
     super.key,
   });
 
@@ -86,6 +90,7 @@ class PracticeTodayCard extends StatelessWidget {
   final int streakDays;
   final int reviewedLast7Days;
   final int total;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -93,54 +98,72 @@ class PracticeTodayCard extends StatelessWidget {
     final text = context.text;
     final colors = context.colors;
     final muted = text.bodySmall.copyWith(color: colors.onSurfaceVariant);
-    // The outlined frame of the Library's Practice row: the two surfaces
-    // say the same thing and look the same.
+    final medium = AppWindowSize.isMedium(context);
+    final dueDetails = (medium ? text.bodyMedium : text.bodySmall).copyWith(
+      color: colors.onSurfaceVariant,
+    );
     return DecoratedBox(
       key: const ValueKey('practiceTodayCard'),
       decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
         border: Border.all(color: colors.outlineVariant),
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.practiceTodayTitle,
-              style: text.labelMedium.copyWith(
-                color: colors.onSurfaceVariant,
+            Semantics(
+              header: true,
+              child: Text(
+                l10n.practiceTodayTitle,
+                style: (medium ? text.labelLarge : text.labelMedium).copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
               ),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: AppSpacing.md),
             Text(
               due == 0 ? l10n.practiceCaughtUp : l10n.practiceDueCount(due),
               key: const ValueKey('practiceTodayDue'),
               style: AppTypography.sans(
-                textStyle: text.headlineLarge,
+                textStyle: text.displaySmall,
                 color: colors.onSurface,
               ),
             ),
             if (due > 0) ...[
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                [
-                  l10n.practiceWordCount(dueWords),
-                  l10n.practiceHighlightCount(dueHighlights),
-                  l10n.practiceNewToday(newToday),
-                ].join(' · '),
-                style: muted,
+              const SizedBox(height: AppSpacing.md),
+              Wrap(
+                spacing: AppSpacing.md,
+                runSpacing: AppSpacing.xs,
+                children: [
+                  Text(l10n.practiceWordCount(dueWords), style: dueDetails),
+                  Text(
+                    l10n.practiceHighlightCount(dueHighlights),
+                    style: dueDetails,
+                  ),
+                  Text(l10n.practiceNewToday(newToday), style: dueDetails),
+                ],
               ),
             ],
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              [
-                if (streakDays > 0) l10n.practiceStreak(streakDays),
-                l10n.practiceThisWeek(reviewedLast7Days),
-                l10n.practiceTotalCards(total),
-              ].join(' · '),
+            if (action case final child?) ...[
+              const SizedBox(height: AppSpacing.xl),
+              Align(alignment: AlignmentDirectional.centerStart, child: child),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.lg),
+            Wrap(
               key: const ValueKey('practiceTodayStats'),
-              style: muted,
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.sm,
+              children: [
+                if (streakDays > 0)
+                  Text(l10n.practiceStreak(streakDays), style: muted),
+                Text(l10n.practiceThisWeek(reviewedLast7Days), style: muted),
+                Text(l10n.practiceTotalCards(total), style: muted),
+              ],
             ),
           ],
         ),
@@ -175,9 +198,11 @@ class PracticeSourceRow extends StatelessWidget {
     ].join(' · ');
     return Semantics(
       button: true,
+      enabled: true,
       label: summary.source.title,
       value: [counts, l10n.practiceDueCount(summary.due)].join(', '),
       onTapHint: l10n.practiceStartReview,
+      onTap: onPressed,
       excludeSemantics: true,
       child: InkWell(
         onTap: onPressed,
@@ -218,11 +243,15 @@ class PracticeSourceRow extends StatelessWidget {
                           ? l10n.practiceCaughtUpShort
                           : l10n.practiceDueCount(summary.due),
                       key: ValueKey('practiceSourceDue-${summary.source.id}'),
-                      style: text.labelMedium.copyWith(
-                        color: summary.due == 0
-                            ? colors.onSurfaceVariant
-                            : context.actionForeground,
-                      ),
+                      style:
+                          (AppWindowSize.isMedium(context)
+                                  ? text.labelLarge
+                                  : text.labelMedium)
+                              .copyWith(
+                                color: summary.due == 0
+                                    ? colors.onSurfaceVariant
+                                    : context.actionForeground,
+                              ),
                     ),
                   ],
                 ),

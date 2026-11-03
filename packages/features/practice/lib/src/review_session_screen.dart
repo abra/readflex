@@ -19,7 +19,10 @@ import 'review_session_bloc.dart';
 part 'review_session_cards.dart';
 part 'review_session_controls.dart';
 
-/// A full-screen review session over the tabs: one card at a time, Show
+const double _reviewWorkspaceMaxWidth = 960;
+const double _reviewCardMaxWidth = 640;
+
+/// A full-screen review session above Practice: one card at a time, Show
 /// answer, then a rating. Words are rated Again / Hard / Good; highlights
 /// are kept or shown less. Ends with the session's numbers.
 class ReviewSessionScreen extends StatelessWidget {
@@ -81,89 +84,132 @@ class _ReviewSessionView extends StatelessWidget {
         final current = state.current;
         return Scaffold(
           body: SafeArea(
-            child: switch (state.status) {
-              ReviewSessionStatus.loading =>
-                const CenteredCircularProgressIndicator(),
-              ReviewSessionStatus.failure => ErrorState(
-                message: l10n.practiceLoadFailed,
-                retryLabel: l10n.commonRetry,
-                onRetry: () => bloc.add(const ReviewSessionStarted()),
-                secondaryLabel: l10n.commonClose,
-                onSecondary: () => Navigator.of(context).pop(),
-              ),
-              ReviewSessionStatus.empty => EmptyState(
-                icon: AppIcons.practice,
-                message: l10n.practiceCaughtUp,
-                subtitle: l10n.practiceCaughtUpBody,
-                action: FilledButton.tonal(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: AppButtonLabel(l10n.commonDone),
+            child: AppContentFrame(
+              maxWidth: _reviewWorkspaceMaxWidth,
+              child: switch (state.status) {
+                ReviewSessionStatus.loading =>
+                  const CenteredCircularProgressIndicator(),
+                ReviewSessionStatus.failure => ErrorState(
+                  message: l10n.practiceLoadFailed,
+                  retryLabel: l10n.commonRetry,
+                  onRetry: () => bloc.add(const ReviewSessionStarted()),
+                  secondaryLabel: l10n.commonClose,
+                  onSecondary: () => Navigator.of(context).pop(),
                 ),
-              ),
-              ReviewSessionStatus.completed => ReviewSessionSummary(
-                reviewed: state.reviewed,
-                known: state.known,
-                again: state.again.length,
-                onDone: () => Navigator.of(context).pop(),
-                onReviewAgain: () =>
-                    bloc.add(const ReviewSessionAgainRequested()),
-              ),
-              ReviewSessionStatus.reviewing when current != null => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  ReviewSessionTopBar(
-                    position: state.index + 1,
-                    total: state.items.length,
-                    canOpenInSource: current.sourceId != null,
-                    onClose: () => Navigator.of(context).pop(),
-                    onOpenInSource: () =>
-                        onOpenInSource(current.sourceId!, current.cfiRange),
-                    onRemove: () => bloc.add(const ReviewSessionCardRemoved()),
+                ReviewSessionStatus.empty => EmptyState(
+                  icon: AppIcons.practice,
+                  message: l10n.practiceCaughtUp,
+                  subtitle: l10n.practiceCaughtUpBody,
+                  action: FilledButton.tonal(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: AppButtonLabel(l10n.commonDone),
                   ),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        AppSpacing.lg,
-                        AppSpacing.lg,
-                        AppSpacing.xl,
-                      ),
-                      child: switch (current) {
-                        PracticeWordItem() => ReviewWordCard(
-                          key: ValueKey('reviewCard-${current.itemId}'),
-                          item: current,
-                          revealed: state.revealed,
-                        ),
-                        PracticeHighlightItem() => ReviewHighlightCard(
-                          key: ValueKey('reviewCard-${current.itemId}'),
-                          item: current,
-                          revealed: state.revealed,
-                        ),
-                      },
+                ),
+                ReviewSessionStatus.completed => ReviewSessionSummary(
+                  reviewed: state.reviewed,
+                  known: state.known,
+                  again: state.again.length,
+                  onDone: () => Navigator.of(context).pop(),
+                  onReviewAgain: () =>
+                      bloc.add(const ReviewSessionAgainRequested()),
+                ),
+                ReviewSessionStatus.reviewing when current != null => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ReviewSessionTopBar(
+                      position: state.index + 1,
+                      total: state.items.length,
+                      canOpenInSource: current.sourceId != null,
+                      onClose: () => Navigator.of(context).pop(),
+                      onOpenInSource: () =>
+                          onOpenInSource(current.sourceId!, current.cfiRange),
+                      onRemove: () =>
+                          bloc.add(const ReviewSessionCardRemoved()),
                     ),
-                  ),
-                  ReviewSessionControls(
-                    item: current,
-                    revealed: state.revealed,
-                    intervals: state.intervals,
-                    onReveal: () =>
-                        bloc.add(const ReviewSessionAnswerRevealed()),
-                    onRated: (rating) =>
-                        bloc.add(ReviewSessionCardRated(rating)),
-                    onOpenInSource: current.sourceId == null
-                        ? null
-                        : () => onOpenInSource(
-                            current.sourceId!,
-                            current.cfiRange,
+                    Expanded(
+                      child: _ReviewCardViewport(
+                        child: switch (current) {
+                          PracticeWordItem() => ReviewWordCard(
+                            key: ValueKey('reviewCard-${current.itemId}'),
+                            item: current,
+                            revealed: state.revealed,
                           ),
-                  ),
-                ],
-              ),
-              ReviewSessionStatus.reviewing => const SizedBox.shrink(),
-            },
+                          PracticeHighlightItem() => ReviewHighlightCard(
+                            key: ValueKey('reviewCard-${current.itemId}'),
+                            item: current,
+                            revealed: state.revealed,
+                          ),
+                        },
+                      ),
+                    ),
+                    ReviewSessionControls(
+                      item: current,
+                      revealed: state.revealed,
+                      intervals: state.intervals,
+                      onReveal: () =>
+                          bloc.add(const ReviewSessionAnswerRevealed()),
+                      onRated: (rating) =>
+                          bloc.add(ReviewSessionCardRated(rating)),
+                      onOpenInSource: current.sourceId == null
+                          ? null
+                          : () => onOpenInSource(
+                              current.sourceId!,
+                              current.cfiRange,
+                            ),
+                    ),
+                  ],
+                ),
+                ReviewSessionStatus.reviewing => const SizedBox.shrink(),
+              },
+            ),
           ),
         );
       },
     );
   }
+}
+
+/// A focused reading card; short fronts centre while long answers scroll.
+class _ReviewCardViewport extends StatelessWidget {
+  const _ReviewCardViewport({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      key: const ValueKey('reviewCardViewport'),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.xl,
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: (constraints.maxHeight - AppSpacing.xl * 2)
+              .clamp(0.0, double.infinity)
+              .toDouble(),
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _reviewCardMaxWidth),
+            child: SizedBox(
+              width: double.infinity,
+              child: DecoratedBox(
+                key: const ValueKey('reviewStudyCard'),
+                decoration: BoxDecoration(
+                  color: context.colors.surfaceContainerLow,
+                  border: Border.all(color: context.colors.outlineVariant),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 }

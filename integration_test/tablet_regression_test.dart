@@ -12,11 +12,15 @@ import 'pdf_reader_test.dart' as pdf;
 import 'reader_flows_test.dart' as reader;
 import 'reader_note_sheet_test.dart' as notes;
 import 'toast_test.dart' as toasts;
+import 'tablet_extra_flows_test.dart' as extra;
 
 /// Native tablet regression batch. Each suite keeps its own fixture lifecycle;
 /// the device supplies its real viewport instead of a synthetic test surface.
-void main() {
+void main() => runNativeRegression();
+
+void runNativeRegression({bool requireTablet = true}) {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final deviceKind = requireTablet ? 'tablet' : 'phone';
 
   Map<String, Object> viewport() {
     final view = binding.platformDispatcher.views.first;
@@ -31,17 +35,20 @@ void main() {
     };
   }
 
-  testWidgets('the native device exposes a tablet viewport', (tester) async {
+  testWidgets('the native device exposes a $deviceKind viewport', (
+    tester,
+  ) async {
     expect(
       Platform.isAndroid || Platform.isIOS,
       isTrue,
-      reason: 'Run this batch on a native iPad or Android tablet.',
+      reason: 'Run this batch on a native iOS or Android $deviceKind.',
     );
     final size = tester.view.physicalSize / tester.view.devicePixelRatio;
-    expect(size.shortestSide, greaterThanOrEqualTo(600));
+    expect(size.shortestSide, greaterThanOrEqualTo(requireTablet ? 600 : 320));
+    if (!requireTablet) expect(size.shortestSide, lessThan(600));
     binding.reportData = {
       ...?binding.reportData,
-      'tabletInitialViewport': viewport(),
+      '${deviceKind}InitialViewport': viewport(),
     };
   });
 
@@ -54,13 +61,16 @@ void main() {
   group('MOBI native', mobi.main);
   group('Notes', notes.main);
   group('Toasts', toasts.main);
+  if (!requireTablet) {
+    group('RTL and Practice', () => extra.runExtraFlows(requireTablet: false));
+  }
 
   tearDownAll(() {
     binding.reportData = {
       ...?binding.reportData,
       'platform': Platform.operatingSystem,
       'operatingSystemVersion': Platform.operatingSystemVersion,
-      'tabletFinalViewport': viewport(),
+      '${deviceKind}FinalViewport': viewport(),
       'completedAt': DateTime.now().toUtc().toIso8601String(),
       'tests': binding.results.map(
         (name, result) => MapEntry(name, result.toString()),

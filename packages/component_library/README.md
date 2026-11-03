@@ -89,7 +89,8 @@ as static semantic token classes:
 |-------------|---------|
 | `AppSpacing` | Layout gaps and insets (`xxs` … `xxl`) |
 | `AppRadius` | Shape scale (`xs`, `sm`, `md`, `lg`, `xl`, `full`) |
-| `AppSizes` | Control heights and tap targets; `centeredColumnMaxWidth` (480) is where a welcome or empty screen's column stops on tablets and landscape phones |
+| `AppSizes` | Control heights and tap targets; `centeredColumnMaxWidth` (480) bounds narrow welcome and empty-state columns |
+| `AppSizes.pageContentMaxWidth` / `sidePanelWidth` | Shared workspace maximum (1200dp) and expanded reader navigation panel (420dp) |
 | `AppIconSize` | Standard icon sizes |
 | `AppMotion` | Implicit-animation durations (`quick` 120ms, `short` 200ms, `medium` 300ms) |
 | `AppElevation` / `AppShadows` | Shared depth language |
@@ -162,8 +163,10 @@ source quote and translated sentence for native screenshot inspection.
   (4/8/12dp), and the owning surface subtracts that inset from its own edge
   padding, so text and icons land exactly on the 16dp screen/drawer or 24dp
   sheet gutter while the pill bleeds into the gutter. The same rule places
-  icon actions: a 48dp target is outset by `AppSizes.iconActionOutset` so its
-  20dp glyph meets the gutter, and a Material `Checkbox` by
+  icon actions: a 48dp target is outset by
+  `AppPlainIconButton.defaultIconOutsetOf(context)` so its adaptive 20/24dp
+  glyph meets the gutter (`AppSizes.iconActionOutset` remains the fixed 20dp
+  glyph's outset), and a Material `Checkbox` by
   `AppSizes.checkboxOutset`. Never shrink a target, and never fake an outset
   with negative padding, `Transform` or `OverflowBox`; move the padding to the
   widget that owns the surface. Text buttons inside a content column follow
@@ -207,11 +210,12 @@ Reusable presentation-only widgets used across features:
 | `AppStatusMessage`                  | Inline sheet status: start-aligned title/body, optional full-width filled action and progress |
 | `AppSettingsSection`                | Shared settings heading and label/control spacing |
 | `AppChoiceControl` / `AppChoiceOption` | Single-choice settings, with the same themed states for text, icons, painted `glyph`s and font previews; `reselectable` reports a tap on the selected option for nearest-match presets |
+| `AppContentFrame` | Centered bounded workspace with optional directional padding; preserves height constraints for Expanded lazy lists without intrinsic measurement |
 | `AppCopyButton`                     | 48px copy command with local success/error feedback |
 | `AppSaveToggleButton`               | Save / Saved bookmark toggle for a sheet row (Translation and Definition word headers); the tooltip names the next tap, a state change is announced through a live region, `failed` shows the error glyph until the next tap |
-| `AppFilterChip`                     | App-styled filter chip with stable tap target  |
-| `AppFloatingCapsule`                | Stadium that floats a screen's bottom controls over content (reader chrome, Library collection switcher + "+"): `surface` at 92%, hairline `outlineVariant`, `AppShadows.popover`, radius from the caller's height; controls paint their own ink |
-| `AppInlineSheet` / `AppInlineSheetGeometry` | Bottom sheet drawn in a screen's `Stack` instead of a route, retained offstage while hidden; half (60%) and full positions, header drag, list-driven grow/collapse, keyboard-aware |
+| `AppFilterChip`                     | Compact visual body (32dp minimum) in a target of at least 48×48dp; labels use `labelSmall` on narrow windows and `labelLarge` on medium windows; bounded long labels wrap and large text can grow the control |
+| `AppFloatingCapsule`                | Stadium for compact floating controls (reader search navigation, Library collection switcher + "+"): `surface` at 92%, hairline `outlineVariant`, `AppShadows.popover`, radius from the caller's height; controls paint their own ink |
+| `AppInlineSheet` / `AppInlineSheetGeometry` | Retained modal surface in a screen's Stack: narrow windows use a keyboard-aware 60%/full bottom sheet; expanded windows use a full-height trailing 420dp panel. RTL mirrors the panel, resizing preserves its body/focus, and list gestures stay scrolling gestures on wide windows. |
 | `BottomSheetHeader`                 | Bottom sheet title row                         |
 | `ButtonLoadingIndicator`            | Compact circular progress for buttons; takes the button's own foreground via `IconTheme` |
 | `CenteredCircularProgressIndicator` | Centered loading spinner                       |
@@ -225,7 +229,7 @@ Reusable presentation-only widgets used across features:
 | `ScrollEdgeFade`                    | Scroll-edge fade: top/bottom darken (0.14 alpha in light mode); start/end dissolve a horizontal strip into `surfaceColor` (default scaffold background) |
 | `SelectionPreviewCard`              | Compact preview of selected text with its own `textDirection` |
 | `showAppBottomSheet`                | Shared modal bottom-sheet presentation helper  |
-| `AppWindowSize`                     | When a surface switches to its wide layout: `isWide(context)` is true for a window at least 840 wide (Material expanded) and 480 tall (medium), so phones in either orientation and narrow Split View windows keep the phone layout. It depends on the window size only, never padding or insets, and never on the device type: iPad windows resize while the app runs |
+| `AppWindowSize`                     | `isMedium(context)` selects larger controls at 600×480dp; `isWide(context)` keeps the existing expanded layout threshold of 840×480dp. Short landscape phones keep narrow controls, while 600dp Split View and 800dp portrait tablets use medium controls. Both depend only on window size, never padding, keyboard insets or device type |
 
 ## What Belongs Here
 
@@ -256,8 +260,10 @@ in place of the app's chevron. The app bar title style carries the sans
 family explicitly: a theme-level `TextStyle` is not merged with
 `ThemeData.fontFamily`.
 
-`AppPlainIconButton` keeps a minimum 48dp target independently of `iconSize`; the default
-glyph is 20dp, while `SearchField` uses 16dp. Its resting background is
+`AppPlainIconButton` keeps a minimum 48dp target independently of `iconSize`.
+Its default glyph is 20dp in narrow windows and 24dp in medium windows
+(`AppWindowSize.isMedium`); explicit sizes keep their value, and `iconWidget`
+keeps the caller's own geometry. `SearchField` uses 16dp. Its resting background is
 transparent and pressed/focus feedback follows the circular shape, not the
 filled rectangular global icon-button theme. The localized `tooltip` supplies
 the accessible name through Flutter's `IconButton` semantics. Pass `iconWidget`
@@ -274,7 +280,7 @@ from grouped controls to achieve alignment.
 
 Screen/drawer content uses a 16dp gutter; sheet content uses 24dp. The owning
 surface applies each outer gutter once. `AppSheetActionRow` accepts a full-width
-sheet row and aligns a 20dp utility glyph with `BottomSheetHeader`, preserving
+sheet row and aligns its adaptive 20/24dp utility glyph with `BottomSheetHeader`, preserving
 the full 48dp target; `textDirection` lets a Copy action trail LTR content in
 an RTL interface. The action is centered on the first line of the text
 (`firstLineStyle`) by a single-pass render object, not by padding guesses: a
@@ -287,9 +293,14 @@ target. Definition/Translation use it for Copy; other body sections retain
 their 24dp padding. `AppCopyButton` delegates appearance to
 `AppPlainIconButton`, including circular feedback and disabled hit semantics.
 
+When measuring text before building a row, pass
+`AppPlainIconButton.defaultIconSizeOf(context)` as `childWidthFor`'s `iconSize`
+so the measurement uses the same action gutter as the rendered row.
+
 `AppSheetSection` separates the parts of a sheet body that readers must tell
 apart (Translation and Definition results). Its outline is painted behind the
-content, 10dp from either sheet edge (the 24dp gutter less a 48dp target's
+content, 10dp from either sheet edge in narrow windows and 12dp in medium
+windows (`outlineInsetFor(context)`, the 24dp gutter less a 48dp target's
 outset), so content keeps the sheet's geometry: text stays on the gutter under
 the sheet title and an `AppSheetActionRow` target reaches exactly to the
 outline. The section pads its content 12dp above and below; content that keeps
@@ -452,7 +463,7 @@ state (a `TabBar` stays mounted when it switches to scrolling).
 - `AppInlineSheet` is the in-place counterpart for panels whose content must
   survive closing (the reader's Contents and Search keep tab search text,
   scroll offsets and result snapshots). The owner passes `visible` and
-  `onClose` and decides; the sheet only reports scrim taps, downward flings
+  `onClose` and decides. On narrow windows the sheet reports scrim taps, downward flings
   from half and pulls past a list's top through `onClose`, and settles back
   at half if the owner keeps it open. It shares the route's grab handle
   (`AppSheetDragHandle`), `AppRadius.xl` corners, background, barrier colour
@@ -474,6 +485,11 @@ state (a `TabBar` stays mounted when it switches to scrolling).
   so crossing that threshold never re-inflates a focused field. Children that
   reveal a row should scroll their own list (`ScrollPosition.ensureVisible`),
   not every ancestor. Tests: `test/app_inline_sheet_test.dart`.
+  Expanded windows use a 420dp trailing panel with a physical-pixel outline,
+  24dp gutters and full available height above the keyboard. The panel has no
+  grip or vertical dismiss gesture; Close and the scrim remain available.
+  It slides fully beyond the trailing gutter in LTR/RTL, consumes its safe
+  insets once, and keeps the same child slots while the window resizes.
 - `AppSheetDismissGuard` registers with the route's `AppSheetDismissRegistry`;
   holders are ordered and the latest wins, so a step change that mounts the
   next guard before the previous one is disposed keeps the sheet guarded

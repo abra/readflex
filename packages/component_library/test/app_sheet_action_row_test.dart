@@ -73,59 +73,96 @@ void main() {
   RenderBox renderRow(WidgetTester tester) => tester.renderObject(layout());
 
   for (final direction in TextDirection.values) {
-    testWidgets('sheet actions share the header gutter ($direction)', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(320, 568);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      var copied = false;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: Directionality(
-            textDirection: direction,
-            child: Scaffold(
-              body: ActionBottomSheetLayout.scrollable(
-                title: 'Definition',
-                closeLabel: 'Close',
-                onClose: () {},
-                bodyPadding: EdgeInsets.zero,
-                child: AppSheetActionRow(
-                  firstLineStyle: lineStyle,
-                  action: AppCopyButton(
-                    onCopy: () async {
-                      copied = true;
-                    },
-                    copyLabel: 'Copy',
-                    copiedLabel: 'Copied',
-                    failureLabel: 'Failed',
+    for (final windowSize in [
+      const Size(320, 568),
+      const Size(600, 480),
+      const Size(800, 1280),
+      const Size(844, 390),
+    ]) {
+      testWidgets(
+        'sheet actions share the header gutter ($direction, $windowSize)',
+        (
+          tester,
+        ) async {
+          tester.view.physicalSize = windowSize;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          var copied = false;
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light(),
+              home: Directionality(
+                textDirection: direction,
+                child: Scaffold(
+                  body: ActionBottomSheetLayout.scrollable(
+                    title: 'Definition',
+                    closeLabel: 'Close',
+                    onClose: () {},
+                    bodyPadding: EdgeInsets.zero,
+                    child: AppSheetActionRow(
+                      firstLineStyle: lineStyle,
+                      lead: const Text('Source', key: leadKey),
+                      action: AppCopyButton(
+                        onCopy: () async {
+                          copied = true;
+                        },
+                        copyLabel: 'Copy',
+                        copiedLabel: 'Copied',
+                        failureLabel: 'Failed',
+                      ),
+                      child: const Text('Word', key: bodyKey, style: lineStyle),
+                    ),
                   ),
-                  child: const Text('Word', style: lineStyle),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+          final copy = find.widgetWithIcon(IconButton, AppIcons.copy);
+          final close = find.widgetWithIcon(IconButton, AppIcons.close);
+          expect(tester.getSize(copy), const Size.square(48));
+          expect(
+            tester.getRect(copy).center.dx,
+            tester.getRect(close).center.dx,
+          );
+          final icon = tester.getRect(find.byIcon(AppIcons.copy));
+          expect(
+            icon.width,
+            AppWindowSize.isMediumSize(windowSize)
+                ? AppIconSize.md
+                : AppIconSize.sm,
+          );
+          expect(
+            direction == TextDirection.ltr
+                ? windowSize.width - icon.right
+                : icon.left,
+            24,
+          );
+          expect(
+            rect(tester, bodyKey).width,
+            AppSheetActionRow.childWidthFor(
+              windowSize.width,
+              iconSize: icon.width,
+            ),
+          );
+          final lead = rect(tester, leadKey);
+          expect(lead.left, AppSpacing.xl);
+          expect(windowSize.width - lead.right, AppSpacing.xl);
+          final bounds = tester.getRect(copy);
+          await tester.tapAt(
+            Offset(
+              direction == TextDirection.ltr
+                  ? bounds.right - 1
+                  : bounds.left + 1,
+              bounds.center.dy,
+            ),
+          );
+          await tester.pump();
+          expect(copied, isTrue);
+          await tester.pumpWidget(const SizedBox());
+        },
       );
-      final copy = find.widgetWithIcon(IconButton, AppIcons.copy);
-      final close = find.widgetWithIcon(IconButton, AppIcons.close);
-      expect(tester.getSize(copy), const Size.square(48));
-      expect(tester.getRect(copy).center.dx, tester.getRect(close).center.dx);
-      final icon = tester.getRect(find.byIcon(AppIcons.copy));
-      expect(direction == TextDirection.ltr ? 320 - icon.right : icon.left, 24);
-      final bounds = tester.getRect(copy);
-      await tester.tapAt(
-        Offset(
-          direction == TextDirection.ltr ? bounds.right - 1 : bounds.left + 1,
-          bounds.center.dy,
-        ),
-      );
-      await tester.pump();
-      expect(copied, isTrue);
-      await tester.pumpWidget(const SizedBox());
-    });
+    }
 
     testWidgets('a single line has the action centered on it ($direction)', (
       tester,

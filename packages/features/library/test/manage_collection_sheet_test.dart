@@ -300,6 +300,68 @@ void main() {
     });
   }
 
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    for (final windowSize in [
+      const Size(390, 844),
+      const Size(600, 480),
+      const Size(800, 1280),
+      const Size(844, 390),
+    ]) {
+      testWidgets('remove and undo keep adaptive glyphs on the header gutter '
+          '($locale, $windowSize)', (tester) async {
+        tester.view.physicalSize = windowSize;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final source = LibrarySource.fromBook(
+          Book(
+            id: 'book',
+            title: 'Book',
+            filePath: '/book.epub',
+            format: BookFormat.epub,
+            addedAt: DateTime(2026),
+          ),
+        );
+        await open(tester, sources: [source], locale: locale);
+        final rtl = locale.languageCode == 'ar';
+        final sheet = tester.getRect(find.byType(ActionBottomSheetLayout));
+        final close = tester.getRect(find.byIcon(AppIcons.close));
+        final iconSize = AppWindowSize.isMediumSize(windowSize)
+            ? AppIconSize.md
+            : AppIconSize.sm;
+        for (final (action, icon) in [
+          ('Remove', AppIcons.delete),
+          ('Undo', AppIcons.undo),
+        ]) {
+          final button = find.byKey(ValueKey('collectionSource$action-book'));
+          await tester.ensureVisible(button);
+          await tester.pumpAndSettle();
+          final bounds = tester.getRect(button);
+          final glyph = tester.getRect(
+            find.descendant(of: button, matching: find.byIcon(icon)),
+          );
+          expect(bounds.size, const Size.square(48));
+          expect(glyph.width, iconSize);
+          expect(glyph.center.dx, close.center.dx);
+          expect(
+            rtl ? glyph.left - sheet.left : sheet.right - glyph.right,
+            AppSpacing.xl,
+          );
+          await tester.tapAt(
+            Offset(rtl ? bounds.left + 1 : bounds.right - 1, bounds.center.dy),
+          );
+          await tester.pumpAndSettle();
+        }
+        expect(
+          find.byKey(const ValueKey('collectionSourceRemove-book')),
+          findsOneWidget,
+        );
+        expect(repository.addedSourceIdsByCollection.values.single, {'book'});
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   testWidgets('staged removal has no animation ticks or eager source rows', (
     tester,
   ) async {

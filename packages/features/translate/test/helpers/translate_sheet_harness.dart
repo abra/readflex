@@ -203,14 +203,15 @@ class FakeTranslationService implements ContextualTranslationService {
   void dispose() {}
 }
 
-/// The outline of [section]: its full height, [AppSheetSection.outlineInset]
+/// The outline of [section]: its full height, [AppSheetSection.outlineInsetFor]
 /// in from either side.
 Rect sectionOutline(WidgetTester tester, Finder section) {
   final rect = tester.getRect(section);
+  final inset = AppSheetSection.outlineInsetFor(tester.element(section));
   return Rect.fromLTRB(
-    rect.left + AppSheetSection.outlineInset,
+    rect.left + inset,
     rect.top,
-    rect.right - AppSheetSection.outlineInset,
+    rect.right - inset,
     rect.bottom,
   );
 }

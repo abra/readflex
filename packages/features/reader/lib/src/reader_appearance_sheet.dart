@@ -249,18 +249,23 @@ class _LayeredAppearanceControls extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const _ThemeSection(),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.xl),
         Padding(
           padding: _sectionGutterInset,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _CompactSettingRows(onFont: onFont),
-              const SizedBox(height: AppSpacing.lg),
+              _TextSettingRows(onFont: onFont),
+              const SizedBox(height: AppSpacing.xl),
               AppSettingsSection(
                 title: l10n.readerTextAlignment,
                 child: const _AlignmentControl(),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              AppSettingsSection(
+                title: l10n.readerPageMargins,
+                child: const _MarginControl(),
               ),
               if (showPageTurnControls) ...[
                 const SizedBox(height: AppSpacing.lg),
@@ -614,11 +619,10 @@ class _TextSizeValueButton extends StatelessWidget {
   }
 }
 
-/// The font row, then text size, line spacing and margins. Each control
-/// takes exactly half the column, so its start edge meets the split of the
-/// two-option choices below. The three move below their labels together.
-class _CompactSettingRows extends StatelessWidget {
-  const _CompactSettingRows({required this.onFont});
+/// Typeface and text size stay together. Controls share the end half of the
+/// column, moving below their labels together when the text needs more room.
+class _TextSettingRows extends StatelessWidget {
+  const _TextSettingRows({required this.onFont});
 
   final VoidCallback onFont;
 
@@ -628,7 +632,6 @@ class _CompactSettingRows extends StatelessWidget {
     final rows = [
       (l10n.readerFontSize, const _FontSizeControl()),
       (l10n.readerLineSpacing, const _LineSpacingControl()),
-      (l10n.readerPageMargins, const _MarginControl()),
     ];
     return LayoutBuilder(
       builder: (context, constraints) {

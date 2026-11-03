@@ -34,6 +34,7 @@ import 'reader_chrome_labels.dart';
 import 'reader_chrome_progress_layout.dart';
 import 'reader_comic_surface.dart';
 import 'reader_contents_tabs.dart';
+import 'reader_control_styles.dart';
 import 'reader_device_font_scale.dart';
 import 'reader_directional_layout.dart';
 import 'reader_document_features.dart';

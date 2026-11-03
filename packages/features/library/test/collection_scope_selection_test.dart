@@ -118,119 +118,138 @@ void main() {
   }
 
   for (final locale in [const Locale('en'), const Locale('ar')]) {
-    testWidgets('picker rows, section titles and menu glyph sit on the 24dp '
-        'gutter ($locale)', (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final favourites = LibraryCollectionScope.favourites(sourceIds: ['a']);
-      const author = LibraryCollectionScope.smart(
-        type: LibraryCollectionScopeType.author,
-        id: 'author:readflex',
-        label: 'Readflex Tests',
-        sourceCount: 7,
-      );
-      final manual = LibraryCollectionScope.manual(
-        collection: LibraryCollection(
-          id: 'reading',
-          name: 'Reading',
-          sourceCount: 2,
-          createdAt: DateTime(2026),
-          updatedAt: DateTime(2026),
-        ),
-        sourceIds: const {'a', 'b'},
-      );
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          locale: locale,
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
-          supportedLocales: ReadflexSupportedLocales.locales,
-          home: Scaffold(
-            body: Builder(
-              builder: (context) => TextButton(
-                onPressed: () => showLibraryCollectionScopeSheet(
-                  context: context,
-                  state: LibraryState(
-                    collectionScopes: [favourites, manual, author],
-                    selectedCollectionScope: manual,
+    for (final windowSize in [
+      const Size(390, 844),
+      const Size(600, 480),
+      const Size(800, 1280),
+      const Size(844, 390),
+    ]) {
+      testWidgets('picker rows, section titles and menu glyph sit on the 24dp '
+          'gutter ($locale, $windowSize)', (tester) async {
+        tester.view.physicalSize = windowSize;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final favourites = LibraryCollectionScope.favourites(sourceIds: ['a']);
+        const author = LibraryCollectionScope.smart(
+          type: LibraryCollectionScopeType.author,
+          id: 'author:readflex',
+          label: 'Readflex Tests',
+          sourceCount: 7,
+        );
+        final manual = LibraryCollectionScope.manual(
+          collection: LibraryCollection(
+            id: 'reading',
+            name: 'Reading',
+            sourceCount: 2,
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          ),
+          sourceIds: const {'a', 'b'},
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            locale: locale,
+            localizationsDelegates:
+                ReadflexLocalizations.localizationsDelegates,
+            supportedLocales: ReadflexSupportedLocales.locales,
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => showLibraryCollectionScopeSheet(
+                    context: context,
+                    state: LibraryState(
+                      collectionScopes: [favourites, manual, author],
+                      selectedCollectionScope: manual,
+                    ),
+                    manageBuilder: (_, _, _, _) => const SizedBox(),
                   ),
-                  manageBuilder: (_, _, _, _) => const SizedBox(),
+                  child: const Text('Open'),
                 ),
-                child: const Text('Open'),
               ),
             ),
           ),
-        ),
-      );
-      await tester.tap(find.text('Open'));
-      await tester.pumpAndSettle();
-      final rtl = locale.languageCode == 'ar';
-      final sheet = tester.getRect(find.byType(BottomSheet));
-      double start(Rect r) => rtl ? sheet.right - r.right : r.left - sheet.left;
-      double end(Rect r) => rtl ? r.left - sheet.left : sheet.right - r.right;
-      final strings = tester.element(find.byType(BottomSheet)).l10n;
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        final rtl = locale.languageCode == 'ar';
+        final sheet = tester.getRect(find.byType(ActionBottomSheetLayout));
+        double start(Rect r) =>
+            rtl ? sheet.right - r.right : r.left - sheet.left;
+        double end(Rect r) => rtl ? r.left - sheet.left : sheet.right - r.right;
+        final strings = tester.element(find.byType(BottomSheet)).l10n;
 
-      final search = tester.getRect(find.byType(SearchField));
-      final title = tester.getRect(find.text(strings.libraryManualCollections));
-      final favouriteIcon = tester.getRect(
-        find.byIcon(AppIcons.collectionFavourites),
-      );
-      final authorIcon = tester.getRect(find.byIcon(AppIcons.author));
-      final menu = find.byKey(
-        const ValueKey('collectionScopeManage-manual-reading'),
-      );
-      final menuGlyph = tester.getRect(
-        find.descendant(of: menu, matching: find.byIcon(AppIcons.moreVertical)),
-      );
-      final pill = tester.getRect(
-        find.byKey(const ValueKey('collectionScopeSelection-manual-reading')),
-      );
-      expect(start(search), AppSpacing.xl);
-      expect(end(search), AppSpacing.xl);
-      expect(start(title), closeTo(AppSpacing.xl, .01));
-      expect(start(favouriteIcon), closeTo(AppSpacing.xl, .01));
-      expect(start(authorIcon), closeTo(AppSpacing.xl, .01));
-      expect(end(menuGlyph), closeTo(AppSpacing.xl, .01));
-      expect(tester.getSize(menu), const Size.square(48));
-      expect(start(pill), AppSpacing.xl - AppSpacing.sm);
-      expect(end(pill), AppSpacing.xl - AppSpacing.sm);
-      // Counts end 12dp before the 48dp slot whose glyph is centered.
-      final managedCount = tester.getRect(find.text('2'));
-      final plainCount = tester.getRect(find.text('7'));
-      expect(
-        end(managedCount),
-        closeTo(
-          AppSpacing.xl +
-              AppIconSize.sm +
-              AppSizes.iconActionOutset +
-              AppSpacing.md,
-          .01,
-        ),
-      );
-      expect(end(plainCount), closeTo(end(managedCount), .01));
+        final search = tester.getRect(find.byType(SearchField));
+        final title = tester.getRect(
+          find.text(strings.libraryManualCollections),
+        );
+        final favouriteIcon = tester.getRect(
+          find.byIcon(AppIcons.collectionFavourites),
+        );
+        final authorIcon = tester.getRect(find.byIcon(AppIcons.author));
+        final menu = find.byKey(
+          const ValueKey('collectionScopeManage-manual-reading'),
+        );
+        final menuGlyph = tester.getRect(
+          find.descendant(
+            of: menu,
+            matching: find.byIcon(AppIcons.moreVertical),
+          ),
+        );
+        final pill = tester.getRect(
+          find.byKey(const ValueKey('collectionScopeSelection-manual-reading')),
+        );
+        expect(start(search), AppSpacing.xl);
+        expect(end(search), AppSpacing.xl);
+        expect(start(title), closeTo(AppSpacing.xl, .01));
+        expect(end(title), closeTo(AppSpacing.xl, .01));
+        expect(start(favouriteIcon), closeTo(AppSpacing.xl, .01));
+        expect(start(authorIcon), closeTo(AppSpacing.xl, .01));
+        expect(end(menuGlyph), closeTo(AppSpacing.xl, .01));
+        final iconSize = AppWindowSize.isMediumSize(windowSize)
+            ? AppIconSize.md
+            : AppIconSize.sm;
+        expect(menuGlyph.width, iconSize);
+        expect(tester.getSize(menu), const Size.square(48));
+        expect(start(pill), AppSpacing.xl - AppSpacing.sm);
+        expect(end(pill), AppSpacing.xl - AppSpacing.sm);
+        // Counts end 12dp before the 48dp slot whose glyph is centered.
+        final managedCount = tester.getRect(find.text('2'));
+        final plainCount = tester.getRect(find.text('7'));
+        expect(
+          end(managedCount),
+          closeTo(
+            AppSpacing.xl +
+                iconSize +
+                (AppSizes.buttonHeight - iconSize) / 2 +
+                AppSpacing.md,
+            .01,
+          ),
+        );
+        expect(end(plainCount), closeTo(end(managedCount), .01));
 
-      // Menu glyph colour follows the row's selection.
-      final colors = Theme.of(tester.element(menu)).colorScheme;
-      expect(
-        tester.widget<AppPlainIconButton>(menu).color,
-        colors.selectedControlForeground,
-      );
-      expect(
-        tester
-            .widget<AppPlainIconButton>(
-              find.byKey(
-                const ValueKey(
-                  'collectionScopeManage-favourites-readflex:favourites',
+        // Menu glyph colour follows the row's selection.
+        final colors = Theme.of(tester.element(menu)).colorScheme;
+        expect(
+          tester.widget<AppPlainIconButton>(menu).color,
+          colors.selectedControlForeground,
+        );
+        expect(
+          tester
+              .widget<AppPlainIconButton>(
+                find.byKey(
+                  const ValueKey(
+                    'collectionScopeManage-favourites-readflex:favourites',
+                  ),
                 ),
-              ),
-            )
-            .color,
-        colors.onSurfaceVariant,
-      );
-      expect(tester.takeException(), isNull);
-    });
+              )
+              .color,
+          colors.onSurfaceVariant,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
   }
 
   group('Library row', () {

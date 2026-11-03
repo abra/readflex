@@ -39,12 +39,13 @@ void main() {
     WidgetTester tester, {
     LibraryState? state,
     double width = 390,
+    double height = 844,
     double textScale = 1,
     Locale locale = const Locale('en'),
     ThemeData? theme,
     bool isOffline = false,
   }) async {
-    tester.view.physicalSize = Size(width, 844);
+    tester.view.physicalSize = Size(width, height);
     tester.view.devicePixelRatio = 1;
     tester.platformDispatcher.textScaleFactorTestValue = textScale;
     addTearDown(tester.view.resetPhysicalSize);
@@ -207,46 +208,112 @@ void main() {
       );
     });
 
-    for (final locale in [const Locale('en'), const Locale('ar')]) {
-      testWidgets('"⋮" is the only action; its glyph ends on the 16dp gutter '
-          '($locale)', (tester) async {
-        final strings = await pumpHeader(
-          tester,
-          locale: locale,
-          isOffline: true,
-        );
-        final rtl = locale.languageCode == 'ar';
-        final display = tester.getRect(_displayButton);
-        final displayGlyph = tester.getRect(
-          find.descendant(
-            of: _displayButton,
-            matching: find.byIcon(AppIcons.moreVertical),
-          ),
-        );
-        final search = tester.getRect(find.byType(SearchField));
-        final title = tester.getRect(titleText(strings.libraryTitle));
-        final offline = tester.getRect(find.byIcon(AppIcons.offline));
+    testWidgets('wide headers name Display options and keep its tooltip', (
+      tester,
+    ) async {
+      final strings = await pumpHeader(tester, width: 1032);
+      expect(find.text(strings.libraryDisplayOptions), findsOneWidget);
+      expect(find.byTooltip(strings.libraryDisplayOptions), findsOneWidget);
+      final target = tester.getRect(_displayButton);
+      expect(target.width, greaterThan(AppSizes.buttonHeight));
+      expect(target.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
+      expect(tester.takeException(), isNull);
+    });
 
-        expect(display.size, const Size.square(48));
-        expect(search.left, AppSpacing.lg);
-        expect(search.right, 390 - AppSpacing.lg);
-        if (rtl) {
-          expect(displayGlyph.left, closeTo(AppSpacing.lg, .01));
-          expect(title.right, closeTo(390 - AppSpacing.lg, .01));
-          expect(offline.right, lessThan(title.left));
-          expect(offline.left, greaterThan(display.right));
-        } else {
-          expect(displayGlyph.right, closeTo(390 - AppSpacing.lg, .01));
-          expect(
-            display.right,
-            closeTo(390 - AppSpacing.lg + AppSizes.iconActionOutset, .01),
-          );
-          expect(title.left, closeTo(AppSpacing.lg, .01));
-          expect(offline.left, greaterThan(title.right));
-          expect(offline.right, lessThan(display.left));
+    for (final size in [
+      const Size(390, 844),
+      const Size(844, 390),
+      const Size(800, 1280),
+      const Size(1280, 800),
+    ]) {
+      for (final locale in [const Locale('en'), const Locale('ar')]) {
+        for (final scale in [1.0, 2.0]) {
+          testWidgets('header controls fit $size / $locale / $scale', (
+            tester,
+          ) async {
+            final strings = await pumpHeader(
+              tester,
+              state: LibraryState(sources: [_book('a')]),
+              width: size.width,
+              height: size.height,
+              locale: locale,
+              textScale: scale,
+            );
+            final medium = size.width >= 600 && size.height >= 480;
+            final glyph = find.descendant(
+              of: _displayButton,
+              matching: find.byIcon(AppIcons.settings),
+            );
+            expect(
+              tester.widget<Icon>(glyph).size,
+              medium ? AppIconSize.md : AppIconSize.sm,
+            );
+            final subtitle = tester.widget<Text>(
+              find.byKey(const ValueKey('libraryHeaderItemCount')),
+            );
+            final theme = Theme.of(tester.element(_displayButton));
+            expect(
+              subtitle.style!.fontSize,
+              medium
+                  ? theme.textTheme.bodyMedium!.fontSize
+                  : theme.textTheme.bodySmall!.fontSize,
+            );
+            expect(subtitle.data, strings.libraryItemCount(1));
+            final target = tester.getRect(_displayButton);
+            expect(target.width, greaterThanOrEqualTo(48));
+            expect(target.height, greaterThanOrEqualTo(48));
+            expect(target.left, greaterThanOrEqualTo(0));
+            expect(target.right, lessThanOrEqualTo(size.width));
+            expect(_displayButton.hitTestable(), findsOneWidget);
+            expect(tester.takeException(), isNull);
+          });
         }
-        expect(tester.takeException(), isNull);
-      });
+      }
+    }
+
+    for (final locale in [const Locale('en'), const Locale('ar')]) {
+      testWidgets(
+        'Display settings is the only action; its glyph ends on the 16dp gutter '
+        '($locale)',
+        (tester) async {
+          final strings = await pumpHeader(
+            tester,
+            locale: locale,
+            isOffline: true,
+          );
+          final rtl = locale.languageCode == 'ar';
+          final display = tester.getRect(_displayButton);
+          final displayGlyph = tester.getRect(
+            find.descendant(
+              of: _displayButton,
+              matching: find.byIcon(AppIcons.settings),
+            ),
+          );
+          final search = tester.getRect(find.byType(SearchField));
+          final title = tester.getRect(titleText(strings.libraryTitle));
+          final offline = tester.getRect(find.byIcon(AppIcons.offline));
+
+          expect(display.size, const Size.square(48));
+          expect(search.left, AppSpacing.lg);
+          expect(search.right, 390 - AppSpacing.lg);
+          if (rtl) {
+            expect(displayGlyph.left, closeTo(AppSpacing.lg, .01));
+            expect(title.right, closeTo(390 - AppSpacing.lg, .01));
+            expect(offline.right, lessThan(title.left));
+            expect(offline.left, greaterThan(display.right));
+          } else {
+            expect(displayGlyph.right, closeTo(390 - AppSpacing.lg, .01));
+            expect(
+              display.right,
+              closeTo(390 - AppSpacing.lg + AppSizes.iconActionOutset, .01),
+            );
+            expect(title.left, closeTo(AppSpacing.lg, .01));
+            expect(offline.left, greaterThan(title.right));
+            expect(offline.right, lessThan(display.left));
+          }
+          expect(tester.takeException(), isNull);
+        },
+      );
     }
 
     for (final theme in [AppTheme.light(), AppTheme.dark()]) {
@@ -442,7 +509,7 @@ void main() {
         final displayGlyph = tester.getRect(
           find.descendant(
             of: _displayButton,
-            matching: find.byIcon(AppIcons.moreVertical),
+            matching: find.byIcon(AppIcons.settings),
           ),
         );
         expect(display.bottom, lessThanOrEqualTo(title.top));

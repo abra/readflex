@@ -429,13 +429,14 @@ void main() {
         await open(tester);
         await tester.tap(picker);
         await tester.pumpAndSettle();
+        final sheet = tester.getRect(find.byType(BottomSheet));
         final option = find.byKey(ValueKey('libraryLanguageOption-$code'));
         await tester.ensureVisible(option);
         await tester.tap(option);
         await tester.pumpAndSettle();
         expect(option.hitTestable(), findsOneWidget);
+        expect(tester.getRect(find.byType(BottomSheet)), sheet);
         final l10n = tester.element(option).l10n;
-        final sheet = tester.getRect(find.byType(BottomSheet));
         if (exit == 'system back') {
           await tester.binding.handlePopRoute();
         } else {
@@ -461,9 +462,17 @@ void main() {
         } else {
           expect(picker.hitTestable(), findsOneWidget);
           expect(option, findsNothing);
-          expect(tester.getRect(find.byType(BottomSheet)), sheet);
+          // Back adopts translated Display controls at their natural height.
+          expect(
+            tester.getBottomLeft(find.byType(ActionBottomSheetLayout)).dy -
+                tester.getBottomLeft(picker).dy,
+            closeTo(AppSpacing.lg, .01),
+          );
+          final localizedSheet = tester.getRect(find.byType(BottomSheet));
+          expect(localizedSheet.bottom, sheet.bottom);
           await tester.tap(picker);
           await tester.pumpAndSettle();
+          expect(tester.getRect(find.byType(BottomSheet)), localizedSheet);
           expect(
             find.descendant(of: option, matching: find.byIcon(AppIcons.check)),
             findsOneWidget,

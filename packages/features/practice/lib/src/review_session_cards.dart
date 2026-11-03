@@ -31,18 +31,7 @@ class ReviewWordCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Semantics(
-          header: true,
-          child: Text(
-            entry.word,
-            key: const ValueKey('reviewWord'),
-            textDirection: direction,
-            style: AppTypography.serif(
-              textStyle: text.displaySmall,
-              color: colors.onSurface,
-            ),
-          ),
-        ),
+        _ReviewWordHeading(word: entry.word, direction: direction),
         if (!metadata.isEmpty) ...[
           const SizedBox(height: AppSpacing.xs),
           metadata,
@@ -53,6 +42,15 @@ class ReviewWordCard extends StatelessWidget {
             key: const ValueKey('reviewSentence'),
             sentence: sentence,
             word: entry.word,
+          ),
+        ],
+        if (item.sourceTitle case final title?) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            title,
+            key: const ValueKey('reviewWordSource'),
+            textDirection: _directionOf(title),
+            style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
           ),
         ],
         if (revealed) ...[
@@ -97,6 +95,37 @@ class ReviewWordCard extends StatelessWidget {
       ],
     );
   }
+}
+
+class _ReviewWordHeading extends StatelessWidget {
+  const _ReviewWordHeading({required this.word, required this.direction});
+
+  final String word;
+  final TextDirection direction;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    child: LayoutBuilder(
+      builder: (context, constraints) => Text(
+        word,
+        key: const ValueKey('reviewWord'),
+        textDirection: direction,
+        style: appFitLongestWord(
+          AppTypography.serif(
+            textStyle: context.text.displaySmall,
+            color: context.colors.onSurface,
+          ),
+          text: word,
+          maxWidth: constraints.maxWidth,
+          minFontSize: context.text.titleLarge.fontSize!,
+          textScaler: MediaQuery.textScalerOf(context),
+          textDirection: direction,
+          locale: Localizations.maybeLocaleOf(context),
+        ),
+      ),
+    ),
+  );
 }
 
 /// The sentence with every occurrence of the word in bold.

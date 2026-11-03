@@ -118,9 +118,8 @@ class LibraryBody extends StatelessWidget {
               final continueReadingSource = state.continueReadingCardSource;
               final practice = state.practice;
               final onPracticePressed = this.onPracticePressed;
-              // Appears after the first save and then stays: a stable entry
-              // up here besides the floating action, only in the default
-              // view like the card.
+              // A secondary entry below reading, present after the first save
+              // in the default view, alongside the floating Practice action.
               final leading =
                   state.isDefaultView &&
                       practice != null &&

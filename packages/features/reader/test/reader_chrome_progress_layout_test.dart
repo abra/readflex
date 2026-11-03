@@ -38,5 +38,21 @@ void main() {
         );
       }
     });
+
+    test('nonlinear scaling follows the rendered phone or tablet role', () {
+      const scaler = _NonlinearTextScaler();
+      expect(readerProgressLabelsStack(scaler, fontSize: 13), isTrue);
+      expect(readerProgressLabelsStack(scaler, fontSize: 15), isFalse);
+    });
   });
+}
+
+class _NonlinearTextScaler extends TextScaler {
+  const _NonlinearTextScaler();
+
+  @override
+  double scale(double fontSize) => fontSize * (fontSize < 14 ? 1.4 : 1.2);
+
+  @override
+  double get textScaleFactor => 1.4;
 }

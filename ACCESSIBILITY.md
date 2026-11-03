@@ -53,6 +53,13 @@ to the feature package unless it is genuinely reusable UI code.
 
 ## Tests
 
+Control readability follows the current window, not the device model. Windows
+at least 600dp wide and 480dp tall use 24dp default utility glyphs and larger
+existing text roles for important control captions. Explicit icon sizes and
+system text scaling remain authoritative. Narrow windows retain compact roles.
+Filter chips reserve at least 48dp in both hit-target dimensions, including
+short labels; their visible pill can stay compact. Larger text may grow it.
+
 Sheet headings use a shared heading semantics node and a minimum 48dp title
 row. Close and trailing actions must remain reachable with enlarged text.
 `AppSheetActions` stacks long localized labels rather than shrinking the font;
@@ -73,6 +80,9 @@ Explicit Close stays in the header: drag, fling and pull-to-close are
 shortcuts, never the only way out. With large text the sheet opens at full
 height, and on a screen too short for its content the content scrolls as a
 whole instead of clipping.
+On expanded windows the same content occupies a bounded trailing panel;
+RTL mirrors its edge, resizing retains query/focus, and vertical list gestures
+only scroll the list. Close and the dismissible scrim remain available.
 
 The Library's bottom capsule keeps each control its own node: the collection
 switcher merges into one button (label Choose collection, value the shown
@@ -125,7 +135,9 @@ touch behavior or screen-reader announcements.
 Onboarding is one static screen: the app icon is decorative,
 the heading is a header that shrinks rather than break a word at large text,
 each feature row reads as one item, the rows mirror in RTL, nothing animates,
-and both actions stay outside the scrolling content at large text.
+and both actions stay outside the scrolling content at large text on narrow
+windows. Expanded windows pair the greeting/actions with a feature card and
+scroll the whole workspace when height is constrained.
 The reader's one-time selection tip is a live region with a 48dp "Got it"; its
 inks keep 4.5:1 on the inverse plate, "Got it" moves below the message at
 large text, and the tip appears without animation under reduced motion. Errors do not expire automatically

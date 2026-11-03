@@ -1,40 +1,5 @@
 part of 'reader_screen.dart';
 
-/// Toolbar bookmark action: the shared plain icon button with the custom
-/// filled/outline glyph. The glyph paints its own color, so the disabled
-/// dimming is applied here rather than by the button's foreground.
-class _ReaderBookmarkIconButton extends StatelessWidget {
-  const _ReaderBookmarkIconButton({
-    required this.active,
-    required this.tooltip,
-    required this.foregroundColor,
-    required this.activeColor,
-    this.onPressed,
-  });
-
-  final bool active;
-  final String tooltip;
-  final Color foregroundColor;
-  final Color activeColor;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final disabled = onPressed == null;
-    final color = active ? activeColor : foregroundColor;
-    return AppPlainIconButton(
-      iconWidget: _ReaderBookmarkGlyph(
-        filled: active,
-        color: disabled ? color.withValues(alpha: 0.38) : color,
-        size: AppIconSize.md,
-      ),
-      tooltip: tooltip,
-      color: color,
-      onPressed: onPressed,
-    );
-  }
-}
-
 class _ReaderBookmarkGlyph extends StatelessWidget {
   const _ReaderBookmarkGlyph({
     required this.filled,
@@ -342,6 +307,7 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
     final borderColor = cs.outlineVariant.withValues(alpha: 0.72);
     final foreground = cs.onSurface.withValues(alpha: 0.74);
     final motion = context.motion(AppMotion.short);
+    final expanded = AppWindowSize.isWide(context);
     // The pill sits at the trailing edge, so it slides out toward that edge.
     final hiddenOffset = Directionality.of(context) == TextDirection.rtl
         ? const Offset(-0.18, 0)
@@ -349,7 +315,7 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
 
     return PositionedDirectional(
       top: 0,
-      end: AppSpacing.lg,
+      end: expanded ? AppSpacing.sm : AppSpacing.lg,
       bottom: 0,
       child: SafeArea(
         top: false,
@@ -377,11 +343,13 @@ class _ReaderBrightnessChromeState extends State<_ReaderBrightnessChrome> {
                     boxShadow: AppShadows.panelUp,
                   ),
                   child: SizedBox(
-                    width: _kReaderBrightnessChromeWidth,
+                    width: expanded
+                        ? AppSizes.buttonHeight
+                        : _kReaderBrightnessChromeWidth,
                     height: _kReaderBrightnessChromeHeight,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xs,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: expanded ? 0 : AppSpacing.xs,
                         vertical: AppSpacing.sm,
                       ),
                       child: Column(
@@ -449,7 +417,6 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = context.colors;
-    final text = context.text;
     final active = !usesSystemBrightness;
     final radius = BorderRadius.circular(AppRadius.md);
 
@@ -480,7 +447,7 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
                   child: usesSystemBrightness
                       ? Icon(
                           AppIcons.deviceMode,
-                          size: AppIconSize.sm,
+                          size: readerControlIconSize(context),
                           color: cs.onSurfaceVariant,
                         )
                       : FittedBox(
@@ -488,7 +455,7 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
                           child: Text(
                             label,
                             maxLines: 1,
-                            style: text.labelSmall.copyWith(
+                            style: readerControlCaptionStyle(context).copyWith(
                               color: cs.selectedControlForeground,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.1,
@@ -589,13 +556,13 @@ const _kReaderTopChromeLineHeight = AppSizes.buttonHeight;
 /// scrolled text never runs behind a label.
 const _kReaderChromeBackdropFade = AppSpacing.lg;
 
-const _kReaderChromeCapsuleHeight = 60.0;
+const _kReaderActionStripHeight = 60.0;
 
-/// Keeps the capsule a compact control on landscape phones and tablets.
+/// Keeps the reading dock compact on landscape phones and tablets.
 const _kReaderBottomChromeMaxWidth = 560.0;
 
-/// Labels sit inside the capsule's rounded ends: the 16dp gutter plus 12dp.
-const _kReaderProgressRowInset = AppSpacing.lg + AppSpacing.md;
+/// Progress has a little more inset than the action targets below it.
+const _kReaderProgressRowInset = AppSpacing.md;
 const _kReaderProgressTrackHeight = 3.0;
 
 /// Keeps article progress visible below the title, or at the safe top edge
@@ -739,7 +706,7 @@ class _ReaderTopChrome extends StatelessWidget {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.center,
-      style: context.text.readerChromeLabel.copyWith(color: textColor),
+      style: readerChromeLabelStyle(context).copyWith(color: textColor),
     );
 
     return Positioned(
@@ -964,12 +931,12 @@ class ReaderBottomChromeDriver extends StatelessWidget {
             sourceType: snapshot.sourceType,
             pageProgressionRtl: snapshot.pageProgressionRtl,
             format: snapshot.format,
-            inkColor: readerChromeInkColor(readerTheme),
-            trackColor: readerChromeTrackColor(readerTheme),
+            inkColor: colors.onSurfaceVariant,
+            trackColor: colors.outlineVariant,
             formatPageOfTotal: l10n.readerPageOfTotal,
             onSeekFraction: onSeekFraction,
           ),
-          capsule: _ReaderChromeCapsule(
+          actions: _ReaderChromeActionStrip(
             foregroundColor: colors.onSurface,
             actionColor: context.actionForeground,
             bookmarkActive: snapshot.currentPageBookmarked,
@@ -999,7 +966,6 @@ class ReaderBottomChromeDriver extends StatelessWidget {
             onBookmarkPressed: onBookmarkPressed,
             onSearchPressed: onSearchPressed,
           ),
-          pageColor: readerTheme.backgroundColor,
         );
       },
     );
@@ -1103,20 +1069,17 @@ class _ReaderBottomChromeSnapshot {
   }
 }
 
-/// Bottom reader chrome: the progress row on the page above a floating
-/// action capsule. Both slide and fade together.
+/// One floating reading dock, keeping status, seeking and actions together.
 class _ReaderBottomChrome extends StatelessWidget {
   const _ReaderBottomChrome({
     required this.visible,
     required this.progress,
-    required this.capsule,
-    required this.pageColor,
+    required this.actions,
   });
 
   final bool visible;
   final Widget progress;
-  final Widget capsule;
-  final Color pageColor;
+  final Widget actions;
 
   @override
   Widget build(BuildContext context) {
@@ -1137,63 +1100,32 @@ class _ReaderBottomChrome extends StatelessWidget {
             opacity: visible ? 1 : 0,
             duration: motion,
             curve: chromeAnimCurve,
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: _ReaderPageBackdrop(
-                      color: pageColor,
-                      fadeAtTop: true,
-                    ),
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: Center(
+                heightFactor: 1,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: _kReaderBottomChromeMaxWidth,
                   ),
-                ),
-                SafeArea(
-                  top: false,
-                  bottom: false,
-                  child: Center(
-                    heightFactor: 1,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: _kReaderBottomChromeMaxWidth,
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: _kReaderChromeBackdropFade),
-                          // Toasts float above the slider and the capsule
-                          // while they show; the hidden chrome stays mounted.
-                          ToastAvoidArea(
-                            enabled: visible,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: _kReaderProgressRowInset,
-                                  ),
-                                  child: progress,
-                                ),
-                                const SizedBox(height: AppSpacing.sm),
-                                Padding(
-                                  padding: EdgeInsets.fromLTRB(
-                                    AppSpacing.lg,
-                                    0,
-                                    AppSpacing.lg,
-                                    appBottomSafeInset(context),
-                                  ),
-                                  child: capsule,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      appBottomSafeInset(context),
+                    ),
+                    child: ToastAvoidArea(
+                      enabled: visible,
+                      child: _ReaderChromeDock(
+                        progress: progress,
+                        actions: actions,
                       ),
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -1202,9 +1134,55 @@ class _ReaderBottomChrome extends StatelessWidget {
   }
 }
 
-/// Floating pill of equal 48dp action slots.
-class _ReaderChromeCapsule extends StatelessWidget {
-  const _ReaderChromeCapsule({
+class _ReaderChromeDock extends StatelessWidget {
+  const _ReaderChromeDock({required this.progress, required this.actions});
+
+  final Widget progress;
+  final Widget actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final radius = BorderRadius.circular(AppRadius.xl);
+    return DecoratedBox(
+      key: const ValueKey('readerChromeDock'),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: radius,
+        border: Border.all(
+          color: colors.outlineVariant,
+          width: 1 / MediaQuery.devicePixelRatioOf(context),
+        ),
+        boxShadow: AppShadows.popover,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: radius,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                _kReaderProgressRowInset,
+                AppSpacing.md,
+                _kReaderProgressRowInset,
+                AppSpacing.sm,
+              ),
+              child: progress,
+            ),
+            actions,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Equal 48dp action targets, with captions when a wide window has room.
+class _ReaderChromeActionStrip extends StatelessWidget {
+  const _ReaderChromeActionStrip({
     required this.foregroundColor,
     required this.actionColor,
     required this.bookmarkActive,
@@ -1248,8 +1226,10 @@ class _ReaderChromeCapsule extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final verticalPageTurn = pageTurnStyle == ReaderPageTurnStyle.vertical;
-    final slots = <Widget>[
-      AppPlainIconButton(
+    final bookmarkColor = bookmarkActive ? actionColor : foregroundColor;
+    final slots = <_ReaderChromeActionData>[
+      _ReaderChromeActionData(
+        label: l10n.readerBack,
         icon: AppIcons.back,
         iconSize: AppIconSize.lg,
         tooltip: l10n.readerBack,
@@ -1257,27 +1237,29 @@ class _ReaderChromeCapsule extends StatelessWidget {
         onPressed: onBack,
       ),
       if (showTocAction)
-        AppPlainIconButton(
+        _ReaderChromeActionData(
+          label: l10n.readerContents,
           icon: AppIcons.toc,
-          iconSize: AppIconSize.md,
           tooltip: l10n.readerContents,
           color: foregroundColor,
           onPressed: onTocPressed,
         ),
       if (showFontAction)
-        AppPlainIconButton(
+        _ReaderChromeActionData(
+          label: l10n.readerAppearanceTitle,
           icon: AppIcons.font,
-          iconSize: AppIconSize.md,
           tooltip: fontActionTooltip,
           color: foregroundColor,
           onPressed: onFontPressed,
         ),
       if (showPageTurnAction)
-        AppPlainIconButton(
+        _ReaderChromeActionData(
+          label: verticalPageTurn
+              ? l10n.readerPageTurnVerticalShort
+              : l10n.readerPageTurnHorizontalShort,
           icon: verticalPageTurn
               ? AppIcons.pageTurnVertical
               : AppIcons.pageTurnHorizontal,
-          iconSize: AppIconSize.md,
           tooltip: verticalPageTurn
               ? l10n.readerPageTurnVertical
               : l10n.readerPageTurnHorizontal,
@@ -1285,32 +1267,147 @@ class _ReaderChromeCapsule extends StatelessWidget {
           onPressed: onPageTurnPressed,
         ),
       if (showBookmarkAction)
-        _ReaderBookmarkIconButton(
-          active: bookmarkActive,
+        _ReaderChromeActionData(
+          label: l10n.readerBookmark,
+          glyph: _ReaderBookmarkGlyph(
+            filled: bookmarkActive,
+            color: onBookmarkPressed == null
+                ? bookmarkColor.withValues(alpha: 0.38)
+                : bookmarkColor,
+            size: AppIconSize.md,
+          ),
           tooltip: bookmarkActive
               ? l10n.readerRemoveBookmark
               : l10n.readerBookmark,
-          foregroundColor: foregroundColor,
-          activeColor: actionColor,
+          color: bookmarkColor,
           onPressed: onBookmarkPressed,
         ),
       if (showSearchAction)
-        AppPlainIconButton(
+        _ReaderChromeActionData(
+          label: l10n.readerSearchAction,
           icon: AppIcons.search,
-          iconSize: AppIconSize.md,
           tooltip: searchActionTooltip,
           color: foregroundColor,
           onPressed: searchActionEnabled ? onSearchPressed : null,
         ),
     ];
-
-    return AppFloatingCapsule(
+    final labelStyle = readerControlCaptionStyle(context);
+    final scaledLabelSize = MediaQuery.textScalerOf(
+      context,
+    ).scale(labelStyle.fontSize!);
+    final showLabels =
+        AppWindowSize.isWide(context) &&
+        scaledLabelSize <= labelStyle.fontSize! * 1.3;
+    final largestIcon = slots.fold(
+      0.0,
+      (size, action) => math.max(size, action.iconSize),
+    );
+    // Two translated lines keep their scaled height; 80dp is only a minimum.
+    final labeledHeight = math.max(
+      AppSizes.buttonHeight + AppSpacing.xl + AppSpacing.sm,
+      largestIcon +
+          AppSpacing.xs +
+          scaledLabelSize * labelStyle.height! * 2 +
+          AppSpacing.xs * 2,
+    );
+    return SizedBox(
       key: const ValueKey('readerChromeCapsule'),
-      height: _kReaderChromeCapsuleHeight,
+      height: showLabels ? labeledHeight : _kReaderActionStripHeight,
       child: Row(
         children: [
-          for (final slot in slots) Expanded(child: Center(child: slot)),
+          for (final action in slots)
+            Expanded(
+              child: _ReaderChromeAction(
+                action: action,
+                showLabel: showLabels,
+              ),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+@immutable
+class _ReaderChromeActionData {
+  const _ReaderChromeActionData({
+    required this.label,
+    required this.tooltip,
+    required this.color,
+    required this.onPressed,
+    this.icon,
+    this.glyph,
+    this.iconSize = AppIconSize.md,
+  }) : assert((icon == null) != (glyph == null));
+
+  final String label;
+  final String tooltip;
+  final Color color;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final Widget? glyph;
+  final double iconSize;
+}
+
+class _ReaderChromeAction extends StatelessWidget {
+  const _ReaderChromeAction({
+    required this.action,
+    required this.showLabel,
+  });
+
+  final _ReaderChromeActionData action;
+  final bool showLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!showLabel) {
+      return Center(
+        child: AppPlainIconButton(
+          icon: action.icon,
+          iconWidget: action.glyph,
+          iconSize: action.iconSize,
+          tooltip: action.tooltip,
+          color: action.color,
+          onPressed: action.onPressed,
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xs),
+      child: Tooltip(
+        message: action.tooltip,
+        child: TextButton(
+          onPressed: action.onPressed,
+          style: TextButton.styleFrom(
+            foregroundColor: action.color,
+            disabledForegroundColor: action.color.withValues(alpha: 0.38),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+            ),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                action.glyph ?? Icon(action.icon, size: action.iconSize),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  action.label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: readerControlCaptionStyle(context).copyWith(
+                    color: action.onPressed == null
+                        ? action.color.withValues(alpha: 0.38)
+                        : action.color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1462,7 +1559,8 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
     final progressionDirection = widget.pageProgressionRtl
         ? TextDirection.rtl
         : TextDirection.ltr;
-    final text = context.text;
+    final labelStyle = readerChromeLabelStyle(context);
+    final numberStyle = readerChromeNumberStyle(context);
     final progressTrack = showProgressSlider
         ? SliderTheme(
             data: SliderThemeData(
@@ -1511,7 +1609,10 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
             ),
           );
 
-    final stacked = readerProgressLabelsStack(MediaQuery.textScalerOf(context));
+    final stacked = readerProgressLabelsStack(
+      MediaQuery.textScalerOf(context),
+      fontSize: labelStyle.fontSize!,
+    );
     final startText = widget.startLabel.isEmpty
         ? null
         : Text(
@@ -1522,7 +1623,7 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
                 : progressionDirection,
             maxLines: stacked ? 2 : 1,
             overflow: TextOverflow.ellipsis,
-            style: text.readerChromeLabel.copyWith(color: widget.inkColor),
+            style: labelStyle.copyWith(color: widget.inkColor),
           );
     final pageText = Text(
       pageLabel,
@@ -1531,18 +1632,16 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
       textAlign: widget.pageProgressionRtl ? TextAlign.left : TextAlign.right,
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
-      style: text.readerChromeNumber.copyWith(color: widget.inkColor),
+      style: numberStyle.copyWith(color: widget.inkColor),
     );
 
-    // The slider spans the row right above the capsule, under the thumb; the
-    // labels read below it.
+    // Read status first, then seek, then reach the actions below it.
     return Directionality(
       textDirection: progressionDirection,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(height: AppSizes.buttonHeight, child: progressTrack),
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: readerProgressTrackInset,
@@ -1553,13 +1652,14 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
               stacked: stacked,
             ),
           ),
+          SizedBox(height: AppSizes.buttonHeight, child: progressTrack),
         ],
       ),
     );
   }
 }
 
-/// The line under the slider: the chapter (or time left) at the start, the
+/// Status above the slider: the chapter (or time left) at the start, the
 /// page label at the end. With large text each takes its own line.
 class _ReaderProgressLabels extends StatelessWidget {
   const _ReaderProgressLabels({

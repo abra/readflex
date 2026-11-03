@@ -28,8 +28,9 @@ class ReviewSessionTopBar extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.lg - AppSizes.iconActionOutset,
+          padding: EdgeInsetsDirectional.symmetric(
+            horizontal:
+                AppSpacing.lg - AppPlainIconButton.defaultIconOutsetOf(context),
           ),
           child: Row(
             children: [
@@ -45,7 +46,11 @@ class ReviewSessionTopBar extends StatelessWidget {
                   l10n.practiceCardPosition(position, total),
                   key: const ValueKey('reviewPosition'),
                   textAlign: TextAlign.center,
-                  style: context.text.screenCounter,
+                  style: AppWindowSize.isMedium(context)
+                      ? context.text.screenCounter.copyWith(
+                          fontSize: context.text.labelLarge.fontSize,
+                        )
+                      : context.text.screenCounter,
                 ),
               ),
               MenuAnchor(
@@ -120,84 +125,112 @@ class ReviewSessionControls extends StatelessWidget {
     return Material(
       color: context.colors.surface,
       child: AppBottomSafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.sm,
-            AppSpacing.lg,
-            0,
+        child: AppContentFrame(
+          maxWidth: _reviewCardMaxWidth + AppSpacing.lg * 2,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              0,
+            ),
+            child: !revealed
+                ? FilledButton(
+                    key: const ValueKey('reviewShowAnswer'),
+                    onPressed: onReveal,
+                    child: AppButtonLabel(l10n.practiceShowAnswer),
+                  )
+                : switch (item) {
+                    PracticeWordItem() => _WordRatingControls(
+                      intervals: intervals,
+                      onRated: onRated,
+                    ),
+                    PracticeHighlightItem() => Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          spacing: AppSpacing.sm,
+                          children: [
+                            Expanded(
+                              child: ReviewRatingButton(
+                                key: const ValueKey('reviewRate-keep'),
+                                label: l10n.practiceKeep,
+                                interval: intervals[Rating.good],
+                                color: context.appColors.ratingGood,
+                                onPressed: () => onRated(Rating.good),
+                              ),
+                            ),
+                            Expanded(
+                              child: ReviewRatingButton(
+                                key: const ValueKey('reviewRate-showLess'),
+                                label: l10n.practiceShowLess,
+                                interval: intervals[Rating.easy],
+                                color: context.appColors.ratingEasy,
+                                onPressed: () => onRated(Rating.easy),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (onOpenInSource != null)
+                          TextButton(
+                            key: const ValueKey('reviewOpenInBook'),
+                            onPressed: onOpenInSource,
+                            child: AppButtonLabel(l10n.practiceOpenInBook),
+                          ),
+                      ],
+                    ),
+                  },
           ),
-          child: !revealed
-              ? FilledButton(
-                  key: const ValueKey('reviewShowAnswer'),
-                  onPressed: onReveal,
-                  child: AppButtonLabel(l10n.practiceShowAnswer),
-                )
-              : switch (item) {
-                  PracticeWordItem() => Row(
-                    spacing: AppSpacing.sm,
-                    children: [
-                      for (final rating in const [
-                        Rating.again,
-                        Rating.hard,
-                        Rating.good,
-                      ])
-                        Expanded(
-                          child: ReviewRatingButton(
-                            key: ValueKey('reviewRate-${rating.name}'),
-                            label: switch (rating) {
-                              Rating.again => l10n.practiceRateAgain,
-                              Rating.hard => l10n.practiceRateHard,
-                              _ => l10n.practiceRateGood,
-                            },
-                            interval: intervals[rating],
-                            color: switch (rating) {
-                              Rating.again => context.appColors.ratingAgain,
-                              Rating.hard => context.appColors.ratingHard,
-                              _ => context.appColors.ratingGood,
-                            },
-                            onPressed: () => onRated(rating),
-                          ),
-                        ),
-                    ],
-                  ),
-                  PracticeHighlightItem() => Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        spacing: AppSpacing.sm,
-                        children: [
-                          Expanded(
-                            child: ReviewRatingButton(
-                              key: const ValueKey('reviewRate-keep'),
-                              label: l10n.practiceKeep,
-                              interval: intervals[Rating.good],
-                              color: context.appColors.ratingGood,
-                              onPressed: () => onRated(Rating.good),
-                            ),
-                          ),
-                          Expanded(
-                            child: ReviewRatingButton(
-                              key: const ValueKey('reviewRate-showLess'),
-                              label: l10n.practiceShowLess,
-                              interval: intervals[Rating.easy],
-                              color: context.appColors.ratingEasy,
-                              onPressed: () => onRated(Rating.easy),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (onOpenInSource != null)
-                        TextButton(
-                          key: const ValueKey('reviewOpenInBook'),
-                          onPressed: onOpenInSource,
-                          child: AppButtonLabel(l10n.practiceOpenInBook),
-                        ),
-                    ],
-                  ),
-                },
         ),
       ),
+    );
+  }
+}
+
+class _WordRatingControls extends StatelessWidget {
+  const _WordRatingControls({required this.intervals, required this.onRated});
+
+  final Map<Rating, Duration> intervals;
+  final ValueChanged<Rating> onRated;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(1);
+        final stacked = constraints.maxWidth < 3 * 88 * scale;
+        final buttons = [
+          for (final rating in const [Rating.again, Rating.hard, Rating.good])
+            ReviewRatingButton(
+              key: ValueKey('reviewRate-${rating.name}'),
+              label: switch (rating) {
+                Rating.again => l10n.practiceRateAgain,
+                Rating.hard => l10n.practiceRateHard,
+                _ => l10n.practiceRateGood,
+              },
+              interval: intervals[rating],
+              color: switch (rating) {
+                Rating.again => context.appColors.ratingAgain,
+                Rating.hard => context.appColors.ratingHard,
+                _ => context.appColors.ratingGood,
+              },
+              horizontal: stacked,
+              onPressed: () => onRated(rating),
+            ),
+        ];
+        if (stacked) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: AppSpacing.sm,
+            children: buttons,
+          );
+        }
+        return Row(
+          spacing: AppSpacing.sm,
+          children: [for (final button in buttons) Expanded(child: button)],
+        );
+      },
     );
   }
 }
@@ -209,6 +242,7 @@ class ReviewRatingButton extends StatelessWidget {
     required this.interval,
     required this.color,
     required this.onPressed,
+    this.horizontal = false,
     super.key,
   });
 
@@ -216,15 +250,23 @@ class ReviewRatingButton extends StatelessWidget {
   final Duration? interval;
   final Color color;
   final VoidCallback onPressed;
+  final bool horizontal;
 
   @override
   Widget build(BuildContext context) {
     final interval = this.interval;
     final l10n = context.l10n;
+    final intervalStyle =
+        (AppWindowSize.isMedium(context)
+                ? context.text.labelLarge
+                : context.text.labelSmall)
+            .copyWith(color: context.colors.onSurfaceVariant);
     return Semantics(
       button: true,
+      enabled: true,
       label: label,
       value: interval == null ? null : reviewIntervalLabel(l10n, interval),
+      onTap: onPressed,
       excludeSemantics: true,
       child: FilledButton.tonal(
         onPressed: onPressed,
@@ -237,25 +279,35 @@ class ReviewRatingButton extends StatelessWidget {
           ),
           minimumSize: const Size(0, AppSizes.buttonHeight),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: context.text.labelLarge,
-            ),
-            if (interval != null)
-              Text(
-                reviewIntervalLabel(l10n, interval),
-                maxLines: 1,
-                style: context.text.labelSmall.copyWith(
-                  color: context.colors.onSurfaceVariant,
-                ),
+        child: horizontal
+            ? Row(
+                children: [
+                  Expanded(child: Text(label, style: context.text.labelLarge)),
+                  if (interval != null) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      reviewIntervalLabel(l10n, interval),
+                      style: intervalStyle,
+                    ),
+                  ],
+                ],
+              )
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: context.text.labelLarge,
+                  ),
+                  if (interval != null)
+                    Text(
+                      reviewIntervalLabel(l10n, interval),
+                      textAlign: TextAlign.center,
+                      style: intervalStyle,
+                    ),
+                ],
               ),
-          ],
-        ),
       ),
     );
   }
@@ -284,46 +336,93 @@ class ReviewSessionSummary extends StatelessWidget {
     final l10n = context.l10n;
     final text = context.text;
     final colors = context.colors;
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xl),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Icon(
-            AppIcons.checkCircle,
-            size: AppIconSize.lg,
-            color: context.actionForeground,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        key: const ValueKey('reviewSummaryViewport'),
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: (constraints.maxHeight - AppSpacing.xl * 2)
+                .clamp(0.0, double.infinity)
+                .toDouble(),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            l10n.practiceSessionDone,
-            key: const ValueKey('reviewSummaryTitle'),
-            textAlign: TextAlign.center,
-            style: text.headlineMedium.copyWith(color: colors.onSurface),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            l10n.practiceSessionSummary(reviewed, known, again),
-            key: const ValueKey('reviewSummaryCounts'),
-            textAlign: TextAlign.center,
-            style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          FilledButton(
-            key: const ValueKey('reviewDone'),
-            onPressed: onDone,
-            child: AppButtonLabel(l10n.commonDone),
-          ),
-          if (again > 0) ...[
-            const SizedBox(height: AppSpacing.sm),
-            TextButton(
-              key: const ValueKey('reviewAgain'),
-              onPressed: onReviewAgain,
-              child: AppButtonLabel(l10n.practiceReviewAgainCount(again)),
+          child: Center(
+            child: AppContentFrame(
+              maxWidth: AppSizes.centeredColumnMaxWidth,
+              child: DecoratedBox(
+                key: const ValueKey('reviewSummaryCard'),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerLow,
+                  border: Border.all(color: colors.outlineVariant),
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Align(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: colors.secondaryContainer,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(AppSpacing.lg),
+                            child: Icon(
+                              AppIcons.checkCircle,
+                              size: AppIconSize.lg,
+                              color: context.actionForeground,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          l10n.practiceSessionDone,
+                          key: const ValueKey('reviewSummaryTitle'),
+                          textAlign: TextAlign.center,
+                          style: text.headlineMedium.copyWith(
+                            color: colors.onSurface,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        l10n.practiceSessionSummary(reviewed, known, again),
+                        key: const ValueKey('reviewSummaryCounts'),
+                        textAlign: TextAlign.center,
+                        style: text.bodyMedium.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      FilledButton(
+                        key: const ValueKey('reviewDone'),
+                        onPressed: onDone,
+                        child: AppButtonLabel(l10n.commonDone),
+                      ),
+                      if (again > 0) ...[
+                        const SizedBox(height: AppSpacing.sm),
+                        TextButton(
+                          key: const ValueKey('reviewAgain'),
+                          onPressed: onReviewAgain,
+                          child: AppButtonLabel(
+                            l10n.practiceReviewAgainCount(again),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

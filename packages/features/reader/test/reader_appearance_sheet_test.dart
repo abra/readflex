@@ -112,8 +112,9 @@ void main() {
       tester.getSize(find.byKey(const ValueKey('reader-line-height-control'))),
     );
     expect(
-      tester.getSize(find.byKey(const ValueKey('reader-text-scale-control'))),
-      tester.getSize(find.byKey(const ValueKey('reader-margin-control'))),
+      tester.getSize(find.byKey(const ValueKey('reader-margin-control'))).width,
+      greaterThan(tester.getSize(textScaleControl).width),
+      reason: 'page margins belong to the full-width layout settings',
     );
     expect(find.text('PREVIEW'), findsNothing);
     expect(find.byType(Divider), findsNothing);
@@ -327,9 +328,8 @@ void main() {
     const compactControls = [
       'reader-text-scale-control',
       'reader-line-height-control',
-      'reader-margin-control',
     ];
-    const compactLabels = ['Font size', 'Line spacing', 'Page margins'];
+    const compactLabels = ['Font size', 'Line spacing'];
 
     for (final direction in TextDirection.values) {
       testWidgets('controls take the end half, on the split of the choices '
@@ -398,7 +398,10 @@ void main() {
         'Межстрочный интервал',
         'Поля страницы',
       ];
-      for (final (index, key) in compactControls.indexed) {
+      for (final (index, key) in [
+        ...compactControls,
+        'reader-margin-control',
+      ].indexed) {
         final control = tester.getRect(find.byKey(ValueKey(key)));
         expect(control.width, column.width, reason: key);
         final caption = find.text(captions[index]);
@@ -423,7 +426,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a label that would need a third line stacks all three rows', (
+    testWidgets('a label that would need a third line stacks both text rows', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(390, 1400);
@@ -476,6 +479,7 @@ void main() {
       for (final caption in [
         'Theme',
         'Text alignment',
+        'Page margins',
         'Page turn',
       ]) {
         expect(
@@ -500,8 +504,15 @@ void main() {
       final alignmentControl = tester.getRect(
         find.byKey(const ValueKey('reader-text-alignment-control')),
       );
-      expect(alignment.top - margins.bottom, AppSpacing.lg);
-      expect(pageTurn.top - alignmentControl.bottom, AppSpacing.lg);
+      final lineSpacing = tester.getRect(
+        find.byKey(const ValueKey('reader-line-height-control')),
+      );
+      expect(alignment.top - lineSpacing.bottom, AppSpacing.xl);
+      expect(
+        tester.getRect(find.text('Page margins')).top - alignmentControl.bottom,
+        AppSpacing.lg,
+      );
+      expect(pageTurn.top - margins.bottom, AppSpacing.lg);
       semantics.dispose();
     });
   });
@@ -650,7 +661,9 @@ void main() {
       ReaderMarginPreset.narrow,
       ReaderMarginPreset.medium,
     ]) {
-      await tester.tap(find.byKey(ValueKey('reader-margin-${preset.name}')));
+      final target = find.byKey(ValueKey('reader-margin-${preset.name}'));
+      await tester.revealAppearanceControl(target);
+      await tester.tap(target);
       await tester.pump();
 
       expect(cubit.state.effectiveAppearance.sideMargin, preset.sideMargin);
@@ -729,8 +742,12 @@ void main() {
     expect(_selectedLineSpacing(tester), ReaderLineSpacingPreset.normal);
     expect(_selectedMargin(tester), ReaderMarginPreset.medium);
 
-    await tester.tap(find.byKey(const ValueKey('reader-line-spacing-normal')));
-    await tester.tap(find.byKey(const ValueKey('reader-margin-medium')));
+    final spacing = find.byKey(const ValueKey('reader-line-spacing-normal'));
+    final margin = find.byKey(const ValueKey('reader-margin-medium'));
+    await tester.revealAppearanceControl(spacing);
+    await tester.tap(spacing);
+    await tester.revealAppearanceControl(margin);
+    await tester.tap(margin);
     await tester.pump();
 
     expect(cubit.state.effectiveAppearance.lineHeight, 1.6);
@@ -752,8 +769,12 @@ void main() {
     final subscription = cubit.stream.listen(states.add);
     addTearDown(subscription.cancel);
 
-    await tester.tap(find.byKey(const ValueKey('reader-line-spacing-normal')));
-    await tester.tap(find.byKey(const ValueKey('reader-margin-medium')));
+    final spacing = find.byKey(const ValueKey('reader-line-spacing-normal'));
+    final margin = find.byKey(const ValueKey('reader-margin-medium'));
+    await tester.revealAppearanceControl(spacing);
+    await tester.tap(spacing);
+    await tester.revealAppearanceControl(margin);
+    await tester.tap(margin);
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(states, isEmpty);
@@ -1424,15 +1445,17 @@ void main() {
       ReaderMarginPreset.medium: l10n.readerMarginsMedium,
       ReaderMarginPreset.wide: l10n.readerMarginsWide,
     };
-    void expectGlyphSegments({
+    Future<void> expectGlyphSegments({
       required ReaderLineSpacingPreset selectedSpacing,
       required ReaderMarginPreset selectedMargin,
-    }) {
+    }) async {
       for (final entry in lineSpacing.entries) {
+        final target = find.byKey(
+          ValueKey('reader-line-spacing-${entry.key.name}'),
+        );
+        await tester.revealAppearanceControl(target);
         expect(
-          tester.getSemantics(
-            find.byKey(ValueKey('reader-line-spacing-${entry.key.name}')),
-          ),
+          tester.getSemantics(target),
           isSemantics(
             label: '',
             tooltip: entry.value,
@@ -1447,10 +1470,10 @@ void main() {
         );
       }
       for (final entry in margins.entries) {
+        final target = find.byKey(ValueKey('reader-margin-${entry.key.name}'));
+        await tester.revealAppearanceControl(target);
         expect(
-          tester.getSemantics(
-            find.byKey(ValueKey('reader-margin-${entry.key.name}')),
-          ),
+          tester.getSemantics(target),
           isSemantics(
             label: '',
             tooltip: entry.value,
@@ -1466,7 +1489,7 @@ void main() {
       }
     }
 
-    expectGlyphSegments(
+    await expectGlyphSegments(
       selectedSpacing: ReaderLineSpacingPreset.normal,
       selectedMargin: ReaderMarginPreset.medium,
     );
@@ -1476,6 +1499,7 @@ void main() {
       (l10n.readerPageTurnHorizontalShort, true),
       (l10n.readerPageTurnVerticalShort, false),
     ]) {
+      await tester.revealAppearanceControl(find.text(label));
       expect(
         tester.getSemantics(find.text(label)),
         isSemantics(
@@ -1495,6 +1519,7 @@ void main() {
       ('reader-text-scale-increase', l10n.readerIncreaseTextSize),
     ]) {
       // The "A" glyph stays out of the name.
+      await tester.revealAppearanceControl(find.byKey(ValueKey(key)));
       expect(
         tester.getSemantics(
           find.descendant(
@@ -1511,6 +1536,7 @@ void main() {
         ),
       );
     }
+    await tester.revealAppearanceControl(find.text('100%'));
     expect(
       tester.getSemantics(find.text('100%')),
       isSemantics(
@@ -1522,15 +1548,22 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byKey(const ValueKey('reader-line-spacing-compact')));
-    await tester.tap(find.byKey(const ValueKey('reader-margin-wide')));
-    await tester.tap(find.byKey(const ValueKey('reader-text-scale-increase')));
+    for (final key in [
+      'reader-line-spacing-compact',
+      'reader-margin-wide',
+      'reader-text-scale-increase',
+    ]) {
+      final target = find.byKey(ValueKey(key));
+      await tester.revealAppearanceControl(target);
+      await tester.tap(target);
+    }
     await tester.pumpAndSettle();
 
-    expectGlyphSegments(
+    await expectGlyphSegments(
       selectedSpacing: ReaderLineSpacingPreset.compact,
       selectedMargin: ReaderMarginPreset.wide,
     );
+    await tester.revealAppearanceControl(find.text('105%'));
     expect(
       tester.getSemantics(find.text('105%')),
       isSemantics(label: l10n.readerTextSize, value: '105%'),
@@ -1994,6 +2027,12 @@ Text _stepperValueText(WidgetTester tester, Key key) {
 }
 
 extension on WidgetTester {
+  Future<void> revealAppearanceControl(Finder target) async {
+    await ensureVisible(target);
+    await pumpAndSettle();
+    expect(target.hitTestable(), findsOneWidget);
+  }
+
   Future<void> openFontStep() async {
     await tap(find.byKey(const ValueKey('reader-font-picker')).hitTestable());
     await pumpAndSettle();

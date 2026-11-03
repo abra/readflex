@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
+import 'app_plain_icon_button.dart';
+import 'theme/tokens/app_icon_size.dart';
 import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
 
@@ -53,20 +55,26 @@ class AppSheetActionRow extends StatelessWidget {
 
   /// The width [child] gets in a row [rowWidth] wide with [actionCount]
   /// 48dp actions side by side, for measuring its text before building it.
-  static double childWidthFor(double rowWidth, {int actionCount = 1}) =>
+  /// Use [AppPlainIconButton.defaultIconSizeOf] for the current window.
+  static double childWidthFor(
+    double rowWidth, {
+    int actionCount = 1,
+    double iconSize = AppIconSize.sm,
+  }) =>
       rowWidth -
       AppSpacing.xl -
-      (AppSpacing.xl - AppSizes.iconActionOutset) -
+      (AppSpacing.xl - (AppSizes.buttonHeight - iconSize) / 2) -
       AppSizes.buttonHeight * actionCount;
 
   @override
   Widget build(BuildContext context) {
     final ambient = Directionality.of(context);
     final lead = this.lead;
+    final iconOutset = AppPlainIconButton.defaultIconOutsetOf(context);
     final row = Padding(
-      padding: const EdgeInsetsDirectional.only(
+      padding: EdgeInsetsDirectional.only(
         start: AppSpacing.xl,
-        end: AppSpacing.xl - AppSizes.iconActionOutset,
+        end: AppSpacing.xl - iconOutset,
       ),
       child: _SheetActionRowLayout(
         lead: lead == null
@@ -76,7 +84,7 @@ class AppSheetActionRow extends StatelessWidget {
         action: action,
         firstLineHeight: _lineHeight(context),
         leadSpacing: leadSpacing,
-        leadEndInset: AppSizes.iconActionOutset,
+        leadEndInset: iconOutset,
         minTextRoom: minTextRoom,
       ),
     );

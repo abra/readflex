@@ -226,47 +226,62 @@ void main() {
 
   for (final direction in TextDirection.values) {
     for (final end in [0.0, 8.0, 24.0, 32.0]) {
-      testWidgets('header respects directional padding $end in $direction', (
-        tester,
-      ) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: AppTheme.light(),
-            home: Scaffold(
-              body: Directionality(
-                textDirection: direction,
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: SizedBox(
-                    width: 320,
-                    child: BottomSheetHeader(
-                      title: 'Title',
-                      closeLabel: 'Close',
-                      onClose: () {},
-                      padding: EdgeInsetsDirectional.fromSTEB(24, 6, end, 10),
+      for (final windowSize in [
+        const Size(390, 844),
+        const Size(600, 480),
+        const Size(844, 390),
+      ]) {
+        testWidgets('header respects directional padding $end in $direction '
+            'at $windowSize', (
+          tester,
+        ) async {
+          tester.view.physicalSize = windowSize;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light(),
+              home: Scaffold(
+                body: Directionality(
+                  textDirection: direction,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: SizedBox(
+                      width: 320,
+                      child: BottomSheetHeader(
+                        title: 'Title',
+                        closeLabel: 'Close',
+                        onClose: () {},
+                        padding: EdgeInsetsDirectional.fromSTEB(24, 6, end, 10),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        );
-        final header = tester.getRect(find.byType(BottomSheetHeader));
-        final title = tester.getRect(find.text('Title'));
-        final icon = tester.getRect(find.byIcon(AppIcons.close));
-        final button = tester.getRect(find.byType(AppPlainIconButton));
-        final ltr = direction == TextDirection.ltr;
-        expect(ltr ? title.left - header.left : header.right - title.right, 24);
-        expect(
-          ltr ? header.right - icon.right : icon.left - header.left,
-          end < 14 ? 14 : end,
-        );
-        expect(button.left, greaterThanOrEqualTo(header.left));
-        expect(button.right, lessThanOrEqualTo(header.right));
-        expect(button.top - header.top, 6);
-        expect(header.bottom - button.bottom, 10);
-        expect(tester.takeException(), isNull);
-      });
+          );
+          final header = tester.getRect(find.byType(BottomSheetHeader));
+          final title = tester.getRect(find.text('Title'));
+          final icon = tester.getRect(find.byIcon(AppIcons.close));
+          final button = tester.getRect(find.byType(AppPlainIconButton));
+          final ltr = direction == TextDirection.ltr;
+          final iconInset = (button.width - icon.width) / 2;
+          expect(
+            ltr ? title.left - header.left : header.right - title.right,
+            24,
+          );
+          expect(
+            ltr ? header.right - icon.right : icon.left - header.left,
+            end < iconInset ? iconInset : end,
+          );
+          expect(button.left, greaterThanOrEqualTo(header.left));
+          expect(button.right, lessThanOrEqualTo(header.right));
+          expect(button.top - header.top, 6);
+          expect(header.bottom - button.bottom, 10);
+          expect(tester.takeException(), isNull);
+        });
+      }
     }
   }
 

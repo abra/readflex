@@ -154,14 +154,14 @@ offers labeled Horizontal and Vertical paging. Page animation (Slide/Cover)
 is global and selected from Library's top-right Display action. It is not a
 per-book control, and Reader Reset leaves it unchanged. Cover is the default;
 older preferences and unknown global IDs retain it. Legacy source animation
-keys are ignored while other source settings are preserved. The compact rows come first and
-together, 8dp apart: Font, then Font size, Line spacing and Page margins, whose
-controls fill exactly the end half of the column so they start on the split
-of the two-option choices below. All three move under captions, as full-width
-controls 16dp apart, when the sheet is narrow at large text, when half the
+keys are ignored while other source settings are preserved. Theme, text settings
+and layout have separate groups. Font, Font size and Line spacing stay together,
+8dp apart; the latter controls fill the end half of the column. Both move under
+captions, as full-width controls 16dp apart, when the sheet is narrow at large text, when half the
 column cannot hold three 48dp segments, or when a label would need a third
-line. Text alignment and Page turn are `AppSettingsSection` captions above
-full-width choices, 16dp below the group above, where `AppChoiceControl`
+line. Layout starts 24dp below the text settings: Text alignment, Page margins,
+Page turn and the available Columns choice use `AppSettingsSection` captions
+above full-width controls, 16dp apart, where `AppChoiceControl`
 reflows long translations instead of truncating them. Reset keeps its label
 while the title can shrink to fit beside it (`BottomSheetHeader.minTitleScale`)
 and otherwise becomes a tooltip-labeled icon (`headerCompactTrailing`); only
@@ -593,11 +593,10 @@ Each row ends on the 16dp gutter with its start position as a muted
 `bodySmall` label in tabular figures, baseline-aligned with the title: the
 estimated start page (announced as "Page N"; the renderer's page 0 reads 1),
 else the whole start percent, else nothing. On the active row the label takes
-the selected foreground, since the dark selected fill is tonal. Active chapter,
-active search result and
-bookmark rows share the plain `ListTile(selected:)` fill, drawn edge to edge
-with an explicit rectangular shape: the app-wide 16dp tile radius is for inset
-rows and must not bleed into full-bleed panel rows. The highlight color
+the selected foreground, since the dark selected fill is tonal. The active
+chapter uses a rounded tonal fill inset 8dp from the panel edge, keeping the
+same text and position gutters. Active search results and bookmark rows keep
+their full-width selection surfaces. The highlight color
 filter strip starts on the 16dp gutter like the search field above it, with
 8dp above and below its 48dp targets; its "All" entry is an `AppFilterChip`
 with a visible selected state and the swatches beside it paint 32dp circles
@@ -612,12 +611,13 @@ Empty tabs render `EmptyState(compact: true)`, scrollable when a short sheet
 leaves it less room than it needs.
 
 Contents is an `AppInlineSheet` (component_library) in the reader's stack, not
-a route. It opens at 60% of the height below the status bar, so the title, tabs
+a route. On phones it opens at 60% of the height below the status bar, so the title, tabs
 and search field land mid-screen and the current chapter is under the thumb;
 the page stays visible, dimmed, above it. Dragging the header or scrolling a
 list forward grows it to just below the status bar; a downward fling, pulling a
 list past its top, the scrim, Close and System Back step it down or close it.
-Landscape phones and large text open it at full. Hidden, it stays mounted
+Landscape phones and large text open it at full. Expanded windows use the
+shared trailing side panel. Hidden, it stays mounted
 offstage, so each tab's search text and scroll offset survive; opening reveals
 the active chapter in the list only (`ScrollPosition.ensureVisible`), never by
 scrolling the sheet itself. While hidden it keeps the position it last showed
@@ -649,7 +649,9 @@ rows.
 Oversized Contents tab labels scroll horizontally rather than overlapping;
 the scrolling bar is inset 8dp so the first glyph lands on the 16dp gutter.
 A label cut by the sheet edge fades into the sheet (`ScrollEdgeFadeStack`,
-horizontal) so it reads as more tabs to scroll to; the divider stays whole.
+horizontal) so it reads as more tabs to scroll to. Selected tabs use the same
+tonal fill and foreground as settings choices, without an underline or divider.
+Contents and Search use `titleMedium` headings with heading semantics.
 The "Contents" title stays on one line: a long translation at large text
 shrinks to at most `readerDrawerTitleMinFontScale` (0.8) of its size before it
 ellipsizes (`readerFittedTitleFontSize`). The three Contents search fields
@@ -793,37 +795,45 @@ position has not changed meanwhile. Bookmark revisions also prevent an older
 source-load snapshot from overwriting edits made while it was pending.
 Bookmark rows delete by swipe (trash glyph in the swipe fill) and retain the
 existing in-place icon-only Undo action; the cross in the header only closes
-the drawer. Undo and Close glyphs are the default 20dp, aligned to the
+the drawer. Undo and Close glyphs are 20dp on phones and 24dp in medium windows,
+aligned to the
 Contents field's 16dp gutter with full 48dp targets
-(`readerDrawerActionEndPadding` in `reader_drawer_layout.dart`, defined from
-`AppSizes.iconActionOutset`). Geometry tests compare the visible icon boxes,
+(`readerDrawerActionEndPadding` in `reader_drawer_layout.dart`, derived from
+the window's glyph size and 48dp target). Geometry tests compare the visible icon boxes,
 not only button bounds; native flows also exercise deletion and Undo.
-The bottom chrome is a floating capsule with a progress row above it. The
-progress row and the capsule form one `ToastAvoidArea`, enabled only while the
+The bottom chrome is one rounded reading dock: status, seeking and actions
+share an opaque app surface, hairline outline and `AppShadows.popover`. The
+dock forms one `ToastAvoidArea`, enabled only while the
 chrome shows (the hidden chrome stays mounted, slid out); the fallback
 selection panel and the search navigation bar are marked too, so a toast
-(Copied, Highlight saved) floats above whichever is on screen. The
-capsule is 60dp tall (stadium radius 30), 16dp from the screen edges and
-`appBottomSafeInset` (minimum 16dp) above the bottom, capped at 560dp wide on
-wide screens. It is the shared `AppFloatingCapsule`, like the Library's
-bottom capsule: the chrome surface (`colors.surface`, the colour of the
-brightness pill and context popups) at 92% with a hairline `outlineVariant`
-border and `AppShadows.popover`. It holds equal slots, each centring a 48dp
-`AppPlainIconButton` with circular feedback: Back, Contents, Appearance ("Aa"),
+(Copied, Highlight saved) floats above whichever is on screen. The dock keeps
+16dp side gutters and `appBottomSafeInset` (minimum 16dp) above the bottom,
+inside a centered 560dp maximum column. Its phone action strip is 60dp tall,
+with equal slots centring 48dp `AppPlainIconButton`s: Back, Contents, Appearance,
 Bookmark (custom filled/outline glyph passed as `iconWidget`) and Search; Row
-order mirrors in RTL. The page-turn toggle is not in the capsule for books or
+order mirrors in RTL. Expanded windows add captions in a strip at least 80dp
+tall; its height grows with the rendered label's scaled line height so two
+translated lines fit through 130% text. The whole captioned action is a button.
+Larger text keeps the compact icon actions.
+The existing tooltip and capability rules remain for every format.
+Medium windows (at least 600dp wide and 480dp tall) use the existing 15sp
+`labelLarge` role for chrome status and numbers, Contents tabs, Search counters,
+theme names and available action captions. Their utility glyphs use 24dp;
+phone roles stay unchanged, including short landscape windows. Measurement
+uses the same role and scaler as rendering, and progress numbers retain
+tabular figures. This only changes controls, not the page layout or location.
+The page-turn toggle is not in the dock for books or
 articles (the setting lives in Appearance). Comics have no Appearance action,
-so their capsule keeps the page-turn toggle as their only route to that
+so their dock keeps the page-turn toggle as their only route to that
 setting. Page-turn and active-bookmark glyphs, the page-bookmark indicator and
-the Contents tab indicator use `context.actionForeground`.
+other action accents use `context.actionForeground`.
 
-The progress row sits 8dp above the capsule, 28dp from the screen edges (the
-16dp gutter plus 12dp, inside the capsule's rounded ends), and follows the
+Status sits above the seek track, inset 12dp inside the dock, and follows the
 book's page progression like the slider itself. The scrubbing `Slider` (3dp
-track, 12dp thumb, 48dp-tall hit area) spans the whole row right above the
-capsule, under the thumb, with the same local drag preview and a single
+track, 12dp thumb, 48dp-tall hit area) spans the row above the actions,
+with the same local drag preview and a single
 `goToFraction` on release; only this row rebuilds while dragging. The labels
-read on one line under it, inset by the slider's overlay radius
+read on one line above it, inset by the slider's overlay radius
 (`readerProgressTrackInset`, 14dp) so they start and end with the track: at
 the start the current chapter title for books,
 for articles `readingTimeLeft` (minutes left in the whole article) or the
@@ -834,12 +844,12 @@ digits never truncate (`reader_chrome_progress_layout.dart`); the chapter
 takes the rest on one line and truncates first. Above 130% text each
 label takes its own line, the chapter up to two lines and the page label
 end-aligned below it, so the slider never shares its line.
-Text and slider use `readerChromeInkColor` (78% of the page text over the page,
-at least 4.5:1 on every reader theme) because they sit on the page, over a
-page-coloured band that fades in above the row so scrolled text never runs
-behind them. That band passes taps through to the page, which hides chrome.
+Text and slider use the app surface's `onSurfaceVariant` and `outlineVariant`,
+so selecting a dark reading page in a light app never makes the dock unreadable.
 
-The top chrome is one centred `readerChromeLabel` line in the same ink, with
+The top chrome is one centred `readerChromeLabel` line (`labelLarge` in medium
+windows) in `readerChromeInkColor`
+(78% of the page text over the page), with
 no plate, shadow or divider: `chapter · title` once a chapter title is known,
 otherwise the title, ellipsized. It keeps the top safe-area inset and a 48dp
 line; for articles the line is an ink button with button semantics, the title
@@ -852,9 +862,12 @@ bar and only scrim it (`readerSystemUiOverlayStyle`).
 Active bookmark/Undo icons and the tab indicator use the accessible action
 foreground. Active search results use the same selected color pair as Contents
 and settings controls; text and emphasized matches remain readable on that fill.
-The brightness pill beside the page uses `PositionedDirectional(end:)`, so it
-sits 16dp from the trailing edge (like the page-bookmark indicator and every
-other reader edge) and slides toward it in RTL. The top line shares the
+The brightness pill beside the page uses `PositionedDirectional(end:)` and
+slides toward that edge in RTL. Phones keep a 56dp pill with 4dp inner padding,
+16dp inside the safe edge. Expanded windows use a 48dp pill with no extra
+horizontal padding, floating 8dp inside the safe edge. Both keep the same
+48dp controls; the compact tablet width leaves room for the floating gap.
+The temporary overlay preserves the reading canvas. The top line shares the
 capsule's 16dp content gutter. The transient CBZ page pill sits
 `appBottomSafeInset` (minimum 16dp) plus 12dp above the bottom edge. Its step buttons are
 `AppPlainIconButton`s; the value button is a 48dp selected control

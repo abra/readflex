@@ -282,10 +282,10 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
           children: [
             Padding(
               // The sheet's grab handle supplies the gap above the title.
-              padding: const EdgeInsetsDirectional.fromSTEB(
+              padding: EdgeInsetsDirectional.fromSTEB(
                 AppSpacing.lg,
                 0,
-                readerDrawerActionEndPadding,
+                readerDrawerActionEndPadding(context),
                 AppSpacing.xs,
               ),
               child: Row(
@@ -303,23 +303,28 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
               builder: (context, constraints) {
                 // Filled tabs share the width equally, so the widest label
                 // decides; four tabs in a long language need to scroll.
+                final labelStyle = readerControlCaptionStyle(context);
+                final iconSize = readerControlIconSize(context);
                 var widest = 0.0;
                 for (final label in tabs.map(labelOf)) {
                   final painter = TextPainter(
-                    text: TextSpan(text: label, style: context.text.labelSmall),
+                    text: TextSpan(text: label, style: labelStyle),
                     textDirection: Directionality.of(context),
                     textScaler: MediaQuery.textScalerOf(context),
+                    locale: Localizations.maybeLocaleOf(context),
                   )..layout();
                   widest = math.max(
                     widest,
                     painter.width +
-                        AppIconSize.sm +
+                        iconSize +
                         AppSpacing.xxs +
                         2 * AppSpacing.sm,
                   );
                   painter.dispose();
                 }
-                final scrollable = widest * tabs.length > constraints.maxWidth;
+                final scrollable =
+                    widest * tabs.length >
+                    constraints.maxWidth - 2 * AppSpacing.sm;
                 final tabBar = TabBar(
                   isScrollable: scrollable,
                   tabAlignment: scrollable
@@ -327,9 +332,9 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                       : TabAlignment.fill,
                   // Scrolling tabs start at the drawer gutter: 8dp bar inset
                   // plus the 8dp label padding puts the first glyph on 16.
-                  padding: scrollable
-                      ? const EdgeInsets.symmetric(horizontal: AppSpacing.sm)
-                      : null,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
                   labelPadding: EdgeInsets.symmetric(
                     horizontal: scrollable ? AppSpacing.sm : 0,
                   ),
@@ -347,9 +352,17 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                         ),
                       ),
                   ],
-                  labelColor: colors.onSurface,
+                  labelColor: colors.selectedControlForeground,
                   unselectedLabelColor: colors.onSurfaceVariant,
-                  indicatorColor: context.actionForeground,
+                  labelStyle: labelStyle,
+                  unselectedLabelStyle: labelStyle,
+                  indicator: BoxDecoration(
+                    color: colors.selectedControlBackground,
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicatorPadding: const EdgeInsets.all(AppSpacing.xs),
+                  dividerHeight: 0,
                 );
                 // A label cut by the sheet edge fades into the sheet, so it
                 // reads as more tabs to scroll to; the divider stays whole.
@@ -494,27 +507,32 @@ class _ReaderDrawerTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = context.text.titleLarge.copyWith(
+    final style = context.text.titleMedium.copyWith(
       color: context.colors.onSurface,
     );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final fontSize = readerFittedTitleFontSize(
-          text: label,
-          style: style,
-          textScaler: MediaQuery.textScalerOf(context),
-          textDirection: Directionality.of(context),
-          maxWidth: constraints.maxWidth,
-        );
-        return Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          // The fitted size already includes the text scale.
-          style: fontSize == null ? style : style.copyWith(fontSize: fontSize),
-          textScaler: fontSize == null ? null : TextScaler.noScaling,
-        );
-      },
+    return Semantics(
+      header: true,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final fontSize = readerFittedTitleFontSize(
+            text: label,
+            style: style,
+            textScaler: MediaQuery.textScalerOf(context),
+            textDirection: Directionality.of(context),
+            maxWidth: constraints.maxWidth,
+          );
+          return Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            // The fitted size already includes the text scale.
+            style: fontSize == null
+                ? style
+                : style.copyWith(fontSize: fontSize),
+            textScaler: fontSize == null ? null : TextScaler.noScaling,
+          );
+        },
+      ),
     );
   }
 }
@@ -534,7 +552,7 @@ class _ReaderDrawerTabLabel extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, size: AppIconSize.sm),
+        Icon(icon, size: readerControlIconSize(context)),
         const SizedBox(width: AppSpacing.xxs),
         Flexible(
           child: Text(
@@ -542,7 +560,6 @@ class _ReaderDrawerTabLabel extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.visible,
             softWrap: false,
-            style: context.text.labelSmall,
           ),
         ),
       ],
@@ -802,81 +819,84 @@ class _ReaderTocListTile extends StatelessWidget {
         ? '$percent%'
         : null;
 
-    // Row layout follows the app locale; only the chapter text keeps the
-    // book's direction. The active fill spans the panel edge to edge: the
-    // themed 16dp tile radius is for inset rows, not full-bleed panel rows.
-    return Semantics(
-      value: state == ReaderTocReadingState.read
-          ? l10n.readerChapterRead
-          : null,
-      child: ListTile(
-        selected: isActive,
-        selectedTileColor: colors.selectedControlBackground,
-        shape: const RoundedRectangleBorder(),
-        contentPadding: EdgeInsetsDirectional.only(
-          start: levelInset.toDouble(),
-          end: AppSpacing.lg,
-          top: AppSpacing.xxs,
-          bottom: AppSpacing.xxs,
-        ),
-        minVerticalPadding: AppSpacing.xs,
-        title: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ReaderTocReadingMark(
-              state: state,
-              lineHeight: readerTextLineHeight(
-                MediaQuery.textScalerOf(context),
-                titleStyle,
+    // Inset the active fill while keeping text on the panel's content gutter.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: Semantics(
+        value: state == ReaderTocReadingState.read
+            ? l10n.readerChapterRead
+            : null,
+        child: ListTile(
+          selected: isActive,
+          selectedTileColor: colors.selectedControlBackground,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+          contentPadding: EdgeInsetsDirectional.only(
+            start: levelInset.toDouble() - AppSpacing.sm,
+            end: AppSpacing.lg - AppSpacing.sm,
+            top: AppSpacing.xxs,
+            bottom: AppSpacing.xxs,
+          ),
+          minVerticalPadding: AppSpacing.xs,
+          title: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ReaderTocReadingMark(
+                state: state,
+                lineHeight: readerTextLineHeight(
+                  MediaQuery.textScalerOf(context),
+                  titleStyle,
+                ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.label.isEmpty
-                          ? l10n.readerUntitledChapter
-                          : item.label,
-                      textAlign: readerDirectionalTextAlign(
-                        pageProgressionRtl: pageProgressionRtl,
-                      ),
-                      textDirection: readerDirectionalTextDirection(
-                        pageProgressionRtl: pageProgressionRtl,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: titleStyle,
-                    ),
-                  ),
-                  if (position != null) ...[
-                    const SizedBox(width: AppSpacing.md),
-                    Text(
-                      position,
-                      semanticsLabel: page != null
-                          ? l10n.readerPageNumber(page)
-                          : null,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: context.text.bodySmall.copyWith(
-                        // The active fill is tonal in dark mode, so its label
-                        // takes the paired foreground instead of the muted ink.
-                        color: isActive
-                            ? colors.selectedControlForeground
-                            : colors.onSurfaceVariant,
-                        fontFeatures: const [FontFeature.tabularFigures()],
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.label.isEmpty
+                            ? l10n.readerUntitledChapter
+                            : item.label,
+                        textAlign: readerDirectionalTextAlign(
+                          pageProgressionRtl: pageProgressionRtl,
+                        ),
+                        textDirection: readerDirectionalTextDirection(
+                          pageProgressionRtl: pageProgressionRtl,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: titleStyle,
                       ),
                     ),
+                    if (position != null) ...[
+                      const SizedBox(width: AppSpacing.md),
+                      Text(
+                        position,
+                        semanticsLabel: page != null
+                            ? l10n.readerPageNumber(page)
+                            : null,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: context.text.bodySmall.copyWith(
+                          // The active fill is tonal in dark mode, so its label
+                          // takes the paired foreground instead of the muted ink.
+                          color: isActive
+                              ? colors.selectedControlForeground
+                              : colors.onSurfaceVariant,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
+          onTap: onTap,
         ),
-        onTap: onTap,
       ),
     );
   }
@@ -1071,7 +1091,7 @@ class _ReaderBookmarkListTile extends StatelessWidget {
       contentPadding: EdgeInsetsDirectional.fromSTEB(
         AppSpacing.lg,
         AppSpacing.xxs,
-        removed ? readerDrawerActionEndPadding : AppSpacing.lg,
+        removed ? readerDrawerActionEndPadding(context) : AppSpacing.lg,
         AppSpacing.xxs,
       ),
       minVerticalPadding: AppSpacing.xs,

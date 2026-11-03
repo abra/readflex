@@ -9,9 +9,9 @@ import 'library_layout_cubit.dart';
 import 'library_list_sliver.dart';
 import 'library_selection_cubit.dart';
 
-/// The Library's one scroll view: a non-null [leading] (the Practice row)
-/// inside the gutters, then a non-null [continueReadingSource] as its
-/// full-width card, then [sources] in [layoutMode], a [LibraryListSliver] or
+/// The Library's one scroll view: a non-null [continueReadingSource] as its
+/// inset reading panel, then a non-null [leading] (the Practice row) inside
+/// the gutters, then [sources] in [layoutMode], a [LibraryListSliver] or
 /// a [LibraryGridSliver]. [sources] leave the card's source out.
 ///
 /// A layout change swaps only the sources sliver, which fades in over
@@ -39,7 +39,7 @@ class LibraryContentScrollView extends StatelessWidget {
   final LibraryLayoutMode layoutMode;
   final List<LibrarySource> sources;
 
-  /// Leads the content inside the gutters, such as the Practice row.
+  /// Secondary content inside the gutters, such as the Practice row.
   final Widget? leading;
   final LibrarySource? continueReadingSource;
 
@@ -69,34 +69,18 @@ class LibraryContentScrollView extends StatelessWidget {
       ),
       semanticChildCount: sources.length + cardCount,
       slivers: [
-        if (leading != null)
+        if (continueReadingSource != null || leading != null)
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              kLibraryContentTopPadding,
-              AppSpacing.lg,
-              0,
-            ),
-            sliver: SliverToBoxAdapter(child: leading),
-          ),
-        if (continueReadingSource != null)
-          SliverPadding(
-            padding: EdgeInsets.only(
-              top: leading == null
-                  ? kLibraryContentTopPadding
-                  : kLibraryContinueReadingGap,
+            padding: const EdgeInsets.only(
+              top: kLibraryContentTopPadding,
             ),
             sliver: SliverToBoxAdapter(
-              child: IndexedSemantics(
-                index: 0,
-                child: LibraryContinueReadingCard(
-                  source: continueReadingSource,
-                  isSelectionMode: selection.isActive,
-                  isSelected: selection.contains(continueReadingSource.id),
-                  onPressed: () => onSourcePressed(continueReadingSource),
-                  onLongPressed: () =>
-                      onSourceLongPressed(continueReadingSource),
-                ),
+              child: _LibraryLeadingContent(
+                leading: leading,
+                source: continueReadingSource,
+                selection: selection,
+                onSourcePressed: onSourcePressed,
+                onSourceLongPressed: onSourceLongPressed,
               ),
             ),
           ),
@@ -124,6 +108,87 @@ class LibraryContentScrollView extends StatelessWidget {
             ),
           },
         ),
+      ],
+    );
+  }
+}
+
+/// Wide windows give reading and review their own columns; the shelf below
+/// continues to use all the available width.
+class _LibraryLeadingContent extends StatelessWidget {
+  const _LibraryLeadingContent({
+    required this.leading,
+    required this.source,
+    required this.selection,
+    required this.onSourcePressed,
+    required this.onSourceLongPressed,
+  });
+
+  final Widget? leading;
+  final LibrarySource? source;
+  final LibrarySelectionState selection;
+  final ValueChanged<LibrarySource> onSourcePressed;
+  final ValueChanged<LibrarySource> onSourceLongPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final source = this.source;
+    final leading = this.leading;
+    final card = source == null
+        ? null
+        : IndexedSemantics(
+            index: 0,
+            child: LibraryContinueReadingCard(
+              source: source,
+              isSelectionMode: selection.isActive,
+              isSelected: selection.contains(source.id),
+              onPressed: () => onSourcePressed(source),
+              onLongPressed: () => onSourceLongPressed(source),
+            ),
+          );
+    if (AppWindowSize.isWide(context)) {
+      if (card != null && leading != null) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(flex: 2, child: card),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(end: AppSpacing.lg),
+                child: leading,
+              ),
+            ),
+          ],
+        );
+      }
+      return Align(
+        alignment: AlignmentDirectional.topStart,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppSizes.pageContentMaxWidth * 2 / 3,
+          ),
+          child:
+              card ??
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: leading,
+              ),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ?card,
+        if (leading != null)
+          Padding(
+            padding: EdgeInsets.only(
+              left: AppSpacing.lg,
+              right: AppSpacing.lg,
+              top: card == null ? 0 : kLibraryContinueReadingGap,
+            ),
+            child: leading,
+          ),
       ],
     );
   }

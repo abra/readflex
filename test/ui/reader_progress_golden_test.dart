@@ -14,8 +14,8 @@ import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
 
-/// The reader's bottom chrome: the full-width page slider right above the
-/// capsule, with the chapter and the page label on the line under it.
+/// One reading dock: chapter/page status, a full-width seek target, then
+/// actions. Large text stacks status while keeping every page digit visible.
 void main() {
   setUpAll(loadUiFonts);
   const chapter = 'Chapter 12. The Long Road Home';
@@ -93,13 +93,39 @@ void main() {
       final capsule = tester.getRect(
         find.byKey(const ValueKey('readerChromeCapsule')),
       );
-      // The slider spans the row the capsule spans, minus the label inset.
+      final dock = tester.getRect(
+        find.byKey(const ValueKey('readerChromeDock')),
+      );
+      final startRect = tester.getRect(start);
+      final pageRect = tester.getRect(page);
+      // The status, seek target and actions share one bounded surface.
+      for (final rect in [startRect, pageRect, slider, capsule]) {
+        expect(rect.left, greaterThanOrEqualTo(dock.left));
+        expect(rect.right, lessThanOrEqualTo(dock.right));
+        expect(rect.top, greaterThanOrEqualTo(dock.top));
+        expect(rect.bottom, lessThanOrEqualTo(dock.bottom));
+      }
+      expect(capsule.bottom, dock.bottom);
+      expect(capsule.top - slider.bottom, AppSpacing.sm);
       expect(slider.left, closeTo(capsule.left + AppSpacing.md, .01));
       expect(slider.right, closeTo(capsule.right - AppSpacing.md, .01));
-      expect(tester.getRect(start).top, closeTo(slider.bottom, .01));
+      if (readerProgressLabelsStack(TextScaler.linear(profile.scale))) {
+        expect(startRect.bottom, closeTo(pageRect.top, .01));
+      } else {
+        expect(startRect.bottom, closeTo(slider.top, .01));
+        expect(
+          startRect.right,
+          lessThanOrEqualTo(pageRect.left - readerProgressLabelGap),
+        );
+      }
+      expect(pageRect.bottom, closeTo(slider.top, .01));
       expect(
-        tester.getRect(start).left,
+        startRect.left,
         closeTo(slider.left + readerProgressTrackInset, .01),
+      );
+      expect(
+        pageRect.right,
+        closeTo(slider.right - readerProgressTrackInset, .01),
       );
       expect(
         tester.renderObject<RenderParagraph>(page).didExceedMaxLines,

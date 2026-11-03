@@ -43,13 +43,115 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a tablet sheet is centered within 640dp', (tester) async {
+    testWidgets('an expanded window opens a bounded trailing panel', (
+      tester,
+    ) async {
       await _pumpHost(tester, size: const Size(1024, 1366));
       await _open(tester);
 
       final surface = tester.getRect(_surface);
-      expect(surface.width, 640);
-      expect(surface.center.dx, 512);
+      expect(surface.width, AppSizes.sidePanelWidth);
+      expect(surface.right, 1024 - AppSpacing.xl);
+      expect(surface.top, _statusBar + AppSpacing.xl);
+      expect(surface.bottom, 1366 - _homeIndicator);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('the expanded panel follows the RTL trailing edge', (
+      tester,
+    ) async {
+      await _pumpHost(
+        tester,
+        size: const Size(1024, 1366),
+        textDirection: TextDirection.rtl,
+      );
+      await _open(tester);
+
+      expect(tester.getRect(_surface).left, AppSpacing.xl);
+      expect(tester.getRect(_surface).width, AppSizes.sidePanelWidth);
+    });
+
+    testWidgets('the inset side panel consumes the bottom safe area once', (
+      tester,
+    ) async {
+      await _pumpHost(
+        tester,
+        size: const Size(1024, 1366),
+        body: const _InsetProbe(),
+      );
+      await _open(tester);
+
+      expect(tester.getRect(_surface).bottom, 1366 - _homeIndicator);
+      expect(_InsetProbe.lastBottomPadding, 0);
+      expect(_InsetProbe.lastViewInset, 0);
+    });
+
+    for (final direction in TextDirection.values) {
+      testWidgets(
+        'the $direction side panel starts entirely outside the window',
+        (
+          tester,
+        ) async {
+          final host = await _pumpHost(
+            tester,
+            size: const Size(1024, 1366),
+            textDirection: direction,
+          );
+          host.open();
+          await tester.pump();
+
+          final bounds = tester.getRect(_surface);
+          if (direction == TextDirection.rtl) {
+            expect(bounds.right, lessThanOrEqualTo(0));
+          } else {
+            expect(bounds.left, greaterThanOrEqualTo(1024));
+          }
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+
+    testWidgets('resizing a panel into a sheet retains query and focus', (
+      tester,
+    ) async {
+      final focus = FocusNode();
+      addTearDown(focus.dispose);
+      await _pumpHost(
+        tester,
+        size: const Size(1024, 1366),
+        body: Align(
+          alignment: Alignment.topCenter,
+          child: TextField(focusNode: focus),
+        ),
+      );
+      await _open(tester);
+      await tester.enterText(find.byType(TextField), 'Dune');
+      final editable = tester.state(find.byType(EditableText));
+
+      tester.view.physicalSize = _phone;
+      await tester.pumpAndSettle();
+
+      expect(tester.state(find.byType(EditableText)), same(editable));
+      expect(find.text('Dune'), findsOneWidget);
+      expect(focus.hasFocus, isTrue);
+      expect(tester.getRect(_surface).width, _phone.width);
+      expect(tester.getRect(_surface).bottom, _phone.height);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('pulling the tablet list does not dismiss its side panel', (
+      tester,
+    ) async {
+      final host = await _pumpHost(tester, size: const Size(1024, 1366));
+      await _open(tester);
+      final bounds = tester.getRect(_surface);
+
+      await tester.drag(find.text('Row 1'), const Offset(0, 160));
+      await tester.pumpAndSettle();
+
+      expect(host.closeRequests, 0);
+      expect(tester.getRect(_surface), bounds);
     });
 
     testWidgets('the scrim asks the owner to close and the owner closes it', (
@@ -548,6 +650,7 @@ Future<_HostState> _pumpHost(
   bool ownerCloses = true,
   bool disableAnimations = false,
   double textScale = 1,
+  TextDirection textDirection = TextDirection.ltr,
   Widget? body,
 }) async {
   tester.view
@@ -568,7 +671,7 @@ Future<_HostState> _pumpHost(
           disableAnimations: disableAnimations,
           textScaler: TextScaler.linear(textScale),
         ),
-        child: child!,
+        child: Directionality(textDirection: textDirection, child: child!),
       ),
       home: Scaffold(
         resizeToAvoidBottomInset: false,

@@ -20,8 +20,7 @@ const double _selectedTrackAlpha = 0.24;
 /// the default view. It is that source's place there: the list and grid
 /// below leave it out.
 ///
-/// A full-width band, like a row's selection fill, whose cover and text sit
-/// on the list rows' lines (16dp gutter, [LibraryListCoverSlot], 14dp gap).
+/// An inset reading panel with the row's compact cover and full title.
 /// It behaves like a row: tap opens (or toggles while selecting), long-press
 /// starts selection, and a selected card takes the row's selected colours.
 class LibraryContinueReadingCard extends StatelessWidget {
@@ -45,6 +44,9 @@ class LibraryContinueReadingCard extends StatelessWidget {
     final colors = context.colors;
     final text = context.text;
     final l10n = context.l10n;
+    final wide = AppWindowSize.isWide(context);
+    final coverWidth = wide ? 80.0 : kLibraryListCoverWidth;
+    final coverHeight = wide ? 120.0 : kLibraryListCoverHeight;
     final progress = source.readingProgress.clamp(0.0, 1.0).toDouble();
     final percent = (progress * 100).round();
     final timeLeft = l10n.readingTimeLeft(source.estimatedMinutesLeft);
@@ -58,12 +60,20 @@ class LibraryContinueReadingCard extends StatelessWidget {
     final mutedColor = isSelected
         ? colors.selectedControlForeground
         : colors.onSurfaceVariant;
-    final mutedStyle = text.bodySmall.copyWith(color: mutedColor);
-    final overlineStyle = text.labelSmall.copyWith(color: mutedColor);
+    final medium = AppWindowSize.isMedium(context);
+    final mutedStyle = (medium ? text.bodyMedium : text.bodySmall).copyWith(
+      color: mutedColor,
+    );
+    final overlineStyle = (medium ? text.labelLarge : text.labelSmall).copyWith(
+      color: mutedColor,
+    );
     final titleStyle = AppTypography.serif(
-      textStyle: text.titleMedium,
+      textStyle: wide ? text.titleLarge : text.titleMedium,
       color: emphasisColor,
     );
+    final expanded =
+        MediaQuery.textScalerOf(context).scale(titleStyle.fontSize!) >
+        titleStyle.fontSize! * 1.3;
     final metadataHeight = _lineHeight(context, mutedStyle);
     final headerHeight = math.max(
       metadataHeight,
@@ -75,7 +85,7 @@ class LibraryContinueReadingCard extends StatelessWidget {
             AppSpacing.xxs +
             preferredTitleHeight +
             _progressBarHeight <=
-        kLibraryListCoverHeight;
+        coverHeight;
     final separateAuthor =
         showHeader &&
         headerHeight +
@@ -83,7 +93,7 @@ class LibraryContinueReadingCard extends StatelessWidget {
                 preferredTitleHeight +
                 metadataHeight +
                 _progressBarHeight <=
-            kLibraryListCoverHeight;
+            coverHeight;
 
     return Semantics(
       container: true,
@@ -103,75 +113,194 @@ class LibraryContinueReadingCard extends StatelessWidget {
       ),
       onTap: onPressed,
       onLongPress: onLongPressed,
-      child: Material(
-        key: const ValueKey('libraryContinueReadingCard'),
-        color: isSelected
-            ? colors.selectedControlBackground
-            : colors.surfaceContainerLow,
-        child: InkWell(
-          onTap: onPressed,
-          onLongPress: onLongPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg,
-              vertical: AppSpacing.md,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: Material(
+          key: const ValueKey('libraryContinueReadingCard'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            side: BorderSide(
+              color: isSelected
+                  ? colors.selectedControlForeground
+                  : colors.outlineVariant,
             ),
-            child: SizedBox(
-              height: kLibraryListCoverHeight,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  LibraryListCoverSlot(
-                    key: const ValueKey('libraryContinueReadingCover'),
-                    cover: _ContinueReadingCover(source: source),
-                    isSelected: isSelected,
-                  ),
-                  const SizedBox(width: kLibraryListCoverToTextGap),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (showHeader) ...[
-                          SizedBox(
-                            height: headerHeight,
-                            child: _ContinueReadingHeader(
-                              label: !separateAuthor && hasAuthor
-                                  ? author
-                                  : l10n.libraryContinueReading,
-                              labelStyle: !separateAuthor && hasAuthor
-                                  ? mutedStyle
-                                  : overlineStyle,
-                              caption: caption,
-                              captionStyle: mutedStyle,
+          ),
+          clipBehavior: Clip.antiAlias,
+          color: isSelected
+              ? colors.selectedControlBackground
+              : colors.surfaceContainerLow,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            onTap: onPressed,
+            onLongPress: onLongPressed,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.lg,
+              ),
+              child: expanded
+                  ? _ContinueReadingExpandedContent(
+                      source: source,
+                      caption: caption,
+                      progress: progress,
+                      isSelected: isSelected,
+                      coverWidth: coverWidth,
+                      coverHeight: coverHeight,
+                      titleStyle: titleStyle,
+                      mutedStyle: mutedStyle,
+                      overlineStyle: overlineStyle,
+                    )
+                  : SizedBox(
+                      height: coverHeight,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          LibraryListCoverSlot(
+                            key: const ValueKey('libraryContinueReadingCover'),
+                            cover: _ContinueReadingCover(source: source),
+                            isSelected: isSelected,
+                            width: coverWidth,
+                            height: coverHeight,
+                          ),
+                          const SizedBox(width: kLibraryListCoverToTextGap),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (showHeader) ...[
+                                  SizedBox(
+                                    height: headerHeight,
+                                    child: _ContinueReadingHeader(
+                                      label: !separateAuthor && hasAuthor
+                                          ? author
+                                          : l10n.libraryContinueReading,
+                                      labelStyle: !separateAuthor && hasAuthor
+                                          ? mutedStyle
+                                          : overlineStyle,
+                                      caption: caption,
+                                      captionStyle: mutedStyle,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.xxs),
+                                ],
+                                Expanded(
+                                  child: _ContinueReadingDetails(
+                                    title: source.title,
+                                    style: titleStyle,
+                                    author: separateAuthor && hasAuthor
+                                        ? author
+                                        : null,
+                                    authorStyle: mutedStyle,
+                                    authorHeight: separateAuthor
+                                        ? metadataHeight + AppSpacing.xxs
+                                        : 0,
+                                  ),
+                                ),
+                                _ContinueReadingProgressBar(
+                                  sourceId: source.id,
+                                  progress: progress,
+                                  isSelected: isSelected,
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.xxs),
                         ],
-                        Expanded(
-                          child: _ContinueReadingDetails(
-                            title: source.title,
-                            style: titleStyle,
-                            author: separateAuthor && hasAuthor ? author : null,
-                            authorStyle: mutedStyle,
-                            authorHeight: separateAuthor
-                                ? metadataHeight + AppSpacing.xxs
-                                : 0,
-                          ),
-                        ),
-                        _ContinueReadingProgressBar(
-                          sourceId: source.id,
-                          progress: progress,
-                          isSelected: isSelected,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Large text keeps its requested size and gives the full title its own space.
+class _ContinueReadingExpandedContent extends StatelessWidget {
+  const _ContinueReadingExpandedContent({
+    required this.source,
+    required this.caption,
+    required this.progress,
+    required this.isSelected,
+    required this.coverWidth,
+    required this.coverHeight,
+    required this.titleStyle,
+    required this.mutedStyle,
+    required this.overlineStyle,
+  });
+
+  final LibrarySource source;
+  final String caption;
+  final double progress;
+  final bool isSelected;
+  final double coverWidth;
+  final double coverHeight;
+  final TextStyle titleStyle;
+  final TextStyle mutedStyle;
+  final TextStyle overlineStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final author = source.author?.trim();
+    final direction = switch (source.inferredTextDirection) {
+      ArticleTextDirection.rtl => TextDirection.rtl,
+      ArticleTextDirection.ltr || null => TextDirection.ltr,
+    };
+    return Column(
+      key: const ValueKey('libraryContinueReadingExpandedContent'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LibraryListCoverSlot(
+              key: const ValueKey('libraryContinueReadingCover'),
+              cover: _ContinueReadingCover(source: source),
+              isSelected: isSelected,
+              width: coverWidth,
+              height: coverHeight,
+            ),
+            const SizedBox(width: kLibraryListCoverToTextGap),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    context.l10n.libraryContinueReading,
+                    key: const ValueKey('libraryContinueReadingContext'),
+                    style: overlineStyle,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    caption,
+                    key: const ValueKey('libraryContinueReadingCaption'),
+                    style: mutedStyle,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          source.title,
+          key: const ValueKey('libraryContinueReadingTitle'),
+          textDirection: direction,
+          style: titleStyle,
+        ),
+        if (author != null && author.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Text(author, textDirection: direction, style: mutedStyle),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        _ContinueReadingProgressBar(
+          sourceId: source.id,
+          progress: progress,
+          isSelected: isSelected,
+        ),
+      ],
     );
   }
 }
@@ -254,6 +383,7 @@ class _ContinueReadingHeader extends StatelessWidget {
       Expanded(
         child: Text(
           label,
+          key: const ValueKey('libraryContinueReadingContext'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: labelStyle,

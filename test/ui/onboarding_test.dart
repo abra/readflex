@@ -437,19 +437,21 @@ void main() {
         addBook(l10n),
         notNow(l10n),
         find.text(l10n.onboardingWelcomeTitle),
-        featureRows.first,
       ]) {
         final rect = tester.getRect(target);
         expect(rect.left, AppSpacing.lg, reason: '$target');
         expect(rect.right, 390 - AppSpacing.lg, reason: '$target');
       }
+      final row = tester.getRect(featureRows.first);
+      expect(row.left, AppSpacing.lg * 2);
+      expect(row.right, 390 - AppSpacing.lg * 2);
       // The icon is centered; the list follows the greeting at its spacing.
       final icon = tester.getRect(find.byType(OnboardingAppIcon));
       expect(icon.center.dx, closeTo(195, 0.01));
       expect(
         tester.getRect(featureRows.first).top -
             tester.getRect(find.text(l10n.onboardingWelcomeSubtitle)).bottom,
-        closeTo(OnboardingScreen.featuresSpacing, 0.5),
+        closeTo(OnboardingScreen.featuresSpacing + AppSpacing.lg, 0.5),
       );
     });
 
@@ -462,14 +464,52 @@ void main() {
       for (final target in [
         addBook(l10n),
         notNow(l10n),
-        featureRows.first,
       ]) {
         final rect = tester.getRect(target);
         expect(rect.width, OnboardingScreen.maxContentWidth, reason: '$target');
         expect(rect.center.dx, closeTo(width / 2, 0.01), reason: '$target');
       }
+      expect(
+        tester.getRect(featureRows.first).width,
+        OnboardingScreen.maxContentWidth - AppSpacing.lg * 2,
+      );
       expect(tester.takeException(), isNull);
     });
+
+    for (final (size, locale, name) in [
+      (const Size(1032, 1376), const Locale('en'), 'portrait'),
+      (const Size(1376, 1032), const Locale('en'), 'landscape'),
+      (const Size(1032, 1376), const Locale('ar'), 'rtl'),
+    ]) {
+      testWidgets(
+        'expanded welcome keeps greeting and features side by side: $name',
+        (tester) async {
+          await pumpOnboarding(tester, size: size, locale: locale);
+          final l10n = l10nOf(tester);
+          final heading = tester.getRect(
+            find.text(l10n.onboardingWelcomeTitle),
+          );
+          final features = tester.getRect(featureRows.first);
+          final action = tester.getRect(addBook(l10n));
+          if (locale.languageCode == 'ar') {
+            expect(heading.left, greaterThan(features.right));
+          } else {
+            expect(heading.right, lessThan(features.left));
+          }
+          expect(action.width, closeTo(heading.width, .01));
+          expect(addBook(l10n).hitTestable(), findsOneWidget);
+          expect(notNow(l10n).hitTestable(), findsOneWidget);
+          expect(action.bottom, lessThanOrEqualTo(size.height));
+          expect(tester.takeException(), isNull);
+          await expectUiGolden(
+            tester,
+            VisualProfile.phone,
+            'onboarding-tablet-$name',
+          );
+        },
+        tags: ['golden'],
+      );
+    }
 
     testWidgets('safe areas keep content and actions inside the insets', (
       tester,

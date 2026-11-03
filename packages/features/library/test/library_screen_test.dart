@@ -780,7 +780,7 @@ void main() {
     final glyphRect = tester.getRect(
       find.descendant(
         of: displayButton,
-        matching: find.byIcon(AppIcons.moreVertical),
+        matching: find.byIcon(AppIcons.settings),
       ),
     );
     final searchRect = tester.getRect(find.byType(SearchField));
@@ -790,7 +790,9 @@ void main() {
     expect(
       displayButtonRect.right,
       closeTo(
-        scaffoldRect.right - AppSpacing.lg + AppSizes.iconActionOutset,
+        scaffoldRect.right -
+            AppSpacing.lg +
+            (displayButtonRect.width - glyphRect.width) / 2,
         1,
       ),
     );
@@ -2348,10 +2350,11 @@ void main() {
     );
     expect(
       listView.padding,
-      const EdgeInsetsDirectional.fromSTEB(
+      EdgeInsetsDirectional.fromSTEB(
         AppSpacing.xl - AppSpacing.sm,
         0,
-        AppSpacing.xl - AppSizes.iconActionOutset,
+        AppSpacing.xl -
+            AppPlainIconButton.defaultIconOutsetOf(tester.element(sheet)),
         AppSpacing.lg,
       ),
     );

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+
+import 'reader_control_styles.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_progress_label.dart';
@@ -165,7 +167,7 @@ class _ImagePageProgressOverlayPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = context.text.readerChromeNumber.copyWith(color: textColor);
+    final style = readerChromeNumberStyle(context).copyWith(color: textColor);
 
     return Container(
       padding: const EdgeInsets.symmetric(

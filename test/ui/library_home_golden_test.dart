@@ -1,6 +1,7 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:local_storage/local_storage.dart';
@@ -153,8 +154,8 @@ void main() {
     }, tags: ['golden']);
   }
 
-  // The cover bounds the text: the full title wraps and scales down to fit,
-  // including at double text size, without changing the cover or outer padding.
+  // Normal text retains the compact card. Large text gives the title its own
+  // space and keeps the requested text size instead of shrinking it to fit.
   for (final profile in [VisualProfile.phone, VisualProfile.largeText]) {
     testWidgets('continue reading long title ${profile.name}', (tester) async {
       const longTitle =
@@ -181,6 +182,31 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.text(longTitle), findsOneWidget);
+      if (profile == VisualProfile.largeText) {
+        final cover = find.byKey(const ValueKey('libraryContinueReadingCover'));
+        final titleText = tester.widget<Text>(title);
+        final paragraph = tester.renderObject<RenderParagraph>(title);
+        final role = Theme.of(tester.element(title)).textTheme.titleMedium!;
+        expect(titleText.style!.fontSize, role.fontSize);
+        expect(
+          paragraph.textScaler.scale(role.fontSize!),
+          role.fontSize! * profile.scale,
+        );
+        expect(titleText.maxLines, isNull);
+        expect(titleText.overflow, isNull);
+        expect(paragraph.didExceedMaxLines, isFalse);
+        expect(
+          tester.getRect(title).top,
+          greaterThan(tester.getRect(cover).bottom),
+        );
+        final contextLabel = find.byKey(
+          const ValueKey('libraryContinueReadingContext'),
+        );
+        expect(
+          tester.renderObject<RenderParagraph>(contextLabel).didExceedMaxLines,
+          isFalse,
+        );
+      }
       expect(tester.takeException(), isNull);
       await expectUiGolden(
         tester,

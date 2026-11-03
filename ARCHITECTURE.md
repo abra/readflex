@@ -198,18 +198,35 @@ get the wide one. It reads `MediaQuery.sizeOf`, so callers rebuild only when
 the window is resized or rotated. Features decide with it or with their own
 `LayoutBuilder` constraints, and keep one widget tree per surface: a number
 (columns, a width cap) is a parameter of the existing widget, a different
-structure would be its own widget chosen in one place. Phone layouts are
-unchanged; the phone golden profiles prove it.
+structure is its own widget chosen in one place. `AppContentFrame` keeps
+headers and scrolling workspaces aligned within a shared 1200dp maximum;
+it preserves bounded height and does not measure intrinsic content.
 
-- Library: the grid adds columns once covers would pass 160dp, the list
-  shows two columns of rows, and the selection bar keeps its actions in one
-  row. The empty state, like onboarding, stops at
-  `AppSizes.centeredColumnMaxWidth` in every window.
+Control readability has a separate medium-window threshold in `AppWindowSize`:
+600dp wide and 480dp tall. Shared utility actions and filter captions use
+existing icon/text tokens at this size, including portrait tablets and medium
+Split View windows. This does not change the 840dp expanded-layout threshold
+or scale the reading engine's text. Resizing is driven by the window's
+`MediaQuery`, without device classification, services or stored preferences.
+
+- Library: the lazy cover-only grid adds columns once covers would pass 160dp;
+  generated artwork keeps its title and author/site text on the cover.
+  Lists show two columns on expanded windows.
+  Continue Reading is an inset panel, paired with Practice when there is room;
+  full titles keep their bounded fit and the bottom collection/add capsule
+  remains in thumb reach. Empty states stop at 480dp.
+- Practice: the expanded hub pairs the review overview with supporting lists;
+  enlarged text returns it to one column. Review content and controls share a
+  bounded workspace, with a 640dp study card and 480dp completion summary.
+- Onboarding: narrow windows keep a 480dp column and pinned actions. Expanded
+  windows place the greeting/actions beside the feature card; constrained
+  height scrolls the workspace instead of clipping it.
 - Reader: a measure of 32em of body text reaches pagecraft's page settings in
   every window (phone pages in portrait are narrower than it); wide windows
   add the Auto / One / Two Columns choice. pagecraft lays out one column or a
-  landscape spread, and articles keep one centred column. See the reader and
-  pagecraft READMEs.
+  landscape spread, and articles keep one centred column. Status, seeking
+  and actions share one bounded bottom dock; expanded windows expose labels
+  when text fits. See the reader and pagecraft READMEs.
 
 Reading text size is not a layout, so it has its own rule: a tablet-sized
 window, at least 600 on its shortest side (Android's `sw600dp`), renders book
@@ -219,8 +236,13 @@ stay phones in landscape, and a narrow Split View window reads like a phone.
 The reader's own text size stays at 100%; the multiplier only reaches the
 book style pagecraft lays out with.
 
-Bottom sheets keep Material's 640dp width on wide windows. Side panels and
-popovers for tablets are not implemented.
+Modal utility sheets keep Material's 640dp width on wide windows. Reader
+Contents and Search use the same `AppInlineSheet` instance as narrow windows,
+presented as a 420dp panel at the trailing edge with safe-area gutters. Its
+body, search query, focus and scroll state survive resizing between panel and
+bottom sheet. Expanded panels have an explicit Close action and do not turn
+vertical scrolling into sheet expansion or dismissal. Anchored popovers are
+not implemented.
 
 ## Localization
 

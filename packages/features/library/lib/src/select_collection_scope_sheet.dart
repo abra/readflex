@@ -17,13 +17,6 @@ const double _collectionScopeBottomBreathingRoom = AppSpacing.xl;
 // target; the list subtracts both so icons and the menu glyph land on the
 // 24dp sheet gutter while the pill and target bleed into it.
 const double _collectionScopeRowInset = AppSpacing.sm;
-const EdgeInsetsDirectional _collectionScopeListPadding =
-    EdgeInsetsDirectional.fromSTEB(
-      AppSpacing.xl - _collectionScopeRowInset,
-      0,
-      AppSpacing.xl - AppSizes.iconActionOutset,
-      AppSpacing.lg,
-    );
 
 sealed class LibraryCollectionScopeSheetResult {
   const LibraryCollectionScopeSheetResult();
@@ -325,7 +318,12 @@ class _CollectionScopeSectionsState extends State<_CollectionScopeSections> {
     return ScrollEdgeFadeStack(
       showBottomFade: false,
       child: ListView.custom(
-        padding: _collectionScopeListPadding,
+        padding: EdgeInsetsDirectional.fromSTEB(
+          AppSpacing.xl - _collectionScopeRowInset,
+          0,
+          AppSpacing.xl - AppPlainIconButton.defaultIconOutsetOf(context),
+          AppSpacing.lg,
+        ),
         // Screen readers count the rows, each carrying its own index.
         semanticChildCount: rowCount,
         childrenDelegate: SliverChildBuilderDelegate(
@@ -406,9 +404,9 @@ class _ScopeSectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsetsDirectional.only(
+      padding: EdgeInsetsDirectional.only(
         start: _collectionScopeRowInset,
-        end: AppSizes.iconActionOutset,
+        end: AppPlainIconButton.defaultIconOutsetOf(context),
         bottom: AppSpacing.xs,
       ),
       child: Text(
@@ -491,7 +489,9 @@ class _ScopeOptionRow extends StatelessWidget {
             if (selected)
               PositionedDirectional(
                 start: 0,
-                end: AppSizes.iconActionOutset - _collectionScopeRowInset,
+                end:
+                    AppPlainIconButton.defaultIconOutsetOf(context) -
+                    _collectionScopeRowInset,
                 top: 0,
                 bottom: 0,
                 child: Ink(

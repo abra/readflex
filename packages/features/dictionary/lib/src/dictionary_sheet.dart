@@ -344,6 +344,7 @@ class _DictionaryEntryHeader extends StatelessWidget {
           boxWidth: AppSheetActionRow.childWidthFor(
             constraints.maxWidth,
             actionCount: actionCount,
+            iconSize: AppPlainIconButton.defaultIconSizeOf(context),
           ),
           textDirection: direction,
         );

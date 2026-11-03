@@ -29,6 +29,13 @@ abstract final class AppSizes {
   /// full-width buttons stop growing here on tablets and landscape phones.
   static const double centeredColumnMaxWidth = 480;
 
+  /// A comfortable workspace on expanded windows, shared by screen headers
+  /// and content so they keep the same gutters.
+  static const double pageContentMaxWidth = 1200;
+
+  /// Reader navigation panels leave the book visible beside their controls.
+  static const double sidePanelWidth = 420;
+
   /// Material's regular floating action button (Library "+").
   static const double floatingActionButton = 56;
 

@@ -19,41 +19,52 @@ void main() {
   testWidgets('retry repeats the failed query without discarding history', (
     tester,
   ) async {
-    final cubit = ReaderSearchCubit(initialRecentQueries: const ['earlier']);
-    addTearDown(cubit.close);
-    var requests = 0;
-    Stream<ReaderSearchEvent> search(String query) {
-      expect(query, 'devices');
-      requests++;
-      return requests == 1
-          ? Stream.error(StateError('offline'))
-          : Stream.value(const ReaderSearchDone(requestId: 2));
-    }
+    final semantics = tester.ensureSemantics();
+    try {
+      final cubit = ReaderSearchCubit(initialRecentQueries: const ['earlier']);
+      addTearDown(cubit.close);
+      var requests = 0;
+      Stream<ReaderSearchEvent> search(String query) {
+        expect(query, 'devices');
+        requests++;
+        return requests == 1
+            ? Stream.error(StateError('offline'))
+            : Stream.value(const ReaderSearchDone(requestId: 2));
+      }
 
-    cubit.recentQuerySelected('devices', searchBook: search);
-    await tester.pumpWidget(
-      _app(
-        cubit: cubit,
-        child: ReaderSearchPanel(
-          visible: true,
-          format: BookFormat.epub,
-          pageProgressionRtl: false,
-          onClose: () {},
-          onSearch: search,
-          onResultSelected: (_) {},
+      cubit.recentQuerySelected('devices', searchBook: search);
+      await tester.pumpWidget(
+        _app(
+          cubit: cubit,
+          child: ReaderSearchPanel(
+            visible: true,
+            format: BookFormat.epub,
+            pageProgressionRtl: false,
+            onClose: () {},
+            onSearch: search,
+            onResultSelected: (_) {},
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byType(ErrorState), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
-    await tester.tap(find.text('Retry'));
-    await tester.pumpAndSettle();
-    expect(find.byType(ErrorState), findsNothing);
-    expect(requests, 2);
-    expect(cubit.state.query, 'devices');
-    expect(cubit.state.recentQueries, ['earlier']);
-    expect(cubit.state.errorCode, isNull);
+      );
+      await tester.pumpAndSettle();
+      final title = find.text('Search');
+      expect(tester.getSemantics(title).flagsCollection.isHeader, isTrue);
+      expect(
+        tester.widget<Text>(title).style!.fontSize,
+        tester.element(title).text.titleMedium.fontSize,
+      );
+      expect(find.byType(ErrorState), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ErrorState), findsNothing);
+      expect(requests, 2);
+      expect(cubit.state.query, 'devices');
+      expect(cubit.state.recentQueries, ['earlier']);
+      expect(cubit.state.errorCode, isNull);
+    } finally {
+      semantics.dispose();
+    }
   });
   void viewport(WidgetTester tester, Size size) {
     tester.view.physicalSize = size;
@@ -174,6 +185,16 @@ void main() {
         );
         await tester.pumpAndSettle();
         final field = tester.getRect(find.byType(TextField));
+        final context = tester.element(find.byType(ReaderSearchPanel));
+        final count = tester.widget<Text>(
+          find.text(context.l10n.readerSearchMatches(10)),
+        );
+        expect(
+          count.style!.fontSize,
+          AppWindowSize.isMedium(context)
+              ? context.text.labelLarge.fontSize
+              : context.text.bodySmall.fontSize,
+        );
         expect(field.bottom, lessThanOrEqualTo(size.height - inset));
         expect(field.top, greaterThanOrEqualTo(0));
         expect(tester.takeException(), isNull);
@@ -388,6 +409,84 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final size in [const Size(800, 1280), const Size(1280, 800)]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'tablet search counters match the measured overlay $size x$scale',
+        (
+          tester,
+        ) async {
+          viewport(tester, size);
+          final cubit = await seed(tester, count: 2);
+          cubit.resultSelected(
+            index: 0,
+            returnLocation: const ReaderSearchLocation(
+              cfi: 'original',
+              fraction: 0.12,
+            ),
+          );
+          late double extent;
+          await tester.pumpWidget(
+            _app(
+              cubit: cubit,
+              scale: scale,
+              locale: const Locale('ar'),
+              rtl: true,
+              child: Builder(
+                builder: (context) {
+                  extent = readerSearchNavigationHeight(
+                    context,
+                    canReturn: true,
+                  );
+                  return Align(
+                    alignment: Alignment.bottomCenter,
+                    child: ReaderSearchNavigationBar(
+                      state: cubit.state,
+                      onOpenSearch: () {},
+                      onPrevious: () {},
+                      onNext: () {},
+                      onEndSearch: () {},
+                      onReturn: () {},
+                    ),
+                  );
+                },
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final context = tester.element(
+            find.byType(ReaderSearchNavigationBar),
+          );
+          final counter = find.text(
+            context.l10n.readerSearchMatchPosition(1, 2),
+          );
+          for (final label in [counter, find.text('12%')]) {
+            final text = tester.widget<Text>(label);
+            expect(text.style!.fontSize, context.text.labelLarge.fontSize);
+            expect(text.style!.height, context.text.labelLarge.height);
+          }
+          expect(
+            tester.getSize(find.byType(ReaderSearchNavigationBar)).height,
+            extent,
+          );
+          final closeIcon = tester.getRect(find.byIcon(AppIcons.close));
+          expect(closeIcon.size, const Size.square(AppIconSize.md));
+          expect(closeIcon.left, AppSpacing.lg);
+          expect(closeIcon.left, tester.getRect(find.text('12%')).left);
+          for (final button in tester.widgetList<AppPlainIconButton>(
+            find.byType(AppPlainIconButton),
+          )) {
+            expect(
+              tester.getSize(find.byWidget(button)),
+              const Size.square(AppSizes.buttonHeight),
+            );
+          }
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
   for (final dark in [false, true]) {
     for (final rtl in [false, true]) {
@@ -1015,34 +1114,51 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('search header close uses the default 20dp glyph', (
-    tester,
-  ) async {
-    viewport(tester, const Size(390, 844));
-    final cubit = ReaderSearchCubit(initialRecentQueries: ['devices']);
-    addTearDown(cubit.close);
-    await tester.pumpWidget(
-      _app(
-        cubit: cubit,
-        child: ReaderSearchPanel(
-          visible: true,
-          format: BookFormat.epub,
-          pageProgressionRtl: false,
-          onClose: () {},
-          onResultSelected: (_) {},
-          onSearch: (_) => const Stream.empty(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    final close = find.byTooltip('Close');
-    expect(tester.getSize(close), const Size.square(AppSizes.buttonHeight));
-    final closeIcon = tester.getRect(find.byIcon(AppIcons.close));
-    expect(closeIcon.size, const Size.square(AppIconSize.sm));
-    expect(390 - closeIcon.right, AppSpacing.lg);
-    // History rows have no inline remove glyph; the swipe owns removal.
-    expect(find.byIcon(AppIcons.delete), findsNothing);
-  });
+  for (final size in [
+    const Size(390, 844),
+    const Size(800, 1280),
+    const Size(1280, 800),
+  ]) {
+    for (final rtl in [false, true]) {
+      testWidgets('search Close preserves its glyph gutter $size rtl=$rtl', (
+        tester,
+      ) async {
+        viewport(tester, size);
+        final cubit = ReaderSearchCubit(initialRecentQueries: ['devices']);
+        addTearDown(cubit.close);
+        await tester.pumpWidget(
+          _app(
+            cubit: cubit,
+            rtl: rtl,
+            child: ReaderSearchPanel(
+              visible: true,
+              format: BookFormat.epub,
+              pageProgressionRtl: false,
+              onClose: () {},
+              onResultSelected: (_) {},
+              onSearch: (_) => const Stream.empty(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final close = find.byTooltip('Close');
+        expect(tester.getSize(close), const Size.square(AppSizes.buttonHeight));
+        final closeIcon = tester.getRect(find.byIcon(AppIcons.close));
+        expect(
+          closeIcon.size,
+          Size.square(size.width >= 600 ? AppIconSize.md : AppIconSize.sm),
+        );
+        final sheet = tester.getRect(_sheetSurface);
+        expect(
+          rtl ? closeIcon.left - sheet.left : sheet.right - closeIcon.right,
+          AppSpacing.lg,
+        );
+        // History removal remains a swipe action.
+        expect(find.byIcon(AppIcons.delete), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
 
   for (final (safe, keyboard) in [(0.0, 0.0), (34.0, 0.0), (0.0, 300.0)]) {
     testWidgets(
@@ -1242,11 +1358,13 @@ Widget _app({
   double inset = 0,
   EdgeInsets safePadding = EdgeInsets.zero,
   bool dark = false,
+  Locale locale = const Locale('en'),
   bool rtl = false,
   bool disableAnimations = false,
 }) {
   return MaterialApp(
     theme: dark ? AppTheme.dark() : AppTheme.light(),
+    locale: locale,
     localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
     supportedLocales: ReadflexSupportedLocales.locales,
     builder: (context, child) => MediaQuery(

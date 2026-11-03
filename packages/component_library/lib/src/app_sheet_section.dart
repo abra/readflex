@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'app_plain_icon_button.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_sizes.dart';
@@ -11,7 +12,7 @@ import 'theme/tokens/app_spacing.dart';
 /// The outline is drawn behind full-width content rather than around it.
 /// [child] keeps the sheet's geometry: text stays on the 24dp gutter, under
 /// the sheet title, and an `AppSheetActionRow` glyph stays on the same edge.
-/// The outline sits [outlineInset] from either side of the sheet, so a 48dp
+/// The outline sits [outlineInsetFor] from either side of the sheet, so a 48dp
 /// utility target reaches exactly to it.
 ///
 /// [title] heads the section in the interface language. When the section's
@@ -32,9 +33,12 @@ class AppSheetSection extends StatelessWidget {
     vertical: AppSpacing.md,
   );
 
-  /// Distance of the outline from either side of the sheet: the 24dp gutter
-  /// less the part of a 48dp icon target beyond its glyph.
+  /// Narrow-window outline inset. Use [outlineInsetFor] for current geometry.
   static const double outlineInset = AppSpacing.xl - AppSizes.iconActionOutset;
+
+  /// The 24dp gutter less the part of a 48dp target beyond its default glyph.
+  static double outlineInsetFor(BuildContext context) =>
+      AppSpacing.xl - AppPlainIconButton.defaultIconOutsetOf(context);
 
   final Widget child;
   final String? title;
@@ -43,6 +47,7 @@ class AppSheetSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final title = this.title;
+    final outlineInset = outlineInsetFor(context);
     return Stack(
       children: [
         Positioned.fill(

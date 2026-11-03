@@ -6,7 +6,6 @@ import 'app_icons.dart';
 import 'app_plain_icon_button.dart';
 import 'bottom_sheet_title_bar.dart';
 import 'theme/extensions/build_context_ext.dart';
-import 'theme/tokens/app_icon_size.dart';
 import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
 
@@ -50,7 +49,7 @@ class BottomSheetHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final direction = Directionality.of(context);
     final insets = padding.resolve(direction);
-    const iconInset = (AppSizes.buttonHeight - AppIconSize.sm) / 2;
+    final iconInset = AppPlainIconButton.defaultIconOutsetOf(context);
     final closeOutset = closeLabel == null
         ? 0.0
         : math.min(

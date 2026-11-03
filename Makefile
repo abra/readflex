@@ -1,7 +1,7 @@
 .PHONY: get format format-check analyze test test-ui test-ui-contracts test-goldens update-goldens test-device coverage test-performance benchmark-mobi get-mobi-rust generate-mobi-rust build-mobi-rust test-mobi-rust benchmark-mobi-rust compare-mobi get-reader-native generate-reader-native build-reader-native test-reader-native benchmark-reader-parts verify clean build build-android build-apk run help
 .PHONY: generate-pagecraft-mobi-native analyze-pagecraft-mobi-rust test-pagecraft-mobi-rust
 .PHONY: test-tools
-.PHONY: test-tablet test-tablet-layout
+.PHONY: test-phone test-tablet test-tablet-layout
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
@@ -187,6 +187,11 @@ update-goldens:
 test-device:
 	@test -n "$(DEVICE)" || { echo "Specify DEVICE from '$(FLUTTER) devices'."; exit 2; }
 	READFLEX_NATIVE_DEVICE="$(DEVICE)" READFLEX_NATIVE_COVERAGE="$(COVERAGE)" $(FLUTTER) drive --driver=test_driver/ui_driver.dart --target=integration_test/reader_flows_test.dart -d "$(DEVICE)"
+
+## Run native phone Library/reader/Practice flows: DEVICE=<phone-id>
+test-phone:
+	@test -n "$(DEVICE)" || { echo "Specify phone DEVICE from '$(FLUTTER) devices'."; exit 2; }
+	READFLEX_NATIVE_DEVICE="$(DEVICE)" READFLEX_NATIVE_COVERAGE="$(COVERAGE)" $(FLUTTER) drive --driver=test_driver/ui_driver.dart --target=integration_test/phone_regression_test.dart -d "$(DEVICE)"
 
 ## Run native tablet Library/reader regression flows: DEVICE=<tablet-id>
 test-tablet:

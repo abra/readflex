@@ -8,8 +8,8 @@ const _readerChromeInkEmphasis = 0.78;
 
 const _readerChromeTrackEmphasis = 0.2;
 
-/// Opaque muted reader foreground for the top line and the progress row,
-/// which have no panel of their own.
+/// Opaque muted foreground for the top line and persistent article progress,
+/// drawn directly on the reading page.
 Color readerChromeInkColor(ReaderThemeData theme) => Color.alphaBlend(
   theme.primaryTextColor.withValues(alpha: _readerChromeInkEmphasis),
   theme.backgroundColor,

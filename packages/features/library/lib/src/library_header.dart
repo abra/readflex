@@ -56,7 +56,9 @@ class LibraryHeader extends StatelessWidget {
         : libraryCollectionScopeLabel(l10n, scope);
 
     return Padding(
-      padding: const EdgeInsets.only(top: AppSpacing.lg),
+      padding: EdgeInsets.only(
+        top: AppWindowSize.isWide(context) ? AppSpacing.xl : AppSpacing.lg,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -68,9 +70,13 @@ class LibraryHeader extends StatelessWidget {
               child: Text(
                 l10n.libraryItemCount(state.scopeItemCount),
                 key: const ValueKey('libraryHeaderItemCount'),
-                style: context.text.bodySmall.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
+                style:
+                    (AppWindowSize.isMedium(context)
+                            ? context.text.bodyMedium
+                            : context.text.bodySmall)
+                        .copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
               ),
             ),
           const SizedBox(height: AppSpacing.lg),
@@ -104,19 +110,24 @@ class _LibraryTitleBar extends StatelessWidget {
     final style = context.text.headlineMedium.copyWith(
       color: context.colors.onSurface,
     );
-    const actions = _DisplayMenuButton();
-
-    // The title starts on the 16dp gutter. The row ends 2dp from the edge so
-    // the Display action's 48dp target bleeds into the gutter and its 20dp
-    // glyph lands on the 16dp content edge like the search field.
+    final actionOutset = AppPlainIconButton.defaultIconOutsetOf(context);
+    // The action target extends into the gutter; its glyph stays on the
+    // search field's content edge at either control size.
     return Padding(
-      padding: const EdgeInsetsDirectional.only(
+      padding: EdgeInsetsDirectional.only(
         start: AppSpacing.lg,
-        end: AppSpacing.lg - AppSizes.iconActionOutset,
+        end: AppSpacing.lg - actionOutset,
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          const actionsWidth = AppSizes.buttonHeight;
+          final showLabel = AppWindowSize.isWide(context);
+          final actionsWidth = showLabel
+              ? _displayActionWidth(context)
+              : AppSizes.buttonHeight;
+          final actions = SizedBox(
+            width: actionsWidth,
+            child: _DisplayMenuButton(showLabel: showLabel),
+          );
           final layout = resolveLibraryTitleLayout(
             title: title,
             style: style,
@@ -129,9 +140,7 @@ class _LibraryTitleBar extends StatelessWidget {
                 _titleActionsGap -
                 _titleChromeWidth,
             stackedWidth:
-                constraints.maxWidth -
-                AppSizes.iconActionOutset -
-                _titleChromeWidth,
+                constraints.maxWidth - actionOutset - _titleChromeWidth,
           );
           final titleLine = _LibraryTitleLine(
             title: title,
@@ -155,8 +164,8 @@ class _LibraryTitleBar extends StatelessWidget {
             children: [
               Align(alignment: AlignmentDirectional.centerEnd, child: actions),
               Padding(
-                padding: const EdgeInsetsDirectional.only(
-                  end: AppSizes.iconActionOutset,
+                padding: EdgeInsetsDirectional.only(
+                  end: actionOutset,
                 ),
                 child: titleLine,
               ),
@@ -223,14 +232,40 @@ class _LibraryOfflineStatus extends StatelessWidget {
 }
 
 class _DisplayMenuButton extends StatelessWidget {
-  const _DisplayMenuButton();
+  const _DisplayMenuButton({required this.showLabel});
+
+  final bool showLabel;
 
   @override
   Widget build(BuildContext context) {
+    if (showLabel) {
+      return Tooltip(
+        message: context.l10n.libraryDisplayOptions,
+        excludeFromSemantics: true,
+        child: TextButton.icon(
+          key: const ValueKey('libraryHeaderDisplayButton'),
+          style: TextButton.styleFrom(
+            minimumSize: const Size(0, AppSizes.buttonHeight),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            textStyle: context.text.labelLarge,
+            foregroundColor: context.colors.onSurfaceVariant,
+          ),
+          onPressed: () => showLibraryDisplaySheet(
+            context: context,
+            layoutCubit: context.read<LibraryLayoutCubit>(),
+            localeCubit: context.read<LibraryLocaleCubit>(),
+            themeCubit: context.read<LibraryThemeCubit>(),
+            pageAnimationCubit: context.read<LibraryPageAnimationCubit>(),
+          ),
+          icon: const Icon(AppIcons.settings, size: AppIconSize.md),
+          label: Text(context.l10n.libraryDisplayOptions),
+        ),
+      );
+    }
     return AppPlainIconButton(
       key: const ValueKey('libraryHeaderDisplayButton'),
       tooltip: context.l10n.libraryDisplayOptions,
-      icon: AppIcons.moreVertical,
+      icon: AppIcons.settings,
       color: context.colors.onSurfaceVariant,
       onPressed: () => showLibraryDisplaySheet(
         context: context,
@@ -240,5 +275,26 @@ class _DisplayMenuButton extends StatelessWidget {
         pageAnimationCubit: context.read<LibraryPageAnimationCubit>(),
       ),
     );
+  }
+}
+
+double _displayActionWidth(BuildContext context) {
+  final painter = TextPainter(
+    text: TextSpan(
+      text: context.l10n.libraryDisplayOptions,
+      style: context.text.labelLarge,
+    ),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    locale: Localizations.maybeLocaleOf(context),
+    maxLines: 1,
+  )..layout();
+  try {
+    return painter.width.ceilToDouble() +
+        AppSpacing.lg * 2 +
+        AppIconSize.md +
+        AppSpacing.sm;
+  } finally {
+    painter.dispose();
   }
 }

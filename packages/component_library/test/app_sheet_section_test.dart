@@ -15,8 +15,9 @@ void main() {
     Widget child = const SizedBox(key: contentKey, height: 40),
     TextDirection direction = TextDirection.ltr,
     ThemeData? theme,
+    Size windowSize = const Size(width, 600),
   }) async {
-    tester.view.physicalSize = const Size(width, 600);
+    tester.view.physicalSize = windowSize;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -133,41 +134,68 @@ void main() {
     }
   });
 
-  testWidgets('a 48dp action on the gutter reaches the outline', (
-    tester,
-  ) async {
-    var copied = 0;
-    await pumpSection(
-      tester,
-      padding: EdgeInsets.zero,
-      child: AppSheetActionRow(
-        firstLineStyle: const TextStyle(fontSize: 17, height: 1.45),
-        lead: const AppSheetSectionTitle('Word meaning'),
-        leadSpacing: AppSpacing.sm,
-        minTextRoom: AppSpacing.md,
-        action: AppCopyButton(
-          onCopy: () async => copied++,
-          copyLabel: 'Copy',
-          copiedLabel: 'Copied',
-          failureLabel: 'Failed',
-        ),
-        child: const Text(
-          'power',
-          style: TextStyle(fontSize: 17, height: 1.45),
-        ),
-      ),
-    );
-    final copy = tester.getRect(find.widgetWithIcon(IconButton, AppIcons.copy));
-    final box = tester.getRect(outline());
-    expect(copy.right, box.right);
-    expect(width - tester.getRect(find.byIcon(AppIcons.copy)).right, 24);
-    // The row's room puts the title 12dp inside the outline.
-    expect(
-      tester.getRect(find.text('Word meaning')).top - box.top,
-      AppSpacing.md,
-    );
-    await tester.tap(find.byIcon(AppIcons.copy));
-    await tester.pump();
-    expect(copied, 1);
-  });
+  for (final direction in TextDirection.values) {
+    for (final windowSize in [
+      const Size(width, 844),
+      const Size(600, 480),
+      const Size(800, 1280),
+      const Size(844, 390),
+    ]) {
+      testWidgets('a 48dp action on the gutter reaches the outline '
+          '($direction, $windowSize)', (
+        tester,
+      ) async {
+        var copied = 0;
+        await pumpSection(
+          tester,
+          direction: direction,
+          windowSize: windowSize,
+          padding: EdgeInsets.zero,
+          child: AppSheetActionRow(
+            firstLineStyle: const TextStyle(fontSize: 17, height: 1.45),
+            lead: const AppSheetSectionTitle('Word meaning'),
+            leadSpacing: AppSpacing.sm,
+            minTextRoom: AppSpacing.md,
+            action: AppCopyButton(
+              onCopy: () async => copied++,
+              copyLabel: 'Copy',
+              copiedLabel: 'Copied',
+              failureLabel: 'Failed',
+            ),
+            child: const Text(
+              'power',
+              style: TextStyle(fontSize: 17, height: 1.45),
+            ),
+          ),
+        );
+        final copy = tester.getRect(
+          find.widgetWithIcon(IconButton, AppIcons.copy),
+        );
+        final box = tester.getRect(outline());
+        final icon = tester.getRect(find.byIcon(AppIcons.copy));
+        final ltr = direction == TextDirection.ltr;
+        expect(ltr ? copy.right : copy.left, ltr ? box.right : box.left);
+        expect(ltr ? windowSize.width - icon.right : icon.left, 24);
+        final expectedInset = AppWindowSize.isMediumSize(windowSize)
+            ? 12.0
+            : 10.0;
+        expect(box.left, expectedInset);
+        expect(windowSize.width - box.right, expectedInset);
+        expect(
+          AppSheetSection.outlineInsetFor(
+            tester.element(find.byType(AppSheetSection)),
+          ),
+          expectedInset,
+        );
+        // The row's room puts the title 12dp inside the outline.
+        expect(
+          tester.getRect(find.text('Word meaning')).top - box.top,
+          AppSpacing.md,
+        );
+        await tester.tap(find.byIcon(AppIcons.copy));
+        await tester.pump();
+        expect(copied, 1);
+      });
+    }
+  }
 }

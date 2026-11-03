@@ -12,6 +12,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'practice_highlight_tint.dart';
 import 'practice_highlights_cubit.dart';
 import 'practice_item.dart';
+import 'practice_page_header.dart';
 import 'review_interval_label.dart';
 
 /// Every text highlight, grouped by source: search, a colour filter, and a
@@ -77,63 +78,73 @@ class _PracticeHighlightsViewState extends State<_PracticeHighlightsView> {
     final l10n = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        leading: const AppBackButton(),
-        title: Text(l10n.practiceHighlightsTitle),
+        automaticallyImplyLeading: false,
+        excludeHeaderSemantics: true,
+        titleSpacing: 0,
+        title: PracticePageHeader(title: l10n.practiceHighlightsTitle),
       ),
-      body: BlocBuilder<PracticeHighlightsCubit, PracticeHighlightsState>(
-        builder: (context, state) {
-          final cubit = context.read<PracticeHighlightsCubit>();
-          return switch (state.status) {
-            PracticeHighlightsStatus.initial ||
-            PracticeHighlightsStatus.loading =>
-              const CenteredCircularProgressIndicator(),
-            PracticeHighlightsStatus.failure => ErrorState(
-              message: l10n.practiceLoadFailed,
-              retryLabel: l10n.commonRetry,
-              onRetry: cubit.load,
-            ),
-            PracticeHighlightsStatus.ready => Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                  ),
-                  child: SearchField(
-                    hintText: l10n.practiceSearchHighlights,
-                    clearButtonSemanticsLabel: l10n.commonClearSearch,
-                    controller: _search,
-                    onChanged: cubit.setQuery,
-                  ),
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: AppContentFrame(
+          maxWidth: 960,
+          child: BlocBuilder<PracticeHighlightsCubit, PracticeHighlightsState>(
+            builder: (context, state) {
+              final cubit = context.read<PracticeHighlightsCubit>();
+              final groups = state.groups;
+              return switch (state.status) {
+                PracticeHighlightsStatus.initial ||
+                PracticeHighlightsStatus.loading =>
+                  const CenteredCircularProgressIndicator(),
+                PracticeHighlightsStatus.failure => ErrorState(
+                  message: l10n.practiceLoadFailed,
+                  retryLabel: l10n.commonRetry,
+                  onRetry: cubit.load,
                 ),
-                PracticeColorFilterRow(
-                  selected: state.color,
-                  onSelected: cubit.setColor,
+                PracticeHighlightsStatus.ready => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                      ),
+                      child: SearchField(
+                        hintText: l10n.practiceSearchHighlights,
+                        clearButtonSemanticsLabel: l10n.commonClearSearch,
+                        controller: _search,
+                        onChanged: cubit.setQuery,
+                      ),
+                    ),
+                    PracticeColorFilterRow(
+                      selected: state.color,
+                      onSelected: cubit.setColor,
+                    ),
+                    Expanded(
+                      child: state.highlights.isEmpty
+                          ? EmptyState(
+                              icon: AppIcons.highlight,
+                              message: l10n.practiceHighlightsEmptyTitle,
+                              subtitle: l10n.practiceHighlightsEmptyBody,
+                            )
+                          : groups.isEmpty
+                          ? EmptyState(
+                              message: l10n.practiceNoMatches,
+                              compact: true,
+                            )
+                          : _GroupedHighlightList(
+                              groups: groups,
+                              onOpen: _open,
+                            ),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: state.highlights.isEmpty
-                      ? EmptyState(
-                          icon: AppIcons.highlight,
-                          message: l10n.practiceHighlightsEmptyTitle,
-                          subtitle: l10n.practiceHighlightsEmptyBody,
-                        )
-                      : state.groups.isEmpty
-                      ? EmptyState(
-                          message: l10n.practiceNoMatches,
-                          compact: true,
-                        )
-                      : _GroupedHighlightList(
-                          groups: state.groups,
-                          onOpen: _open,
-                        ),
-                ),
-              ],
-            ),
-          };
-        },
+              };
+            },
+          ),
+        ),
       ),
     );
   }
@@ -181,6 +192,22 @@ class PracticeColorFilterRow extends StatelessWidget {
   }
 }
 
+sealed class _HighlightListEntry {
+  const _HighlightListEntry();
+}
+
+class _HighlightGroupEntry extends _HighlightListEntry {
+  const _HighlightGroupEntry(this.title);
+
+  final String title;
+}
+
+class _HighlightPassageEntry extends _HighlightListEntry {
+  const _HighlightPassageEntry(this.item);
+
+  final PracticeHighlightItem item;
+}
+
 class _GroupedHighlightList extends StatelessWidget {
   const _GroupedHighlightList({required this.groups, required this.onOpen});
 
@@ -189,10 +216,18 @@ class _GroupedHighlightList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = <Widget>[];
-    for (final group in groups) {
-      rows.add(
-        Padding(
+    final rows = <_HighlightListEntry>[
+      for (final group in groups) ...[
+        _HighlightGroupEntry(group.title),
+        for (final item in group.items) _HighlightPassageEntry(item),
+      ],
+    ];
+    return ListView.builder(
+      key: const ValueKey('practiceHighlightsList'),
+      padding: EdgeInsets.only(bottom: appBottomSafeInset(context)),
+      itemCount: rows.length,
+      itemBuilder: (context, index) => switch (rows[index]) {
+        _HighlightGroupEntry(:final title) => Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.lg,
             AppSpacing.lg,
@@ -202,7 +237,7 @@ class _GroupedHighlightList extends StatelessWidget {
           child: Semantics(
             header: true,
             child: Text(
-              group.title,
+              title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.serif(
@@ -212,21 +247,12 @@ class _GroupedHighlightList extends StatelessWidget {
             ),
           ),
         ),
-      );
-      for (final item in group.items) {
-        rows.add(
-          PracticeHighlightRow(
-            key: ValueKey('practiceHighlight-${item.itemId}'),
-            item: item,
-            onPressed: () => onOpen(item.highlight),
-          ),
-        );
-      }
-    }
-    return ListView(
-      key: const ValueKey('practiceHighlightsList'),
-      padding: EdgeInsets.only(bottom: appBottomSafeInset(context)),
-      children: rows,
+        _HighlightPassageEntry(:final item) => PracticeHighlightRow(
+          key: ValueKey('practiceHighlight-${item.itemId}'),
+          item: item,
+          onPressed: () => onOpen(item.highlight),
+        ),
+      },
     );
   }
 }
@@ -271,9 +297,11 @@ class PracticeHighlightRow extends StatelessWidget {
     ].join(' · ');
     return Semantics(
       button: true,
+      enabled: true,
       label: quote,
       value: [?note, meta].join(', '),
       onTapHint: l10n.practiceOpenInBook,
+      onTap: onPressed,
       excludeSemantics: true,
       child: InkWell(
         onTap: onPressed,

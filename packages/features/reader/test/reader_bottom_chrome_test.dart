@@ -10,7 +10,6 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:reader/src/reader_chrome_colors.dart';
 import 'package:reader/src/reader_chrome_progress_layout.dart';
 import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
@@ -24,6 +23,7 @@ import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
 
 const _capsuleKey = ValueKey('readerChromeCapsule');
+const _dockKey = ValueKey('readerChromeDock');
 const _startLabelKey = ValueKey('readerProgressStartLabel');
 const _pageLabelKey = ValueKey('readerProgressPageLabel');
 
@@ -236,43 +236,39 @@ void main() {
 
   group('capsule geometry', () {
     for (final bottomInset in [0.0, 34.0]) {
-      testWidgets('60dp stadium on 16dp margins, inset=$bottomInset', (
-        tester,
-      ) async {
-        await pump(tester, bottomInset: bottomInset);
-        const width = 390.0;
-        const height = 844.0;
-        final rect = tester.getRect(find.byKey(_capsuleKey));
-        expect(rect.height, 60);
-        expect(rect.left, AppSpacing.lg);
-        expect(width - rect.right, AppSpacing.lg);
-        expect(height - rect.bottom, math.max(AppSpacing.lg, bottomInset));
-        // The shared capsule paints the decoration.
-        expect(
-          tester.widget<AppFloatingCapsule>(find.byKey(_capsuleKey)).height,
-          60,
-        );
-        final decoration =
-            tester
-                    .widget<DecoratedBox>(
-                      find.descendant(
-                        of: find.byKey(_capsuleKey),
-                        matching: find.byType(DecoratedBox),
-                      ),
-                    )
-                    .decoration
-                as BoxDecoration;
-        expect(decoration.borderRadius, BorderRadius.circular(30));
-        expect(decoration.boxShadow, AppShadows.popover);
-        final context = tester.element(find.byType(Scaffold));
-        expect(
-          decoration.color,
-          context.colors.surface.withValues(alpha: 0.92),
-        );
-        final border = decoration.border! as Border;
-        expect(border.top.color, context.colors.outlineVariant);
-        expect(border.top.width, 1 / tester.view.devicePixelRatio);
-      });
+      testWidgets(
+        '60dp phone actions inside one reading dock, inset=$bottomInset',
+        (
+          tester,
+        ) async {
+          await pump(tester, bottomInset: bottomInset);
+          const width = 390.0;
+          const height = 844.0;
+          final rect = tester.getRect(find.byKey(_capsuleKey));
+          expect(rect.height, 60);
+          expect(rect.left, AppSpacing.lg);
+          expect(width - rect.right, AppSpacing.lg);
+          expect(height - rect.bottom, math.max(AppSpacing.lg, bottomInset));
+          final dock = tester.getRect(find.byKey(_dockKey));
+          expect(dock.left, rect.left);
+          expect(dock.right, rect.right);
+          expect(dock.bottom, rect.bottom);
+          expect(dock.top, lessThan(tester.getRect(find.byType(Slider)).top));
+          final decoration =
+              tester.widget<DecoratedBox>(find.byKey(_dockKey)).decoration
+                  as BoxDecoration;
+          expect(decoration.borderRadius, BorderRadius.circular(AppRadius.xl));
+          expect(decoration.boxShadow, AppShadows.popover);
+          final context = tester.element(find.byType(Scaffold));
+          expect(
+            decoration.color,
+            context.colors.surface,
+          );
+          final border = decoration.border! as Border;
+          expect(border.top.color, context.colors.outlineVariant);
+          expect(border.top.width, 1 / tester.view.devicePixelRatio);
+        },
+      );
     }
 
     for (final rtl in [false, true]) {
@@ -318,7 +314,135 @@ void main() {
       await pump(tester, size: const Size(1024, 600));
       final rect = tester.getRect(find.byKey(_capsuleKey));
       expect(rect.width, 560 - AppSpacing.lg * 2);
+      expect(rect.height, 80);
       expect(rect.center.dx, closeTo(512, 0.01));
+      expect(find.text('Appearance'), findsOneWidget);
+      expect(capsuleButtons(), findsNothing);
+      final pressed = <String>[];
+      await pump(tester, size: const Size(1024, 600), pressed: pressed);
+      await tester.tap(find.text('Contents'));
+      await tester.pump();
+      expect(pressed, [
+        'toc',
+      ], reason: 'captions are part of the action target');
+    });
+
+    testWidgets('wide dock keeps 48dp icon actions at enlarged text', (
+      tester,
+    ) async {
+      await pump(tester, size: const Size(1024, 600), textScale: 2);
+      expect(capsuleButtons(), findsNWidgets(5));
+      expect(find.text('Appearance'), findsNothing);
+      for (final tooltip in capsuleTooltips(tester)) {
+        expect(tester.getSize(find.byTooltip(tooltip)), const Size.square(48));
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final size in [const Size(800, 1280), const Size(1280, 800)]) {
+      for (final scale in [1.0, 2.0]) {
+        testWidgets('tablet status keeps the large label role $size x$scale', (
+          tester,
+        ) async {
+          await update(tester, bloc, _chapterPosition('A long chapter title'));
+          await pump(tester, size: size, textScale: scale);
+          final context = tester.element(find.byKey(_startLabelKey));
+          final start = tester.widget<Text>(find.byKey(_startLabelKey));
+          final page = tester.widget<Text>(find.byKey(_pageLabelKey));
+          expect(start.style!.fontSize, context.text.labelLarge.fontSize);
+          expect(page.style!.fontSize, context.text.labelLarge.fontSize);
+          expect(
+            page.style!.fontFeatures,
+            context.text.readerChromeNumber.fontFeatures,
+          );
+          if (scale == 2) {
+            expect(
+              tester.getRect(find.byKey(_pageLabelKey)).top,
+              greaterThanOrEqualTo(
+                tester.getRect(find.byKey(_startLabelKey)).bottom,
+              ),
+            );
+            expect(capsuleButtons(), findsNWidgets(5));
+          } else if (size.width < 840) {
+            expect(capsuleButtons(), findsNWidgets(5));
+          } else {
+            expect(find.text('Appearance'), findsOneWidget);
+            expect(
+              tester.widget<Text>(find.text('Appearance')).style!.fontSize,
+              context.text.labelLarge.fontSize,
+            );
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+
+    for (final locale in [const Locale('ru'), const Locale('ar')]) {
+      testWidgets('130% translated captions fit their tablet targets $locale', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          size: const Size(1280, 800),
+          textScale: 1.3,
+          locale: locale,
+          rtl: locale.languageCode == 'ar',
+        );
+        final buttons = find.descendant(
+          of: find.byKey(_capsuleKey),
+          matching: find.byType(TextButton),
+        );
+        expect(buttons, findsNWidgets(5));
+        expect(tester.getSize(find.byKey(_capsuleKey)).height, greaterThan(80));
+        for (final element in buttons.evaluate()) {
+          final button = find.byElementPredicate((item) => item == element);
+          final bounds = tester.getRect(button);
+          final caption = find.descendant(
+            of: button,
+            matching: find.byType(Text),
+          );
+          final text = tester.widget<Text>(caption);
+          expect(text.style!.fontSize, element.text.labelLarge.fontSize);
+          expect(bounds.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
+          expect(bounds.width, greaterThanOrEqualTo(AppSizes.buttonHeight));
+          final textBounds = tester.getRect(caption);
+          expect(textBounds.top, greaterThanOrEqualTo(bounds.top));
+          expect(textBounds.bottom, lessThanOrEqualTo(bounds.bottom));
+          final paragraph = tester.renderObject<RenderParagraph>(caption);
+          expect(paragraph.size.height, lessThanOrEqualTo(bounds.height));
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('resizing changes control roles without resetting progress', (
+      tester,
+    ) async {
+      await update(tester, bloc, _chapterPosition('Current chapter'));
+      await pump(tester, rtl: true, locale: const Locale('ar'));
+      final slider = tester.element(find.byType(Slider));
+      final value = tester.widget<Slider>(find.byType(Slider)).value;
+      final position = bloc.state.document!.readingProgress;
+      for (final size in [
+        const Size(800, 1280),
+        const Size(1280, 800),
+        const Size(390, 844),
+      ]) {
+        tester.view.physicalSize = size * tester.view.devicePixelRatio;
+        await tester.pumpAndSettle();
+        final context = tester.element(find.byKey(_startLabelKey));
+        final label = tester.widget<Text>(find.byKey(_startLabelKey));
+        expect(
+          label.style!.fontSize,
+          size.width >= 600
+              ? context.text.labelLarge.fontSize
+              : context.text.readerChromeLabel.fontSize,
+        );
+        expect(tester.element(find.byType(Slider)), same(slider));
+        expect(tester.widget<Slider>(find.byType(Slider)).value, value);
+        expect(bloc.state.document!.readingProgress, position);
+        expect(tester.takeException(), isNull);
+      }
     });
 
     testWidgets('PDF names its appearance action for pages, not fonts', (
@@ -422,26 +546,27 @@ void main() {
   }
 
   group('progress row', () {
-    testWidgets('the slider spans the row; the labels end 8dp above the '
-        'capsule', (tester) async {
+    testWidgets('status precedes seeking and actions in the same dock', (
+      tester,
+    ) async {
       await update(tester, bloc, _chapterPosition('Chapter 2'));
       await pump(tester);
       final capsule = tester.getRect(find.byKey(_capsuleKey));
       final slider = tester.getRect(find.byType(Slider));
       final start = tester.getRect(find.byKey(_startLabelKey));
       final page = tester.getRect(find.byKey(_pageLabelKey));
-      // Full width inside the 28dp inset, right above the labels.
+      // Status aligns with the track; its hit target stays 48dp tall.
       expect(slider.left, AppSpacing.lg + AppSpacing.md);
       expect(390 - slider.right, AppSpacing.lg + AppSpacing.md);
       expect(slider.height, AppSizes.buttonHeight);
-      expect(start.top, closeTo(slider.bottom, .01));
-      expect(page.top, closeTo(slider.bottom, .01));
+      expect(start.bottom, closeTo(slider.top, .01));
+      expect(page.bottom, closeTo(slider.top, .01));
       // The labels start and end with the track, not the slider's box.
       expect(start.left, slider.left + readerProgressTrackInset);
       expect(page.right, slider.right - readerProgressTrackInset);
       expect(start.center.dy, closeTo(page.center.dy, .5));
       expect(
-        capsule.top - math.max(start.bottom, page.bottom),
+        capsule.top - slider.bottom,
         AppSpacing.sm,
       );
     });
@@ -546,8 +671,8 @@ void main() {
       expect(find.text('Intro'), findsNothing);
       final start = tester.getRect(find.byKey(_startLabelKey));
       expect(
-        start.top,
-        closeTo(tester.getRect(find.byType(Slider)).bottom, .01),
+        start.bottom,
+        closeTo(tester.getRect(find.byType(Slider)).top, .01),
       );
     });
 
@@ -605,7 +730,7 @@ void main() {
     });
 
     for (final preset in ReaderThemePreset.values) {
-      testWidgets('labels and slider use page ink on ${preset.id}', (
+      testWidgets('dock labels stay readable with reader theme ${preset.id}', (
         tester,
       ) async {
         await update(
@@ -622,8 +747,9 @@ void main() {
           ),
         );
         await pump(tester, theme: preset);
-        final page = preset.data.backgroundColor;
-        final ink = readerChromeInkColor(preset.data);
+        final context = tester.element(find.byType(Scaffold));
+        final page = context.colors.surface;
+        final ink = context.colors.onSurfaceVariant;
         for (final key in [_startLabelKey, _pageLabelKey]) {
           final color = tester.widget<Text>(find.byKey(key)).style!.color!;
           expect(color, ink);
@@ -635,11 +761,14 @@ void main() {
         expect(slider.data.trackHeight, 3);
         expect(
           slider.data.inactiveTrackColor,
-          readerChromeTrackColor(preset.data),
+          context.colors.outlineVariant,
         );
-        // The row reads against a page-coloured band, not the page text.
-        final bands = tester.widgetList<ColoredBox>(find.byType(ColoredBox));
-        expect(bands.map((band) => band.color), contains(page));
+        expect(
+          (tester.widget<DecoratedBox>(find.byKey(_dockKey)).decoration
+                  as BoxDecoration)
+              .color,
+          page,
+        );
       });
     }
 
@@ -728,14 +857,14 @@ void main() {
         );
         // Both labels sit under the full-width slider.
         final slider = tester.getRect(find.byType(Slider));
-        expect(start.top, closeTo(slider.bottom, .01));
-        expect(page.top, closeTo(slider.bottom, .01));
+        expect(start.bottom, closeTo(slider.top, .01));
+        expect(page.bottom, closeTo(slider.top, .01));
       });
     }
   });
 
   for (final rtl in [false, true]) {
-    testWidgets('2x text gives each label its own line under the slider '
+    testWidgets('2x text gives each status label a line above seeking '
         'rtl=$rtl', (tester) async {
       await update(
         tester,
@@ -744,15 +873,24 @@ void main() {
       );
       await pump(tester, textScale: 2, rtl: rtl, size: const Size(320, 640));
       expect(tester.takeException(), isNull);
+      final context = tester.element(find.byKey(_startLabelKey));
+      expect(
+        tester.widget<Text>(find.byKey(_startLabelKey)).style!.fontSize,
+        context.text.readerChromeLabel.fontSize,
+      );
+      expect(
+        tester.widget<Text>(find.byKey(_pageLabelKey)).style!.fontSize,
+        context.text.readerChromeNumber.fontSize,
+      );
       final start = tester.getRect(find.byKey(_startLabelKey));
       final slider = tester.getRect(find.byType(Slider));
       final page = tester.getRect(find.byKey(_pageLabelKey));
       final capsule = tester.getRect(find.byKey(_capsuleKey));
-      // The slider keeps the whole row; chapter, then page, below it.
+      // The slider keeps the whole row below chapter and page status.
       expect(slider.width, 320 - (AppSpacing.lg + AppSpacing.md) * 2);
-      expect(start.top, closeTo(slider.bottom, .01));
       expect(page.top, closeTo(start.bottom, .01));
-      expect(capsule.top - page.bottom, AppSpacing.sm);
+      expect(page.bottom, closeTo(slider.top, .01));
+      expect(capsule.top - slider.bottom, AppSpacing.sm);
       // The page label ends on the row's end edge in the UI direction.
       const labelInset =
           AppSpacing.lg + AppSpacing.md + readerProgressTrackInset;
@@ -790,7 +928,7 @@ void main() {
       final page = tester.getRect(find.byKey(_pageLabelKey));
       expect(slider.width, 320 - (AppSpacing.lg + AppSpacing.md) * 2);
       expect(start.center.dy, closeTo(page.center.dy, 0.5));
-      expect(start.top, closeTo(slider.bottom, .01));
+      expect(start.bottom, closeTo(slider.top, .01));
       expect(
         start.right,
         lessThanOrEqualTo(page.left - readerProgressLabelGap),

@@ -49,13 +49,31 @@ void main() {
             as FixedPagePainter;
     final bloc = tester.element(pages).read<ReaderBloc>();
     final l10n = tester.element(pages).l10n;
+    final doubleTaps = <Map<String, Object>>[];
+    (binding.reportData ??= {})['pdfDoubleTaps'] = doubleTaps;
 
     Future<void> doubleTap() async {
       final centre = tester.getCenter(pages);
+      final scaleBefore = view().controller.zoomScale;
+      final elapsed = Stopwatch()..start();
       await tester.tapAt(centre);
-      await tester.pump(const Duration(milliseconds: 80));
+      // A live frame can exceed the double-tap window on a slow emulator.
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 80)),
+      );
+      final interTapMs = elapsed.elapsedMilliseconds;
       await tester.tapAt(centre);
       await tester.pump(const Duration(milliseconds: 450));
+      doubleTaps.add({
+        'interTapMs': interTapMs,
+        'scaleBefore': scaleBefore,
+        'scaleAfter': view().controller.zoomScale,
+        'chromeVisible': tester
+            .element(pages)
+            .read<ReaderUiCubit>()
+            .state
+            .chromeVisible,
+      });
     }
 
     // Each page follows its painted physical size, including in a spread;

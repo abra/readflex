@@ -59,6 +59,7 @@ class _LibraryDisplaySheetState extends State<_LibraryDisplaySheet>
   ).animate(_curve);
   var _languageVisible = false;
   var _transitionDirection = TextDirection.ltr;
+  Locale? _displayLocale;
 
   void _onTransitionStatus(AnimationStatus status) {
     if (status == AnimationStatus.completed ||
@@ -71,6 +72,7 @@ class _LibraryDisplaySheetState extends State<_LibraryDisplaySheet>
     if (_languageVisible == visible) return;
     setState(() {
       _languageVisible = visible;
+      if (visible) _displayLocale = Localizations.localeOf(context);
       // A locale change must not flip the in-flight return animation.
       _transitionDirection = Directionality.of(context);
     });
@@ -110,8 +112,14 @@ class _LibraryDisplaySheetState extends State<_LibraryDisplaySheet>
             position: _displayOffset,
             textDirection: _transitionDirection,
             maintainSize: true,
-            child: _DisplaySettings(
-              onLanguage: () => _showLanguage(true),
+            // Hidden Display copy must not resize the active Language step.
+            child: Localizations.override(
+              context: context,
+              locale: _languageVisible ? _displayLocale : null,
+              child: _DisplaySettings(
+                onLanguage: () => _showLanguage(true),
+                displayedLocale: _languageVisible ? _displayLocale : null,
+              ),
             ),
           ),
           Positioned.fill(
@@ -137,9 +145,10 @@ class _LibraryDisplaySheetState extends State<_LibraryDisplaySheet>
 }
 
 class _DisplaySettings extends StatelessWidget {
-  const _DisplaySettings({required this.onLanguage});
+  const _DisplaySettings({required this.onLanguage, this.displayedLocale});
 
   final VoidCallback onLanguage;
+  final Locale? displayedLocale;
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +215,10 @@ class _DisplaySettings extends StatelessWidget {
             child: const _PageAnimationControl(),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _LanguagePickerRow(onPressed: onLanguage),
+          _LanguagePickerRow(
+            onPressed: onLanguage,
+            displayedLocale: displayedLocale,
+          ),
         ],
       ),
     );
@@ -242,15 +254,17 @@ class _PageAnimationControl extends StatelessWidget {
 }
 
 class _LanguagePickerRow extends StatelessWidget {
-  const _LanguagePickerRow({required this.onPressed});
+  const _LanguagePickerRow({required this.onPressed, this.displayedLocale});
 
   final VoidCallback onPressed;
+  final Locale? displayedLocale;
 
   @override
   Widget build(BuildContext context) => BlocBuilder<LibraryLocaleCubit, Locale>(
     builder: (context, locale) {
+      final shownLocale = displayedLocale ?? locale;
       final language = ReadflexSupportedLocales.languages.firstWhere(
-        (item) => item.code == locale.languageCode,
+        (item) => item.code == shownLocale.languageCode,
       );
       return AppDrillInRow(
         key: const ValueKey('libraryLanguagePicker'),

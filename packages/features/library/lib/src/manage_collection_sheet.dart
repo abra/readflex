@@ -1093,10 +1093,10 @@ class _CollectionSourceRow extends StatelessWidget {
         Padding(
           // The 48dp remove target bleeds into the trailing gutter so its
           // glyph ends on the 24dp content edge.
-          padding: const EdgeInsetsDirectional.fromSTEB(
+          padding: EdgeInsetsDirectional.fromSTEB(
             AppSpacing.xl,
             AppSpacing.sm,
-            AppSpacing.xl - AppSizes.iconActionOutset,
+            AppSpacing.xl - AppPlainIconButton.defaultIconOutsetOf(context),
             AppSpacing.sm,
           ),
           child: Row(

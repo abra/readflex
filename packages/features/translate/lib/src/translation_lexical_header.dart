@@ -69,7 +69,10 @@ class _TranslationLexicalHeader extends StatelessWidget {
           text: selectedText,
           boxWidth: onToggleSaved == null
               ? constraints.maxWidth
-              : AppSheetActionRow.childWidthFor(constraints.maxWidth),
+              : AppSheetActionRow.childWidthFor(
+                  constraints.maxWidth,
+                  iconSize: AppPlainIconButton.defaultIconSizeOf(context),
+                ),
           textDirection: sourceDirection,
         );
         final header = Column(

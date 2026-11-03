@@ -228,6 +228,95 @@ void main() {
     });
   }
 
+  for (final size in [const Size(1280, 800), const Size(1376, 1032)]) {
+    for (final rtl in [false, true]) {
+      for (final safeInset in [0.0, 44.0]) {
+        testWidgets('expanded brightness floats inside the safe edge '
+            '$size rtl=$rtl inset=$safeInset', (tester) async {
+          tester.view
+            ..physicalSize = size
+            ..devicePixelRatio = 1
+            ..padding = FakeViewPadding(
+              left: rtl ? safeInset : 0,
+              right: rtl ? 0 : safeInset,
+            );
+          addTearDown(tester.view.reset);
+          await tester.pumpBrightnessChrome(
+            uiCubit: uiCubit,
+            selectionCubit: selectionCubit,
+            brightnessCubit: brightnessCubit,
+            rtl: rtl,
+          );
+          uiCubit.showChrome();
+          await tester.pumpAndSettle();
+          final pill = tester.getRect(find.byType(DecoratedBox).first);
+          expect(pill.width, AppSizes.buttonHeight);
+          expect(
+            rtl ? pill.left : size.width - pill.right,
+            safeInset + AppSpacing.sm,
+          );
+          for (final button in find.byType(AppPlainIconButton).evaluate()) {
+            final rect = tester.getRect(find.byWidget(button.widget));
+            expect(rect.size, const Size.square(AppSizes.buttonHeight));
+            expect(rect.left, pill.left);
+            expect(rect.right, pill.right);
+          }
+          expect(
+            tester
+                .getSize(
+                  find.byKey(const ValueKey('readerBrightnessChromeDragArea')),
+                )
+                .width,
+            AppSizes.buttonHeight,
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+  }
+
+  for (final size in [const Size(800, 1280), const Size(1280, 800)]) {
+    testWidgets(
+      'tablet brightness keeps readable labels and reset action $size',
+      (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = size
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpBrightnessChrome(
+          uiCubit: uiCubit,
+          selectionCubit: selectionCubit,
+          brightnessCubit: brightnessCubit,
+        );
+        uiCubit.showChrome();
+        brightnessCubit.previewBrightness(0.5);
+        await tester.pumpAndSettle();
+        final label = find.text('50%');
+        final context = tester.element(label);
+        expect(
+          tester.widget<Text>(label).style!.fontSize,
+          context.text.labelLarge.fontSize,
+        );
+        await tester.tap(label);
+        await tester.pumpAndSettle();
+        expect(brightnessCubit.state.usesSystemBrightness, isTrue);
+        expect(
+          tester.widget<Icon>(find.byIcon(AppIcons.deviceMode)).size,
+          AppIconSize.md,
+        );
+        for (final button in find.byType(AppPlainIconButton).evaluate()) {
+          expect(
+            tester.getSize(find.byWidget(button.widget)),
+            const Size.square(AppSizes.buttonHeight),
+          );
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('brightness chrome fits a narrow phone at 2x text', (
     tester,
   ) async {

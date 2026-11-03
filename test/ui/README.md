@@ -45,6 +45,21 @@ plus on-device iOS and Android checks; a synthesized gesture is not a finger on
 Flutter's adaptive selection handles. Brightness and unrelated reader
 behavior are not part of a general UI consistency pass.
 
+Expanded windows use bounded Library and Practice workspaces, and reader
+Contents/Search become trailing panels. Review narrow and expanded windows
+separately: resizing must retain queries, selection and focused fields. The
+phone's frequent controls remain at the bottom; expanded panels use explicit
+Close rather than vertical sheet gestures.
+
+Control readability uses the separate 600×480 medium-window threshold:
+default utility glyphs become 24dp and important captions use existing 15sp
+roles. Test 800×1280 portrait and 1280×800 landscape as well as narrow Split
+View and phone landscape. Short filter labels still need a 48×48dp target;
+larger glyphs must retain the surface gutter and explicit size overrides.
+Reader captions may grow their dock at 130%; large text must not be clipped
+to its normal-height strip. The tablet Practice and Reader golden flows cover
+both medium and expanded windows, with Arabic/German 200% Practice cases.
+
 Close out with the commands actually run, the profiles/devices inspected and
 unverified cases. Put temporary screenshots/logs under `.local/`, and generated
 review reports under `.local/reports/`. A passing checklist is not a claim of
@@ -64,6 +79,16 @@ make verify
 make coverage
 make test-performance
 ```
+
+To export the actual full-screen golden captures for a visual review while
+keeping baseline comparison enabled:
+
+```sh
+READFLEX_VISUAL_CAPTURE_DIR=.local/ui-review/actual make test-ui
+```
+
+The export mirrors the `goldens/<profile>/...` paths. It does not accept a
+changed image as a baseline or suppress a failed comparison.
 
 - `test-ui-contracts`: component-library/toast tests, import form/navigation, Display
   step navigation and representative root layout contracts. No goldens, devices
@@ -85,6 +110,8 @@ For native reader flows, boot a simulator/emulator or connect an authorized devi
 ```sh
 fvm flutter devices
 make test-device DEVICE=<device-id>
+# Full native phone regression, including Practice and Arabic reading:
+make test-phone DEVICE=<phone-id>
 # Also collect Dart line coverage after the actions:
 make test-device DEVICE=<device-id> COVERAGE=1
 ```
@@ -142,6 +169,11 @@ full screen" prompt. Such a window can take focus, intercept taps and prevent a
 clipboard read even while Flutter still finds the underlying widget. Inspect the
 native screenshot and focused window before treating this as an app regression.
 
+`test-phone` runs the corresponding native phone batch with 22 cases, including
+the same reader/Library actions plus Arabic reading and a full Practice session.
+It requires an actual window below 600dp on its shortest side; the tablet batch
+requires at least 600dp. Neither substitutes a synthetic tester viewport.
+
 These tests complement the existing phone RTL and large-text cases. They provide
 functional assertions and screenshots on the named simulator/emulator profiles;
 they do not establish physical-device selection-handle behavior, VoiceOver or
@@ -157,7 +189,7 @@ same as for `test-device` above.
 | Theme text roles | Primary/secondary text on surface, sheet and input backgrounds; foreground/fill contrast for primary, secondary and destructive controls in light/dark | `packages/component_library/test/app_theme_test.dart` |
 | Onboarding | Welcome screen: an 80dp app icon above "Welcome to Readflex", a heading that shrinks instead of breaking a word (CJK never shrinks); four feature rows of equal weight with the real menu labels and no feature staged as a hero; Add your first book / Not now callbacks, 48dp targets and contrast; 480dp column on tablets, large-text scrolling in every locale, RTL; five visual profiles. Routing and the saved preference after remount live in `test/app/readflex_app_test.dart` | `onboarding_test.dart` |
 | Library | Search/clear, empty results, layout preference; UI changes do not issue new storage reads | `app_flows_test.dart` |
-| Library appearance | Grid, display sheet, empty search results (Clear search) and pressed Display/search-clear actions in all profiles; list rows with title and author at the cover top and the status at its bottom, without the file format, and the compact favourites badge in light/dark and on an Arabic phone; an empty collection offers Show entire Library | `library_golden_test.dart`, `collection_management_golden_test.dart` |
+| Library appearance | Cover-only 2:3 grid with generated title/author/site text on the artwork and 12dp gaps, display sheet, empty search results (Clear search) and pressed Display/search-clear actions in all profiles; list rows with title and author at the cover top and the status at its bottom, without the file format, and the compact favourites badge in light/dark and on an Arabic phone; an empty collection offers Show entire Library | `library_golden_test.dart`, `collection_management_golden_test.dart` |
 | Wide windows | A 13-inch iPad in both orientations: the Library list in two columns (light, dark, Arabic RTL) that screen readers still count per source, the grid adding columns instead of growing covers, the empty library at the onboarding width (also on narrow tablets and landscape phones), the selection bar in one row with the command at its own width (portrait, Arabic RTL landscape), and the Appearance sheet's Columns row in light/dark. Phone profiles keep their goldens. Selection bar labels with the app's fonts in all 10 locales at 840 × 480 (100% and 200% text), 1032@2x and phones at 390@1x, 320@1x, 320@2x and 320 with 200% text: no ellipsis, one line each at 100% in a wide window | `tablet_layout_golden_test.dart`, `library_selection_bar_test.dart`, library `library_wide_window_test.dart`, reader `reader_appearance_sheet_test.dart` |
 | Reader text layout | The window and the Columns choice reach pagecraft's page settings and style end to end: every window keeps the 32em measure, phones and narrow windows keep one column (a portrait phone page stays as it was, a landscape phone centres the measure), a wide window adds Auto/One/Two, articles keep one column at the measure, PDF pages keep their layout and offer no Columns row; tablet-sized windows (shortest side ≥600) get 12.5% larger book and article text, rotation keeps it, narrow Split View and phone landscape stay at the phone size, and the reader's own text size stays 100% and applies on top; the keyboard, even across a rotation, never turns a portrait page into a spread; book and article text keeps clear of a landscape phone's side insets (display cutout) while the page fills the window | `reader_text_layout_test.dart`, reader `reader_text_columns_test.dart` and `reader_device_font_scale_test.dart`, pagecraft `text_page_geometry_test.dart` |
 | Settings consistency | Display and Appearance share header geometry, section typography/gaps, content gutters, 48dp stepper targets and full-width fades in light/dark themes | `settings_consistency_test.dart` |
@@ -429,6 +461,9 @@ a thumbnail. `pdf_reader_test.dart` opens a generated PDF on pagecraft. It check
 the default trimmed page rendered denser than the screen and sharp zoom, the
 dark theme's colors, then turns both options off from the real Appearance
 sheet, runs PDF search, draws a saved highlight and previews the pages.
+Its double taps use a real-time gap without awaiting a rendered frame between
+the taps; slow emulator frames must not turn them into separate single taps.
+`results.json` records the inter-tap interval, zoom scales and chrome visibility.
 `table_rendering_test.dart` checks that a table wider than the page keeps its
 words whole, scrolls sideways under a swipe and, at its edge, turns the page.
 `pdf_contents_golden_test.dart` and `reader_appearance_golden_test.dart`

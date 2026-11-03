@@ -529,6 +529,47 @@ void main() {
     );
   });
 
+  for (final size in [const Size(800, 1280), const Size(1280, 800)]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('tablet title uses the large label role $size x$scale', (
+        tester,
+      ) async {
+        await pump(
+          tester,
+          bloc: await tester.runAsync(loadBloc) as ReaderBloc,
+          size: size,
+          textScale: scale,
+          locale: const Locale('ar'),
+          rtl: true,
+        );
+        final line = tester.widget<Text>(find.byKey(_lineKey));
+        final context = tester.element(find.byKey(_lineKey));
+        expect(line.style!.fontSize, context.text.labelLarge.fontSize);
+        expect(line.style!.height, context.text.labelLarge.height);
+        expect(line.maxLines, 1);
+        expect(
+          tester.getSize(find.byKey(_lineKey)).height,
+          lessThanOrEqualTo(48),
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets('phone landscape keeps its original title role', (tester) async {
+    await pump(
+      tester,
+      bloc: await tester.runAsync(loadBloc) as ReaderBloc,
+      size: const Size(844, 390),
+      rtl: true,
+      textScale: 2,
+    );
+    final context = tester.element(find.byKey(_lineKey));
+    final line = tester.widget<Text>(find.byKey(_lineKey));
+    expect(line.style!.fontSize, context.text.readerChromeLabel.fontSize);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('no panel plate, shadow or divider', (tester) async {
     await pump(tester, bloc: await tester.runAsync(loadBloc) as ReaderBloc);
     final decorated = tester.widgetList<DecoratedBox>(

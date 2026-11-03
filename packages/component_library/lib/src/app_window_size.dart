@@ -1,18 +1,33 @@
 import 'package:flutter/widgets.dart';
 
-/// When a surface switches to its wide layout.
+/// Window breakpoints for control sizes and expanded layouts.
 ///
 /// The decision follows the window, never the device: an iPad in Split View
 /// or Stage Manager can be as narrow as a phone, and windows resize while the
-/// app runs. A window is wide from Material's expanded width class (840) when
-/// it is also at least medium height (480), so a phone held in landscape
-/// (844 × 390) keeps the phone layout.
+/// app runs. Controls use medium sizes from 600dp wide; expanded layouts
+/// start at 840dp. Both need 480dp height, so a phone held in landscape
+/// (844 × 390) keeps its narrow controls and layout.
 abstract final class AppWindowSize {
+  /// Narrowest window using larger app controls, including tablet Split View.
+  static const double mediumMinWidth = 600;
+
+  /// Short landscape phones retain their compact controls.
+  static const double mediumMinHeight = 480;
+
   /// Narrowest wide window: Material's expanded width class.
   static const double wideMinWidth = 840;
 
   /// Shortest wide window: Material's medium height class.
-  static const double wideMinHeight = 480;
+  static const double wideMinHeight = mediumMinHeight;
+
+  /// Whether app controls have the medium window's extra room.
+  /// Reads only window size, so keyboard and padding changes do not rebuild it.
+  static bool isMedium(BuildContext context) =>
+      isMediumSize(MediaQuery.sizeOf(context));
+
+  /// Whether [size] has room for medium controls.
+  static bool isMediumSize(Size size) =>
+      size.width >= mediumMinWidth && size.height >= mediumMinHeight;
 
   /// Whether the window around [context] is wide.
   ///

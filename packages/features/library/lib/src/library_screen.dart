@@ -596,60 +596,74 @@ class _LibraryViewState extends State<_LibraryView> {
                             onRetry: () =>
                                 bloc.add(const LibraryLoadRequested()),
                           ),
-                          LibraryStatus.success => Column(
-                            children: [
-                              LibraryHeader(
-                                state: state,
-                                isOffline: widget.isOffline,
-                                searchController: _searchController,
-                                searchFocusNode: _searchFocusNode,
-                                onSearchChanged: (query) =>
-                                    bloc.add(LibrarySearchQueryChanged(query)),
-                              ),
-                              Expanded(
-                                child: ScrollEdgeFadeStack(
-                                  child: LibraryBody(
-                                    state: state,
-                                    scrollController: _scrollController,
-                                    onSourcePressed: (source) =>
-                                        _handleSourceTap(context, source),
-                                    onSourceLongPressed: (source) =>
-                                        _handleSourceLongPress(context, source),
-                                    onConfirmSwipeDelete: (source) =>
-                                        _confirmAndDispatchSwipe(
-                                          context,
-                                          source,
-                                        ),
-                                    onImportPressed: onImportPressed,
-                                    onRefresh: () {
-                                      // Keep the indicator until the reload
-                                      // ends.
-                                      final done = Completer<void>();
-                                      bloc.add(
-                                        LibraryRefreshRequested(
-                                          completer: done,
-                                        ),
-                                      );
-                                      return done.future;
-                                    },
-                                    onClearSearch: () {
-                                      _searchController.clear();
-                                      _searchFocusNode.unfocus();
-                                      bloc.add(
-                                        const LibrarySearchQueryChanged(''),
-                                      );
-                                    },
-                                    onShowWholeLibrary: () => bloc.add(
-                                      const LibraryCollectionScopeChanged(null),
-                                    ),
-                                    onPracticePressed:
-                                        widget.onPracticePressed == null
-                                        ? null
-                                        : () => _handlePracticePressed(context),
+                          LibraryStatus.success => AppContentFrame(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppWindowSize.isWide(context)
+                                  ? AppSpacing.sm
+                                  : 0,
+                            ),
+                            child: Column(
+                              children: [
+                                LibraryHeader(
+                                  state: state,
+                                  isOffline: widget.isOffline,
+                                  searchController: _searchController,
+                                  searchFocusNode: _searchFocusNode,
+                                  onSearchChanged: (query) => bloc.add(
+                                    LibrarySearchQueryChanged(query),
                                   ),
                                 ),
-                              ),
-                            ],
+                                Expanded(
+                                  child: ScrollEdgeFadeStack(
+                                    child: LibraryBody(
+                                      state: state,
+                                      scrollController: _scrollController,
+                                      onSourcePressed: (source) =>
+                                          _handleSourceTap(context, source),
+                                      onSourceLongPressed: (source) =>
+                                          _handleSourceLongPress(
+                                            context,
+                                            source,
+                                          ),
+                                      onConfirmSwipeDelete: (source) =>
+                                          _confirmAndDispatchSwipe(
+                                            context,
+                                            source,
+                                          ),
+                                      onImportPressed: onImportPressed,
+                                      onRefresh: () {
+                                        // Keep the indicator until the reload
+                                        // ends.
+                                        final done = Completer<void>();
+                                        bloc.add(
+                                          LibraryRefreshRequested(
+                                            completer: done,
+                                          ),
+                                        );
+                                        return done.future;
+                                      },
+                                      onClearSearch: () {
+                                        _searchController.clear();
+                                        _searchFocusNode.unfocus();
+                                        bloc.add(
+                                          const LibrarySearchQueryChanged(''),
+                                        );
+                                      },
+                                      onShowWholeLibrary: () => bloc.add(
+                                        const LibraryCollectionScopeChanged(
+                                          null,
+                                        ),
+                                      ),
+                                      onPracticePressed:
+                                          widget.onPracticePressed == null
+                                          ? null
+                                          : () =>
+                                                _handlePracticePressed(context),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         };
                       },

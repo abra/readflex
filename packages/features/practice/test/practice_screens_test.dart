@@ -1,6 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:practice/practice.dart';
 import 'package:practice/src/practice_settings_presets.dart';
@@ -105,6 +106,44 @@ void main() {
     await h.addHighlight('b1', 'Fear is the mind-killer.', note: 'Litany');
   }
 
+  testWidgets('composite practice controls expose an accessible tap action', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      await seed();
+
+      for (final (screen, control) in [
+        (hub(), find.byKey(const ValueKey('practiceSource-b1'))),
+        (wordsScreen(), find.byType(PracticeWordRow)),
+        (highlightsScreen(), find.byType(PracticeHighlightRow)),
+      ]) {
+        await tester.pumpWidget(screen);
+        await settle(tester);
+        expect(
+          tester
+              .getSemantics(control)
+              .getSemanticsData()
+              .hasAction(
+                SemanticsAction.tap,
+              ),
+          isTrue,
+        );
+      }
+
+      await tester.pumpWidget(session());
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('reviewShowAnswer')));
+      await tester.pumpAndSettle();
+      final rating = tester.getSemantics(
+        find.byKey(const ValueKey('reviewRate-good')),
+      );
+      expect(rating.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+    } finally {
+      semantics.dispose();
+    }
+  });
+
   group('hub', () {
     testWidgets('empty: nothing to practice, no command, back only', (
       tester,
@@ -169,6 +208,127 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.getRect(start), firstFrame);
+    });
+
+    for (final size in const [Size(1032, 1376), Size(1280, 800)]) {
+      testWidgets('tablet separates the due action from its library: $size', (
+        tester,
+      ) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await seed();
+        await tester.pumpWidget(hub());
+        await settle(tester);
+
+        final workspace = tester.getRect(
+          find.byKey(const ValueKey('practiceWideWorkspace')),
+        );
+        final today = tester.getRect(find.byType(PracticeTodayCard));
+        final collection = tester.getRect(
+          find.byKey(const ValueKey('practiceWords')),
+        );
+        final action = tester.getRect(
+          find.byKey(const ValueKey('practiceStartReview')),
+        );
+        expect(workspace.width, lessThanOrEqualTo(1200));
+        expect(today.right, lessThan(collection.left));
+        expect(today.contains(action.center), isTrue);
+        expect(action.right, lessThanOrEqualTo(today.right));
+        expect(tester.takeException(), isNull);
+
+        await tester.tap(find.byKey(const ValueKey('practiceStartReview')));
+        await tester.pump();
+        expect(started.single, (sourceId: null, ahead: false));
+      });
+    }
+
+    testWidgets('tablet workspace mirrors with Arabic reading direction', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1032, 1376);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await seed();
+      await tester.pumpWidget(hub(locale: const Locale('ar')));
+      await settle(tester);
+
+      final today = tester.getRect(find.byType(PracticeTodayCard));
+      final collection = tester.getRect(
+        find.byKey(const ValueKey('practiceWords')),
+      );
+      expect(today.left, greaterThan(collection.right));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tablet gives keyboard scrolling one primary source list', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1032, 1376);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final primary = ScrollController();
+      addTearDown(primary.dispose);
+      for (var index = 0; index < 20; index++) {
+        final id = 'book-$index';
+        await h.addBook(id, title: 'Saved book $index');
+        await h.addWord('word $index', sourceId: id);
+      }
+      await tester.pumpWidget(
+        h.app(PrimaryScrollController(controller: primary, child: hubScreen())),
+      );
+      await settle(tester);
+
+      expect(primary.positions, hasLength(1));
+      ScrollAction().invoke(
+        const ScrollIntent(
+          direction: AxisDirection.down,
+          type: ScrollIncrementType.page,
+        ),
+        tester.element(find.byKey(const ValueKey('practiceWideWorkspace'))),
+      );
+      await tester.pumpAndSettle();
+      expect(primary.offset, greaterThan(0));
+      final offset = primary.offset;
+      final viewport = tester.getRect(
+        find.byKey(const ValueKey('practiceContent')),
+      );
+      final visible = find
+          .byType(PracticeSourceRow)
+          .evaluate()
+          .firstWhere(
+            (element) => viewport.contains(
+              tester.getCenter(find.byWidget(element.widget)),
+            ),
+          );
+      final visibleKey = visible.widget.key!;
+      final originalCenter = tester.getCenter(find.byKey(visibleKey));
+
+      tester.view.physicalSize = const Size(600, 900);
+      await tester.pumpAndSettle();
+      expect(primary.positions, hasLength(1));
+      expect(primary.offset, closeTo(offset, .01));
+      expect(
+        tester
+            .getRect(find.byKey(const ValueKey('practiceContent')))
+            .contains(
+              tester.getCenter(find.byKey(visibleKey)),
+            ),
+        isTrue,
+      );
+
+      tester.view.physicalSize = const Size(1032, 1376);
+      await tester.pumpAndSettle();
+      expect(primary.positions, hasLength(1));
+      expect(primary.offset, closeTo(offset, .01));
+      expect(
+        tester.getCenter(find.byKey(visibleKey)).dy,
+        closeTo(originalCenter.dy, .01),
+      );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('caught up offers Review ahead', (tester) async {
@@ -370,6 +530,44 @@ void main() {
   });
 
   group('words', () {
+    testWidgets('resizing the search toolbar retains its query and focus', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await seed();
+      await h.addWord('desert');
+      await tester.pumpWidget(wordsScreen());
+      await settle(tester);
+      await tester.enterText(find.byType(TextField), 'spice');
+      await tester.pumpAndSettle();
+      final editor = tester.element(find.byType(EditableText));
+      final focus = tester
+          .widget<EditableText>(find.byType(EditableText))
+          .focusNode;
+      expect(focus.hasFocus, isTrue);
+      expect(find.text('desert'), findsNothing);
+
+      for (final size in const [Size(600, 800), Size(1200, 800)]) {
+        tester.view.physicalSize = size;
+        await tester.pumpAndSettle();
+        expect(tester.element(find.byType(EditableText)), same(editor));
+        expect(focus.hasFocus, isTrue);
+        expect(
+          tester
+              .widget<EditableText>(find.byType(EditableText))
+              .controller
+              .text,
+          'spice',
+        );
+        expect(find.byType(PracticeWordRow), findsOneWidget);
+        expect(find.text('desert'), findsNothing);
+        expect(tester.takeException(), isNull);
+      }
+    });
+
     testWidgets('lists words, opens the sheet, removes', (tester) async {
       await seed();
       await tester.pumpWidget(wordsScreen());
@@ -380,7 +578,13 @@ void main() {
 
       await tester.tap(find.textContaining('spice'));
       await tester.pumpAndSettle();
-      expect(find.text('пряность'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ActionBottomSheetLayout),
+          matching: find.text('пряность'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('специя'), findsOneWidget);
       expect(find.text('The spice must flow.'), findsOneWidget);
 
@@ -401,6 +605,42 @@ void main() {
       await tester.pumpWidget(wordsScreen());
       await settle(tester);
       expect(find.text('No vocabulary yet'), findsOneWidget);
+    });
+
+    testWidgets('long details scroll while word actions stay reachable', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await h.addBook('b1');
+      await h.addWord(
+        'word',
+        sourceId: 'b1',
+        context: List.filled(
+          40,
+          'A long sentence in its original context.',
+        ).join(' '),
+        contextTranslation: List.filled(40, 'Its saved translation.').join(' '),
+      );
+      await tester.pumpWidget(wordsScreen(ts: const TextScaler.linear(2)));
+      await settle(tester);
+      await tester.tap(find.text('word'));
+      await tester.pumpAndSettle();
+
+      final action = tester.getRect(find.text('Open in book'));
+      expect(action.bottom, lessThanOrEqualTo(568));
+      await tester.drag(
+        find.byKey(const ValueKey('practiceWordDetails')),
+        const Offset(0, -250),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.text('Open in book')), action);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Open in book'));
+      await settle(tester);
+      expect(opened.single.$1, 'b1');
     });
 
     for (final locale in const [Locale('en'), Locale('de'), Locale('ar')]) {
@@ -441,6 +681,30 @@ void main() {
       expect(opened.single.$1, 'b1');
     });
 
+    testWidgets('long collections build only visible highlight rows', (
+      tester,
+    ) async {
+      await h.addBook('b1', title: 'Dune');
+      for (var index = 0; index < 80; index++) {
+        await h.addHighlight('b1', 'Saved passage $index.');
+      }
+      await tester.pumpWidget(highlightsScreen());
+      await settle(tester);
+
+      expect(find.byType(PracticeHighlightRow).evaluate().length, lessThan(20));
+      await tester.scrollUntilVisible(
+        find.text('Saved passage 0.'),
+        400,
+        scrollable: find.descendant(
+          of: find.byKey(const ValueKey('practiceHighlightsList')),
+          matching: find.byType(Scrollable),
+        ),
+        maxScrolls: 40,
+      );
+      expect(find.text('Saved passage 0.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     for (final locale in const [Locale('en'), Locale('de'), Locale('ar')]) {
       testWidgets('200% text fits: $locale', (tester) async {
         tester.view.physicalSize = const Size(320, 568);
@@ -458,6 +722,71 @@ void main() {
   });
 
   group('session', () {
+    testWidgets('tablet study and summary keep a focused reading measure', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await h.addWord('spice', translation: 'пряность');
+      await tester.pumpWidget(session());
+      await settle(tester);
+
+      final card = tester.getRect(
+        find.byKey(const ValueKey('reviewStudyCard')),
+      );
+      final reveal = tester.getRect(
+        find.byKey(const ValueKey('reviewShowAnswer')),
+      );
+      expect(card.width, lessThanOrEqualTo(640));
+      expect(card.center.dx, closeTo(640, .01));
+      expect(reveal.width, closeTo(card.width, .01));
+      expect(reveal.bottom, greaterThan(720));
+      await tester.tap(find.byKey(const ValueKey('reviewShowAnswer')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('reviewRate-good')));
+      await settle(tester);
+
+      final summary = tester.getRect(
+        find.byKey(const ValueKey('reviewSummaryCard')),
+      );
+      final done = tester.getRect(find.byKey(const ValueKey('reviewDone')));
+      expect(summary.width, lessThanOrEqualTo(480));
+      expect(summary.center.dx, closeTo(640, .01));
+      expect(summary.contains(done.center), isTrue);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('phone RTL large text keeps every rating in thumb reach', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await h.addWord('كلمة', translation: 'A saved meaning');
+      await tester.pumpWidget(
+        session(locale: const Locale('ar'), ts: const TextScaler.linear(2)),
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('reviewShowAnswer')));
+      await tester.pumpAndSettle();
+
+      Rect? previous;
+      for (final rating in ['again', 'hard', 'good']) {
+        final rect = tester.getRect(find.byKey(ValueKey('reviewRate-$rating')));
+        expect(rect.width, greaterThanOrEqualTo(48));
+        expect(rect.height, greaterThanOrEqualTo(48));
+        expect(rect.bottom, lessThanOrEqualTo(568));
+        if (previous case final above?) {
+          expect(rect.top, greaterThan(above.bottom));
+        }
+        previous = rect;
+      }
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('word then highlight, ratings, summary, review again', (
       tester,
     ) async {

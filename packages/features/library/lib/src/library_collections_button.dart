@@ -52,8 +52,8 @@ class LibraryCollectionsButton extends StatelessWidget {
             shape: const StadiumBorder(),
             // The leading glyph sits centred in the stadium's round end,
             // level with the "+" glyph in its circle.
-            padding: const EdgeInsetsDirectional.only(
-              start: AppSizes.iconActionOutset,
+            padding: EdgeInsetsDirectional.only(
+              start: AppPlainIconButton.defaultIconOutsetOf(context),
               end: AppSpacing.md,
             ),
           ),
@@ -65,7 +65,7 @@ class LibraryCollectionsButton extends StatelessWidget {
                   scoped
                       ? libraryCollectionScopeIcon(scope.type)
                       : AppIcons.library,
-                  size: AppIconSize.sm,
+                  size: AppPlainIconButton.defaultIconSizeOf(context),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Flexible(

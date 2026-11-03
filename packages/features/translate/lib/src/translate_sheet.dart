@@ -573,7 +573,10 @@ class _TranslationAnswer extends StatelessWidget {
             ? _answerHeadingStyle(
                 context,
                 text,
-                AppSheetActionRow.childWidthFor(constraints.maxWidth),
+                AppSheetActionRow.childWidthFor(
+                  constraints.maxWidth,
+                  iconSize: AppPlainIconButton.defaultIconSizeOf(context),
+                ),
               )
             : _answerBodyStyle(context);
         return AppSheetActionRow(
