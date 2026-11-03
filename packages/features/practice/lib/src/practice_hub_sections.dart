@@ -257,10 +257,15 @@ class PracticeSourceRow extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
-              Icon(
-                AppIcons.chevronRight,
-                size: AppIconSize.sm,
-                color: colors.onSurfaceVariant,
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: AppSpacing.md),
+                child: Icon(
+                  Directionality.of(context) == TextDirection.rtl
+                      ? AppIcons.chevronLeft
+                      : AppIcons.chevronRight,
+                  size: AppIconSize.sm,
+                  color: colors.onSurfaceVariant,
+                ),
               ),
             ],
           ),

@@ -150,6 +150,7 @@ follows the same setting.
   labels wrap independently inside the quiet surface, including at large text.
 - `PracticeSourceRow` shows a cover, title (the Library list's title role),
   counts and what is due; tapping it starts a session over that source. Source
+  chevrons align with Collections and follow the layout direction. Source
   and highlight lists build visible rows lazily.
 - Word rows show the word, its meaning, the source title and the stored FSRS
   review date and time (`reviewDueLabel` in `review_due_label.dart`). The date
