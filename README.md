@@ -59,8 +59,10 @@ The test harness, coverage reports and benchmark orchestration use the pinned
 Dart SDK. Node.js is optional, only for regenerating the independent ICU sentence
 reference in `packages/pagecraft/test/fixtures/icu_sentence_breaks.mjs`;
 normal builds, tests and benchmarks use the committed reference data.
-Android builds also need the project's
-JDK/SDK setup; iOS builds need Xcode and CocoaPods.
+Android builds use AGP 8.13.2 and the Gradle 8.14 wrapper, with Java 17 source
+compatibility. Run Gradle with the JDK configured for Flutter (Java 21 is
+supported), including when reproducing a build directly with `gradlew`.
+iOS builds need Xcode and CocoaPods.
 MOBI text processing uses Rust through FRB. Install rustup; the compiler and
 targets are pinned in `packages/pagecraft/rust/rust-toolchain.toml`.
 Pagecraft's Flutter/Dart build hook compiles and bundles the library automatically,
