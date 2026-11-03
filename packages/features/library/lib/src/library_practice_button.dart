@@ -12,10 +12,8 @@ const double _badgeOutset = (AppSizes.buttonHeight - _practiceIconSize) / 2;
 /// Counts above this show as "99+" to stay inside the touch target.
 const int _badgeMaxCount = 99;
 
-/// A plain Practice icon above "+", outside the Library's bottom capsule:
-/// Practice has one stable entry under the thumb
-/// even before anything is saved, with the due count as a badge once cards
-/// are waiting.
+/// Practice reminder above "+", shown only while cards are due.
+/// The caller owns visibility; the glow and badge emphasize the due count.
 ///
 /// One semantics node: "Practice, 2 cards due today".
 class LibraryPracticeButton extends StatelessWidget {
@@ -23,9 +21,9 @@ class LibraryPracticeButton extends StatelessWidget {
     required this.due,
     required this.onPressed,
     super.key,
-  });
+  }) : assert(due > 0);
 
-  /// Cards due now; zero hides the badge.
+  /// Positive number of cards due now.
   final int due;
   final VoidCallback onPressed;
 
@@ -36,7 +34,7 @@ class LibraryPracticeButton extends StatelessWidget {
     return MergeSemantics(
       key: const ValueKey('libraryPracticeButton'),
       child: Semantics(
-        value: due > 0 ? l10n.practiceDueToday(due) : null,
+        value: l10n.practiceDueToday(due),
         child: AppPlainIconButton(
           tooltip: l10n.practiceTitle,
           color: colors.onSurface,
@@ -45,26 +43,14 @@ class LibraryPracticeButton extends StatelessWidget {
           iconWidget: Stack(
             clipBehavior: Clip.none,
             children: [
-              Icon(
-                AppIcons.practiceFloating,
-                size: _practiceIconSize,
-                shadows: [
-                  for (final shadow in AppShadows.popover)
-                    Shadow(
-                      color: shadow.color,
-                      offset: shadow.offset,
-                      blurRadius: shadow.blurRadius,
-                    ),
-                ],
+              const AppFloatingPracticeIcon(showAura: true),
+              // Offset to the corner while staying inside the 48dp target.
+              // A wider count grows inwards; semantics say the full count.
+              PositionedDirectional(
+                top: -_badgeOutset,
+                end: -_badgeOutset,
+                child: ExcludeSemantics(child: _DueBadge(count: due)),
               ),
-              if (due > 0)
-                // Offset to the corner while staying inside the 48dp target.
-                // A wider count grows inwards; semantics say the full count.
-                PositionedDirectional(
-                  top: -_badgeOutset,
-                  end: -_badgeOutset,
-                  child: ExcludeSemantics(child: _DueBadge(count: due)),
-                ),
             ],
           ),
         ),

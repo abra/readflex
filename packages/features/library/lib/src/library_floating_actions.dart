@@ -15,7 +15,7 @@ const double _controlInset =
     (kLibraryFloatingActionsHeight - AppSizes.buttonHeight) / 2;
 
 /// The collection switcher and "+" share a bottom capsule. Practice is a
-/// separate plain icon above "+", aligned with it in both LTR and RTL.
+/// separate icon above "+" while cards are due, aligned in LTR and RTL.
 ///
 /// Mounted in the Scaffold's floating action slot. That slot strips the safe
 /// insets, so the width bound uses the 16dp gutters only; side insets exist
@@ -37,7 +37,7 @@ class LibraryFloatingActions extends StatelessWidget {
   /// `null` while an import flow is already open.
   final VoidCallback? onAddPressed;
 
-  /// Cards due in Practice, shown as a badge.
+  /// Cards due in Practice; zero hides the action.
   final int practiceDue;
 
   /// Opens Practice; `null` omits the separate icon.
@@ -76,7 +76,7 @@ class LibraryFloatingActions extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                if (onPracticePressed != null)
+                if (onPracticePressed != null && practiceDue > 0)
                   Padding(
                     padding: const EdgeInsetsDirectional.only(
                       end: _controlInset,

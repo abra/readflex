@@ -1223,6 +1223,11 @@ class ReadflexLocalizationsRu extends ReadflexLocalizations {
   String get practiceDueNow => 'Пора повторить';
 
   @override
+  String practiceNextReviewAt(String date, String time) {
+    return 'Повторение: $date, $time';
+  }
+
+  @override
   String practiceDueIn(String interval) {
     return 'Через $interval';
   }

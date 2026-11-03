@@ -154,6 +154,28 @@ class FsrsRepository {
     }
   }
 
+  /// A lightweight due count and deadline, without loading review history.
+  /// Null [types] includes all tracked types; an empty set includes none.
+  Future<ReviewQueueStatus> getReviewQueueStatus({
+    Set<ReviewableType>? types,
+  }) async {
+    try {
+      final now = _clock().toUtc().toIso8601String();
+      final status = await _dao.reviewQueueStatus(
+        now,
+        types: types?.map((type) => type.toStorageString()).toSet(),
+      );
+      return ReviewQueueStatus(
+        dueCount: status.dueCount,
+        nextReviewAt: status.nextReviewAt == null
+            ? null
+            : DateTime.parse(status.nextReviewAt!).toUtc(),
+      );
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   /// Returns due review items for a specific source.
   Future<List<ReviewItem>> getDueItemsBySource(
     String sourceId, {

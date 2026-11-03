@@ -11,6 +11,7 @@ import 'package:preferences_service/preferences_service.dart';
 import 'package:stream_transform/stream_transform.dart';
 
 part 'library_event.dart';
+part 'library_practice_schedule.dart';
 part 'library_state.dart';
 
 class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
@@ -20,16 +21,22 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     CollectionRepository? collectionRepository,
     FsrsRepository? fsrsRepository,
     PreferencesService? preferencesService,
+    DateTime Function()? clock,
+    bool isForeground = true,
   }) : _bookRepository = bookRepository,
        _articleRepository = articleRepository,
        _collectionRepository = collectionRepository,
        _fsrsRepository = fsrsRepository,
        _preferencesService = preferencesService,
+       _clock = clock ?? DateTime.now,
+       _isForeground = isForeground,
        super(LibraryState()) {
     on<LibraryLoadRequested>(_onLoadRequested);
     on<LibrarySourceDeleted>(_onSourceDeleted);
     on<LibrarySourcesDeleted>(_onSourcesDeleted);
     on<LibraryRefreshRequested>(_onRefreshRequested);
+    on<LibraryPracticeRefreshRequested>(_onPracticeRefreshRequested);
+    on<LibraryForegroundChanged>(_onForegroundChanged);
     on<LibrarySourceProgressSaved>(_onSourceProgressSaved);
     on<LibrarySearchQueryChanged>(
       _onSearchQueryChanged,
@@ -70,7 +77,20 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   /// without one.
   final FsrsRepository? _fsrsRepository;
   final PreferencesService? _preferencesService;
+  final DateTime Function() _clock;
+  bool _isForeground;
+  bool _libraryLoading = false;
+  bool _refreshPracticeAfterLoad = false;
+  Timer? _practiceTimer;
+  int _practiceGeneration = 0;
   int _loadGeneration = 0;
+
+  @override
+  Future<void> close() {
+    _practiceGeneration++;
+    _cancelPracticeTimer();
+    return super.close();
+  }
 
   /// Progress saved since the latest load started. That load may have read a
   /// row before the write, so its result takes these values.
@@ -92,6 +112,53 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       await _loadItems(emit);
     } finally {
       event.completer?.complete();
+    }
+  }
+
+  Future<void> _onPracticeRefreshRequested(
+    LibraryPracticeRefreshRequested event,
+    Emitter<LibraryState> emit,
+  ) async {
+    if (!_isForeground || _fsrsRepository == null) return;
+    if (_libraryLoading) {
+      _refreshPracticeAfterLoad = true;
+      return;
+    }
+    if (state.status != LibraryStatus.success) return;
+    final generation = ++_practiceGeneration;
+    _cancelPracticeTimer();
+    try {
+      final previous = state.practice;
+      final LibraryPracticeSummary? summary;
+      if (previous == null) {
+        summary = await _loadPracticeSummary();
+      } else {
+        final queue = await _fsrsRepository.getReviewQueueStatus(
+          types: _activeReviewTypes,
+        );
+        summary = LibraryPracticeSummary(
+          words: previous.words,
+          highlights: previous.highlights,
+          due: queue.dueCount,
+          nextReviewAt: queue.nextReviewAt,
+        );
+      }
+      if (emit.isDone ||
+          generation != _practiceGeneration ||
+          !_canSchedulePractice) {
+        return;
+      }
+      if (summary == null) {
+        _schedulePracticeRetry();
+        return;
+      }
+      emit(state.copyWith(practice: summary));
+      _schedulePracticeRefresh(summary.nextReviewAt);
+    } catch (error, stackTrace) {
+      addError(error, stackTrace);
+      if (!emit.isDone && generation == _practiceGeneration) {
+        _schedulePracticeRetry();
+      }
     }
   }
 
@@ -185,6 +252,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     bool deletionSuccess = true,
   }) async {
     final generation = ++_loadGeneration;
+    _libraryLoading = true;
+    _practiceGeneration++;
+    _cancelPracticeTimer();
+    var practiceLoaded = false;
     _savedProgress.clear();
     try {
       final snapshot = await _loadLibrarySnapshot();
@@ -205,6 +276,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         return;
       }
       final sources = _withSavedProgress(snapshot.sources);
+      practiceLoaded = snapshot.practice != null;
       final scopes = [
         ..._buildBuiltInScopes(sources),
         // A failed read is not an empty collection. Keep the last valid data.
@@ -257,6 +329,18 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
           deletionEffect: effect,
         ),
       );
+    } finally {
+      if (!isClosed && generation == _loadGeneration) {
+        _libraryLoading = false;
+        if (_refreshPracticeAfterLoad) {
+          _refreshPracticeAfterLoad = false;
+          if (_isForeground) add(const LibraryPracticeRefreshRequested());
+        } else if (practiceLoaded) {
+          _schedulePracticeRefresh(state.practice?.nextReviewAt);
+        } else {
+          _schedulePracticeRetry();
+        }
+      }
     }
   }
 
@@ -266,16 +350,15 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     final repository = _fsrsRepository;
     if (repository == null) return null;
     try {
-      final stats = await repository.getStats();
-      // Highlights count as due only while sessions review them.
-      final reviewHighlights =
-          _preferencesService?.current.practiceReviewHighlights ?? true;
+      final (stats, queue) = await (
+        repository.getStats(),
+        repository.getReviewQueueStatus(types: _activeReviewTypes),
+      ).wait;
       return LibraryPracticeSummary(
         words: stats.totalOf(ReviewableType.dictionary),
         highlights: stats.totalOf(ReviewableType.highlight),
-        due:
-            stats.dueOf(ReviewableType.dictionary) +
-            (reviewHighlights ? stats.dueOf(ReviewableType.highlight) : 0),
+        due: queue.dueCount,
+        nextReviewAt: queue.nextReviewAt,
       );
     } catch (e, st) {
       addError(e, st);

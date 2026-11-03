@@ -297,7 +297,7 @@ and UI. Storage rows and DAO types should remain behind repositories.
 | `collection_repository` | Manual library collections and built-in favorite membership. | `domain_models`, `local_storage` |
 | `highlight_repository` | Highlight persistence and domain mapping; a new text highlight registers its review row. | `domain_models`, `local_storage` |
 | `dictionary_repository` | Saved words (`DictionaryEntry`) with their source anchors; saving a word registers its review row. | `domain_models`, `local_storage` |
-| `fsrs_repository` | One FSRS review store over `review_items`/`review_logs`: due queue, per-type stats and streaks (`ReviewStats`), rating previews, backfill of untracked highlights. | `domain_models`, `local_storage`, `review_scheduler` |
+| `fsrs_repository` | One FSRS review store over `review_items`/`review_logs`: due queue, narrow due/deadline snapshots (`ReviewQueueStatus`), per-type stats and streaks (`ReviewStats`), rating previews, backfill of untracked highlights. | `domain_models`, `local_storage`, `review_scheduler` |
 
 Repositories orchestrate data sources and return domain models/exceptions.
 Feature blocs/cubits talk to repositories; feature UI should not import DAOs.
@@ -717,6 +717,12 @@ feature package      UI and state management
   sources and review counts (`LibraryState.practice`) then. The reader
   closing refreshes the same way, so a word saved in a Translation sheet
   shows in the Library's Practice row on return.
+- `LibraryBloc` keeps one foreground timer for the next eligible review
+  deadline. Its queue-only refresh uses `FsrsRepository.getReviewQueueStatus`
+  without reloading the source list or activity statistics. It respects the
+  highlight-review preference, cancels on background/disposal and refreshes
+  on resume. Failed reads keep the last counts and retry after one minute
+  while active; there is no periodic polling.
 Features should express navigation needs through callbacks. They should not
 call GoRouter to navigate to sibling features directly.
 

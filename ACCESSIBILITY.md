@@ -92,11 +92,20 @@ collection; it has no tap action. The capsule's height is fixed, so its text
 scales to 200% and no further; at 320dp and 200% it still fits within the
 gutters, truncating a long collection name rather than clipping.
 
-The separate Practice icon announces the full due count on its button node.
-Its decorative badge is hidden at zero and shows at most "99+" visually.
+The separate Practice icon appears only when its destination is available and
+at least one card is due; zero or unknown counts remove its button semantics.
+It announces the full due count on its button node. Its decorative badge shows
+at most "99+" visually; its soft aura is static and adds no semantics.
 The number follows text scaling until it reaches the 48dp target's bounds,
 then scales down to fit on one line; the row and Practice section retain the
 full count with normal text scaling.
+
+Practice word and highlight rows include the stored review date and time in
+their composite semantics value. The visible schedule uses muted supporting
+text on its own wrapping line; truncating a long source or chapter must not
+truncate the timestamp. Word details expose the same localized date and local
+time with the user's 12/24-hour preference and normal text scaling. Items with
+no scheduled time retain the New or Due label.
 
 When behavior changes accessibility output, add focused tests:
 

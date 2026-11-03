@@ -344,6 +344,7 @@
   "practiceNoMatches": "Keine Treffer",
   "practiceDueNew": "Neu",
   "practiceDueNow": "Fällig",
+  "practiceNextReviewAt": "Nächste Wiederholung: {date}, {time}",
   "practiceDueIn": "In {interval}",
   "practiceIntervalMinutes": "{count} Min",
   "practiceIntervalHours": "{count} Std",

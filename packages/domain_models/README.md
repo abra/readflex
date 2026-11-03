@@ -29,6 +29,7 @@ where a storage or wire boundary needs one.
 | `DictionaryAnchor` | Source-scoped anchor attached to a dictionary entry       |
 | `ReviewItem`      | FSRS state for a reviewable item (flashcard/highlight/…)  |
 | `ReviewLog`       | Single review event, persisted for history and statistics |
+| `ReviewQueueStatus` | Due count and next future review deadline from one queue snapshot |
 | `ReviewStats`     | Due/mastered counts and study-day activity for Practice and Library |
 | `FsrsCardData`    | Embedded FSRS v6 state (stability, difficulty, due date)  |
 

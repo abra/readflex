@@ -29,6 +29,7 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_collection_repository.dart';
+import 'helpers/fake_fsrs_repository.dart';
 
 const double _collectionSourcesMaxHeightForTest = 260;
 
@@ -123,6 +124,7 @@ void main() {
 
   Widget buildSubject({
     ArticleRepository? articleRepository,
+    FakeFsrsRepository? fsrsRepository,
     ThemeData? theme,
     bool isOffline = false,
     bool openImportOnStart = false,
@@ -143,6 +145,7 @@ void main() {
           bookRepository: bookRepository,
           articleRepository: articleRepository,
           collectionRepository: collectionRepository,
+          fsrsRepository: fsrsRepository,
           preferencesService: preferencesService,
           isOffline: isOffline,
           openImportOnStart: openImportOnStart,
@@ -1561,6 +1564,8 @@ void main() {
           await tester.pumpWidget(
             buildSubject(
               theme: code == 'ar' ? AppTheme.dark() : AppTheme.light(),
+              fsrsRepository: FakeFsrsRepository()
+                ..stats = reviewStats(words: 1, due: 1),
               onPracticePressed: () async {},
             ),
           );

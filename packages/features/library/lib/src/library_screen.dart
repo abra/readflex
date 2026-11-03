@@ -180,7 +180,8 @@ class _LibraryView extends StatefulWidget {
   State<_LibraryView> createState() => _LibraryViewState();
 }
 
-class _LibraryViewState extends State<_LibraryView> {
+class _LibraryViewState extends State<_LibraryView>
+    with WidgetsBindingObserver {
   /// Search field is a local controller + local state: the bloc only needs
   /// to know about query changes (not every keystroke triggers a new load),
   /// and owning a controller lets us clear the field from the clear button.
@@ -200,6 +201,9 @@ class _LibraryViewState extends State<_LibraryView> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null) didChangeAppLifecycleState(lifecycle);
     if (widget.openImportOnStart) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _handleAdd(context, LibraryImportEntry.file);
@@ -209,6 +213,7 @@ class _LibraryViewState extends State<_LibraryView> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     for (final pending in _pendingSwipeDeletions.values) {
       if (!pending.isCompleted) pending.complete(false);
     }
@@ -216,6 +221,13 @@ class _LibraryViewState extends State<_LibraryView> {
     _searchFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    context.read<LibraryBloc>().add(
+      LibraryForegroundChanged(state == AppLifecycleState.resumed),
+    );
   }
 
   Future<void> _handleAdd(

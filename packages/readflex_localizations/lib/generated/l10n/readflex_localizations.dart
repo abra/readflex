@@ -2181,6 +2181,12 @@ abstract class ReadflexLocalizations {
   /// **'Due'**
   String get practiceDueNow;
 
+  /// Exact scheduled FSRS review date and local clock time for an individual saved card.
+  ///
+  /// In en, this message translates to:
+  /// **'Next review: {date}, {time}'**
+  String practiceNextReviewAt(String date, String time);
+
   /// No description provided for @practiceDueIn.
   ///
   /// In en, this message translates to:

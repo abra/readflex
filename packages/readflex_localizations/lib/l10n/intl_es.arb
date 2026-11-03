@@ -344,6 +344,7 @@
   "practiceNoMatches": "Sin coincidencias",
   "practiceDueNew": "Nueva",
   "practiceDueNow": "Pendiente",
+  "practiceNextReviewAt": "Próximo repaso: {date}, {time}",
   "practiceDueIn": "En {interval}",
   "practiceIntervalMinutes": "{count} min",
   "practiceIntervalHours": "{count} h",

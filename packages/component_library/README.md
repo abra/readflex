@@ -244,8 +244,12 @@ confirmation and Undo behavior when changing an icon.
 Use `AppIcons.undo` for reversing a deletion, not the refresh/retry icon.
 `AppIcons.practice` is Lucide's `playing-cards-fan`, the review deck, wherever
 Practice is named: the Library row, Start review, the empty hub.
-The separate 32dp floating action uses `AppIcons.practiceFloating`, the same
-glyph at weight 300 so its strokes stay close to the usual 2dp thickness.
+The separate 32dp floating action uses `AppFloatingPracticeIcon`: opaque
+surface-coloured cards beneath `AppIcons.practiceFloating`, the same glyph at
+weight 300 so its strokes stay close to the usual 2dp thickness. Its silhouette
+uses `AppShadows.popover`, with an optional soft primary-colour aura. The aura
+is static, including with reduced motion; the surrounding button area stays
+transparent.
 Icons come from `lucide_icons_flutter` 4 (Lucide 1.56+); regular glyphs and
 their `Dir` variants keep the 3.x API, weighted variants live in separate
 libraries. A Lucide bump can refine glyphs, so compare every

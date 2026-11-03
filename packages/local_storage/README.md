@@ -37,6 +37,12 @@ remains exported so existing databases keep migrating cleanly and the frozen
 flashcard feature can be restored from history without a destructive schema
 reset.
 
+`ReviewItemsDao.reviewQueueStatus` reads the due count and earliest future
+deadline in one SQL snapshot at a supplied UTC time. Separate aggregate
+subqueries let the existing type/deadline index restrict each lookup. An
+explicit set of types filters both values; an empty set returns an empty
+queue. It reads no review history and requires no schema change.
+
 Schema v27 adds the indexed `dictionary_table.word_key`. `DictionaryDao`
 normalizes both saved words and lookup terms with Dart's Unicode lowercase
 conversion and trimming; insert and rename keep the key current. Migration

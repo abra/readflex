@@ -574,7 +574,14 @@ void main() {
       await settle(tester);
 
       expect(find.textContaining('spice'), findsOneWidget);
-      expect(find.textContaining('Dune · New'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(PracticeWordRow),
+          matching: find.text('Dune'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('New'), findsOneWidget);
 
       await tester.tap(find.textContaining('spice'));
       await tester.pumpAndSettle();
@@ -668,7 +675,14 @@ void main() {
       expect(find.text('Dune'), findsOneWidget);
       expect(find.text('Fear is the mind-killer.'), findsOneWidget);
       expect(find.text('Litany'), findsOneWidget);
-      expect(find.textContaining('Chapter 1 · New'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(PracticeHighlightRow),
+          matching: find.text('Chapter 1'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('New'), findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('practiceColor-green')));
       await tester.pumpAndSettle();

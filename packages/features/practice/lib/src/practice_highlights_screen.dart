@@ -12,8 +12,9 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'practice_highlight_tint.dart';
 import 'practice_highlights_cubit.dart';
 import 'practice_item.dart';
+import 'practice_review_metadata.dart';
 import 'practice_page_header.dart';
-import 'review_interval_label.dart';
+import 'review_due_label.dart';
 
 /// Every text highlight, grouped by source: search, a colour filter, and a
 /// row per passage that opens it in its source.
@@ -284,12 +285,7 @@ class PracticeHighlightRow extends StatelessWidget {
     final direction = Bidi.detectRtlDirectionality(quote)
         ? TextDirection.rtl
         : TextDirection.ltr;
-    final due = reviewDueLabel(
-      l10n,
-      item.fsrs.nextReviewAt,
-      isNew: item.isNew,
-      now: DateTime.now(),
-    );
+    final due = reviewDueLabel(context, item.fsrs);
     final chapter = highlight.chapterTitle?.trim();
     final meta = [
       if (chapter != null && chapter.isNotEmpty) chapter,
@@ -338,11 +334,9 @@ class PracticeHighlightRow extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: AppSpacing.xs),
-              Text(
-                meta,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+              PracticeReviewMetadata(
+                sourceTitle: chapter,
+                reviewLabel: due,
               ),
             ],
           ),

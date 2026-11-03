@@ -344,6 +344,7 @@
   "practiceNoMatches": "一致なし",
   "practiceDueNew": "新規",
   "practiceDueNow": "復習時",
+  "practiceNextReviewAt": "次回の復習：{date} {time}",
   "practiceDueIn": "{interval}後",
   "practiceIntervalMinutes": "{count}分",
   "practiceIntervalHours": "{count}時間",

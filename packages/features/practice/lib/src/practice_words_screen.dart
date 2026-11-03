@@ -10,9 +10,10 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'practice_item.dart';
 import 'practice_page_header.dart';
+import 'practice_review_metadata.dart';
 import 'practice_word_sheet.dart';
 import 'practice_words_cubit.dart';
-import 'review_interval_label.dart';
+import 'review_due_label.dart';
 
 /// Opens [sourceId] in the reader, at [cfiRange] when known.
 typedef PracticeOpenInSource =
@@ -241,19 +242,13 @@ class PracticeWordRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final text = context.text;
     final colors = context.colors;
     final entry = word.entry;
     final direction = Bidi.detectRtlDirectionality(entry.word)
         ? TextDirection.rtl
         : TextDirection.ltr;
-    final due = reviewDueLabel(
-      l10n,
-      word.fsrs.nextReviewAt,
-      isNew: word.isNew,
-      now: DateTime.now(),
-    );
+    final due = reviewDueLabel(context, word.fsrs);
     final meta = [?word.sourceTitle, due].join(' · ');
     return Semantics(
       button: true,
@@ -294,11 +289,9 @@ class PracticeWordRow extends StatelessWidget {
                 style: text.bodyMedium.copyWith(color: colors.onSurfaceVariant),
               ),
               const SizedBox(height: AppSpacing.xxs),
-              Text(
-                meta,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
+              PracticeReviewMetadata(
+                sourceTitle: word.sourceTitle,
+                reviewLabel: due,
               ),
             ],
           ),

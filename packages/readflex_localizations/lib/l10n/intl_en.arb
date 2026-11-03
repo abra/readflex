@@ -637,6 +637,18 @@
   "practiceNoMatches": "No matches",
   "practiceDueNew": "New",
   "practiceDueNow": "Due",
+  "practiceNextReviewAt": "Next review: {date}, {time}",
+  "@practiceNextReviewAt": {
+    "description": "Exact scheduled FSRS review date and local clock time for an individual saved card.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "practiceDueIn": "In {interval}",
   "@practiceDueIn": {
     "placeholders": {

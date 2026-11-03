@@ -344,6 +344,7 @@
   "practiceNoMatches": "没有匹配项",
   "practiceDueNew": "新",
   "practiceDueNow": "待复习",
+  "practiceNextReviewAt": "下次复习：{date} {time}",
   "practiceDueIn": "{interval}后",
   "practiceIntervalMinutes": "{count}分",
   "practiceIntervalHours": "{count}小时",

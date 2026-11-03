@@ -263,5 +263,14 @@ class _LargeCountFsrsRepository implements FsrsRepository {
   );
 
   @override
+  Future<ReviewQueueStatus> getReviewQueueStatus({
+    Set<ReviewableType>? types,
+  }) async => ReviewQueueStatus(
+    dueCount: types == null || types.contains(ReviewableType.dictionary)
+        ? count
+        : 0,
+  );
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

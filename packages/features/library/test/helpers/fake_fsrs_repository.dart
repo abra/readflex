@@ -7,14 +7,30 @@ class FakeFsrsRepository implements FsrsRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
   ReviewStats stats = const ReviewStats();
+  DateTime? nextReviewAt;
   bool shouldThrow = false;
   int getStatsCallCount = 0;
+  int getReviewQueueStatusCallCount = 0;
 
   @override
   Future<ReviewStats> getStats() async {
     getStatsCallCount++;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     return stats;
+  }
+
+  @override
+  Future<ReviewQueueStatus> getReviewQueueStatus({
+    Set<ReviewableType>? types,
+  }) async {
+    getReviewQueueStatusCallCount++;
+    if (shouldThrow) throw StorageException(cause: 'fake error');
+    return ReviewQueueStatus(
+      dueCount: stats.dueByType.entries
+          .where((entry) => types == null || types.contains(entry.key))
+          .fold(0, (sum, entry) => sum + entry.value),
+      nextReviewAt: types?.isEmpty == true ? null : nextReviewAt,
+    );
   }
 }
 

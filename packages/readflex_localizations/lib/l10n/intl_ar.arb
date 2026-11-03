@@ -344,6 +344,7 @@
   "practiceNoMatches": "لا نتائج",
   "practiceDueNew": "جديدة",
   "practiceDueNow": "مستحقة",
+  "practiceNextReviewAt": "المراجعة التالية: {date}، {time}",
   "practiceDueIn": "بعد {interval}",
   "practiceIntervalMinutes": "{count} د",
   "practiceIntervalHours": "{count} س",

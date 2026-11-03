@@ -1155,6 +1155,11 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get practiceDueNow => '復習時';
 
   @override
+  String practiceNextReviewAt(String date, String time) {
+    return '次回の復習：$date $time';
+  }
+
+  @override
   String practiceDueIn(String interval) {
     return '$interval後';
   }

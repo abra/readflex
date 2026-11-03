@@ -105,6 +105,7 @@ class LibraryPracticeSummary extends Equatable {
     required this.words,
     required this.highlights,
     required this.due,
+    this.nextReviewAt,
   });
 
   /// Saved words in the review queue.
@@ -116,11 +117,14 @@ class LibraryPracticeSummary extends Equatable {
   /// Cards due now, words and highlights together.
   final int due;
 
+  /// Earliest future deadline among the enabled review types.
+  final DateTime? nextReviewAt;
+
   /// Nothing saved yet: the Library shows no Practice row.
   bool get isEmpty => words == 0 && highlights == 0;
 
   @override
-  List<Object?> get props => [words, highlights, due];
+  List<Object?> get props => [words, highlights, due, nextReviewAt];
 }
 
 class LibraryState extends Equatable {

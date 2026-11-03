@@ -15,19 +15,4 @@ void main() {
     expect(reviewIntervalLabel(l10n, const Duration(days: 95)), '3mo');
     expect(reviewIntervalLabel(l10n, const Duration(days: 800)), '2y');
   });
-
-  test('due labels', () {
-    final now = DateTime(2026, 10, 26);
-    expect(reviewDueLabel(l10n, null, isNew: true, now: now), 'New');
-    expect(reviewDueLabel(l10n, now, isNew: false, now: now), 'Due');
-    expect(
-      reviewDueLabel(
-        l10n,
-        now.add(const Duration(days: 3)),
-        isNew: false,
-        now: now,
-      ),
-      'In 3d',
-    );
-  });
 }

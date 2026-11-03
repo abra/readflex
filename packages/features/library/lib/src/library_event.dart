@@ -16,6 +16,18 @@ final class LibraryRefreshRequested extends LibraryEvent {
   final Completer<void>? completer;
 }
 
+/// Recounts the review queue without reloading books or collections.
+final class LibraryPracticeRefreshRequested extends LibraryEvent {
+  const LibraryPracticeRefreshRequested();
+}
+
+/// Suspends deadline work in the background and catches up on resume.
+final class LibraryForegroundChanged extends LibraryEvent {
+  const LibraryForegroundChanged(this.isForeground);
+
+  final bool isForeground;
+}
+
 /// The reader saved [progress] for [sourceId]. A save changes nothing else
 /// the Library shows, so the bloc updates that source without reading
 /// storage.

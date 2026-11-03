@@ -151,13 +151,19 @@ follows the same setting.
 - `PracticeSourceRow` shows a cover, title (the Library list's title role),
   counts and what is due; tapping it starts a session over that source. Source
   and highlight lists build visible rows lazily.
-- Word rows show the word, its meaning, the source title and when it is
-  next due (`reviewDueLabel`: New, Due, or a rounded interval). The word and
-  meaning each keep their own reading direction. Tapping opens
+- Word rows show the word, its meaning, the source title and the stored FSRS
+  review date and time (`reviewDueLabel` in `review_due_label.dart`). The date
+  uses the current locale and local time zone; the clock follows the 12/24-hour
+  preference. Muted `bodySmall` metadata puts the schedule on a separate,
+  wrapping line so a long source title cannot hide it. Items without a
+  timestamp keep New or Due rather than inventing a date. The word and meaning
+  each keep their own reading direction. Tapping opens
   `PracticeWordSheet` with the saved meaning, the sentence, Open in book and
-  Remove. Details scroll above pinned actions, with one shared content gutter.
+  Remove, plus the same review timestamp. Details scroll above pinned actions,
+  with one shared content gutter.
 - Highlight rows quote the passage on its colour (`practiceHighlightTint`)
-  and open it in its source.
+  and open it in its source. Their chapter and review timestamp use the same
+  separate metadata lines as word rows.
 - Composite source, word and highlight rows and rating buttons expose one
   labelled, enabled semantics node with their tap action and metadata. Their
   replacement semantics keep assistive activation available.
@@ -181,8 +187,9 @@ follows the same setting.
   source's due label. Summary counts already use 15sp. Narrow windows keep
   their compact roles; supporting statistics and source metadata stay small.
   Accessibility text scaling still applies to every role.
-- `reviewIntervalLabel` rounds intervals to one unit: minutes under an hour,
-  then hours, days, weeks, months and years.
+- Rating previews keep `reviewIntervalLabel`, which rounds intervals to one
+  unit: minutes under an hour, then hours, days, weeks, months and years.
+  Displaying a stored timestamp does not change FSRS scheduling.
 
 ## Tests
 
@@ -204,7 +211,12 @@ follows the same setting.
   scrollable word details with pinned commands, plus tap semantics on composite
   controls. These are widget geometry and
   interaction checks; they do not establish native accessibility or FPS.
-- `test/review_interval_label_test.dart` pins the rounding and due labels.
+- `test/review_interval_label_test.dart` pins rating-interval rounding.
+- `test/practice_review_schedule_test.dart` covers full review timestamps,
+  metadata semantics, long sources, large text and phone RTL in word and
+  highlight rows and word details. Root
+  `test/ui/practice_schedule_golden_test.dart` captures these surfaces on
+  phones and tablets.
 - `test/review_word_card_test.dart` uses the shipped Literata font to keep
   `reading` whole and legible at 320dp/200%, before and after revealing its
   answer, while context text retains accessibility scaling.
@@ -231,5 +243,5 @@ platform service is shipped.
 - `component_library` — theme tokens, `SearchField`, `AppChoiceControl`,
   `AppFilterChip`, `AppFirstRunState`, sheets
 - `readflex_localizations` — copy
-- `intl` — bidi detection, so words and quotes keep their own writing
-  direction
+- `intl` — localized review dates and bidi detection, so words and quotes keep
+  their own writing direction

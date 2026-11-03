@@ -43,9 +43,9 @@ selection, and collection commands separate:
 - `LibraryBloc` — domain data. Loads books and article metadata into a single
   `LibraryState.sources` list of `LibrarySource` values, and, given an
   `FsrsRepository`, the review counts into `LibraryState.practice`
-  (`LibraryPracticeSummary`: saved words, highlights, cards due). The counts
-  load in parallel with the sources; a failed read is reported and keeps the
-  last counts, never the Library. It exposes
+  (`LibraryPracticeSummary`: saved words, highlights, cards due and the next
+  review deadline). Counts load alongside the sources. A failed count read is
+  reported and preserves the last counts without failing Library. It exposes
   `visibleItems` sorted by `lastOpenedAt ?? addedAt` DESC, then
   `addedAt` DESC and title. Narrows by one `selectedCollectionScope` and
   `searchQuery` (debounced 300ms). `visibleItems` is cached per state
@@ -77,21 +77,30 @@ Practice has no tab; the Library is its one way in, in two places:
   (no search or collection), once something is saved for
   review: "N cards due today" with the accent-tinted glyph, or "All caught
   up" with the totals, muted. It scrolls with the rows, so a short window at
-  large text keeps its list. A reader who never saves sees no row.
+  large text keeps its list. It still opens Practice when nothing is due,
+  including Review ahead. A reader who never saves sees no row.
 - The due count is words due plus highlights due while Practice settings
   review highlights (`practiceReviewHighlights`), read from
   `PreferencesService` at each load, so the row and the badge agree with the
   hub.
+- While the app is in the foreground, `LibraryBloc` schedules one timer for
+  the next eligible review deadline. It refreshes only the narrow review
+  queue status, then schedules the next deadline; it does not poll or reload
+  books and articles. Entering the background cancels the timer; resuming
+  refreshes the queue immediately. A failed queue read preserves the last
+  counts and retries after one minute while active. Closing the bloc cancels
+  pending work.
 - `LibraryPracticeButton` sits separately above "+", outside the bottom
-  capsule, with a transparent background. Its 32dp glyph uses weight 300 to
-  keep the strokes close to 2dp and has the same shadow as the capsule,
-  painted around the strokes, in a 48dp touch target.
-  Practice stays reachable before the first save (it opens the empty
-  section), and the due count is its badge. One semantics node:
-  "Practice, N cards due today".
+  capsule, only when Practice has a destination and at least one card is due.
+  Zero or unknown counts hide the action. Its 48dp touch target is transparent.
+  `AppFloatingPracticeIcon` fills the 32dp card silhouettes with the opaque
+  surface colour so content cannot show through. Its weight-300 outline keeps
+  the strokes close to 2dp. The silhouette combines the capsule's popover
+  shadow with a soft, static primary-colour aura. The due count is its badge.
+  One semantics node: "Practice, N cards due today".
 - The badge is Material's 16dp pill with a 2dp ring in the app surface's colour,
   anchored at the glyph's top-end corner with an 8dp outset; a wider count
-  grows inwards. Zero hides it, 1–99 shows the exact count, and 100 or more
+  grows inwards. 1–99 shows the exact count, and 100 or more
   shows "99+". Its width and height stay within the 48dp touch target; at
   enlarged text the single-line number scales down only when needed to fit.
   The full count remains in the row, the Practice section and button semantics.
@@ -286,9 +295,9 @@ popover shadow, as the reader chrome), `kLibraryFloatingActionsHeight` (56dp)
 tall and lifted `kLibraryFloatingActionsLift` (8dp) above the Scaffold's
 margin. Two 48dp controls sit 4dp inside it and 4dp apart; the row follows
 the reading direction, so "+" keeps the outer corner in RTL too.
-When Practice is available, its plain 48dp action sits 8dp above the capsule,
-centred over "+" in both directions. The floating group keeps its bottom
-anchor, so adding Practice does not move the capsule or "+".
+When cards are due and Practice has a destination, its 48dp action sits 8dp
+above the capsule, centred over "+" in both directions. The floating group
+keeps its bottom anchor, so adding Practice does not move the capsule or "+".
 
 `LibraryFloatingActionsLocation` places it like `endFloat`, 16dp above the
 bottom safe inset or the keyboard, whichever is higher. `endFloat` alone
@@ -412,9 +421,9 @@ inset, and both layouts start their first cover `kLibraryContentTopPadding`
 (12dp) below the header's band, 24dp under the search field: the list row's
 own padding supplies it, the grid adds it as top padding. Content bottom
 padding comes from `libraryContentBottomPadding(context)`: the bottom capsule
-(56dp), another 56dp when Practice is available (48dp target plus 8dp gap),
-its 8dp lift, the Scaffold's 16dp margin and a 16dp gap over the body's bottom
-padding (the safe inset the keyboard leaves uncovered), so the last row ends
+(56dp), another 56dp only while its due-card action is shown (48dp target plus
+8dp gap), its 8dp lift, the Scaffold's 16dp margin and a 16dp gap over the body's
+bottom padding (the safe inset the keyboard leaves uncovered), so the last row ends
 16dp above the highest floating action with or without a home indicator and
 on every keyboard frame. "No results"
 pads its scroll view the same way so its command can scroll clear of it;

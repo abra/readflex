@@ -344,6 +344,7 @@
   "practiceNoMatches": "Ничего не найдено",
   "practiceDueNew": "Новое",
   "practiceDueNow": "Пора повторить",
+  "practiceNextReviewAt": "Повторение: {date}, {time}",
   "practiceDueIn": "Через {interval}",
   "practiceIntervalMinutes": "{count} мин",
   "practiceIntervalHours": "{count} ч",

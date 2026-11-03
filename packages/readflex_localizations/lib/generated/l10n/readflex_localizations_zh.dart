@@ -1154,6 +1154,11 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
   String get practiceDueNow => '待复习';
 
   @override
+  String practiceNextReviewAt(String date, String time) {
+    return '下次复习：$date $time';
+  }
+
+  @override
   String practiceDueIn(String interval) {
     return '$interval后';
   }

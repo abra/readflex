@@ -14,20 +14,3 @@ String reviewIntervalLabel(ReadflexLocalizations l10n, Duration interval) {
   if (days < 365) return l10n.practiceIntervalMonths((days / 30).round());
   return l10n.practiceIntervalYears((days / 365).round());
 }
-
-/// When a card is next due, relative to now: "Due" for anything due, else
-/// the rounded interval ahead; a never-reviewed card is "New".
-String reviewDueLabel(
-  ReadflexLocalizations l10n,
-  DateTime? nextReviewAt, {
-  required bool isNew,
-  required DateTime now,
-}) {
-  if (isNew) return l10n.practiceDueNew;
-  if (nextReviewAt == null || !nextReviewAt.isAfter(now)) {
-    return l10n.practiceDueNow;
-  }
-  return l10n.practiceDueIn(
-    reviewIntervalLabel(l10n, nextReviewAt.difference(now)),
-  );
-}

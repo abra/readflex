@@ -33,7 +33,7 @@ const double kLibraryFloatingActionsHeight = AppSizes.floatingActionButton;
 /// Space between the separate Practice action and the capsule below it.
 const double kLibraryPracticeActionGap = AppSpacing.sm;
 
-/// Extra height above the capsule when Practice is available.
+/// Extra height above the capsule while the due reminder is visible.
 const double kLibraryPracticeActionExtent =
     AppSizes.buttonHeight + kLibraryPracticeActionGap;
 
@@ -51,7 +51,7 @@ const double kLibraryFloatingActionsMaxWidth = 320;
 const double kLibraryFloatingActionsMaxTextScale = 2;
 
 /// Bottom padding for Library grid/list content: the last row ends a 16dp
-/// gap above the highest floating action: Practice when available, otherwise
+/// gap above the highest floating action: Practice while cards are due, otherwise
 /// the bottom capsule.
 ///
 /// The capsule (56dp) is lifted 8dp above the Scaffold's 16dp margin, which

@@ -1218,6 +1218,11 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
   String get practiceDueNow => 'مستحقة';
 
   @override
+  String practiceNextReviewAt(String date, String time) {
+    return 'المراجعة التالية: $date، $time';
+  }
+
+  @override
   String practiceDueIn(String interval) {
     return 'بعد $interval';
   }

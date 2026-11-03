@@ -126,14 +126,6 @@ void runExtraFlows({bool requireTablet = true}) {
         await unmountUi(tester);
         await app.dispose();
       });
-      tester.platformDispatcher.defaultRouteNameTestValue = '/';
-      addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
-      await tester.pumpWidget(app.widget);
-      await waitForUi(
-        tester,
-        () => find.text(ReadingFixture.bookTitle).evaluate().isNotEmpty,
-        description: 'Library before saving vocabulary',
-      );
       await tester.runAsync(() async {
         await app.dictionaryRepository.addEntry(
           word: 'power',
@@ -150,9 +142,22 @@ void runExtraFlows({bool requireTablet = true}) {
           cfiRange: 'epubcfi(/6/2!/4/4,/1:0,/1:40)',
         );
       });
+      tester.platformDispatcher.defaultRouteNameTestValue = '/';
+      addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
+      final practiceButton = find.byKey(
+        const ValueKey('libraryPracticeButton'),
+      );
+      await tester.pumpWidget(app.widget);
+      await waitForUi(
+        tester,
+        () =>
+            find.text(ReadingFixture.bookTitle).evaluate().isNotEmpty &&
+            practiceButton.evaluate().isNotEmpty,
+        description: 'Library with two due items',
+      );
 
       final hub = find.byKey(const ValueKey('practiceTodayCard'));
-      await tapUi(tester, find.byKey(const ValueKey('libraryPracticeButton')));
+      await tapUi(tester, practiceButton);
       await waitForUi(
         tester,
         () => hub.evaluate().isNotEmpty,
@@ -204,11 +209,15 @@ void runExtraFlows({bool requireTablet = true}) {
       await waitForUi(
         tester,
         () => find
-            .byKey(const ValueKey('libraryPracticeRow'))
+            .descendant(
+              of: find.byKey(const ValueKey('libraryPracticeRow')),
+              matching: find.text('All caught up'),
+            )
             .evaluate()
             .isNotEmpty,
         description: 'Library refreshes completed Practice counts',
       );
+      expect(practiceButton, findsNothing);
       expect(find.byKey(const ValueKey('libraryPracticeBadge')), findsNothing);
       binding.reportData = {
         ...?binding.reportData,

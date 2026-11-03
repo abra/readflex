@@ -23,6 +23,7 @@ export 'src/app_save_toggle_button.dart';
 export 'src/app_cover_art.dart';
 export 'src/app_filter_chip.dart';
 export 'src/app_floating_capsule.dart';
+export 'src/app_floating_practice_icon.dart';
 export 'src/app_icons.dart';
 export 'src/app_inline_sheet.dart';
 export 'src/app_inline_sheet_geometry.dart';

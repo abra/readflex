@@ -36,6 +36,7 @@ tracking existed; `recordReview` still creates a missing row implicitly.
 | `getDueItems({type, limit, offset})` | Due now, oldest due first |
 | `getDueItemsBySource(sourceId, {type})` | Due items from one source |
 | `getDueItemCount({type})` | Due count |
+| `getReviewQueueStatus({types})` | Due count and earliest future deadline in one query, without review history; `null` types means all, an empty set means none |
 | `getStats()` | `ReviewStats`: due/total/mastered per type, today, 7 days, streak, counted in study days (`studyDay`) |
 | `previewIntervals(current, {desiredRetention})` | Interval per rating for the button labels |
 | `recordReview({itemId, itemType, rating, sourceId, reviewDurationMs, desiredRetention})` | Apply a rating at the reader's memory target |

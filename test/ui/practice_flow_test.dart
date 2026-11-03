@@ -52,23 +52,14 @@ void main() {
   }
 
   testWidgets(
-    'before the first save only the floating icon leads to Practice',
+    'before the first save there is no Practice entry',
     (
       tester,
     ) async {
       await launch(tester);
       expect(row, findsNothing);
+      expect(button, findsNothing);
       expect(badge, findsNothing);
-
-      await tapUi(tester, button);
-      expect(find.byType(PracticeScreen), findsOneWidget);
-      expect(find.byKey(const ValueKey('practiceEmptyState')), findsOneWidget);
-      expect(find.byKey(const ValueKey('practiceStartReview')), findsNothing);
-
-      await tapUi(tester, find.byType(AppBackButton));
-      await tester.pumpAndSettle();
-      expect(find.byType(PracticeScreen), findsNothing);
-      expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
       await unmountUi(tester);
     },
   );
@@ -76,11 +67,11 @@ void main() {
   testWidgets('after a session the Library shows the new counts', (
     tester,
   ) async {
-    await launch(tester);
     await tester.runAsync(saveWordAndHighlight);
-    // Saved while the Library was up: the entry appears on the next reload,
-    // here the one that follows closing Practice.
-    expect(row, findsNothing);
+    await launch(tester);
+    expect(row, findsOneWidget);
+    expect(button, findsOneWidget);
+    expect(badge, findsOneWidget);
 
     await tapUi(tester, button);
     await waitForUi(
@@ -119,9 +110,13 @@ void main() {
 
     await waitForUi(
       tester,
-      () => row.evaluate().isNotEmpty,
-      description: 'practice row after the session',
+      () => find
+          .descendant(of: row, matching: find.text('All caught up'))
+          .evaluate()
+          .isNotEmpty,
+      description: 'Library counts refreshed after the session',
     );
+    expect(row, findsOneWidget);
     expect(
       find.descendant(of: row, matching: find.text('All caught up')),
       findsOneWidget,
@@ -130,6 +125,7 @@ void main() {
       find.descendant(of: row, matching: find.text('1 word · 1 highlight')),
       findsOneWidget,
     );
+    expect(button, findsNothing);
     expect(badge, findsNothing);
     await unmountUi(tester);
   });

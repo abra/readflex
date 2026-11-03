@@ -344,6 +344,7 @@
   "practiceNoMatches": "कोई मेल नहीं",
   "practiceDueNew": "नया",
   "practiceDueNow": "बाकी",
+  "practiceNextReviewAt": "अगली पुनरावृत्ति: {date}, {time}",
   "practiceDueIn": "{interval} में",
   "practiceIntervalMinutes": "{count} मि",
   "practiceIntervalHours": "{count} घं",

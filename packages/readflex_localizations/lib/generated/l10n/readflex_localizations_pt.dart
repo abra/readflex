@@ -1206,6 +1206,11 @@ class ReadflexLocalizationsPt extends ReadflexLocalizations {
   String get practiceDueNow => 'Pendente';
 
   @override
+  String practiceNextReviewAt(String date, String time) {
+    return 'Próxima revisão: $date, $time';
+  }
+
+  @override
   String practiceDueIn(String interval) {
     return 'Em $interval';
   }

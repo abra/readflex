@@ -67,6 +67,8 @@ class LibraryBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final visibleItems = state.visibleItems;
+    final hasPracticeAction =
+        onPracticePressed != null && (state.practice?.due ?? 0) > 0;
 
     if (visibleItems.isEmpty) {
       return RefreshIndicator(
@@ -82,7 +84,7 @@ class LibraryBody extends StatelessWidget {
               : EdgeInsets.only(
                   bottom: libraryContentBottomPadding(
                     context,
-                    hasPracticeAction: onPracticePressed != null,
+                    hasPracticeAction: hasPracticeAction,
                   ),
                 ),
           child: ConstrainedBox(
@@ -118,8 +120,8 @@ class LibraryBody extends StatelessWidget {
               final continueReadingSource = state.continueReadingCardSource;
               final practice = state.practice;
               final onPracticePressed = this.onPracticePressed;
-              // A secondary entry below reading, present after the first save
-              // in the default view, alongside the floating Practice action.
+              // The row stays available after the first save, including
+              // when no cards are due and the floating reminder is hidden.
               final leading =
                   state.isDefaultView &&
                       practice != null &&
@@ -135,7 +137,7 @@ class LibraryBody extends StatelessWidget {
                 sources: state.listedItems,
                 leading: leading,
                 continueReadingSource: continueReadingSource,
-                hasPracticeAction: onPracticePressed != null,
+                hasPracticeAction: hasPracticeAction,
                 selection: selection,
                 scrollController: scrollController,
                 onSourcePressed: onSourcePressed,

@@ -4,6 +4,8 @@ import 'package:intl/intl.dart' show Bidi;
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'practice_item.dart';
+import 'practice_review_metadata.dart';
+import 'review_due_label.dart';
 
 enum PracticeWordSheetOutcome { open, remove }
 
@@ -121,12 +123,11 @@ class PracticeWordSheet extends StatelessWidget {
                   ],
                 ),
               ),
-            if (word.sourceTitle case final title?)
-              Text(
-                title,
-                textDirection: _direction(title),
-                style: text.bodySmall.copyWith(color: colors.onSurfaceVariant),
-              ),
+            PracticeReviewMetadata(
+              sourceTitle: word.sourceTitle,
+              sourceMaxLines: null,
+              reviewLabel: reviewDueLabel(context, word.fsrs),
+            ),
           ],
         ),
       ),

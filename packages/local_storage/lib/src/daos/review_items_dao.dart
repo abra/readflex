@@ -53,6 +53,52 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
         .getSingle();
   }
 
+  /// Due count and the next strictly future deadline at the same UTC [now].
+  /// A null [types] includes every type; an empty set includes none.
+  Future<({int dueCount, String? nextReviewAt})> reviewQueueStatus(
+    String now, {
+    Set<String>? types,
+  }) async {
+    if (types != null && types.isEmpty) {
+      return (dueCount: 0, nextReviewAt: null);
+    }
+    final typeFilter = types == null
+        ? ''
+        : 'AND item_type IN (${List.filled(types.length, '?').join(', ')})';
+    final row = await customSelect(
+      '''
+      SELECT (
+        SELECT COUNT(*) FROM review_items_table
+        WHERE next_review_at IS NULL
+        $typeFilter
+      ) + (
+        SELECT COUNT(*) FROM review_items_table
+        WHERE next_review_at <= ?
+        $typeFilter
+      ) AS due_count, (
+        SELECT MIN(next_review_at) FROM review_items_table
+        WHERE next_review_at > ?
+        $typeFilter
+      ) AS next_review_at
+      ''',
+      variables: [
+        if (types != null)
+          for (final type in types) Variable<String>(type),
+        Variable<String>(now),
+        if (types != null)
+          for (final type in types) Variable<String>(type),
+        Variable<String>(now),
+        if (types != null)
+          for (final type in types) Variable<String>(type),
+      ],
+      readsFrom: {reviewItemsTable},
+    ).getSingle();
+    return (
+      dueCount: row.read<int>('due_count'),
+      nextReviewAt: row.readNullable<String>('next_review_at'),
+    );
+  }
+
   Future<List<ReviewItemsTableData>> dueItemsBySource(
     String sourceId,
     String now, {

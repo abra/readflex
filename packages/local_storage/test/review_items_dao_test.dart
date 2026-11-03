@@ -194,6 +194,92 @@ void main() {
     });
   });
 
+  group('ReviewItemsDao queue status', () {
+    const now = '2026-11-04T07:00:00.000Z';
+    const soon = '2026-11-04T07:05:00.000Z';
+    const later = '2026-11-04T08:00:00.000Z';
+
+    test('an empty queue has no deadline', () async {
+      expect(
+        await dao.reviewQueueStatus(now),
+        (dueCount: 0, nextReviewAt: null),
+      );
+    });
+
+    test(
+      'counts new, overdue and exact-time items, with next future time',
+      () async {
+        for (final (id, due) in [
+          ('new', null),
+          ('overdue', '2026-11-03T07:00:00.000Z'),
+          ('now', now),
+          ('later', later),
+          ('soon', soon),
+        ]) {
+          await dao.insertItem(makeItem(itemId: id, nextReviewAt: due));
+        }
+        expect(
+          await dao.reviewQueueStatus(now),
+          (dueCount: 3, nextReviewAt: soon),
+        );
+        expect(
+          await dao.reviewQueueStatus(soon),
+          (dueCount: 4, nextReviewAt: later),
+        );
+        expect(
+          await dao.reviewQueueStatus(later),
+          (dueCount: 5, nextReviewAt: null),
+        );
+      },
+    );
+
+    test(
+      'filters both due count and future deadline by active types',
+      () async {
+        for (final (id, type, due) in [
+          ('word', 'dictionary', null),
+          ('word-later', 'dictionary', later),
+          ('highlight', 'highlight', now),
+          ('highlight-soon', 'highlight', soon),
+          ('legacy', 'flashcard', null),
+          ('legacy-sooner', 'flashcard', '2026-11-04T07:01:00.000Z'),
+        ]) {
+          await dao.insertItem(
+            makeItem(itemId: id, itemType: type, nextReviewAt: due),
+          );
+        }
+        expect(
+          await dao.reviewQueueStatus(now, types: {'dictionary', 'highlight'}),
+          (dueCount: 2, nextReviewAt: soon),
+        );
+        expect(
+          await dao.reviewQueueStatus(now, types: {'dictionary'}),
+          (dueCount: 1, nextReviewAt: later),
+        );
+        expect(
+          await dao.reviewQueueStatus(now),
+          (dueCount: 3, nextReviewAt: '2026-11-04T07:01:00.000Z'),
+        );
+        expect(
+          await dao.reviewQueueStatus(now, types: {}),
+          (dueCount: 0, nextReviewAt: null),
+        );
+      },
+    );
+
+    test('type filters are bound values', () async {
+      const unusualType = "dictionary') OR 1 = 1 --";
+      await dao.insertItem(makeItem(itemId: 'ordinary'));
+      await dao.insertItem(
+        makeItem(itemId: 'unusual', itemType: unusualType, nextReviewAt: soon),
+      );
+      expect(
+        await dao.reviewQueueStatus(now, types: {unusualType}),
+        (dueCount: 0, nextReviewAt: soon),
+      );
+    });
+  });
+
   group('ReviewItemsDao mastered items', () {
     test('masteredItems returns items in review state', () async {
       await dao.insertItem(makeItem(itemId: 'f1', fsrsState: 'review'));

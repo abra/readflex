@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_bloc.dart';
@@ -42,7 +43,7 @@ bool _badgeVisible(WidgetTester tester) => _badge.evaluate().isNotEmpty;
 
 /// Every entry into Practice the Library offers: the row under the search
 /// field once something is saved, and the floating button with its due
-/// badge, always.
+/// badge only while cards are due.
 void main() {
   late FakeBookRepository bookRepository;
   late FakeCollectionRepository collectionRepository;
@@ -100,6 +101,15 @@ void main() {
       tester.view.padding = FakeViewPadding(
         bottom: height < 34 ? 34 - height : 0,
       );
+    }
+
+    Future<void> refresh(WidgetTester tester) async {
+      final bloc = tester.element(find.byType(LibraryBody)).read<LibraryBloc>();
+      final done = Completer<void>();
+      bloc.add(LibraryRefreshRequested(completer: done));
+      await tester.pumpAndSettle();
+      await done.future;
+      await tester.pumpAndSettle();
     }
 
     testWidgets('without a Practice destination there is no entry', (
@@ -161,7 +171,13 @@ void main() {
             ),
           );
           expect(glyph.size, 32);
-          expect(glyph.shadows, isNotEmpty);
+          expect(
+            find.descendant(
+              of: _button,
+              matching: find.byType(AppFloatingPracticeIcon),
+            ),
+            findsOneWidget,
+          );
           expect(
             tester.getSize(find.byIcon(AppIcons.practiceFloating)),
             const Size.square(32),
@@ -202,9 +218,12 @@ void main() {
       );
     }
 
-    for (final mode in LibraryLayoutMode.values) {
+    for (final (mode, due) in [
+      for (final mode in LibraryLayoutMode.values)
+        for (final due in [0, 1]) (mode, due),
+    ]) {
       testWidgets(
-        'the last $mode source scrolls above the separate Practice action',
+        'the last $mode source clears the highest action with $due cards due',
         (
           tester,
         ) async {
@@ -222,14 +241,15 @@ void main() {
           await preferencesService.update(
             (p) => p.copyWith(libraryLayoutMode: mode.id),
           );
+          fsrsRepository.stats = reviewStats(words: 1, due: due);
           await tester.pumpWidget(
             buildSubject(
-              withReviewStore: false,
               onPracticePressed: () async {},
               textScaler: const TextScaler.linear(2),
             ),
           );
           await tester.pumpAndSettle();
+          expect(_button, due > 0 ? findsOneWidget : findsNothing);
           final position = tester
               .state<ScrollableState>(
                 find.descendant(
@@ -259,7 +279,7 @@ void main() {
                 .map((tile) => tester.getRect(find.byWidget(tile)).bottom)
                 .reduce((a, b) => a > b ? a : b);
             expect(
-              tester.getTopLeft(_button).dy - lastBottom,
+              tester.getTopLeft(due > 0 ? _button : _capsule).dy - lastBottom,
               closeTo(AppSpacing.lg, 0.01),
               reason: 'keyboard $keyboard',
             );
@@ -269,7 +289,7 @@ void main() {
       );
     }
 
-    testWidgets('without a review store the capsule still opens Practice', (
+    testWidgets('without a review store there is no floating Practice action', (
       tester,
     ) async {
       var opened = 0;
@@ -282,23 +302,264 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(_row, findsNothing);
+      expect(_button, findsNothing);
+      expect(_capsule, findsOneWidget);
       expect(_badgeVisible(tester), isFalse);
-      await tester.tap(_button);
-      await tester.pumpAndSettle();
-      expect(opened, 1);
+      expect(opened, 0);
     });
 
-    testWidgets('nothing saved: the button without a badge, no row', (
+    testWidgets('nothing saved: no floating button or row', (
       tester,
     ) async {
       await tester.pumpWidget(buildSubject(onPracticePressed: () async {}));
       await tester.pumpAndSettle();
 
-      expect(_button, findsOneWidget);
+      expect(_button, findsNothing);
       expect(_badgeVisible(tester), isFalse);
       expect(_row, findsNothing);
       expect(fsrsRepository.getStatsCallCount, 1);
     });
+
+    testWidgets('unavailable review counts do not show a floating reminder', (
+      tester,
+    ) async {
+      fsrsRepository.shouldThrow = true;
+      await tester.pumpWidget(buildSubject(onPracticePressed: () async {}));
+      await tester.pumpAndSettle();
+
+      expect(_button, findsNothing);
+      expect(_row, findsNothing);
+      expect(_capsule, findsOneWidget);
+    });
+
+    testWidgets('the due reminder appears after five idle minutes', (
+      tester,
+    ) async {
+      setPhone(tester, height: 844);
+      fsrsRepository
+        ..stats = reviewStats(words: 1)
+        ..nextReviewAt = DateTime.now().add(const Duration(minutes: 5));
+      try {
+        await tester.pumpWidget(buildSubject(onPracticePressed: () async {}));
+        await tester.pumpAndSettle();
+        expect(_button, findsNothing);
+        final addBounds = tester.getRect(_add);
+        final sourceReads = bookRepository.getBooksCallCount;
+        final statsReads = fsrsRepository.getStatsCallCount;
+        final queueReads = fsrsRepository.getReviewQueueStatusCallCount;
+
+        fsrsRepository
+          ..stats = reviewStats(words: 1, due: 1)
+          ..nextReviewAt = null;
+        await tester.pump(const Duration(minutes: 5, seconds: 1));
+        await tester.pumpAndSettle();
+
+        expect(_button, findsOneWidget);
+        expect(
+          find.descendant(of: _badge, matching: find.text('1')),
+          findsOneWidget,
+        );
+        final icon = tester.widget<AppFloatingPracticeIcon>(
+          find.descendant(
+            of: _button,
+            matching: find.byType(AppFloatingPracticeIcon),
+          ),
+        );
+        expect(icon.showAura, isTrue);
+        expect(
+          tester.getRect(_add),
+          rectMoreOrLessEquals(addBounds, epsilon: .01),
+        );
+        expect(bookRepository.getBooksCallCount, sourceReads);
+        expect(fsrsRepository.getStatsCallCount, statsReads);
+        expect(fsrsRepository.getReviewQueueStatusCallCount, queueReads + 1);
+        expect(tester.takeException(), isNull);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets(
+      'background pauses the deadline and resume refreshes the queue',
+      (
+        tester,
+      ) async {
+        void resumeApp() {
+          final binding = tester.binding;
+          if (binding.lifecycleState == AppLifecycleState.paused) {
+            binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+          }
+          if (binding.lifecycleState == AppLifecycleState.hidden) {
+            binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+          }
+          if (binding.lifecycleState != AppLifecycleState.resumed) {
+            binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+          }
+        }
+
+        setPhone(tester, height: 844);
+        resumeApp();
+        fsrsRepository
+          ..stats = reviewStats(words: 1)
+          ..nextReviewAt = DateTime.now().add(const Duration(minutes: 5));
+        try {
+          await tester.pumpWidget(buildSubject(onPracticePressed: () async {}));
+          await tester.pumpAndSettle();
+          expect(_button, findsNothing);
+          final sourceReads = bookRepository.getBooksCallCount;
+          final statsReads = fsrsRepository.getStatsCallCount;
+          final queueReads = fsrsRepository.getReviewQueueStatusCallCount;
+
+          for (final state in [
+            AppLifecycleState.inactive,
+            AppLifecycleState.hidden,
+            AppLifecycleState.paused,
+          ]) {
+            tester.binding.handleAppLifecycleStateChanged(state);
+          }
+          await tester.pump();
+          fsrsRepository
+            ..stats = reviewStats(words: 1, due: 1)
+            ..nextReviewAt = null;
+          await tester.pump(const Duration(minutes: 10));
+
+          expect(_button, findsNothing);
+          expect(fsrsRepository.getReviewQueueStatusCallCount, queueReads);
+          expect(bookRepository.getBooksCallCount, sourceReads);
+
+          resumeApp();
+          await tester.pumpAndSettle();
+
+          expect(_button, findsOneWidget);
+          expect(
+            find.descendant(of: _badge, matching: find.text('1')),
+            findsOneWidget,
+          );
+          expect(fsrsRepository.getReviewQueueStatusCallCount, queueReads + 1);
+          expect(fsrsRepository.getStatsCallCount, statsReads);
+          expect(bookRepository.getBooksCallCount, sourceReads);
+          expect(tester.takeException(), isNull);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          resumeApp();
+          await tester.pumpAndSettle();
+        }
+      },
+    );
+
+    for (final locale in [const Locale('en'), const Locale('ar')]) {
+      testWidgets('the first due card appears, then the last review hides it: '
+          '$locale', (tester) async {
+        setPhone(tester, height: 844);
+        final semantics = tester.ensureSemantics();
+        try {
+          fsrsRepository.stats = reviewStats(words: 1);
+          var opened = 0;
+          await tester.pumpWidget(
+            buildSubject(
+              locale: locale,
+              onPracticePressed: () async {
+                opened++;
+                fsrsRepository.stats = reviewStats(words: 1);
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          final addBounds = tester.getRect(_add);
+          expect(_button, findsNothing);
+          expect(_row, findsOneWidget);
+
+          fsrsRepository.stats = reviewStats(words: 1, due: 1);
+          await refresh(tester);
+
+          expect(_button, findsOneWidget);
+          expect(
+            find.descendant(of: _badge, matching: find.text('1')),
+            findsOneWidget,
+          );
+          final buttonSemantics = tester.getSemantics(_button);
+          expect(
+            buttonSemantics.value,
+            tester.element(_button).l10n.practiceDueToday(1),
+          );
+          expect(
+            tester.getRect(_add),
+            rectMoreOrLessEquals(addBounds, epsilon: .01),
+          );
+
+          await tester.tap(_button);
+          await tester.pumpAndSettle();
+
+          expect(opened, 1);
+          expect(_button, findsNothing);
+          expect(_badge, findsNothing);
+          expect(buttonSemantics.attached, isFalse);
+          expect(_row, findsOneWidget);
+          expect(
+            tester.getRect(_add),
+            rectMoreOrLessEquals(addBounds, epsilon: .01),
+          );
+          expect(tester.takeException(), isNull);
+        } finally {
+          semantics.dispose();
+        }
+      });
+    }
+
+    testWidgets(
+      'no results reserves extra clearance only while cards are due',
+      (
+        tester,
+      ) async {
+        setPhone(tester);
+        fsrsRepository.stats = reviewStats(words: 1);
+        await tester.pumpWidget(
+          buildSubject(
+            onPracticePressed: () async {},
+            textScaler: const TextScaler.linear(2),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'no matching title');
+        await tester.pumpAndSettle(const Duration(milliseconds: 400));
+        final clearSearch = find.byKey(
+          const ValueKey('libraryClearSearchButton'),
+        );
+        expect(clearSearch, findsOneWidget);
+        expect(_button, findsNothing);
+        final scrollable = find.descendant(
+          of: find.byType(LibraryBody),
+          matching: find.byType(Scrollable),
+        );
+        final initialExtent = tester
+            .state<ScrollableState>(scrollable)
+            .position
+            .maxScrollExtent;
+        expect(initialExtent, greaterThan(0));
+
+        fsrsRepository.stats = reviewStats(words: 1, due: 1);
+        await refresh(tester);
+
+        expect(clearSearch, findsOneWidget);
+        expect(_button, findsOneWidget);
+        final dueExtent = tester
+            .state<ScrollableState>(scrollable)
+            .position
+            .maxScrollExtent;
+        expect(dueExtent - initialExtent, closeTo(56, .01));
+
+        fsrsRepository.stats = reviewStats(words: 1);
+        await refresh(tester);
+
+        expect(_button, findsNothing);
+        expect(
+          tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+          closeTo(initialExtent, .01),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('cards due: the row counts them, the badge shows the number', (
       tester,
@@ -500,11 +761,14 @@ void main() {
       );
     });
 
-    testWidgets('all reviewed: a quiet row with the totals, no badge', (
+    testWidgets('all reviewed: the quiet row remains the way into Practice', (
       tester,
     ) async {
       fsrsRepository.stats = reviewStats(words: 12, highlights: 3);
-      await tester.pumpWidget(buildSubject(onPracticePressed: () async {}));
+      var opened = 0;
+      await tester.pumpWidget(
+        buildSubject(onPracticePressed: () async => opened++),
+      );
       await tester.pumpAndSettle();
 
       expect(
@@ -518,14 +782,12 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(_button, findsNothing);
       expect(_badgeVisible(tester), isFalse);
-      final semantics = tester.ensureSemantics();
-      expect(
-        tester.getSemantics(_button),
-        isSemantics(tooltip: 'Practice', isButton: true, hasTapAction: true),
-      );
-      expect(tester.getSemantics(_button).value, isEmpty);
-      semantics.dispose();
+      await tester.tap(_row);
+      await tester.pumpAndSettle();
+      expect(opened, 1);
+      expect(_button, findsNothing);
     });
 
     testWidgets('the row and the button open Practice, then reload counts', (
@@ -550,13 +812,17 @@ void main() {
       expect(opened, 1);
       expect(fsrsRepository.getStatsCallCount, 2);
       expect(find.text('All caught up'), findsOneWidget);
+      expect(_button, findsNothing);
       expect(_badgeVisible(tester), isFalse);
 
       fsrsRepository.stats = reviewStats(words: 1, highlights: 1, due: 1);
+      await refresh(tester);
+      expect(_button, findsOneWidget);
       await tester.tap(_button);
       await tester.pumpAndSettle();
       expect(opened, 2);
       expect(find.text('All caught up'), findsOneWidget);
+      expect(_button, findsNothing);
       expect(_badgeVisible(tester), isFalse);
     });
 
