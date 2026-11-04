@@ -93,6 +93,30 @@ android {
     }
 }
 
+androidComponents {
+    finalizeDsl { extension ->
+        val targetPlatforms = providers.gradleProperty("target-platform").orNull
+        // Flutter's default filters also include dependency binaries for unused CPUs.
+        // Split APKs own their ABI selection; other builds follow Flutter's targets.
+        if (!extension.splits.abi.isEnable && targetPlatforms != null) {
+            val requestedAbis = targetPlatforms.split(",").map { platform ->
+                when (platform.trim()) {
+                    "android-arm" -> "armeabi-v7a"
+                    "android-arm64" -> "arm64-v8a"
+                    "android-x64" -> "x86_64"
+                    else -> throw GradleException(
+                        "Unsupported Flutter Android target platform: $platform",
+                    )
+                }
+            }
+            extension.defaultConfig.ndk.abiFilters.apply {
+                clear()
+                addAll(requestedAbis)
+            }
+        }
+    }
+}
+
 flutter {
     source = "../.."
 }

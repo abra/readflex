@@ -1,4 +1,4 @@
-.PHONY: get format format-check analyze test test-ui test-ui-contracts test-goldens update-goldens test-device coverage test-performance benchmark-mobi get-mobi-rust generate-mobi-rust build-mobi-rust test-mobi-rust benchmark-mobi-rust compare-mobi get-reader-native generate-reader-native build-reader-native test-reader-native benchmark-reader-parts verify clean build build-android build-apk run help
+.PHONY: get format format-check analyze test test-ui test-ui-contracts test-goldens update-goldens test-device coverage test-performance benchmark-mobi get-mobi-rust generate-mobi-rust build-mobi-rust test-mobi-rust benchmark-mobi-rust compare-mobi get-reader-native generate-reader-native build-reader-native test-reader-native benchmark-reader-parts verify clean build build-android build-apk analyze-apk run help
 .PHONY: generate-pagecraft-mobi-native analyze-pagecraft-mobi-rust test-pagecraft-mobi-rust
 .PHONY: test-tools
 .PHONY: test-phone test-tablet test-tablet-layout
@@ -6,6 +6,10 @@
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
 MOBI_RUST_ENV = PATH="$$(dirname "$$(rustup which rustc)"):$$PATH"
+
+ifndef ANDROID_SYMBOLS_DIR
+ANDROID_SYMBOLS_DIR := .local/symbols/android/$(shell date -u +%Y%m%dT%H%M%SZ)
+endif
 
 PACKAGES = \
 	packages/domain_models \
@@ -214,11 +218,16 @@ run:
 build: build-android
 
 build-android:
-	$(FLUTTER) build appbundle --release
+	$(FLUTTER) build appbundle --release --split-debug-info="$(ANDROID_SYMBOLS_DIR)" $(ARGS)
 
-## Build a signed release APK for direct device testing
+## Build signed release APKs split by CPU architecture
 build-apk:
-	$(FLUTTER) build apk --release
+	$(FLUTTER) build apk --release --split-per-abi --split-debug-info="$(ANDROID_SYMBOLS_DIR)" $(ARGS)
+
+## Inspect APK size and native architectures: APK=<file> [ARGS='--expect-abi arm64-v8a']
+analyze-apk:
+	@test -n "$(APK)" || { echo "Specify APK=<path-to-apk>" >&2; exit 2; }
+	$(DART) scripts/apk_size.dart "$(APK)" $(ARGS)
 
 ## Remove build artifacts
 clean:

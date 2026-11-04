@@ -152,6 +152,10 @@ unchanged, and the script also works when invoked from another directory:
 make run ARGS='--profile'
 ```
 
+For Android, native libraries follow the requested target architecture, including
+device-targeted `--release` runs. `flutter run --release` retains full icon fonts;
+use `make build-apk` below to measure an optimized release artifact.
+
 The template explicitly selects `ENVIRONMENT=DEV`, including for `--release`:
 this is a local device-testing setup, not a store-distribution configuration.
 Build-time credentials are still embedded in the app and build artifacts. Do
@@ -178,13 +182,53 @@ contract remains a release blocker.
 Android release builds require an upload keystore. Copy
 `android/key.properties.example` to the ignored `android/key.properties`, or
 provide the documented `READFLEX_ANDROID_*` variables in CI. `make build`
-produces the signed AAB used by Google Play; `make build-apk` is available for
-direct release-device testing.
+produces the signed AAB used by Google Play, which delivers the libraries for
+each device's architecture. `make build-apk` produces separate signed APKs with
+icon-font subsetting enabled instead of one APK containing every architecture:
+
+```sh
+make build
+make build-apk
+# Build only the ARM64 APK for a compatible physical device:
+make build-apk ARGS='--target-platform android-arm64'
+```
+
+The APK outputs are under `build/app/outputs/flutter-apk/`:
+
+- `app-armeabi-v7a-release.apk`
+- `app-arm64-v8a-release.apk`
+- `app-x86_64-release.apk`
+
+Only requested architectures are built. Inspect a result and fail if it contains
+unexpected native architectures:
+
+```sh
+make analyze-apk APK=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+  ARGS='--expect-abi arm64-v8a --output .local/reports/apk-arm64.json'
+```
+
+Both release targets separate Dart debug information into a timestamped
+`.local/symbols/android/<UTC timestamp>/` directory. Archive that directory with
+its matching APK/AAB for crash symbolication; `.local/` is ignored and is not a
+durable release archive. CI can choose an artifact directory with
+`ANDROID_SYMBOLS_DIR=<path>`. These targets do not enable obfuscation.
 
 See [the signing template](android/key.properties.example) and
 [`android/app/build.gradle.kts`](android/app/build.gradle.kts) for the accepted
 signing properties/environment variables. `make build` and `make build-apk` do
 not load `.local/run-defines.json`; that private DEV file belongs to `run.sh`.
+For an optimized local device-test APK with the same DEV configuration, pass it
+explicitly:
+
+```sh
+make build-apk \
+  ARGS='--target-platform android-arm64 --dart-define-from-file=.local/run-defines.json'
+./run.sh --release -d <device-id> \
+  --use-application-binary=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+```
+
+`--use-application-binary` installs and launches that APK without rebuilding it;
+its environment and dart-defines are those used when it was built.
 
 GlitchTip uses the Sentry-compatible Dart SDK. Prefer `GLITCHTIP_DSN` for
 Readflex builds; `SENTRY_DSN` is accepted as a fallback for compatibility with
