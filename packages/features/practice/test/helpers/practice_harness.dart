@@ -66,17 +66,22 @@ class PracticeHarness {
     if (await directory.exists()) await directory.delete(recursive: true);
   }
 
-  Future<void> addBook(String id, {String title = 'A Book'}) =>
-      database.booksDao.insertBook(
-        BooksTableCompanion.insert(
-          id: id,
-          title: title,
-          author: const Value('Author'),
-          filePath: '$id.epub',
-          format: 'epub',
-          addedAt: DateTime(2026, 1, 1).toIso8601String(),
-        ),
-      );
+  Future<void> addBook(
+    String id, {
+    String title = 'A Book',
+    String? author = 'Author',
+    String? coverImagePath,
+  }) => database.booksDao.insertBook(
+    BooksTableCompanion.insert(
+      id: id,
+      title: title,
+      author: Value(author),
+      coverImagePath: Value(coverImagePath),
+      filePath: '$id.epub',
+      format: 'epub',
+      addedAt: DateTime(2026, 1, 1).toIso8601String(),
+    ),
+  );
 
   Future<DictionaryEntry> addWord(
     String word, {
@@ -104,6 +109,7 @@ class PracticeHarness {
     String text, {
     String? note,
     HighlightColor color = HighlightColor.yellow,
+    String? chapterTitle = 'Chapter 1',
   }) => highlights.addHighlight(
     sourceId: sourceId,
     sourceType: SourceType.book,
@@ -111,7 +117,7 @@ class PracticeHarness {
     note: note,
     color: color,
     cfiRange: 'epubcfi(/6/4!/4/2,/1:0,/1:${text.length})',
-    chapterTitle: 'Chapter 1',
+    chapterTitle: chapterTitle,
   );
 
   Future<void> review(String itemId, ReviewableType type, Rating rating) =>

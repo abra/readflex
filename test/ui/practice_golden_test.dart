@@ -219,36 +219,49 @@ void main() {
     }, tags: ['golden']);
 
     testWidgets('review session word and highlight $name', (tester) async {
-      final app = await createApp(tester);
-      await seedPractice(app);
-      await pump(
-        tester,
-        app,
-        AppRoutes.practiceReview,
-        () => find.byKey(const ValueKey('reviewWord')).evaluate().isNotEmpty,
-      );
-      await snapshot(tester, 'review-word');
-      await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
-      await snapshot(tester, 'review-word-answer');
-      await tapUi(tester, find.byKey(const ValueKey('reviewRate-good')));
-      await waitForUi(
-        tester,
-        () => find.byKey(const ValueKey('reviewQuote')).evaluate().isNotEmpty,
-        description: 'highlight card',
-      );
-      await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
-      await snapshot(tester, 'review-highlight-answer');
-      await tapUi(tester, find.byKey(const ValueKey('reviewRate-keep')));
-      await waitForUi(
-        tester,
-        () => find
-            .byKey(const ValueKey('reviewSummaryTitle'))
-            .evaluate()
-            .isNotEmpty,
-        description: 'summary',
-      );
-      await snapshot(tester, 'review-summary');
-      await unmountUi(tester);
+      final shadowsDisabled = debugDisableShadows;
+      debugDisableShadows = false;
+      addTearDown(() => debugDisableShadows = shadowsDisabled);
+      try {
+        final app = await createApp(tester);
+        await seedPractice(app);
+        await pump(
+          tester,
+          app,
+          AppRoutes.practiceReview,
+          () => find.byKey(const ValueKey('reviewWord')).evaluate().isNotEmpty,
+        );
+        await snapshot(tester, 'review-word');
+        await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
+        await snapshot(tester, 'review-word-answer');
+        await tapUi(tester, find.byKey(const ValueKey('reviewRate-good')));
+        await waitForUi(
+          tester,
+          () => find.byKey(const ValueKey('reviewQuote')).evaluate().isNotEmpty,
+          description: 'highlight card',
+        );
+        expect(find.byKey(const ValueKey('reviewShowAnswer')), findsNothing);
+        expect(find.byKey(const ValueKey('reviewRate-keep')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('reviewRate-showLess')),
+          findsOneWidget,
+        );
+        expect(find.text('Opening line'), findsOneWidget);
+        await snapshot(tester, 'review-highlight-answer');
+        await tapUi(tester, find.byKey(const ValueKey('reviewRate-keep')));
+        await waitForUi(
+          tester,
+          () => find
+              .byKey(const ValueKey('reviewSummaryTitle'))
+              .evaluate()
+              .isNotEmpty,
+          description: 'summary',
+        );
+        await snapshot(tester, 'review-summary');
+      } finally {
+        debugDisableShadows = shadowsDisabled;
+        await unmountUi(tester);
+      }
     }, tags: ['golden']);
   }
 }

@@ -16,6 +16,8 @@ class ReviewSessionState extends Equatable {
   final ReviewSessionStatus status;
   final List<PracticeItem> items;
   final int index;
+
+  /// Whether the current word's answer is visible; highlights need no reveal.
   final bool revealed;
 
   /// How far each rating postpones the current card.

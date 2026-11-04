@@ -94,8 +94,10 @@ follows the same setting.
 - `PracticeItemLoader` turns review rows into `PracticeWordItem` /
   `PracticeHighlightItem` with one content query per type and a separate
   anchor lookup for each saved word, keeps the due order and drops rows whose
-  content was deleted. `PracticeSourceIndex` names
-  where items came from; a missing source leaves `sourceTitle` null.
+  content was deleted. Highlights carry an immutable `LibrarySource` from the
+  existing `PracticeSourceIndex`, including cover and author metadata. This
+  adds no per-card repository query. A missing source keeps the title/chapter
+  fallback without inventing an author or cover.
 - Views read only state and dispatch events or callbacks. `PracticeScreen`
   owns the settings-sheet callback, so its view never receives a service.
   The hub reloads
@@ -114,7 +116,8 @@ follows the same setting.
   given; a failed write ends the session in the failure state.
 - Words are rated Again / Hard / Good with the interval each would give,
   from `previewIntervals`. Highlights are Keep (recorded as Good) or Show
-  less (recorded as Easy). There is no Easy for words.
+  less (recorded as Easy), available as soon as the highlight appears, without
+  a Show answer step. There is no Easy for words.
 - Remove deletes the card's review row and drops it from the queue; the saved
   word or highlight remains. A session emptied by removals ends as empty when
   nothing was rated. The legacy-highlight backfill currently registers text
@@ -178,13 +181,44 @@ follows the same setting.
   book, Remove from review) on one row with a thin progress line under it. A word card
   shows the word large with reading and part of speech and the sentence with
   the word in bold; the answer adds the meaning in context, the word's own
-  meaning and the sentence translation. A highlight card shows the quote and
-  its origin; the answer is the note, or that there is none.
-- The session workspace is at most 960dp wide. A vertically centred study
-  surface and the bottom controls share a 640dp reading measure; a long answer
-  scrolls without moving the controls. Word ratings stack at narrow widths or
-  large text instead of clipping their labels. The completion surface is at
-  most 480dp and scrolls when needed, with Done in the same quiet panel.
+  meaning and the sentence translation. Highlights use a top-aligned reading
+  card on `surfaceContainerLowest`, with the full regular-weight serif
+  `bodyLarge` passage and natural paragraph tracking. Paragraph breaks remain
+  intact. A saved note follows in a quieter `bodyMedium` block. Highlights have
+  no answer to reveal; an absent or blank note adds no placeholder.
+- The highlight header reuses `PracticeSourceCover` at 40×60 and the Library's
+  `sourceListTitle` role. The title previews two lines; author and chapter each
+  preview one. Full metadata remains in semantics and a tooltip. At large text
+  or narrow widths the decorative cover and chevron give their space to text,
+  and author/chapter share one secondary line. A low-height card uses a single
+  title line, preserving the rest in semantics/tooltip to keep body text usable.
+  The whole header opens the saved passage; Open in book no longer occupies
+  a separate footer row. The quote and note are never truncated.
+- The session workspace is at most 960dp wide. Word cards remain vertically
+  centred; highlight cards start at the top. Both cards and the bottom controls
+  share a 640dp reading measure. A highlight's complete rounded frame and source
+  header stay on screen; only the passage and note scroll inside its padded
+  body. Short cards retain their natural height. `ReviewHighlightCard` requires
+  finite maximum height, supplied by the screen's bounded highlight viewport.
+  Its own `ScrollController` drives one explicit scrollbar, visible when the
+  body overflows; desktop's automatic duplicate scrollbar is disabled locally.
+  Highlights use the application's filled Keep and outlined Show less:
+  secondary first and primary last in a row, primary first when stacked.
+  Labels and interval captions determine whether they stack. The row measures
+  only those four small text runs to keep natural fallback-font metrics and
+  equal button heights, without intrinsic layout or forced text struts.
+  Word ratings retain their tonal colours and also stack when necessary.
+  The completion surface is at most 480dp and scrolls when needed, with Done in
+  the same quiet panel.
+- The reading area clips painting and hit testing inside the card, with a
+  minimum 12dp separation from the controls. The opaque Material dock uses
+  `AppElevation.level1`
+  clipped to its upper edge, with no shadow below or beside it or extra divider;
+  highlights have no dark scroll-edge fade. Word cards retain their existing
+  scroll fade. Each new card starts at the top, while revealing the same word
+  or returning from a highlight's source keeps its scroll position. Scroll
+  notifications update only the position affordance; rating and scheduling state
+  remain in the session bloc.
 - A word heading fits its longest unbreakable piece with `appFitLongestWord`,
   at the current locale, direction and text scale. It stays at least as large
   as `titleLarge`; unusually long words can wrap at that floor. The full text
@@ -229,12 +263,28 @@ follows the same setting.
 - `test/review_word_card_test.dart` uses the shipped Literata font to keep
   `reading` whole and legible at 320dp/200%, before and after revealing its
   answer, while context text retains accessibility scaling.
+- `test/review_highlight_card_test.dart` checks long passages with paragraph
+  breaks, regular body typography, accessibility scaling and scrolling with
+  reachable review controls on phones, phone RTL and tablets. It verifies
+  stable frame/header/action bounds in the middle and end of the inner scroll,
+  actual scrollbar pixels for overflowing content and none for short content,
+  and resetting scroll for the next highlight; word-card tests keep the same
+  position when revealing an answer. Coverage includes 50k-character passages
+  with large notes, bounded metadata with full semantics/tooltips, source
+  navigation, article-publisher fallback and the first visible quote line with
+  a long title on a 320dp phone and a low landscape window at 200% text.
+- `test/review_controls_shadow_test.dart` captures the dock with real blur
+  enabled: the shadow fades above its edge and paints no pixels below or beside
+  it. Review goldens also enable real shadows within their own test scope.
 - `test/practice_tablet_controls_test.dart` checks these control roles with
   the app fonts and multilingual golden-test fallbacks: 800×1280 and 1280×800,
   all ten locales at 200%, compact phone defaults, text/tap/semantics bounds,
   and exact pointer and assistive activation callbacks.
 - Root goldens (`test/ui/practice_golden_test.dart`) cover `practice`,
   `practice-empty` and the `review-*` states.
+- `test/ui/practice_highlight_reading_golden_test.dart` covers the middle and
+  end of long passages on light/dark phones, phone RTL at 200% and a tablet,
+  including the complete final lines, note and pinned controls.
 - `test/ui/practice_review_transition_test.dart` checks intermediate frames
   while closing a completed session and the refreshed hub after returning.
 

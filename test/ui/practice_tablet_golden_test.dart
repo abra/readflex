@@ -37,6 +37,8 @@ void main() {
     ),
   ]) {
     testWidgets('tablet Practice flow ${profile.name} $name', (tester) async {
+      final shadowsDisabled = debugDisableShadows;
+      addTearDown(() => debugDisableShadows = shadowsDisabled);
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;
       tester.platformDispatcher.textScaleFactorTestValue = scale;
@@ -98,6 +100,7 @@ void main() {
           'tablet-practice-hub-$name',
         );
 
+        debugDisableShadows = false;
         await tapUi(tester, start);
         await waitForUi(
           tester,
@@ -152,9 +155,14 @@ void main() {
         await waitForUi(
           tester,
           () => find.byKey(const ValueKey('reviewQuote')).evaluate().isNotEmpty,
-          description: 'tablet highlight question',
+          description: 'tablet highlight card',
         );
-        await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
+        expect(find.byKey(const ValueKey('reviewShowAnswer')), findsNothing);
+        expect(find.byKey(const ValueKey('reviewRate-keep')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('reviewRate-showLess')),
+          findsOneWidget,
+        );
         expect(find.text('Opening line'), findsOneWidget);
         expect(
           tester.getRect(find.byKey(const ValueKey('reviewStudyCard'))).width,
@@ -189,6 +197,7 @@ void main() {
           'tablet-practice-summary-$name',
         );
 
+        debugDisableShadows = shadowsDisabled;
         await tapUi(tester, done);
         final due = find.byKey(const ValueKey('practiceTodayDue'));
         await waitForUi(
@@ -210,6 +219,7 @@ void main() {
         expect(stats.due, 0);
         expect(tester.takeException(), isNull);
       } finally {
+        debugDisableShadows = shadowsDisabled;
         await unmountUi(tester);
       }
     }, tags: ['golden']);

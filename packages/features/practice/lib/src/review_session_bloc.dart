@@ -155,7 +155,10 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     ReviewSessionAnswerRevealed event,
     Emitter<ReviewSessionState> emit,
   ) {
-    if (state.status != ReviewSessionStatus.reviewing) return;
+    if (state.status != ReviewSessionStatus.reviewing ||
+        state.current is! PracticeWordItem) {
+      return;
+    }
     emit(state.copyWith(revealed: true));
   }
 

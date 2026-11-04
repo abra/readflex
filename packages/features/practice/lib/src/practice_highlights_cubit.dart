@@ -129,6 +129,7 @@ class PracticeHighlightsCubit extends Cubit<PracticeHighlightsState> {
                 highlight: h,
                 fsrs: states[h.id] ?? const FsrsCardData(),
                 sourceTitle: sources.titleOf(h.sourceId),
+                source: sources[h.sourceId],
               ),
           ],
         ),

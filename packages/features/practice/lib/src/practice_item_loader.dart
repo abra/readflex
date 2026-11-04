@@ -69,6 +69,7 @@ class PracticeItemLoader {
               highlight: highlightById[row.itemId]!,
               fsrs: row.fsrs,
               sourceTitle: sources.titleOf(highlightById[row.itemId]!.sourceId),
+              source: sources[highlightById[row.itemId]!.sourceId],
             ),
           _ => null,
         },

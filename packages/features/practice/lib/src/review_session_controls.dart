@@ -99,8 +99,8 @@ class ReviewSessionTopBar extends StatelessWidget {
   }
 }
 
-/// Show answer before the reveal; after it the ratings: Again / Hard / Good
-/// with their intervals for a word, Keep / Show less for a highlight.
+/// Words reveal their answer before rating. Highlights offer Keep / Show less
+/// immediately, with the next review interval under each action.
 class ReviewSessionControls extends StatelessWidget {
   const ReviewSessionControls({
     required this.item,
@@ -108,7 +108,6 @@ class ReviewSessionControls extends StatelessWidget {
     required this.intervals,
     required this.onReveal,
     required this.onRated,
-    required this.onOpenInSource,
     super.key,
   });
 
@@ -117,74 +116,195 @@ class ReviewSessionControls extends StatelessWidget {
   final Map<Rating, Duration> intervals;
   final VoidCallback onReveal;
   final ValueChanged<Rating> onRated;
-  final VoidCallback? onOpenInSource;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Material(
-      color: context.colors.surface,
-      child: AppBottomSafeArea(
-        child: AppContentFrame(
-          maxWidth: _reviewCardMaxWidth + AppSpacing.lg * 2,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.sm,
-              AppSpacing.lg,
-              0,
-            ),
-            child: !revealed
-                ? FilledButton(
-                    key: const ValueKey('reviewShowAnswer'),
-                    onPressed: onReveal,
-                    child: AppButtonLabel(l10n.practiceShowAnswer),
-                  )
-                : switch (item) {
-                    PracticeWordItem() => _WordRatingControls(
-                      intervals: intervals,
-                      onRated: onRated,
-                    ),
-                    PracticeHighlightItem() => Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          spacing: AppSpacing.sm,
-                          children: [
-                            Expanded(
-                              child: ReviewRatingButton(
-                                key: const ValueKey('reviewRate-keep'),
-                                label: l10n.practiceKeep,
-                                interval: intervals[Rating.good],
-                                color: context.appColors.ratingGood,
-                                onPressed: () => onRated(Rating.good),
-                              ),
-                            ),
-                            Expanded(
-                              child: ReviewRatingButton(
-                                key: const ValueKey('reviewRate-showLess'),
-                                label: l10n.practiceShowLess,
-                                interval: intervals[Rating.easy],
-                                color: context.appColors.ratingEasy,
-                                onPressed: () => onRated(Rating.easy),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (onOpenInSource != null)
-                          TextButton(
-                            key: const ValueKey('reviewOpenInBook'),
-                            onPressed: onOpenInSource,
-                            child: AppButtonLabel(l10n.practiceOpenInBook),
-                          ),
-                      ],
-                    ),
-                  },
+    return _ReviewControlsSurface(
+      child: AppContentFrame(
+        maxWidth: _reviewCardMaxWidth + AppSpacing.lg * 2,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.md,
+            AppSpacing.lg,
+            0,
           ),
+          child: item is PracticeWordItem && !revealed
+              ? FilledButton(
+                  key: const ValueKey('reviewShowAnswer'),
+                  onPressed: onReveal,
+                  child: AppButtonLabel(l10n.practiceShowAnswer),
+                )
+              : switch (item) {
+                  PracticeWordItem() => _WordRatingControls(
+                    intervals: intervals,
+                    onRated: onRated,
+                  ),
+                  PracticeHighlightItem() => _HighlightRatingControls(
+                    intervals: intervals,
+                    onRated: onRated,
+                  ),
+                },
         ),
       ),
     );
   }
+}
+
+/// An opaque dock, separated from the clipped reading area above it.
+class _ReviewControlsSurface extends StatelessWidget {
+  const _ReviewControlsSurface({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ClipRect(
+    key: const ValueKey('reviewControlsShadowClip'),
+    clipper: const _ReviewControlsShadowClipper(),
+    child: Material(
+      key: const ValueKey('reviewControlsPanel'),
+      color: context.colors.surface,
+      elevation: AppElevation.level1,
+      surfaceTintColor: Colors.transparent,
+      child: AppBottomSafeArea(child: child),
+    ),
+  );
+}
+
+/// The dock casts a shadow only toward the reading area above it.
+class _ReviewControlsShadowClipper extends CustomClipper<Rect> {
+  const _ReviewControlsShadowClipper();
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTRB(0, -AppSpacing.xl, size.width, size.height);
+
+  @override
+  bool shouldReclip(_ReviewControlsShadowClipper oldClipper) => false;
+}
+
+class _HighlightRatingControls extends StatelessWidget {
+  const _HighlightRatingControls({
+    required this.intervals,
+    required this.onRated,
+  });
+
+  final Map<Rating, Duration> intervals;
+  final ValueChanged<Rating> onRated;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final l10n = context.l10n;
+      final goodInterval = intervals[Rating.good];
+      final easyInterval = intervals[Rating.easy];
+      final goodCaption = goodInterval == null
+          ? null
+          : reviewIntervalLabel(l10n, goodInterval);
+      final easyCaption = easyInterval == null
+          ? null
+          : reviewIntervalLabel(l10n, easyInterval);
+      final stacked =
+          AppSheetActions.stacks(
+            context,
+            maxWidth: constraints.maxWidth,
+            primaryLabel: l10n.practiceKeep,
+            secondaryLabel: l10n.practiceShowLess,
+          ) ||
+          AppSheetActions.stacks(
+            context,
+            maxWidth: constraints.maxWidth,
+            primaryLabel: goodCaption ?? '',
+            secondaryLabel: easyCaption ?? '',
+          );
+      final minimumHeight = stacked
+          ? AppSizes.buttonHeight
+          : _highlightRatingRowHeight(
+              context,
+              maxWidth: constraints.maxWidth,
+              labels: [
+                (l10n.practiceKeep, goodCaption),
+                (l10n.practiceShowLess, easyCaption),
+              ],
+            );
+      final keep = ReviewRatingButton(
+        key: const ValueKey('reviewRate-keep'),
+        label: l10n.practiceKeep,
+        interval: intervals[Rating.good],
+        color: context.appColors.ratingGood,
+        emphasis: ReviewRatingEmphasis.primary,
+        horizontal: stacked,
+        minimumHeight: minimumHeight,
+        onPressed: () => onRated(Rating.good),
+      );
+      final showLess = ReviewRatingButton(
+        key: const ValueKey('reviewRate-showLess'),
+        label: l10n.practiceShowLess,
+        interval: intervals[Rating.easy],
+        color: context.appColors.ratingEasy,
+        emphasis: ReviewRatingEmphasis.secondary,
+        horizontal: stacked,
+        minimumHeight: minimumHeight,
+        onPressed: () => onRated(Rating.easy),
+      );
+      return stacked
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              spacing: AppSpacing.sm,
+              children: [keep, showLess],
+            )
+          : Row(
+              spacing: AppSpacing.md,
+              children: [
+                Expanded(child: showLess),
+                Expanded(child: keep),
+              ],
+            );
+    },
+  );
+}
+
+double _highlightRatingRowHeight(
+  BuildContext context, {
+  required double maxWidth,
+  required List<(String, String?)> labels,
+}) {
+  final textWidth = ((maxWidth - AppSpacing.md) / 2 - AppSpacing.lg * 2)
+      .clamp(0.0, double.infinity)
+      .toDouble();
+  final labelStyle = context.text.labelLarge;
+  final intervalStyle = AppWindowSize.isMedium(context)
+      ? context.text.labelLarge
+      : context.text.labelSmall;
+  final direction = Directionality.of(context);
+  final scaler = MediaQuery.textScalerOf(context);
+  final locale = Localizations.maybeLocaleOf(context);
+  double textHeight(String value, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: value, style: style),
+      textDirection: direction,
+      textScaler: scaler,
+      locale: locale,
+    )..layout(maxWidth: textWidth);
+    final height = painter.height;
+    painter.dispose();
+    return height;
+  }
+
+  // Fallback fonts can give equally short captions different natural heights.
+  var height = AppSizes.buttonHeight;
+  for (final (label, interval) in labels) {
+    final contentHeight =
+        textHeight(label, labelStyle) +
+        (interval == null ? 0 : textHeight(interval, intervalStyle));
+    final buttonHeight = contentHeight + AppSpacing.md * 2;
+    if (buttonHeight > height) {
+      height = buttonHeight;
+    }
+  }
+  return height;
 }
 
 class _WordRatingControls extends StatelessWidget {
@@ -235,32 +355,45 @@ class _WordRatingControls extends StatelessWidget {
   }
 }
 
-/// A rating with its interval under the label, tinted by the rating's colour.
+enum ReviewRatingEmphasis { tonal, primary, secondary }
+
+/// A rating with its interval and the action hierarchy of its review surface.
 class ReviewRatingButton extends StatelessWidget {
   const ReviewRatingButton({
     required this.label,
     required this.interval,
     required this.color,
     required this.onPressed,
+    this.emphasis = ReviewRatingEmphasis.tonal,
     this.horizontal = false,
+    this.minimumHeight = AppSizes.buttonHeight,
     super.key,
-  });
+  }) : assert(minimumHeight >= AppSizes.buttonHeight);
 
   final String label;
   final Duration? interval;
   final Color color;
   final VoidCallback onPressed;
+  final ReviewRatingEmphasis emphasis;
   final bool horizontal;
+  final double minimumHeight;
 
   @override
   Widget build(BuildContext context) {
     final interval = this.interval;
     final l10n = context.l10n;
-    final intervalStyle =
-        (AppWindowSize.isMedium(context)
-                ? context.text.labelLarge
-                : context.text.labelSmall)
-            .copyWith(color: context.colors.onSurfaceVariant);
+    final foreground = emphasis == ReviewRatingEmphasis.primary
+        ? context.colors.onPrimary
+        : context.colors.onSurface;
+    final content = _ReviewRatingButtonLabel(
+      label: label,
+      interval: interval == null ? null : reviewIntervalLabel(l10n, interval),
+      foreground: foreground,
+      intervalColor: emphasis == ReviewRatingEmphasis.tonal
+          ? context.colors.onSurfaceVariant
+          : foreground,
+      horizontal: horizontal,
+    );
     return Semantics(
       button: true,
       enabled: true,
@@ -268,48 +401,76 @@ class ReviewRatingButton extends StatelessWidget {
       value: interval == null ? null : reviewIntervalLabel(l10n, interval),
       onTap: onPressed,
       excludeSemantics: true,
-      child: FilledButton.tonal(
-        onPressed: onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: color.withValues(alpha: 0.16),
-          foregroundColor: context.colors.onSurface,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.sm,
-          ),
-          minimumSize: const Size(0, AppSizes.buttonHeight),
+      child: switch (emphasis) {
+        ReviewRatingEmphasis.primary => FilledButton(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(minimumSize: Size(0, minimumHeight)),
+          child: content,
         ),
-        child: horizontal
-            ? Row(
-                children: [
-                  Expanded(child: Text(label, style: context.text.labelLarge)),
-                  if (interval != null) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      reviewIntervalLabel(l10n, interval),
-                      style: intervalStyle,
-                    ),
-                  ],
-                ],
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: context.text.labelLarge,
-                  ),
-                  if (interval != null)
-                    Text(
-                      reviewIntervalLabel(l10n, interval),
-                      textAlign: TextAlign.center,
-                      style: intervalStyle,
-                    ),
-                ],
-              ),
-      ),
+        ReviewRatingEmphasis.secondary => OutlinedButton(
+          onPressed: onPressed,
+          style: OutlinedButton.styleFrom(minimumSize: Size(0, minimumHeight)),
+          child: content,
+        ),
+        ReviewRatingEmphasis.tonal => FilledButton.tonal(
+          onPressed: onPressed,
+          style: FilledButton.styleFrom(
+            backgroundColor: color.withValues(alpha: 0.16),
+            foregroundColor: foreground,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.sm,
+            ),
+            minimumSize: Size(0, minimumHeight),
+          ),
+          child: content,
+        ),
+      },
     );
+  }
+}
+
+class _ReviewRatingButtonLabel extends StatelessWidget {
+  const _ReviewRatingButtonLabel({
+    required this.label,
+    required this.interval,
+    required this.foreground,
+    required this.intervalColor,
+    required this.horizontal,
+  });
+
+  final String label;
+  final String? interval;
+  final Color foreground;
+  final Color intervalColor;
+  final bool horizontal;
+
+  @override
+  Widget build(BuildContext context) {
+    final labelStyle = context.text.labelLarge.copyWith(color: foreground);
+    final intervalStyle =
+        (AppWindowSize.isMedium(context)
+                ? context.text.labelLarge
+                : context.text.labelSmall)
+            .copyWith(color: intervalColor);
+    return horizontal
+        ? Row(
+            children: [
+              Expanded(child: Text(label, style: labelStyle)),
+              if (interval case final value?) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Text(value, style: intervalStyle),
+              ],
+            ],
+          )
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, textAlign: TextAlign.center, style: labelStyle),
+              if (interval case final value?)
+                Text(value, textAlign: TextAlign.center, style: intervalStyle),
+            ],
+          );
   }
 }
 

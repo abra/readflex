@@ -11,20 +11,21 @@ import 'package:intl/intl.dart' show Bidi;
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-import 'practice_highlight_tint.dart';
 import 'practice_item.dart';
+import 'practice_source_cover.dart';
 import 'review_interval_label.dart';
 import 'review_session_bloc.dart';
 
 part 'review_session_cards.dart';
 part 'review_session_controls.dart';
+part 'review_session_highlight_card.dart';
 
 const double _reviewWorkspaceMaxWidth = 960;
 const double _reviewCardMaxWidth = 640;
 
-/// A full-screen review session above Practice: one card at a time, Show
-/// answer, then a rating. Words are rated Again / Hard / Good; highlights
-/// are kept or shown less. Ends with the session's numbers.
+/// A full-screen review session above Practice: words reveal an answer before
+/// Again / Hard / Good; highlights offer Keep / Show less immediately.
+/// Ends with the session's numbers.
 class ReviewSessionScreen extends StatelessWidget {
   const ReviewSessionScreen({
     required this.fsrsRepository,
@@ -127,20 +128,29 @@ class _ReviewSessionView extends StatelessWidget {
                           bloc.add(const ReviewSessionCardRemoved()),
                     ),
                     Expanded(
-                      child: _ReviewCardViewport(
-                        child: switch (current) {
-                          PracticeWordItem() => ReviewWordCard(
+                      child: switch (current) {
+                        PracticeWordItem() => _ReviewWordCardViewport(
+                          key: ValueKey('reviewViewport-${current.itemId}'),
+                          child: ReviewWordCard(
                             key: ValueKey('reviewCard-${current.itemId}'),
                             item: current,
                             revealed: state.revealed,
                           ),
-                          PracticeHighlightItem() => ReviewHighlightCard(
+                        ),
+                        PracticeHighlightItem() => _ReviewHighlightViewport(
+                          key: ValueKey('reviewViewport-${current.itemId}'),
+                          child: ReviewHighlightCard(
                             key: ValueKey('reviewCard-${current.itemId}'),
                             item: current,
-                            revealed: state.revealed,
+                            onOpenInSource: current.sourceId == null
+                                ? null
+                                : () => onOpenInSource(
+                                    current.sourceId!,
+                                    current.cfiRange,
+                                  ),
                           ),
-                        },
-                      ),
+                        ),
+                      },
                     ),
                     ReviewSessionControls(
                       item: current,
@@ -150,12 +160,6 @@ class _ReviewSessionView extends StatelessWidget {
                           bloc.add(const ReviewSessionAnswerRevealed()),
                       onRated: (rating) =>
                           bloc.add(ReviewSessionCardRated(rating)),
-                      onOpenInSource: current.sourceId == null
-                          ? null
-                          : () => onOpenInSource(
-                              current.sourceId!,
-                              current.cfiRange,
-                            ),
                     ),
                   ],
                 ),
@@ -169,41 +173,54 @@ class _ReviewSessionView extends StatelessWidget {
   }
 }
 
-/// A focused reading card; short fronts centre while long answers scroll.
-class _ReviewCardViewport extends StatelessWidget {
-  const _ReviewCardViewport({required this.child});
+/// A centred word card; revealing its answer preserves this scroll position.
+class _ReviewWordCardViewport extends StatelessWidget {
+  const _ReviewWordCardViewport({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => SingleChildScrollView(
-      key: const ValueKey('reviewCardViewport'),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xl,
-      ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: (constraints.maxHeight - AppSpacing.xl * 2)
-              .clamp(0.0, double.infinity)
-              .toDouble(),
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: _reviewCardMaxWidth),
-            child: SizedBox(
-              width: double.infinity,
-              child: DecoratedBox(
-                key: const ValueKey('reviewStudyCard'),
-                decoration: BoxDecoration(
-                  color: context.colors.surfaceContainerLow,
-                  border: Border.all(color: context.colors.outlineVariant),
-                  borderRadius: BorderRadius.circular(AppRadius.lg),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xl),
-                  child: child,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+    child: ClipRect(
+      key: const ValueKey('reviewCardClip'),
+      child: ScrollEdgeFadeStack(
+        showBottomFade: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            key: const ValueKey('reviewCardViewport'),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.xl,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: (constraints.maxHeight - AppSpacing.xl * 2)
+                    .clamp(0.0, double.infinity)
+                    .toDouble(),
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: _reviewCardMaxWidth,
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: DecoratedBox(
+                      key: const ValueKey('reviewStudyCard'),
+                      decoration: BoxDecoration(
+                        color: context.colors.surfaceContainerLow,
+                        border: Border.all(
+                          color: context.colors.outlineVariant,
+                        ),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpacing.xl),
+                        child: child,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -211,5 +228,37 @@ class _ReviewCardViewport extends StatelessWidget {
         ),
       ),
     ),
+  );
+}
+
+/// Keeps the complete highlight frame on screen; only its body scrolls.
+class _ReviewHighlightViewport extends StatelessWidget {
+  const _ReviewHighlightViewport({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final vertical = constraints.maxHeight < AppSizes.buttonHeight * 6
+          ? AppSpacing.lg
+          : AppSpacing.xl;
+      return Padding(
+        key: const ValueKey('reviewHighlightViewport'),
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          vertical,
+          AppSpacing.lg,
+          vertical + AppSpacing.md,
+        ),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _reviewCardMaxWidth),
+            child: child,
+          ),
+        ),
+      );
+    },
   );
 }

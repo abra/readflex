@@ -822,8 +822,7 @@ void main() {
       await settle(tester);
       expect(find.text('2 of 2'), findsOneWidget);
       expect(find.byKey(const ValueKey('reviewQuote')), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('reviewShowAnswer')));
-      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('reviewShowAnswer')), findsNothing);
       expect(find.text('Litany'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('reviewRate-keep')));
       await settle(tester);
@@ -853,6 +852,8 @@ void main() {
       await settle(tester);
       expect(find.text('1 of 1'), findsOneWidget);
       expect(find.byKey(const ValueKey('reviewQuote')), findsOneWidget);
+      expect(find.byKey(const ValueKey('reviewShowAnswer')), findsNothing);
+      expect(find.text('Litany'), findsOneWidget);
     });
 
     testWidgets('nothing due shows the empty state', (tester) async {
@@ -881,8 +882,16 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('reviewRate-good')));
         await settle(tester);
         expect(tester.takeException(), isNull);
-        await tester.tap(find.byKey(const ValueKey('reviewShowAnswer')));
-        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('reviewShowAnswer')), findsNothing);
+        for (final rating in ['keep', 'showLess']) {
+          expect(
+            find.byKey(ValueKey('reviewRate-$rating')).hitTestable(),
+            findsOneWidget,
+          );
+        }
+        await tester.tap(find.byKey(const ValueKey('reviewRate-showLess')));
+        await settle(tester);
+        expect(find.byType(ReviewSessionSummary), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     }

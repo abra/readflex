@@ -57,6 +57,11 @@ void main() {
     expect(state.current, isA<PracticeWordItem>());
     expect(state.intervals.keys, containsAll(Rating.values));
     expect(state.revealed, isFalse);
+    final highlight = state.items.whereType<PracticeHighlightItem>().single;
+    expect(highlight.source?.id, 'b1');
+    expect(highlight.source?.title, 'Dune');
+    expect(highlight.source?.author, 'Author');
+    expect(highlight.sourceTitle, 'Dune');
   });
 
   test('rating records the review and advances; Again is collected', () async {
@@ -89,6 +94,36 @@ void main() {
     expect(b.state.items.single.itemId, word.id);
     expect(b.state.ratings, isEmpty);
   });
+
+  for (final rating in [Rating.good, Rating.easy]) {
+    test(
+      'highlights ignore reveal and record an immediate $rating rating',
+      () async {
+        await h.addBook('b1');
+        final highlight = await h.addHighlight(
+          'b1',
+          'A saved passage.',
+          note: 'A note.',
+        );
+        final b = bloc();
+        addTearDown(b.close);
+        final state = await start(b);
+        expect(state.current, isA<PracticeHighlightItem>());
+        expect(state.revealed, isFalse);
+        final emitted = <ReviewSessionState>[];
+        final subscription = b.stream.listen(emitted.add);
+        addTearDown(subscription.cancel);
+        b.add(const ReviewSessionAnswerRevealed());
+        final completed = await rate(b, rating);
+        expect(completed.status, ReviewSessionStatus.completed);
+        expect(completed.reviewed, 1);
+        expect(completed.ratings[highlight.id], rating);
+        expect(emitted.every((state) => !state.revealed), isTrue);
+        final stored = await h.fsrs.getReviewState(highlight.id);
+        expect(stored!.reps, 1);
+      },
+    );
+  }
 
   test('removing the current card deletes its review row', () async {
     await h.addBook('b1');

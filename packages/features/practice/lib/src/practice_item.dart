@@ -58,9 +58,14 @@ final class PracticeHighlightItem extends PracticeItem {
     required this.highlight,
     required super.fsrs,
     super.sourceTitle,
+    this.source,
   });
 
   final Highlight highlight;
+
+  /// Source metadata already resolved for the screen; older callers may
+  /// provide only [sourceTitle].
+  final LibrarySource? source;
 
   @override
   String get itemId => highlight.id;
@@ -75,5 +80,5 @@ final class PracticeHighlightItem extends PracticeItem {
   String? get cfiRange => highlight.cfiRange;
 
   @override
-  List<Object?> get props => [highlight, fsrs, sourceTitle];
+  List<Object?> get props => [highlight, fsrs, sourceTitle, source];
 }

@@ -177,7 +177,10 @@ void runExtraFlows({bool requireTablet = true}) {
         () => find.byKey(const ValueKey('reviewQuote')).evaluate().isNotEmpty,
         description: 'highlight review card',
       );
-      await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
+      expect(find.byKey(const ValueKey('reviewShowAnswer')), findsNothing);
+      expect(find.byKey(const ValueKey('reviewRate-keep')), findsOneWidget);
+      expect(find.byKey(const ValueKey('reviewRate-showLess')), findsOneWidget);
+      expect(find.byKey(const ValueKey('reviewNote')), findsNothing);
       await tapUi(tester, find.byKey(const ValueKey('reviewRate-keep')));
       final summary = find.byKey(const ValueKey('reviewSummaryTitle'));
       await waitForUi(

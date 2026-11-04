@@ -198,7 +198,6 @@ void main() {
         ];
         for (final item in items) {
           final rated = <Rating>[];
-          var opened = 0;
           await mount(
             Column(
               children: [
@@ -213,13 +212,10 @@ void main() {
                 const Spacer(),
                 ReviewSessionControls(
                   item: item,
-                  revealed: true,
+                  revealed: item is PracticeWordItem,
                   intervals: intervals,
                   onReveal: () {},
                   onRated: rated.add,
-                  onOpenInSource: item is PracticeHighlightItem
-                      ? () => opened++
-                      : null,
                 ),
               ],
             ),
@@ -266,9 +262,67 @@ void main() {
             for (final (_, rating) in ratings) ...[rating, rating],
           ]);
           if (item is PracticeHighlightItem) {
-            await tester.tap(find.byKey(const ValueKey('reviewOpenInBook')));
-            expect(opened, 1);
+            final keep = find.byKey(const ValueKey('reviewRate-keep'));
+            final showLess = find.byKey(const ValueKey('reviewRate-showLess'));
+            expect(
+              find.descendant(of: keep, matching: find.byType(FilledButton)),
+              findsOneWidget,
+            );
+            expect(
+              find.descendant(
+                of: showLess,
+                matching: find.byType(OutlinedButton),
+              ),
+              findsOneWidget,
+            );
+            final primaryRect = tester.getRect(keep);
+            final secondaryRect = tester.getRect(showLess);
+            final ratingContext = tester.element(keep);
+            final availableWidth = tester
+                .getSize(
+                  find
+                      .descendant(
+                        of: find.byType(ReviewSessionControls),
+                        matching: find.byType(LayoutBuilder),
+                      )
+                      .first,
+                )
+                .width;
+            final stacked =
+                AppSheetActions.stacks(
+                  ratingContext,
+                  maxWidth: availableWidth,
+                  primaryLabel: l10n.practiceKeep,
+                  secondaryLabel: l10n.practiceShowLess,
+                ) ||
+                AppSheetActions.stacks(
+                  ratingContext,
+                  maxWidth: availableWidth,
+                  primaryLabel: reviewIntervalLabel(
+                    l10n,
+                    intervals[Rating.good]!,
+                  ),
+                  secondaryLabel: reviewIntervalLabel(
+                    l10n,
+                    intervals[Rating.easy]!,
+                  ),
+                );
+            if (!stacked) {
+              expect(primaryRect.height, closeTo(secondaryRect.height, .01));
+              expect(primaryRect.top, closeTo(secondaryRect.top, .01));
+              final rtl = Directionality.of(ratingContext) == TextDirection.rtl;
+              expect(
+                rtl ? primaryRect.right : secondaryRect.right,
+                lessThan(rtl ? secondaryRect.left : primaryRect.left),
+                reason:
+                    'The primary action follows the secondary in reading order',
+              );
+            } else {
+              expect(primaryRect.bottom, lessThan(secondaryRect.top));
+              expect(primaryRect.width, closeTo(secondaryRect.width, .01));
+            }
           }
+          expect(find.byKey(const ValueKey('reviewOpenInBook')), findsNothing);
           expect(tester.takeException(), isNull);
         }
 

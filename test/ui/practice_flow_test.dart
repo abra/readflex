@@ -93,7 +93,10 @@ void main() {
       () => find.byKey(const ValueKey('reviewQuote')).evaluate().isNotEmpty,
       description: 'highlight card',
     );
-    await tapUi(tester, find.byKey(const ValueKey('reviewShowAnswer')));
+    expect(find.byKey(const ValueKey('reviewShowAnswer')), findsNothing);
+    expect(find.byKey(const ValueKey('reviewRate-keep')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reviewRate-showLess')), findsOneWidget);
+    expect(find.byKey(const ValueKey('reviewNote')), findsNothing);
     await tapUi(tester, find.byKey(const ValueKey('reviewRate-keep')));
     await waitForUi(
       tester,
