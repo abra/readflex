@@ -41,8 +41,8 @@ every library to keep it so. PDFium, the internal MOBI Rust backend and the
 DjVuLibre C++ decoder are built/bundled even when a consumer imports only another
 format. The DjVu native component has its own GPLv2-or-later license; see its
 [upstream notice](native/djvu/upstream/COPYRIGHT) before distributing a build.
-The Rust crate and library retain the name `pagecraft_mobi_native`; the only Dart
-package is `pagecraft`. See [native backend setup and maintenance](doc/mobi_native.md).
+The Rust crate and library retain the name `pagecraft_mobi_native`; the MOBI
+backend has no separate Dart package. See [native backend setup and maintenance](doc/mobi_native.md).
 
 ## Maintainer reading path
 
@@ -695,10 +695,15 @@ Selection (`src/layout/text_page_selection.dart`, `src/document/text_point.dart`
 `src/text_book/selection_context.dart`): inside a `SelectionArea` or
 `SelectableRegion` each paragraph shown on a `TextColumnPage` registers as
 a `Selectable` (`PageParagraphSelectable`, the lines whole on that page),
-so selection uses Flutter's adaptive gestures, handles, magnifier, toolbar
-and keys, as `Text` does: word on long press, words while dragging (the
+so selection keeps Flutter's range, gesture and keyboard contracts, as
+`Text` does: word on long press, words while dragging (the
 pressed word stays selected when the drag goes back), select all,
-character, word and line extension from the keyboard. Each page is its
+character, word and line extension from the keyboard. After the initial pointer
+releases, `TextNativeSelectionGeometry` maps visible cells and exact ranges to
+system iOS/Android controls through `native_text_selection`. Native boundary
+updates go through the same selection events and source maps. The application's
+action menu stays Flutter; unsupported native geometry uses Flutter's handles
+and magnifier. Each page is its
 own `SelectionContainer` (`PageSelectionDelegate`): its paragraphs are
 ordered by document, not by where they sit, and the copied text has a
 line break between paragraphs. `RenderTextColumnPage.selection` gives the
@@ -1149,18 +1154,51 @@ Impeller and Skia. The WebView's canvas recipe (blend modes inside a
 layer) is not used: Impeller renders `saveLayer` plus `difference`/`hue`
 blends as a no-op, so a dark theme left pages white on iOS.
 
+`PdfTextLayer.load` retains the engine's structured text and UTF-16 offsets,
+but uses PDFium's typographic character cells for selection geometry. Tight
+glyph bounds can collapse to a baseline for substituted fonts in scanned
+books. Native cells include ascent and descent; an exact text alignment keeps
+saved CFIs stable, while generated whitespace retains the formatter's boxes.
+Metrics run on the engine's existing worker, where font substitution callbacks
+belong. Metadata, metrics and disposal share a queue; closing waits for accepted
+native tasks. The original Cyrillic raster/text fixture and its crop/rotation
+variant reproduce this missing-font defect without including a user's book.
+
 `PdfTextOverlay` goes into `FixedPagesView.pageOverlayBuilder` with the
 page's `PdfTextLayer`: it draws saved `PdfTextHighlight`s, the search
 hit and the selection held in a `PdfTextSelection` (`ChangeNotifier`) the
 app owns, as `ComicImageAreaDraft` holds an image-area draft. A long
 press (280 ms) on a word selects it and drags its end over the text; a
-drag from either handle (44 px targets at the selection's ends, the
-nearer one where they overlap) moves that end by character; a tap
+drag from either adaptive Flutter fallback handle (at least 48dp targets, kept at
+screen size when zoomed) activates after 6 screen pixels and moves that end
+by an insertion boundary on the nearest text line. The initial finger-to-handle
+offset and the opposite
+endpoint remain fixed, including when one endpoint crosses the other.
+Flutter's platform magnifier shows the active boundary while dragging; a tap
 outside clears the selection; a tap on a saved highlight reports it.
+On supported iOS/Android hosts, releasing the initial long press hands the
+range and exact text-layer geometry to `native_text_selection`. UIKit/Android
+provide the handles and magnifier; the host's action menu stays in
+Flutter. Geometry and source UTF-16 offsets remain Pagecraft's. The platform
+view is disposed when selection clears. Unsupported geometry retains the
+Flutter controls described above. Reflowable books and articles use the same
+adapter through `TextNativeSelectionGeometry`, preserving source maps and CFIs.
+See the [native adapter's contract and limits](../native_text_selection/README.md).
+
 Reports carry the selection's rect as fractions of the whole view for the
-app's chrome. While a selection is up the view's input is locked, as for
-image areas. Both overlays repaint through `RepaintAfterBuild`: the app
-restyles a selection from a popup's `initState` and `dispose`, so a change
+app's chrome. `onSelectionDragChanged` reports active adjustment; the final
+range callback precedes its `false` event so the host can hide actions while
+dragging and restore them with the updated text. `handleColor` is independent
+of the fill: `PdfTextSelection.setBaseColor` configures the normal fill,
+`setColor` previews an annotation colour and `resetColor` restores the base.
+Flutter fallback selection, search and saved-highlight fills multiply over original/light
+pages to preserve black glyphs. With `darkPage: true`, fills use lightening
+with limited opacity to preserve the light text instead. Hosts must
+derive that flag from the rendered page, not application brightness: an
+original white page in a dark application still needs the light-page policy.
+While a selection is up the view's input is locked, as for image areas.
+Both overlays repaint through `RepaintAfterBuild`: app-driven colour changes
+may arrive while a popup builds or disposes, so a change
 may arrive mid-frame, and the repaint then waits for the end of the frame
 while the model keeps its call order. `PdfTextLayerCache`
 keeps the layers of the last 12 pages read and tells listeners when one

@@ -86,11 +86,13 @@ class _TranslationLexicalHeader extends StatelessWidget {
               children: [
                 Semantics(
                   header: true,
-                  child: SelectableText(
-                    selectedText,
-                    key: const ValueKey('translation-selected-fragment'),
-                    textDirection: sourceDirection,
-                    style: wordStyle,
+                  child: AppTextSelectionHost(
+                    child: SelectableText(
+                      selectedText,
+                      key: const ValueKey('translation-selected-fragment'),
+                      textDirection: sourceDirection,
+                      style: wordStyle,
+                    ),
                   ),
                 ),
                 if (hasPronunciation)

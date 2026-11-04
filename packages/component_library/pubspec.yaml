@@ -10,6 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
   lucide_icons_flutter: ^4.0.0
+  native_text_selection:
+    path: ../native_text_selection
 
 flutter:
   licenses:

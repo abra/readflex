@@ -131,21 +131,21 @@ void main() {
     expect(changes.single.$2, isNull, reason: 'no FixedPagesView around');
   });
 
-  testWidgets('dragging while pressing extends the selection by character', (
+  testWidgets('dragging while pressing extends to insertion boundaries', (
     tester,
   ) async {
     await pump(tester);
     final gesture = await tester.startGesture(glyph(tester, 0, 6));
     await tester.pump(ComicImageAreaGeometry.longPressDuration);
     await tester.pump(const Duration(milliseconds: 20));
-    await gesture.moveTo(glyph(tester, 1, 2));
+    await gesture.moveTo(overlayOrigin(tester) + const Offset(30, 45));
     await tester.pump();
     expect(
       selection.range,
       const PdfTextRange(4, 17),
       reason: 'quick fox\\njum',
     );
-    await gesture.moveTo(glyph(tester, 0, 1));
+    await gesture.moveTo(overlayOrigin(tester) + const Offset(10, 25));
     await tester.pump();
     expect(
       selection.range,
@@ -160,14 +160,18 @@ void main() {
   testWidgets('handles move either end after release', (tester) async {
     await pump(tester);
     await longPressAt(tester, glyph(tester, 0, 6));
-    // The end handle sits at the bottom-right of "quick", the start one at
-    // the bottom-left; targets are 44 px around them.
-    final endHandle = overlayOrigin(tester) + const Offset(90, 30);
-    await tester.dragFrom(endHandle, glyph(tester, 1, 4) - endHandle);
+    final endHandle = tester.getCenter(
+      find.byKey(const ValueKey('pdf-selection-end-handle-0')),
+    );
+    // Move the caret from x=90 on the first line to x=50 on the second,
+    // retaining the offset between the grip and the glyph boundary.
+    await tester.dragFrom(endHandle, const Offset(-40, 20));
     await tester.pump();
     expect(selection.range, const PdfTextRange(4, 19));
-    final startHandle = overlayOrigin(tester) + const Offset(40, 30);
-    await tester.dragFrom(startHandle, glyph(tester, 0, 0) - startHandle);
+    final startHandle = tester.getCenter(
+      find.byKey(const ValueKey('pdf-selection-start-handle-0')),
+    );
+    await tester.dragFrom(startHandle, const Offset(-40, 0));
     await tester.pump();
     expect(selection.range, const PdfTextRange(0, 19));
     expect(changes, hasLength(3));
@@ -215,7 +219,7 @@ void main() {
     await tester.tapAt(glyph(tester, 0, 5));
     await tester.pump();
     expect(selection.isActive, isTrue, reason: 'inside the selection');
-    await tester.tapAt(glyph(tester, 1, 8));
+    await tester.tapAt(overlayOrigin(tester) + const Offset(180, 90));
     await tester.pump();
     expect(selection.isActive, isFalse);
     expect(controller.inputLocked, isFalse);

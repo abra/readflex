@@ -112,9 +112,11 @@ class _InitializationFailedScreenState
                             child: ExpansionTile(
                               title: Text(l10n.appTechnicalDetails),
                               children: [
-                                SelectableText(
-                                  '${widget.error}\n${widget.stackTrace}',
-                                  style: text.bodySmall,
+                                AppTextSelectionHost(
+                                  child: SelectableText(
+                                    '${widget.error}\n${widget.stackTrace}',
+                                    style: text.bodySmall,
+                                  ),
                                 ),
                               ],
                             ),

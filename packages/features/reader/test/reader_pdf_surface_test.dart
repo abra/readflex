@@ -147,6 +147,23 @@ void main() {
     expect(selection.isActive, isFalse);
   });
 
+  test(
+    'clearing an annotation preview restores the configured selection fill',
+    () {
+      const base = Color(0x334488AA);
+      selection.setBaseColor(base);
+      selection.start(0, const PdfTextRange(0, 4));
+      surface.showSelectionHighlightPreview(
+        cfiRange: pdfTextCfi(0, const PdfTextRange(0, 4)),
+        color: const Color(0xFFFFDD00),
+        opacity: .82,
+      );
+      surface.clearSelectionHighlightPreview();
+      expect(selection.color, base);
+      expect(selection.isActive, isTrue);
+    },
+  );
+
   test('image-area commands are inert', () {
     surface.showImageAreaSelectionPreview(
       pageIndex: 0,

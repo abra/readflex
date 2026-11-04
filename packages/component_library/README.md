@@ -630,6 +630,14 @@ button; its timer is cancelled on disposal. Clipboard failures remain retryable.
 - Generic UI states (loading, empty, error)
 - UI-only controls with no business logic
 
+`AppTextSelectionHost` adapts an existing read-only `SelectableText` to
+`native_text_selection`. The inner widget keeps its layout, key, semantics and
+callbacks. System handles use the supplied Flutter geometry; the existing
+Flutter action toolbar remains. Editable fields retain their current keyboard
+and IME connection. See the [adapter contract](../native_text_selection/README.md)
+for platform/layout fallbacks and the distinction between channel tests and
+native gesture verification.
+
 ## What Does NOT Belong Here
 
 - Feature-specific screens, sheets, or flows

@@ -550,6 +550,8 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     });
     final surface = widget.surface;
     final theme = widget.readerTheme;
+    final selectionColors = readerTextSelectionColorsOf(context);
+    _selection.setBaseColor(selectionColors.fill);
     final pageColors = pageColorsFor(
       themed: widget.pageColors == ReaderPageColors.theme,
       background: theme.backgroundColor,
@@ -590,11 +592,16 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
               pageHeight: info.height,
               controller: controller,
               selection: _selection,
+              darkPage: pageColors?.dark ?? false,
+              handleColor: selectionColors.handle,
               layer: layer,
               highlights: _highlightsFor(page, layer, highlights),
               searchMark: mark != null && mark.page == page ? mark.range : null,
               onSelectionChanged: (range, viewport) =>
                   _onSelectionChanged(page, range, viewport),
+              onSelectionDragChanged: context
+                  .read<ReaderSelectionCubit>()
+                  .setAdjusting,
               onSelectionCleared: _onSelectionCleared,
               onHighlightPressed: _onHighlightPressed,
             );

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:component_library/component_library.dart';
@@ -12,6 +13,7 @@ import 'package:reader/src/reader_highlight_controls.dart';
 import 'package:reader/src/reader_highlight_color.dart';
 import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
+import 'package:reader/src/reader_text_selection_style.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared/shared.dart';
@@ -19,6 +21,7 @@ import 'package:shared_preferences_platform_interface/in_memory_shared_preferenc
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:pagecraft/all_formats.dart';
 import 'package:pagecraft/testing.dart';
+import 'package:pagecraft/src/formats/pdf/pdf_native_task.dart';
 
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';
@@ -81,13 +84,28 @@ void main() {
     await tester.pump();
   }
 
-  Future<void> pumpReader(WidgetTester tester) async {
+  Future<void> pumpReader(WidgetTester tester, {ThemeData? theme}) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      var drained = false;
+      final fence = runPdfDocumentTask(() async {});
+      unawaited(fence.then((_) => drained = true));
+      // Native close callbacks must finish before this fake-clock zone ends.
+      await tester.runAsync(() async {
+        for (var attempt = 0; attempt < 100 && !drained; attempt++) {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          await tester.pump();
+        }
+      });
+      expect(drained, isTrue, reason: 'PDF document disposal completed');
+    });
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.light(),
+        theme: theme ?? AppTheme.light(),
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         supportedLocales: ReadflexLocalizations.supportedLocales,
         home: ReaderScreen(
@@ -167,14 +185,16 @@ void main() {
     final gesture = await tester.startGesture(point);
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 20));
+    final selectionCubit = tester
+        .element(find.byType(FixedPagesView))
+        .read<ReaderSelectionCubit>();
+    expect(selectionCubit.state.isAdjusting, isTrue);
     await gesture.up();
     await tester.pump();
 
-    final selection = tester
-        .element(find.byType(FixedPagesView))
-        .read<ReaderSelectionCubit>()
-        .state;
+    final selection = selectionCubit.state;
     expect(selection.hasSelection, isTrue);
+    expect(selection.isAdjusting, isFalse);
     expect(selection.selectedText, 'page');
     expect(selection.contextText, 'Hello page one');
     expect(selection.markedContextText, 'Hello [[page]] one');
@@ -183,6 +203,121 @@ void main() {
     expect(selection.position!.top, greaterThan(0));
     expect(selection.position!.bottom, lessThan(0.5));
 
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  testWidgets('PDF adjustment hides actions until the final range is ready', (
+    tester,
+  ) async {
+    await pumpReader(tester);
+    const scale = 390 / 612;
+    const top = (844 - 792 * scale) / 2;
+    final word = Offset((72 + 85) * scale, top + (792 - 700 - 8) * scale);
+    await tester.longPressAt(word);
+    await tester.pumpAndSettle();
+    final overlay = tester.widget<PdfTextOverlay>(
+      find.byType(PdfTextOverlay).first,
+    );
+    final cubit = tester
+        .element(find.byType(FixedPagesView))
+        .read<ReaderSelectionCubit>();
+    expect(find.byType(ReaderHighlightControls).hitTestable(), findsOneWidget);
+
+    overlay.onSelectionDragChanged!(true);
+    await tester.pumpAndSettle();
+    expect(cubit.state.isAdjusting, isTrue);
+    expect(overlay.selection.isActive, isTrue);
+    expect(find.byType(ReaderHighlightControls).hitTestable(), findsNothing);
+
+    const range = PdfTextRange(0, 10);
+    overlay.selection.update(range);
+    overlay.onSelectionChanged!(range, const Rect.fromLTRB(.1, .2, .4, .25));
+    await tester.pumpAndSettle();
+    expect(cubit.state.selectedText, 'Hello page');
+    expect(cubit.state.isAdjusting, isTrue);
+    expect(find.byType(ReaderHighlightControls).hitTestable(), findsNothing);
+
+    overlay.onSelectionDragChanged!(false);
+    await tester.pumpAndSettle();
+    expect(cubit.state.isAdjusting, isFalse);
+    expect(cubit.state.cfiRange, pdfTextCfi(0, range));
+    expect(find.byType(ReaderHighlightControls).hitTestable(), findsOneWidget);
+    expect(highlights.addedHighlights, isEmpty);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
+  for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+    for (final brightness in Brightness.values) {
+      testWidgets('PDF uses platform selection colours $platform $brightness', (
+        tester,
+      ) async {
+        await preferences.update(
+          (prefs) =>
+              prefs.copyWith(readerPageColors: ReaderPageColors.original),
+        );
+        final theme =
+            (brightness == Brightness.light
+                    ? AppTheme.light()
+                    : AppTheme.dark())
+                .copyWith(platform: platform);
+        await pumpReader(tester, theme: theme);
+        final overlay = tester.widget<PdfTextOverlay>(
+          find.byType(PdfTextOverlay).first,
+        );
+        final context = tester.element(find.byType(PdfTextOverlay).first);
+        final colors = readerTextSelectionColorsOf(context);
+        expect(overlay.darkPage, isFalse);
+        expect(overlay.handleColor, colors.handle);
+        expect(overlay.selection.color, colors.fill);
+        expect(
+          tester.widget<FixedPagesView>(find.byType(FixedPagesView)).pageColors,
+          isNull,
+        );
+        overlay.selection.setColor(const Color(0xD1FFDD00));
+        await tester.pump();
+        expect(
+          tester
+              .widget<PdfTextOverlay>(find.byType(PdfTextOverlay).first)
+              .handleColor,
+          colors.handle,
+          reason: 'annotation previews do not recolour the selection handles',
+        );
+        overlay.selection.resetColor();
+        expect(overlay.selection.color, colors.fill);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      });
+    }
+  }
+
+  testWidgets('PDF blend policy follows rendered page colours', (tester) async {
+    await preferences.update(
+      (prefs) => prefs.copyWith(
+        readerThemeId: ReaderThemePreset.night.id,
+        readerPageColors: ReaderPageColors.theme,
+      ),
+    );
+    await pumpReader(tester);
+    expect(
+      tester.widget<PdfTextOverlay>(find.byType(PdfTextOverlay).first).darkPage,
+      isTrue,
+      reason: 'a dark PDF uses lightening even in a light application theme',
+    );
+    await tester.runAsync(
+      () => preferences.update(
+        (prefs) => prefs.copyWith(readerPageColors: ReaderPageColors.original),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<PdfTextOverlay>(find.byType(PdfTextOverlay).first).darkPage,
+      isFalse,
+      reason: 'original PDF colours keep the light-page blend policy',
+    );
+    expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
   });
@@ -253,7 +388,10 @@ void main() {
     final selectionState = tester
         .widget<PdfTextOverlay>(find.byType(PdfTextOverlay).first)
         .selection;
-    expect(selectionState.color, PdfTextSelection.defaultColor);
+    final baseFill = readerTextSelectionColorsOf(
+      tester.element(find.byType(PdfTextOverlay).first),
+    ).fill;
+    expect(selectionState.color, baseFill);
     expect(highlights.addedHighlights, isEmpty);
     expect(tester.takeException(), isNull);
 
@@ -265,7 +403,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       selectionState.color,
-      PdfTextSelection.defaultColor,
+      baseFill,
       reason: 'a theme change does not activate an annotation preview',
     );
 
@@ -302,7 +440,7 @@ void main() {
         .read<ReaderSelectionCubit>()
         .state;
     expect(selection.hasSelection, isFalse);
-    expect(selectionState.color, PdfTextSelection.defaultColor);
+    expect(selectionState.color, baseFill);
     expect(find.byType(ReaderHighlightControls), findsNothing);
     expect(tester.takeException(), isNull);
 

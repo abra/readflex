@@ -234,7 +234,7 @@ class ReaderPdfSurface implements ReaderSurface {
   void clearSelectionHighlightPreview() {
     final selection = _session?.selection;
     if (selection == null) return;
-    selection.setColor(PdfTextSelection.defaultColor);
+    selection.resetColor();
   }
 
   @override

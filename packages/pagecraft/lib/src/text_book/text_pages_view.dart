@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
     show SelectionEdgeUpdateEvent, SelectionHandler;
 import 'package:flutter/scheduler.dart';
+import 'package:native_text_selection/native_text_selection.dart';
 
 import '../document/text_point.dart';
 import '../layout/book_image_cache.dart';
@@ -17,6 +18,7 @@ import '../page_turn/page_turn_frame.dart';
 import '../page_turn/page_turn_layer.dart';
 import 'text_book_layout.dart';
 import 'text_page_geometry.dart';
+import 'text_native_selection.dart';
 import 'scroller_gestures.dart';
 import 'text_pages_controller.dart';
 import 'text_selection_details.dart';
@@ -57,8 +59,8 @@ class TextPagesSelection {
 /// Taps go to a link under them ([onLinkTap]), then a highlight
 /// ([onHighlightTap]), then [onTap] as fractions of the view, which the
 /// reader maps to its tap zones. With [selectable], the spread shown is a
-/// selection area with Flutter's adaptive handles, magnifier and
-/// [contextMenuBuilder].
+/// selection area. Native iOS/Android controls adjust its geometry when the
+/// platform adapter accepts it; other hosts retain Flutter controls.
 ///
 /// A selection follows the reader through the section, as it did in the
 /// WebView reader: a turn by one spread (a swipe, the controller, or a
@@ -112,10 +114,12 @@ class TextPagesView extends StatefulWidget {
   final TextHighlightsOf? highlightsOf;
   final bool selectable;
 
-  /// Flutter's platform-adaptive selection controls when null.
+  /// Controls for the Flutter fallback; platform-adaptive when null.
   final TextSelectionControls? selectionControls;
 
   /// Flutter's adaptive toolbar when null.
+  /// Native-mode custom actions dismiss it with
+  /// [ContextMenuController.removeAny] or clear the selection.
   final SelectableRegionContextMenuBuilder? contextMenuBuilder;
   final ValueChanged<TextPagesSelection?>? onSelectionChanged;
 
@@ -202,11 +206,23 @@ class _TextPagesViewState extends State<TextPagesView>
   /// geometry changes whenever the selection does.
   SelectionHandler? _region;
 
+  late final _nativeSelection = TextNativeSelectionController(
+    pages: () => _pages,
+    viewport: () => context,
+    region: () => _region,
+    selectionState: () => _selectableRegion,
+    contextMenuBuilder: () => widget.contextMenuBuilder,
+    onChanged: _syncSelection,
+    onClear: _clearSelection,
+  );
+  bool _nativeAdjusting = false;
+
   TextPagesController get _controller => widget.controller;
 
   @override
   void initState() {
     super.initState();
+    _nativeSelection.addListener(_onNativeChanged);
     _controller.addListener(_onController);
     _turn
       ..addListener(() => setState(() => _offset = _turn.value))
@@ -271,6 +287,7 @@ class _TextPagesViewState extends State<TextPagesView>
 
   @override
   void dispose() {
+    _nativeSelection.dispose();
     _controller.removeListener(_onController);
     _setRegion(null);
     _tableDrag.dispose();
@@ -378,7 +395,9 @@ class _TextPagesViewState extends State<TextPagesView>
   }
 
   void _onRegionChanged() {
-    if (!mounted || _carryPending || _selecting) return;
+    if (!mounted || _carryPending || _selecting || _nativeSelection.selecting) {
+      return;
+    }
     if (SchedulerBinding.instance.schedulerPhase ==
         SchedulerPhase.persistentCallbacks) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _onRegionChanged());
@@ -393,6 +412,16 @@ class _TextPagesViewState extends State<TextPagesView>
     widget.onSelectionAdjusting?.call(value);
   }
 
+  void _onNativeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onNativeAdjusting(bool value) {
+    _nativeSelection.setAdjusting(value);
+    _nativeAdjusting = value;
+    _setAdjusting(value);
+  }
+
   SelectableRegionState? get _selectableRegion =>
       _selectionKey.currentState?.selectableRegion;
 
@@ -404,6 +433,7 @@ class _TextPagesViewState extends State<TextPagesView>
     _selectionControlsHidden = false;
     _onSpread = null;
     _selectableRegion?.clearSelection();
+    _nativeSelection.refresh();
     _setAdjusting(false);
     if (had) widget.onSelectionChanged?.call(null);
   }
@@ -604,13 +634,14 @@ class _TextPagesViewState extends State<TextPagesView>
     }
     // Selected again under the finger, as a long press does.
     if (onSpread != null) _droppedUnderFinger = false;
+    _nativeSelection.refresh(deferred: _pointers > 0 || _carryPending);
     if (onSpread?.range == _onSpread) return;
     _onSpread = onSpread?.range;
     final selection = onSpread == null ? null : _withCarry(onSpread);
     if (selection == null) _carry = null;
     _selection = selection;
     widget.onSelectionChanged?.call(selection);
-    _setAdjusting(false);
+    if (!_nativeAdjusting) _setAdjusting(false);
   }
 
   /// [onSpread] with the part the reader turned away from, while the
@@ -676,7 +707,10 @@ class _TextPagesViewState extends State<TextPagesView>
   void _onPointerUp(PointerEvent event) {
     if (_pointers > 0) _pointers--;
     // After the gestures this pointer ends have had their say.
-    if (_pointers == 0) scheduleMicrotask(_settleDroppedSelection);
+    if (_pointers == 0) {
+      scheduleMicrotask(_settleDroppedSelection);
+      _nativeSelection.refresh();
+    }
   }
 
   /// No gesture of this view kept the selection the area dropped: it is
@@ -922,6 +956,9 @@ class _TextPagesViewState extends State<TextPagesView>
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       _scheduleTracking();
+      if (_hasSelection) {
+        _nativeSelection.refresh(deferred: _pointers > 0 || _carryPending);
+      }
       final size = constraints.biggest;
       if (size != _viewport && size.isFinite && !size.isEmpty) {
         _viewport = size;
@@ -1031,15 +1068,37 @@ class _TextPagesViewState extends State<TextPagesView>
         );
       }
       if (widget.selectable) {
+        final nativeActive = _nativeSelection.active;
         pages = SelectionArea(
           key: _selectionKey,
-          selectionControls: widget.selectionControls,
-          contextMenuBuilder:
-              widget.contextMenuBuilder ??
-              (context, state) => AdaptiveTextSelectionToolbar.selectableRegion(
-                selectableRegionState: state,
-              ),
+          selectionControls: nativeActive
+              ? emptyTextSelectionControls
+              : widget.selectionControls,
+          magnifierConfiguration: nativeActive
+              ? TextMagnifierConfiguration.disabled
+              : null,
+          contextMenuBuilder: nativeActive
+              ? (context, state) => const SizedBox.shrink()
+              : widget.contextMenuBuilder ??
+                    (context, state) =>
+                        AdaptiveTextSelectionToolbar.selectableRegion(
+                          selectableRegionState: state,
+                        ),
           child: _RegionProbe(onRegion: _setRegion, child: pages),
+        );
+        pages = DefaultSelectionStyle(
+          selectionColor: nativeActive
+              ? Colors.transparent
+              : DefaultSelectionStyle.of(context).selectionColor,
+          child: pages,
+        );
+        pages = NativeSelectionSurface(
+          snapshot: _nativeSelection.snapshot,
+          onSelectionChanged: _nativeSelection.setSelection,
+          onAdjusting: _onNativeAdjusting,
+          onActiveChanged: _nativeSelection.setActive,
+          enabled: !_dragging && !_committing && !_carryPending && _offset == 0,
+          child: pages,
         );
       }
       return ColoredBox(

@@ -507,11 +507,13 @@ class _SentenceSection extends StatelessWidget {
             ),
             if (translation != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              SelectableText(
-                translation,
-                key: const ValueKey('translation-sentence-result'),
-                textDirection: translationTextDirection(translation),
-                style: context.text.bodyMedium,
+              AppTextSelectionHost(
+                child: SelectableText(
+                  translation,
+                  key: const ValueKey('translation-sentence-result'),
+                  textDirection: translationTextDirection(translation),
+                  style: context.text.bodyMedium,
+                ),
               ),
             ],
           ],
@@ -557,14 +559,16 @@ class _TranslationAnswer extends StatelessWidget {
     final expression = this.expression;
     final source = expression == null
         ? null
-        : SelectableText(
-            expression,
-            key: const ValueKey('translation-contextual-expression'),
-            textDirection: translationTextDirection(expression),
-            // Regular weight: the section title above is the bold line.
-            style: context.text.titleMedium.copyWith(
-              letterSpacing: 0,
-              fontWeight: FontWeight.w400,
+        : AppTextSelectionHost(
+            child: SelectableText(
+              expression,
+              key: const ValueKey('translation-contextual-expression'),
+              textDirection: translationTextDirection(expression),
+              // Regular weight: the section title above is the bold line.
+              style: context.text.titleMedium.copyWith(
+                letterSpacing: 0,
+                fontWeight: FontWeight.w400,
+              ),
             ),
           );
     return LayoutBuilder(
@@ -610,11 +614,13 @@ class _TranslationAnswer extends StatelessWidget {
               failureLabel: context.l10n.commonCopyFailed,
             ),
           ),
-          child: SelectableText(
-            text,
-            key: ValueKey('translation-$id-result'),
-            textDirection: direction,
-            style: style,
+          child: AppTextSelectionHost(
+            child: SelectableText(
+              text,
+              key: ValueKey('translation-$id-result'),
+              textDirection: direction,
+              style: style,
+            ),
           ),
         );
       },

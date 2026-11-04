@@ -24,8 +24,8 @@ typedef ImageKeyOf = String? Function(String src);
 /// inside [padding] in its own layer, so a page turn moves it without
 /// repainting. Images come from [images] and repaint the page when they
 /// are decoded. Inside a `SelectionArea` or `SelectableRegion` its text is
-/// selectable with the platform's gestures, handles and magnifier: each
-/// paragraph on the page registers as a [PageParagraphSelectable].
+/// selectable: each paragraph registers as a [PageParagraphSelectable], which
+/// preserves source offsets for Flutter and the native selection adapter.
 /// [highlights] are tinted under the text; they are ranges of
 /// [document], the section's document, and need it.
 class TextColumnPage extends StatefulWidget {
@@ -443,6 +443,10 @@ class RenderTextColumnPage extends RenderBox {
 
   @visibleForTesting
   List<PageParagraphSelectable> get debugSelectables => _selectables;
+
+  /// Paragraph fragments used by the platform selection adapter. Their
+  /// offsets stay in the laid-out paragraph, including source-map markers.
+  Iterable<PageParagraphSelectable> get selectionFragments => _selectables;
 
   /// The box around the selection's highlighted lines on this page, in
   /// the page's coordinates, or null: where a selection menu goes.

@@ -6,6 +6,7 @@ import 'package:pdfium_dart/pdfium_dart.dart' as pdfium_dart;
 import 'package:pdfrx_engine/pdfrx_engine.dart';
 
 import '../../pagecraft_exception.dart';
+import 'pdf_native_task.dart';
 
 /// A PDF over pdfium (`pdfrx_engine`): the pages with their sizes, the
 /// outline and the Info dictionary. The counterpart of `pdf.js` in the
@@ -70,13 +71,14 @@ class PdfBook {
         author: author,
       );
     } catch (_) {
-      await document.dispose();
+      await runPdfDocumentTask(document.dispose);
       rethrow;
     }
   }
 
   final PdfDocument _document;
   bool _closed = false;
+  Future<void>? _closeFuture;
 
   final String path;
 
@@ -101,10 +103,11 @@ class PdfBook {
   }
 
   /// Releases the document; safe to call more than once.
-  Future<void> close() async {
-    if (_closed) return;
+  Future<void> close() {
+    final pending = _closeFuture;
+    if (pending != null) return pending;
     _closed = true;
-    await _document.dispose();
+    return _closeFuture = runPdfDocumentTask(_document.dispose);
   }
 }
 
@@ -189,7 +192,7 @@ pdfium_dart.PDFium get _pdfium =>
 /// engine's worker is paused for the call, as pdfium allows one caller at
 /// a time; the text comes back as UTF-16LE with a terminator.
 Future<String?> _metaText(PdfDocument document, String tag) {
-  return document.useNativeDocumentHandle((handle) {
+  return runPdfNativeDocumentTask(document, (handle) {
     return using((arena) {
       final pdfium = _pdfium;
       final doc = pdfium_dart.FPDF_DOCUMENT.fromAddress(handle);

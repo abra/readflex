@@ -696,6 +696,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  native_text_selection:
+    dependency: "direct dev"
+    description:
+      path: "packages/native_text_selection"
+      relative: true
+    source: path
+    version: "0.1.0"
   native_toolchain_c:
     dependency: transitive
     description:
@@ -1507,4 +1514,4 @@ packages:
     version: "3.1.3"
 sdks:
   dart: ">=3.12.0 <4.0.0"
-  flutter: ">=3.41.0"
+  flutter: ">=3.44.0"

@@ -114,6 +114,8 @@ make test-device DEVICE=<device-id>
 make test-phone DEVICE=<phone-id>
 # Also collect Dart line coverage after the actions:
 make test-device DEVICE=<device-id> COVERAGE=1
+# Native selection activation, custom Reader menu and exact Cyrillic PDF CFIs:
+make test-native-selection DEVICE=<device-id>
 ```
 
 This uses a debug test build. iOS needs the project's supported Xcode/runtime
@@ -224,6 +226,8 @@ same as for `test-device` above.
 | Native persistence | Explicit highlight writes text/CFI to real repository, renders nonzero geometry after reopen, and opens by tapping its Highlights row without copy/arrow controls | `integration_test/reader_flows_test.dart` |
 | Native book import | EPUB, FB2 and MOBI built in the test import through `pagecraft` on the device: title and author from the book, the cover decoded by the platform codecs and scaled to 480×720, each import under 5 s, all three shown in the Library | `integration_test/native_import_test.dart` |
 | Native DjVu | Original three-page fixture imports through the production helper with document metadata and a first-page cover; native DjVu pages render, hidden-text search opens its result, Pages requests previews, a page bookmark persists, and reopening restores the saved page | `integration_test/djvu_reader_test.dart`; reader `reader_djvu_surface_test.dart`, `reader_screen_djvu_test.dart` |
+| PDF selection | Both adaptive 48dp handles adjust exact insertion boundaries after a held grip and short drag, at page fit and zoom; the loupe follows the active boundary and actions hide while adjusting. Dark and original pages retain readable ink; crossings, Unicode boundaries and cancellation have focused coverage | `integration_test/pdf_reader_test.dart`; pagecraft `pdf_selection_drag_test.dart`, `pdf_selection_geometry_test.dart`; reader `reader_screen_pdf_test.dart` |
+| PDF font metrics | An original Cyrillic scan/text fixture reproduces collapsed glyph bounds; native font cells cover the visible text and preserve anchors. Tests include crop origin, rotation, concurrent page loads and safe close | `integration_test/pdf_reader_test.dart`; pagecraft `pdf_text_metrics_test.dart`, `pdf_native_task_test.dart` |
 | Initial position persistence | A reopened book opens on its saved page and closing it keeps the saved position | reader `reader_screen_text_test.dart` |
 | Active chapter contrast | Actual selected TOC tile uses paired foreground/background colors, including alpha compositing; light/dark, large text and phone RTL snapshots | `reader_contents_golden_test.dart` |
 | Contents tab layout | Tabs fill the sheet with equal widths when possible; otherwise each icon and label keeps its measured width and shares the spare space equally. Horizontal scrolling and edge fades appear only when the total width overflows, preserving the 8dp bar inset, 16dp scrolling gutter, large text and phone RTL | reader `reader_contents_tab_bar_test.dart`, `reader_toc_drawer_test.dart`; `reader_contents_golden_test.dart`, `pdf_contents_golden_test.dart` |
@@ -394,7 +398,10 @@ simulator/emulator rather than a device holding valuable app data.
 ## Checks Still Requiring Native or Live Environments
 
 - Native selection handles, edge dragging and iOS system context menus. A
-  synthesized long-press drag is not a simulation of those OS controls. A
+  synthesized long-press drag is not a simulation of those OS controls.
+  The [native adapter's UIKit harness](../../packages/native_text_selection/README.md)
+  exercises actual system handle gestures; the Reader integration test checks
+  activation, exact source mapping and its own menu separately. A
   selection carried across a page turn is checked with taps and swipes
   (pagecraft `text_pages_view_test`, reader `reader_screen_text_test`,
   `integration_test/native_text_reader_test.dart`); dragging a selection handle on a device

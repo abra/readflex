@@ -319,6 +319,7 @@ remain for migration compatibility only (last revision `189e2cc1`).
 | `contextual_translation_service` | Contextual translation request/result contracts, remote client, cache, and ML Kit offline fallback coordinator. | Used by the `translate` feature. |
 | `dictionary_service` | System definition UI bridge contract and typed HTTP client/models for monolingual dictionary lookup. | Used by the `dictionary` feature; native implementations live in the app runners. |
 | `monitoring` | Logger, log observers, analytics/error reporter contracts, GlitchTip reporting, and no-op fallbacks. | GlitchTip is active when configured; analytics remains a no-op. |
+| `native_text_selection` | System selection controls over supplied Flutter text geometry. | Used by `pagecraft` and `component_library`; no feature/domain dependencies. UIKit on iOS 17+, system `TextView` on Android, with Flutter fallback for unsupported layouts. Application menus stay in Flutter; editable fields keep their existing IME connection. See [the package README](packages/native_text_selection/README.md). |
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, Practice, and app composition. Practice limits (`practiceNewCardsPerDay`, `practiceReviewHighlights`, `practiceDesiredRetention`) are edited in the Practice settings sheet. |
 | `review_scheduler` | FSRS-6 over the vendored `fsrs`: computes the next review state and log for a rating at the reader's desired retention, previews intervals. Study days start at 04:00; day-level intervals are at least a day, ordered by rating and capped at 365; one learning and one relearning step of 10 min because the step is not persisted; fuzzing off so previews match. Held to py-fsrs by a 118-history reference test. | Used by `fsrs_repository` only. |
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
@@ -552,10 +553,15 @@ whole page at the density its visible part is shown at, again when a crop
 arrives after the page. Comic pages are decoded from the archive on demand;
 PDF pages, tiles and previews are rendered by pdfium.
 
-Text selection in reflowable books and articles is Flutter's `SelectionArea`
-over each page (or the scrolled slices of an article) with Flutter's adaptive
-handles and magnifier. PDF uses Pagecraft's `PdfTextOverlay` with its own handles
-and selection painter; DjVu uses `DjvuTextOverlay` over stored word zones.
+Text selection in reflowable books and articles keeps Flutter's `SelectionArea`
+and Pagecraft's exact source mapping. After the initial long press releases,
+`native_text_selection` supplies system handles and selection interactions on
+supported iOS/Android hosts. PDF and DjVu supply their existing text-layer
+geometry to the same adapter; DjVu retains source-provided word precision.
+The Reader's translation, dictionary and highlight action menu remains Flutter.
+Unsupported native geometry retains the existing Flutter selection. Read-only
+text in Dictionary, Translation and Practice uses `AppTextSelectionHost`;
+editable fields preserve their existing Flutter input/IME contract.
 Reflowable selection starts with a word on a
 long press, word by word on a drag. `TextSelectionDetails` (books) and
 `ArticleSelection` (articles) read it into the context panel's payload: the

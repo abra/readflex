@@ -80,19 +80,23 @@ class PracticeWordSheet extends StatelessWidget {
             if (!metadata.isEmpty) metadata,
             _PracticeWordDetailSection(
               title: l10n.translationInContext,
-              child: SelectableText(
-                entry.translation,
-                textDirection: _direction(entry.translation),
-                style: text.titleMedium.copyWith(letterSpacing: 0),
+              child: AppTextSelectionHost(
+                child: SelectableText(
+                  entry.translation,
+                  textDirection: _direction(entry.translation),
+                  style: text.titleMedium.copyWith(letterSpacing: 0),
+                ),
               ),
             ),
             if (base != null && base.isNotEmpty)
               _PracticeWordDetailSection(
                 title: l10n.translationWordMeaning,
-                child: SelectableText(
-                  base,
-                  textDirection: _direction(base),
-                  style: text.bodyLarge,
+                child: AppTextSelectionHost(
+                  child: SelectableText(
+                    base,
+                    textDirection: _direction(base),
+                    style: text.bodyLarge,
+                  ),
                 ),
               ),
             if (sentence != null && sentence.isNotEmpty)
@@ -114,10 +118,12 @@ class PracticeWordSheet extends StatelessWidget {
                     if (sentenceTranslation != null &&
                         sentenceTranslation.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.sm),
-                      SelectableText(
-                        sentenceTranslation,
-                        textDirection: _direction(sentenceTranslation),
-                        style: text.bodyMedium,
+                      AppTextSelectionHost(
+                        child: SelectableText(
+                          sentenceTranslation,
+                          textDirection: _direction(sentenceTranslation),
+                          style: text.bodyMedium,
+                        ),
                       ),
                     ],
                   ],

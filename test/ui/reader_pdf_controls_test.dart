@@ -108,6 +108,6 @@ void main() {
     );
     // The reader saves its place after a pause.
     await tester.pump(const Duration(seconds: 1));
-    await tester.pumpWidget(const SizedBox.shrink());
+    await unmountUi(tester);
   });
 }

@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent, SelectedContent;
+import 'package:flutter/rendering.dart'
+    show ScrollCacheExtent, SelectedContent, SelectionHandler;
 import 'package:flutter/scheduler.dart';
+import 'package:native_text_selection/native_text_selection.dart';
 
 import '../document/text_point.dart';
 import '../layout/column_pages.dart';
@@ -12,14 +14,16 @@ import 'text_pages_view.dart'
     show TextHighlightTapCallback, TextLinkTapCallback, TextPagesSelection;
 import 'scroller_gestures.dart';
 import 'text_scroll_controller.dart';
+import 'text_native_selection.dart';
 
 /// A text that scrolls (an article): [controller]'s column shown in
 /// slices the height of the view as they scroll into it, with its
 /// highlights. Taps go to a link under them ([onLinkTap]), then a
 /// highlight ([onHighlightTap]), then [onTap] as fractions of the view;
 /// a tap while text is selected clears the selection. With [selectable]
-/// the text is a selection area across the slices, with Flutter's adaptive
-/// handles, magnifier and [contextMenuBuilder]. A table wider than the
+/// the text is a selection area across the slices. iOS and Android use native
+/// handles and magnification when the platform adapter accepts the geometry;
+/// other hosts retain Flutter controls. A table wider than the
 /// column scrolls sideways under a horizontal drag that starts on it.
 ///
 /// [onHighlightRects] hears where highlight [trackedHighlight] is drawn
@@ -37,6 +41,7 @@ class TextScrollView extends StatefulWidget {
     this.selectionControls,
     this.contextMenuBuilder,
     this.onSelectionChanged,
+    this.onSelectionAdjusting,
     this.trackedHighlight,
     this.onHighlightRects,
   });
@@ -49,12 +54,15 @@ class TextScrollView extends StatefulWidget {
   final TextHighlightTapCallback? onHighlightTap;
   final bool selectable;
 
-  /// Flutter's platform-adaptive selection controls when null.
+  /// Controls for the Flutter fallback; platform-adaptive when null.
   final TextSelectionControls? selectionControls;
 
   /// Flutter's adaptive toolbar when null.
+  /// Native-mode custom actions dismiss it with
+  /// [ContextMenuController.removeAny] or clear the selection.
   final SelectableRegionContextMenuBuilder? contextMenuBuilder;
   final ValueChanged<TextPagesSelection?>? onSelectionChanged;
+  final ValueChanged<bool>? onSelectionAdjusting;
   final String? trackedHighlight;
   final ValueChanged<List<Rect>>? onHighlightRects;
 
@@ -72,6 +80,18 @@ class _TextScrollViewState extends State<TextScrollView>
   final _slices = <int, GlobalKey>{};
   bool _hasSelection = false;
   int _selectionClears = 0;
+  int _pointers = 0;
+  SelectionHandler? _region;
+  late final _nativeSelection = TextNativeSelectionController(
+    pages: () => _pages,
+    viewport: () => context,
+    region: () => _region,
+    selectionState: () => _selectionKey.currentState?.selectableRegion,
+    contextMenuBuilder: () => widget.contextMenuBuilder,
+    onChanged: () => _onSelectionChanged(_region?.getSelectedContent()),
+    onClear: () =>
+        _selectionKey.currentState?.selectableRegion.clearSelection(),
+  );
 
   /// What the slices were built for: a new layout, more of it, or a new
   /// view rebuilds them; a position report alone does not.
@@ -86,9 +106,10 @@ class _TextScrollViewState extends State<TextScrollView>
   @override
   void initState() {
     super.initState();
+    _nativeSelection.addListener(_onNativeChanged);
     _selectionClears = _controller.selectionClears;
     _controller.addListener(_onController);
-    _controller.scroll.addListener(_scheduleTracking);
+    _controller.scroll.addListener(_onScroll);
   }
 
   @override
@@ -96,9 +117,9 @@ class _TextScrollViewState extends State<TextScrollView>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.controller != widget.controller) {
       oldWidget.controller.removeListener(_onController);
-      oldWidget.controller.scroll.removeListener(_scheduleTracking);
+      oldWidget.controller.scroll.removeListener(_onScroll);
       widget.controller.addListener(_onController);
-      widget.controller.scroll.addListener(_scheduleTracking);
+      widget.controller.scroll.addListener(_onScroll);
     }
     if (oldWidget.trackedHighlight != widget.trackedHighlight ||
         !identical(oldWidget.highlights, widget.highlights)) {
@@ -108,10 +129,32 @@ class _TextScrollViewState extends State<TextScrollView>
 
   @override
   void dispose() {
+    _nativeSelection.dispose();
     _controller.removeListener(_onController);
-    _controller.scroll.removeListener(_scheduleTracking);
+    _controller.scroll.removeListener(_onScroll);
     _tableDrag.dispose();
     super.dispose();
+  }
+
+  void _onNativeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onNativeAdjusting(bool value) {
+    _nativeSelection.setAdjusting(value);
+    widget.onSelectionAdjusting?.call(value);
+  }
+
+  void _onScroll() {
+    _scheduleTracking();
+    _nativeSelection.refresh(deferred: _pointers > 0);
+  }
+
+  void _onPointerDown(PointerDownEvent event) => _pointers++;
+
+  void _onPointerUp(PointerEvent event) {
+    if (_pointers > 0) _pointers--;
+    if (_pointers == 0) _nativeSelection.refresh();
   }
 
   /// Reports where the tracked highlight is after the next frame.
@@ -163,6 +206,7 @@ class _TextScrollViewState extends State<TextScrollView>
       _controller.viewport,
     );
     if (built != _built) setState(() {});
+    _nativeSelection.refresh(deferred: _pointers > 0);
     _scheduleTracking();
   }
 
@@ -235,6 +279,7 @@ class _TextScrollViewState extends State<TextScrollView>
   }
 
   void _onSelectionChanged(SelectedContent? content) {
+    if (_nativeSelection.selecting) return;
     final section = _controller.section;
     TextPagesSelection? selection;
     if (content != null && section != null) {
@@ -273,6 +318,7 @@ class _TextScrollViewState extends State<TextScrollView>
       }
     }
     _hasSelection = selection != null;
+    _nativeSelection.refresh(deferred: _pointers > 0);
     widget.onSelectionChanged?.call(selection);
   }
 
@@ -284,6 +330,7 @@ class _TextScrollViewState extends State<TextScrollView>
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
+      if (_hasSelection) _nativeSelection.refresh(deferred: _pointers > 0);
       final size = constraints.biggest;
       if (size.isFinite && !size.isEmpty && size != _controller.viewport) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -380,15 +427,45 @@ class _TextScrollViewState extends State<TextScrollView>
         ),
       );
       if (widget.selectable) {
+        final nativeActive = _nativeSelection.active;
         child = SelectionArea(
           key: _selectionKey,
-          selectionControls: widget.selectionControls,
-          contextMenuBuilder:
-              widget.contextMenuBuilder ??
-              (context, state) => AdaptiveTextSelectionToolbar.selectableRegion(
-                selectableRegionState: state,
-              ),
+          selectionControls: nativeActive
+              ? emptyTextSelectionControls
+              : widget.selectionControls,
+          magnifierConfiguration: nativeActive
+              ? TextMagnifierConfiguration.disabled
+              : null,
+          contextMenuBuilder: nativeActive
+              ? (context, state) => const SizedBox.shrink()
+              : widget.contextMenuBuilder ??
+                    (context, state) =>
+                        AdaptiveTextSelectionToolbar.selectableRegion(
+                          selectableRegionState: state,
+                        ),
           onSelectionChanged: _onSelectionChanged,
+          child: TextSelectionRegionProbe(
+            onRegion: (region) => _region = region,
+            child: child,
+          ),
+        );
+        child = DefaultSelectionStyle(
+          selectionColor: nativeActive
+              ? Colors.transparent
+              : DefaultSelectionStyle.of(context).selectionColor,
+          child: child,
+        );
+        child = Listener(
+          onPointerDown: _onPointerDown,
+          onPointerUp: _onPointerUp,
+          onPointerCancel: _onPointerUp,
+          child: child,
+        );
+        child = NativeSelectionSurface(
+          snapshot: _nativeSelection.snapshot,
+          onSelectionChanged: _nativeSelection.setSelection,
+          onAdjusting: _onNativeAdjusting,
+          onActiveChanged: _nativeSelection.setActive,
           child: child,
         );
       }

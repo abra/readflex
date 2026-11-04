@@ -2,6 +2,7 @@
 .PHONY: generate-pagecraft-mobi-native analyze-pagecraft-mobi-rust test-pagecraft-mobi-rust
 .PHONY: test-tools
 .PHONY: test-phone test-tablet test-tablet-layout
+.PHONY: test-native-selection
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
@@ -16,6 +17,7 @@ PACKAGES = \
 	packages/shared \
 	packages/readflex_localizations \
 	packages/monitoring \
+	packages/native_text_selection \
 	packages/component_library \
 	packages/local_storage \
 	packages/book_repository \
@@ -191,6 +193,11 @@ update-goldens:
 test-device:
 	@test -n "$(DEVICE)" || { echo "Specify DEVICE from '$(FLUTTER) devices'."; exit 2; }
 	READFLEX_NATIVE_DEVICE="$(DEVICE)" READFLEX_NATIVE_COVERAGE="$(COVERAGE)" $(FLUTTER) drive --driver=test_driver/ui_driver.dart --target=integration_test/reader_flows_test.dart -d "$(DEVICE)"
+
+## Check native selection activation and our menus: DEVICE=<iOS17+/Android-id>
+test-native-selection:
+	@test -n "$(DEVICE)" || { echo "Specify DEVICE from '$(FLUTTER) devices'."; exit 2; }
+	READFLEX_NATIVE_DEVICE="$(DEVICE)" $(FLUTTER) drive --driver=test_driver/ui_driver.dart --target=integration_test/native_selection_controls_test.dart -d "$(DEVICE)"
 
 ## Run native phone Library/reader/Practice flows: DEVICE=<phone-id>
 test-phone:

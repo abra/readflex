@@ -464,7 +464,12 @@ class _DictionaryLemma extends StatelessWidget {
               ),
             ),
           ],
-          Semantics(header: true, child: SelectableText(lemma, style: style)),
+          Semantics(
+            header: true,
+            child: AppTextSelectionHost(
+              child: SelectableText(lemma, style: style),
+            ),
+          ),
         ],
       ),
     );
@@ -504,7 +509,12 @@ class _DefinitionView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SelectableText(definition.text, style: context.text.bodyLarge),
+                AppTextSelectionHost(
+                  child: SelectableText(
+                    definition.text,
+                    style: context.text.bodyLarge,
+                  ),
+                ),
                 for (final example in definition.examples) ...[
                   const SizedBox(height: AppSpacing.xs),
                   Text(

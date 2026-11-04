@@ -88,6 +88,8 @@ dev_dependencies:
     sdk: flutter
   pagecraft:
     path: packages/pagecraft
+  native_text_selection:
+    path: packages/native_text_selection
 
   bloc_test: ^10.0.0
   coverage: ^1.15.0

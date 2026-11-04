@@ -11,7 +11,8 @@ import 'pdf_text_layer.dart';
 class PdfTextSelection extends ChangeNotifier {
   int? _page;
   PdfTextRange? _range;
-  Color _color = defaultColor;
+  Color _baseColor = defaultColor;
+  Color? _previewColor;
 
   /// The selection tint before the app styles it: a translucent blue, as
   /// native selections look.
@@ -21,7 +22,8 @@ class PdfTextSelection extends ChangeNotifier {
   PdfTextRange? get range => _range;
   bool get isActive => _range != null;
 
-  Color get color => _color;
+  Color get color => _previewColor ?? _baseColor;
+  Color get baseColor => _baseColor;
 
   void start(int page, PdfTextRange range) {
     _page = page;
@@ -44,8 +46,22 @@ class PdfTextSelection extends ChangeNotifier {
 
   /// The colour the selection is drawn with; alpha included.
   void setColor(Color color) {
-    if (color == _color) return;
-    _color = color;
+    if (color == _previewColor) return;
+    _previewColor = color;
+    notifyListeners();
+  }
+
+  /// The live selection tint, independent of a temporary highlight preview.
+  void setBaseColor(Color color) {
+    if (color == _baseColor) return;
+    _baseColor = color;
+    if (_previewColor == null) notifyListeners();
+  }
+
+  /// Restores the configured live tint after a highlight preview.
+  void resetColor() {
+    if (_previewColor == null) return;
+    _previewColor = null;
     notifyListeners();
   }
 }

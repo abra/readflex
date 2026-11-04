@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pagecraft/pagecraft.dart' show FixedPagePainter;
+import 'package:pagecraft/src/formats/pdf/pdf_native_task.dart';
 
 /// Bounded condition wait, including real SQLite/platform work outside the
 /// widget test's fake clock. Avoid pumpAndSettle while a spinner is active.
@@ -61,4 +64,13 @@ Future<void> dismissSheet(WidgetTester tester) async {
 Future<void> unmountUi(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
+  var drained = false;
+  unawaited(runPdfDocumentTask(() async {}).then((_) => drained = true));
+  await tester.pump();
+  // Finish native close callbacks before leaving this test's fake-clock zone.
+  await waitForUi(
+    tester,
+    () => drained,
+    description: 'PDF document cleanup',
+  );
 }

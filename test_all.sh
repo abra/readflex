@@ -69,6 +69,7 @@ run "domain_models"                "$FLUTTER test test/" "$SCRIPT_DIR/packages/d
 run "shared"                       "$FLUTTER test test/" "$SCRIPT_DIR/packages/shared"
 run "readflex_localizations"       "$FLUTTER test test/" "$SCRIPT_DIR/packages/readflex_localizations"
 run "monitoring"                   "$FLUTTER test test/" "$SCRIPT_DIR/packages/monitoring"
+run "native_text_selection"        "$FLUTTER test test/" "$SCRIPT_DIR/packages/native_text_selection"
 run "component_library"            "$FLUTTER test test/" "$SCRIPT_DIR/packages/component_library"
 run "local_storage"                "$FLUTTER test test/" "$SCRIPT_DIR/packages/local_storage"
 run "book_repository"              "$FLUTTER test test/" "$SCRIPT_DIR/packages/book_repository"

@@ -600,6 +600,10 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
           searchMark: mark != null && mark.page == page ? mark.range : null,
           onSelectionChanged: (range, viewport) =>
               _onSelectionChanged(page, range, viewport),
+          onSelectionDragChanged: context
+              .read<ReaderSelectionCubit>()
+              .setAdjusting,
+          handleColor: readerTextSelectionColorsOf(context).handle,
           onSelectionCleared: _onSelectionCleared,
           onHighlightPressed: _onHighlightPressed,
         );

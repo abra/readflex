@@ -15,6 +15,9 @@ class DjvuTextRange {
       other is DjvuTextRange && start == other.start && end == other.end;
   @override
   int get hashCode => Object.hash(start, end);
+
+  @override
+  String toString() => 'DjvuTextRange($start, $end)';
 }
 
 /// DjVu hidden text supplies word zones; character precision is not invented.

@@ -1,9 +1,12 @@
+import 'package:characters/characters.dart';
 import 'package:meta/meta.dart';
 import 'package:pdfrx_engine/pdfrx_engine.dart'
     show PdfPageBaseExtensions, PdfRect;
 
 import '../../search/text_search.dart';
+import '../../text/text_direction.dart';
 import 'pdf_book.dart';
+import 'pdf_text_metrics.dart';
 
 /// A rectangle on a displayed PDF page, in points with the origin at the
 /// top-left corner (the page's `/Rotate` already applied), so it scales
@@ -81,6 +84,21 @@ class PdfTextLine {
   final PdfBox box;
 }
 
+/// A text insertion edge and its visual line, in displayed page points.
+@immutable
+class PdfTextCaret {
+  const PdfTextCaret({
+    required this.box,
+    required this.lineBox,
+    required this.isRtl,
+  });
+
+  /// A zero-width vertical segment at the insertion edge.
+  final PdfBox box;
+  final PdfBox lineBox;
+  final bool isRtl;
+}
+
 /// The sentence around a selection, for dictionary and translation
 /// actions: as `readflex_selection_context.js` built it from the DOM.
 @immutable
@@ -103,7 +121,9 @@ class PdfTextContext {
 ///
 /// [text] is pdfium's reading-order text with one `\n` per line break,
 /// as `pdfrx_engine` formats it; [charBoxes] has one [PdfBox] per UTF-16
-/// unit of [text], empty for whitespace pdfium generated between words.
+/// unit of [text]. Native typographic cells cover the font's ascent and
+/// descent, including missing-font PDFs whose tight glyph bounds collapse
+/// to the baseline. Formatter-generated whitespace keeps its original box.
 /// Boxes are in display points, so a [PdfTextLayer] built from a `/Rotate`d
 /// page already matches what `PdfPageImage` draws.
 class PdfTextLayer {
@@ -122,11 +142,19 @@ class PdfTextLayer {
     final info = book.pages[pageIndex];
     final structured = await book.document.pages[pageIndex]
         .loadStructuredText();
+    final selectionRects = await loadPdfTextSelectionRects(
+      book.document,
+      pageIndex,
+      structured.fullText,
+    );
     final mapper = _DisplayMapper(info);
     return PdfTextLayer(
       pageIndex: pageIndex,
       text: structured.fullText,
-      charBoxes: [for (final rect in structured.charRects) mapper.box(rect)],
+      charBoxes: [
+        for (var index = 0; index < structured.charRects.length; index++)
+          mapper.box(selectionRects?[index] ?? structured.charRects[index]),
+      ],
     );
   }
 
@@ -134,6 +162,9 @@ class PdfTextLayer {
   final String text;
   final List<PdfBox> charBoxes;
   final List<PdfTextLine> lines;
+
+  late final _glyphs = _glyphsOf(text, charBoxes);
+  late final _selectionLines = _selectionLinesOf(lines, _glyphs);
 
   bool get isEmpty => text.trim().isEmpty;
 
@@ -159,19 +190,102 @@ class PdfTextLayer {
     return null;
   }
 
+  /// The nearest insertion offset for an ongoing drag, including between
+  /// lines and beyond line ends. Initial presses use [charIndexAt] instead.
+  /// Offsets stay on grapheme boundaries, including combining marks and emoji.
+  int? positionAt(double x, double y) {
+    if (!x.isFinite || !y.isFinite) return null;
+    _PdfSelectionLine? nearestLine;
+    var nearestY = double.infinity;
+    var nearestX = double.infinity;
+    for (final line in _selectionLines) {
+      final box = line.line.box;
+      final dy = y < box.top
+          ? box.top - y
+          : y > box.bottom
+          ? y - box.bottom
+          : 0.0;
+      final dx = x < box.left
+          ? box.left - x
+          : x > box.right
+          ? x - box.right
+          : 0.0;
+      if (dy < nearestY || (dy == nearestY && dx < nearestX)) {
+        nearestLine = line;
+        nearestY = dy;
+        nearestX = dx;
+      }
+    }
+    if (nearestLine == null) return null;
+    int? offset;
+    var distance = double.infinity;
+    for (var i = 0; i < nearestLine.glyphs.length; i++) {
+      final glyph = nearestLine.glyphs[i];
+      final rtl = nearestLine.isRtlAt(i);
+      final leading = rtl ? glyph.box.right : glyph.box.left;
+      final trailing = rtl ? glyph.box.left : glyph.box.right;
+      final before = (x - leading).abs();
+      final after = (x - trailing).abs();
+      if (before < distance) {
+        offset = glyph.start;
+        distance = before;
+      }
+      if (after < distance) {
+        offset = glyph.end;
+        distance = after;
+      }
+    }
+    return offset;
+  }
+
+  /// Geometry at [offset]. At a line break, [upstream] chooses the previous
+  /// line's trailing edge; the default chooses the following line's leading
+  /// edge. An offset inside a grapheme snaps to the corresponding outer edge.
+  PdfTextCaret? caretAt(int offset, {bool upstream = false}) {
+    if (offset < 0 || offset > text.length || _selectionLines.isEmpty) {
+      return null;
+    }
+    if (upstream) {
+      for (final line in _selectionLines.reversed) {
+        for (var i = line.glyphs.length - 1; i >= 0; i--) {
+          if (line.glyphs[i].start < offset) return line.caretAt(i, true);
+        }
+      }
+      return _selectionLines.first.caretAt(0, false);
+    }
+    for (final line in _selectionLines) {
+      for (var i = 0; i < line.glyphs.length; i++) {
+        if (line.glyphs[i].end > offset) return line.caretAt(i, false);
+      }
+    }
+    final last = _selectionLines.last;
+    return last.caretAt(last.glyphs.length - 1, true);
+  }
+
   /// The word around [index]: letters, digits and marks, with apostrophes
   /// and hyphens inside a word; null when [index] is not on a word.
   PdfTextRange? wordAt(int index) {
-    if (index < 0 || index >= text.length || !_isWordChar(index)) return null;
-    var start = index;
+    if (index < 0 || index >= text.length) return null;
+    var low = 0;
+    var high = _glyphs.length;
+    while (low < high) {
+      final middle = (low + high) ~/ 2;
+      if (_glyphs[middle].end <= index) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    if (low == _glyphs.length || !_isWordGlyph(low)) return null;
+    var start = low;
     while (start > 0 && _joinsWord(start - 1)) {
       start--;
     }
-    var end = index + 1;
-    while (end < text.length && _joinsWord(end)) {
+    var end = low + 1;
+    while (end < _glyphs.length && _joinsWord(end)) {
       end++;
     }
-    return PdfTextRange(start, end);
+    return PdfTextRange(_glyphs[start].start, _glyphs[end - 1].end);
   }
 
   /// The word under a point, see [charIndexAt] and [wordAt].
@@ -270,15 +384,15 @@ class PdfTextLayer {
   /// Characters read on each side of a selection for its sentence.
   static const contextSideChars = 2048;
 
-  bool _isWordChar(int index) => _wordChar.hasMatch(text[index]);
+  bool _isWordGlyph(int index) => _wordChar.hasMatch(_glyphs[index].text);
 
   bool _joinsWord(int index) {
-    if (_isWordChar(index)) return true;
-    if (!_wordJoiner.hasMatch(text[index])) return false;
+    if (_isWordGlyph(index)) return true;
+    if (!_wordJoiner.hasMatch(_glyphs[index].text)) return false;
     return index > 0 &&
-        index + 1 < text.length &&
-        _isWordChar(index - 1) &&
-        _isWordChar(index + 1);
+        index + 1 < _glyphs.length &&
+        _isWordGlyph(index - 1) &&
+        _isWordGlyph(index + 1);
   }
 
   static final _wordChar = RegExp(r'[\p{L}\p{N}\p{M}]', unicode: true);
@@ -311,6 +425,94 @@ class PdfTextLayer {
     }
     return lines;
   }
+}
+
+class _PdfTextGlyph {
+  _PdfTextGlyph(this.start, this.end, this.text, this.box);
+
+  final int start;
+  final int end;
+  final String text;
+  final PdfBox box;
+  late final bool? direction = textCellIsRtl(text);
+}
+
+class _PdfSelectionLine {
+  const _PdfSelectionLine(this.line, this.glyphs);
+
+  final PdfTextLine line;
+  final List<_PdfTextGlyph> glyphs;
+
+  bool isRtlAt(int index) {
+    final direction = glyphs[index].direction;
+    if (direction != null) return direction;
+    // Neutral glyphs follow their visual run, rather than the app locale.
+    final center = (glyphs[index].box.left + glyphs[index].box.right) / 2;
+    if (index + 1 < glyphs.length) {
+      final next = glyphs[index + 1].box;
+      final delta = (next.left + next.right) / 2 - center;
+      if (delta != 0) return delta < 0;
+    }
+    if (index > 0) {
+      final previous = glyphs[index - 1].box;
+      return center < (previous.left + previous.right) / 2;
+    }
+    return false;
+  }
+
+  PdfTextCaret caretAt(int index, bool trailing) {
+    final glyph = glyphs[index];
+    final rtl = isRtlAt(index);
+    final x = trailing != rtl ? glyph.box.right : glyph.box.left;
+    return PdfTextCaret(
+      box: PdfBox(x, glyph.box.top, x, glyph.box.bottom),
+      lineBox: line.box,
+      isRtl: rtl,
+    );
+  }
+}
+
+List<_PdfTextGlyph> _glyphsOf(String text, List<PdfBox> boxes) {
+  final glyphs = <_PdfTextGlyph>[];
+  var offset = 0;
+  for (final grapheme in text.characters) {
+    final end = offset + grapheme.length;
+    PdfBox? box;
+    for (var i = offset; i < end; i++) {
+      if (boxes[i].isEmpty) continue;
+      box = box == null ? boxes[i] : box.union(boxes[i]);
+    }
+    glyphs.add(
+      _PdfTextGlyph(
+        offset,
+        end,
+        grapheme,
+        box ?? const PdfBox(0, 0, 0, 0),
+      ),
+    );
+    offset = end;
+  }
+  return glyphs;
+}
+
+List<_PdfSelectionLine> _selectionLinesOf(
+  List<PdfTextLine> lines,
+  List<_PdfTextGlyph> glyphs,
+) {
+  final result = <_PdfSelectionLine>[];
+  var index = 0;
+  for (final line in lines) {
+    while (index < glyphs.length && glyphs[index].end <= line.range.start) {
+      index++;
+    }
+    final visible = <_PdfTextGlyph>[];
+    while (index < glyphs.length && glyphs[index].start < line.range.end) {
+      if (!glyphs[index].box.isEmpty) visible.add(glyphs[index]);
+      index++;
+    }
+    if (visible.isNotEmpty) result.add(_PdfSelectionLine(line, visible));
+  }
+  return result;
 }
 
 /// [text] with whitespace runs folded to one space and a map back.

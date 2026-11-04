@@ -292,7 +292,25 @@ DOM CFIs the WebView reader wrote resolve by the highlight's text,
 pagecraft's by range), the search hit and the selection. A long press selects
 a word and feeds `ReaderSelectionCubit` the exact text,
 the sentence as `contextText`/`markedContextText`, pagecraft's range CFI and
-the selection rect as viewport fractions; a tap on a saved highlight
+the selection rect as viewport fractions. While a PDF selection is adjusted,
+`onSelectionDragChanged` drives `ReaderSelectionCubit.isAdjusting`: the action
+popup stays mounted but hidden, and returns after the final range is reported.
+The fill and the independent handle colour use the same platform selection
+colours as Flutter text; choosing an annotation preview never recolours the
+handles, and clearing the preview restores the configured selection fill.
+Pagecraft supplies system selection controls through `native_text_selection`
+on supported iOS/Android hosts, while the Reader keeps its own action popup.
+The native range maps back to the same PDF anchors and context payload.
+Unsupported layouts retain adaptive Flutter handles with 48dp targets and a
+platform magnifier. A Flutter handle drag activates after 6 screen pixels,
+independently of zoom. The endpoint follows insertion boundaries on the
+nearest text line, retaining the finger's offset from the handle so touching
+its target does not shift the selected text.
+The overlay's `darkPage` follows the page renderer's actual colour mapping:
+themed dark pages lighten marker fills at a limited opacity, while
+original/light pages multiply them to preserve black glyphs. Application
+brightness alone does not change this policy.
+A tap on a saved highlight
 focuses `ReaderHighlightFocusCubit` with the sentence as context. Margin
 crops (`trimPageMargins`) are measured per page with
 `detectPdfPageContent` for the box a page is fitted into and passed as
@@ -440,8 +458,10 @@ left to right in every interface locale.
   the scroll where it starts once the article is laid out.
 - **Bookmarks** — the sentence read; it is on screen when its anchor or
   its text matches.
-- **Selection** — a long press selects through Flutter's `SelectionArea`
-  with adaptive Cupertino/Material handles;
+- **Selection** — a long press selects through Flutter's `SelectionArea`;
+  supported hosts then use system controls through `native_text_selection`,
+  with Flutter controls retained for unsupported geometry. The context panel
+  remains the Reader's own;
   `ArticleSelection` gives the context panel the shell's payload: the
   text with white space collapsed, 200 characters of context within the
   sentence or block, its anchor, the saved highlights it merges.

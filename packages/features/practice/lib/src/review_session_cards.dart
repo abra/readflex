@@ -62,11 +62,13 @@ class ReviewWordCard extends StatelessWidget {
             style: text.labelMedium.copyWith(color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: AppSpacing.xs),
-          SelectableText(
-            entry.translation,
-            key: const ValueKey('reviewAnswer'),
-            textDirection: _directionOf(entry.translation),
-            style: text.titleLarge.copyWith(color: colors.onSurface),
+          AppTextSelectionHost(
+            child: SelectableText(
+              entry.translation,
+              key: const ValueKey('reviewAnswer'),
+              textDirection: _directionOf(entry.translation),
+              style: text.titleLarge.copyWith(color: colors.onSurface),
+            ),
           ),
           if (base != null && base.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.lg),
@@ -75,10 +77,12 @@ class ReviewWordCard extends StatelessWidget {
               style: text.labelMedium.copyWith(color: colors.onSurfaceVariant),
             ),
             const SizedBox(height: AppSpacing.xs),
-            SelectableText(
-              base,
-              textDirection: _directionOf(base),
-              style: text.bodyLarge,
+            AppTextSelectionHost(
+              child: SelectableText(
+                base,
+                textDirection: _directionOf(base),
+                style: text.bodyLarge,
+              ),
             ),
           ],
           if (sentenceTranslation != null &&

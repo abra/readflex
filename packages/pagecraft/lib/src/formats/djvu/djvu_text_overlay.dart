@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
+import 'package:native_text_selection/native_text_selection.dart';
 
 import 'djvu_text_layer.dart';
 import '../../fixed_layout/comic_image_area.dart';
@@ -7,6 +8,7 @@ import '../../fixed_layout/fixed_pages_controller.dart';
 import '../../fixed_layout/fixed_pages_view.dart';
 import 'djvu_text_selection.dart';
 import '../../fixed_layout/repaint_after_build.dart';
+import '../../text/text_direction.dart';
 
 /// Text on one DjVu page: saved highlights, the search hit, and the
 /// selection with its handles, over the page image.
@@ -14,9 +16,10 @@ import '../../fixed_layout/repaint_after_build.dart';
 /// Placed by `FixedPagesView.pageOverlayBuilder`, so it is scaled with the
 /// page while zoomed; sizes meant in screen pixels are divided by the
 /// zoom. A long press (280 ms, as image areas) on a word selects it and
-/// drags its end over the text; afterwards a drag from either handle (a
-/// 44 px target at the selection's ends) moves that end by word, a
-/// tap outside clears the selection, and a tap on a
+/// drags its end over the text. After release, supported mobile hosts use
+/// system controls over the same word zones. Flutter fallback handles use
+/// 44 px targets and move an endpoint by word. A tap outside clears the
+/// selection, and a tap on a
 /// saved highlight reports it. The page's text
 /// comes from hidden-text word zones, without guessing character positions.
 /// Until the [DjvuTextLayer] is loaded the overlay only draws
@@ -35,8 +38,10 @@ class DjvuTextOverlay extends StatefulWidget {
     this.searchMark,
     this.searchMarkColor = const Color(0x66FFB300),
     this.onSelectionChanged,
+    this.onSelectionDragChanged,
     this.onSelectionCleared,
     this.onHighlightPressed,
+    this.handleColor,
     this.enabled = true,
   });
 
@@ -63,6 +68,12 @@ class DjvuTextOverlay extends StatefulWidget {
   /// The selection was made or its end moved and the finger lifted, with
   /// where it sits in the whole view (null outside a `FixedPagesView`).
   final DjvuSelectionChanged? onSelectionChanged;
+
+  /// The final range is reported before adjustment ends and actions return.
+  final ValueChanged<bool>? onSelectionDragChanged;
+
+  /// Handle accent stays independent of the annotation preview fill.
+  final Color? handleColor;
 
   /// A tap outside dismissed the selection.
   final VoidCallback? onSelectionCleared;
@@ -98,6 +109,12 @@ class _DjvuTextOverlayState extends State<DjvuTextOverlay>
   /// The character the press started on; the other end follows the finger.
   int? _anchorStart;
   int? _anchorEnd;
+  bool _nativeActive = false;
+  bool _adjusting = false;
+  (DjvuTextLayer, Rect)? _nativeGeometryKey;
+  List<NativeTextBox> _nativeBoxes = const [];
+  int _nativeRevision = 0;
+  (Color, Color)? _nativeStyle;
 
   DjvuTextSelection get _selection => widget.selection;
 
@@ -122,12 +139,24 @@ class _DjvuTextOverlayState extends State<DjvuTextOverlay>
   @override
   void dispose() {
     _selection.removeListener(_onSelectionChanged);
+    if (_adjusting) widget.onSelectionDragChanged?.call(false);
     super.dispose();
   }
 
   void _onSelectionChanged() {
-    if (!_selection.isActive) _drag = null;
+    if (!_hasSelectionHere) {
+      _drag = null;
+      _setAdjusting(false);
+      _nativeGeometryKey = null;
+      _nativeBoxes = const [];
+    }
     repaint();
+  }
+
+  void _setAdjusting(bool value) {
+    if (_adjusting == value) return;
+    _adjusting = value;
+    widget.onSelectionDragChanged?.call(value);
   }
 
   // Coordinates: layer pixels ↔ page points.
@@ -176,6 +205,7 @@ class _DjvuTextOverlayState extends State<DjvuTextOverlay>
     _anchorStart = word.start;
     _anchorEnd = word.end;
     _drag = _Drag.selecting;
+    _setAdjusting(true);
     _selection.start(widget.page, word);
     widget.controller.lockInput(true);
   }
@@ -186,6 +216,10 @@ class _DjvuTextOverlayState extends State<DjvuTextOverlay>
 
   void _onLongPressEnd(LongPressEndDetails details) {
     _endDrag();
+  }
+
+  void _onLongPressCancel() {
+    if (_drag == _Drag.selecting) _endDrag();
   }
 
   void _extendTo(Offset local) {
@@ -216,8 +250,10 @@ class _DjvuTextOverlayState extends State<DjvuTextOverlay>
   void _endDrag() {
     if (_drag == null || !_hasSelectionHere) return;
     _drag = null;
+    repaint();
     final range = _selection.range!;
     widget.onSelectionChanged?.call(range, _viewportRectOf(range));
+    _setAdjusting(false);
   }
 
   // After release: a drag from a handle moves that end, a tap outside
@@ -234,6 +270,7 @@ class _DjvuTextOverlayState extends State<DjvuTextOverlay>
     final end = (details.localPosition - rects.last.bottomRight).distance;
     if (start > radius && end > radius) return;
     _drag = start <= end ? _Drag.startHandle : _Drag.endHandle;
+    _setAdjusting(true);
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
@@ -245,7 +282,7 @@ class _DjvuTextOverlayState extends State<DjvuTextOverlay>
   }
 
   void _onPanCancel() {
-    _drag = null;
+    if (_drag == _Drag.startHandle || _drag == _Drag.endHandle) _endDrag();
   }
 
   void _onTapUp(TapUpDetails details) {
@@ -262,6 +299,72 @@ class _DjvuTextOverlayState extends State<DjvuTextOverlay>
       highlight,
       _viewportRectOf(highlight.range),
     );
+  }
+
+  NativeSelectionSnapshot? _nativeSnapshot() {
+    final layer = widget.layer;
+    if (!_hasSelectionHere || layer == null || _drag == _Drag.selecting) {
+      return null;
+    }
+    final key = (layer, widget.imageRect);
+    final accent =
+        widget.handleColor ??
+        DjvuTextSelection.defaultColor.withValues(alpha: 1);
+    final style = (_selection.color, accent);
+    if (_nativeStyle != style) {
+      _nativeStyle = style;
+      _nativeRevision++;
+    }
+    if (_nativeGeometryKey != key) {
+      _nativeGeometryKey = key;
+      _nativeRevision++;
+      _nativeBoxes = List.unmodifiable([
+        for (final word in layer.words)
+          if (!word.box.isEmpty)
+            NativeTextBox(
+              start: word.start,
+              end: word.end,
+              rect: _toLayer(word.box),
+              direction: textCellIsRtl(word.text) == true
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+            ),
+      ]);
+    }
+    final range = _selection.range!;
+    return NativeSelectionSnapshot(
+      revision: _nativeRevision,
+      text: layer.text,
+      boxes: _nativeBoxes,
+      selection: TextSelection(
+        baseOffset: range.start,
+        extentOffset: range.end,
+      ),
+      accent: accent,
+      selectionColor: _selection.color,
+    );
+  }
+
+  void _onNativeSelection(TextSelection? selection) {
+    final layer = widget.layer;
+    if (selection == null || selection.isCollapsed || layer == null) {
+      _selection.clear();
+      widget.controller.lockInput(false);
+      widget.onSelectionCleared?.call();
+      return;
+    }
+    final start = layer.wordAt(selection.start);
+    final end = layer.wordAt(selection.end - 1);
+    if (start == null || end == null) return;
+    final range = DjvuTextRange(start.start, end.end);
+    _selection.update(range);
+    widget.onSelectionChanged?.call(range, _viewportRectOf(range));
+  }
+
+  void _onNativeActive(bool active) {
+    if (_nativeActive == active) return;
+    _nativeActive = active;
+    repaint();
   }
 
   @override
@@ -283,62 +386,69 @@ class _DjvuTextOverlayState extends State<DjvuTextOverlay>
           ? const []
           : _rectsOf(widget.searchMark!),
       searchMarkColor: widget.searchMarkColor,
-      selection: selectionRects,
+      selection: _nativeActive ? const [] : selectionRects,
       selectionColor: _selection.color,
       handleRadius: DjvuTextOverlay.handleRadius / zoomScale,
     );
     if (!widget.enabled) return CustomPaint(painter: painter);
     final selecting = _hasSelectionHere;
-    return RawGestureDetector(
-      behavior: HitTestBehavior.translucent,
-      gestures: <Type, GestureRecognizerFactory>{
-        LongPressGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
-              () => LongPressGestureRecognizer(
-                duration: ComicImageAreaGeometry.longPressDuration,
-              ),
-              (recognizer) => recognizer
-                ..onLongPressStart = _onLongPressStart
-                ..onLongPressMoveUpdate = _onLongPressMoveUpdate
-                ..onLongPressEnd = _onLongPressEnd,
-            ),
-        // Drags and taps compete with page swipes only while a selection
-        // is up: then a drag from a handle and a tap outside belong to it.
-        if (selecting)
-          PanGestureRecognizer:
-              GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
-                PanGestureRecognizer.new,
-                (recognizer) => recognizer
-                  ..onDown = _onPanDown
-                  ..onUpdate = _onPanUpdate
-                  ..onEnd = _onPanEnd
-                  ..onCancel = _onPanCancel,
-              ),
-        if (selecting)
-          TapGestureRecognizer:
-              GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
-                TapGestureRecognizer.new,
-                (recognizer) => recognizer..onTapUp = _onTapUp,
-              ),
-      },
-      child: Stack(
-        fit: StackFit.expand,
-        clipBehavior: Clip.none,
-        children: [
-          CustomPaint(painter: painter, child: const SizedBox.expand()),
-          // Saved highlights take taps only where they are drawn.
-          if (!selecting)
-            for (final highlight in highlights)
-              for (final rect in _rectsOf(highlight.range))
-                Positioned.fromRect(
-                  rect: rect,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _onHighlightTap(highlight),
-                    child: const SizedBox.expand(),
-                  ),
+    return NativeSelectionSurface(
+      snapshot: _nativeSnapshot(),
+      onSelectionChanged: _onNativeSelection,
+      onActiveChanged: _onNativeActive,
+      onAdjusting: _setAdjusting,
+      child: RawGestureDetector(
+        behavior: HitTestBehavior.translucent,
+        gestures: <Type, GestureRecognizerFactory>{
+          LongPressGestureRecognizer:
+              GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+                () => LongPressGestureRecognizer(
+                  duration: ComicImageAreaGeometry.longPressDuration,
                 ),
-        ],
+                (recognizer) => recognizer
+                  ..onLongPressStart = _onLongPressStart
+                  ..onLongPressMoveUpdate = _onLongPressMoveUpdate
+                  ..onLongPressEnd = _onLongPressEnd
+                  ..onLongPressCancel = _onLongPressCancel,
+              ),
+          // Drags and taps compete with page swipes only while a selection
+          // is up: then a drag from a handle and a tap outside belong to it.
+          if (selecting && !_nativeActive)
+            PanGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
+                  PanGestureRecognizer.new,
+                  (recognizer) => recognizer
+                    ..onDown = _onPanDown
+                    ..onUpdate = _onPanUpdate
+                    ..onEnd = _onPanEnd
+                    ..onCancel = _onPanCancel,
+                ),
+          if (selecting)
+            TapGestureRecognizer:
+                GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
+                  TapGestureRecognizer.new,
+                  (recognizer) => recognizer..onTapUp = _onTapUp,
+                ),
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
+          children: [
+            CustomPaint(painter: painter, child: const SizedBox.expand()),
+            // Saved highlights take taps only where they are drawn.
+            if (!selecting)
+              for (final highlight in highlights)
+                for (final rect in _rectsOf(highlight.range))
+                  Positioned.fromRect(
+                    rect: rect,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _onHighlightTap(highlight),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+          ],
+        ),
       ),
     );
   }

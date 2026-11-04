@@ -852,6 +852,9 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
               onLinkTap: _onLinkTap,
               onHighlightTap: _onHighlightTap,
               onSelectionChanged: _onSelectionChanged,
+              onSelectionAdjusting: context
+                  .read<ReaderSelectionCubit>()
+                  .setAdjusting,
               // The reader shows its own context panel for a selection.
               contextMenuBuilder: (context, state) => const SizedBox.shrink(),
               trackedHighlight: _searchActiveHighlightId,
