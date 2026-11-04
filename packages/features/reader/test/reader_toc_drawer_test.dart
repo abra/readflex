@@ -299,10 +299,13 @@ void main() {
       await load(tester);
       // Wide surface: the three tabs share the width.
       await pump(tester, rtl: rtl, size: const Size(800, 600));
-      expect(tester.widget<TabBar>(find.byType(TabBar)).isScrollable, isFalse);
+      final scrollable = find.descendant(
+        of: find.byType(TabBar),
+        matching: find.byType(Scrollable),
+      );
       expect(
-        tester.widget<TabBar>(find.byType(TabBar)).tabAlignment,
-        TabAlignment.fill,
+        tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+        closeTo(0, .01),
       );
       await pump(tester, rtl: rtl, scale: 2);
       final tabBar = tester.widget<TabBar>(find.byType(TabBar));
@@ -1043,8 +1046,16 @@ void main() {
 
       await pump(tester, size: const Size(800, 600));
       expect(
-        tester.widget<TabBar>(find.byType(TabBar)).isScrollable,
-        isFalse,
+        tester
+            .state<ScrollableState>(
+              find.descendant(
+                of: find.byType(TabBar),
+                matching: find.byType(Scrollable),
+              ),
+            )
+            .position
+            .maxScrollExtent,
+        closeTo(0, .01),
       );
       expect(fade(ScrollFadeEdge.start).visible, isFalse);
       expect(

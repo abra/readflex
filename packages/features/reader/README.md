@@ -705,8 +705,13 @@ flight disables its own action; the serialized event bucket orders the rest.
 Inside the Contents `TabBarView` a horizontal drag that starts on a bookmark
 row belongs to the row, so tab paging works from the tab bar or outside the
 rows.
-Oversized Contents tab labels scroll horizontally rather than overlapping;
-the scrolling bar is inset 8dp so the first glyph lands on the 16dp gutter.
+Contents tabs fill the available width without shrinking their labels. They
+share equal widths when every label fits; otherwise, each tab keeps room for
+its icon and label and receives an equal share of the spare width. Only a total
+width that exceeds the available space enables horizontal scrolling. The bar
+keeps an 8dp inset and each tab reserves at least 8dp beside its contents, so
+scrolling starts on the 16dp gutter. Measurements respect the locale, text
+scale and reading direction.
 A label cut by the sheet edge fades into the sheet (`ScrollEdgeFadeStack`,
 horizontal) so it reads as more tabs to scroll to. Selected tabs use the same
 tonal fill and foreground as settings choices, without an underline or divider.
@@ -733,16 +738,13 @@ preview.
 
 - **CBZ** replaces Chapters with Pages: a comic's table of contents is its page
   list, so taps open the page's TOC entry.
-- **PDF** keeps Chapters first, even without an outline (the tab then shows
-  its empty state), and adds Pages once the document reports its page count.
+- **PDF and DjVu** keep Chapters first, even without an outline (the tab then
+  shows its empty state), and add Pages once the document reports its page count.
   Pages taps call `goToSectionIndex`; the current page is the zero-based
   chapter page that fixed layouts report.
 - **Other books** keep Chapters, Bookmarks and Highlights.
 
-Filled tabs share the width equally, so the bar scrolls once the widest label
-does not fit its share; four tabs in Arabic or German scroll from the gutter.
-
-`ReaderPageGrid` shows the pages of both formats, initially revealing the saved
+`ReaderPageGrid` shows comic, PDF and DjVu pages, initially revealing the saved
 page. The grid keeps the 16dp drawer gutter on every side (plus the bottom
 system inset) with 12dp between tiles. Page order follows the book's
 progression direction independently of the app locale. Captions and controls still use the app locale. Only the visible

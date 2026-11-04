@@ -239,7 +239,6 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
     final l10n = context.l10n;
     final comic = widget.format == BookFormat.cbz;
     final tabs = readerContentsTabs(
@@ -260,13 +259,6 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
               ) ??
               0
         : widget.currentPageIndex ?? 0;
-    String labelOf(ReaderContentsTab tab) => switch (tab) {
-      ReaderContentsTab.chapters => l10n.readerChapters,
-      ReaderContentsTab.pages => l10n.readerPages,
-      ReaderContentsTab.bookmarks => l10n.readerBookmarks,
-      ReaderContentsTab.highlights => l10n.readerHighlights,
-    };
-
     // The tab bar lives in the sheet's dragging header and the tab views in
     // its body, so the controller wraps the whole sheet. The tab count can
     // grow once a PDF reports its outline and page count.
@@ -299,88 +291,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                 ],
               ),
             ),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                // Filled tabs share the width equally, so the widest label
-                // decides; four tabs in a long language need to scroll.
-                final labelStyle = readerControlCaptionStyle(context);
-                final iconSize = readerControlIconSize(context);
-                var widest = 0.0;
-                for (final label in tabs.map(labelOf)) {
-                  final painter = TextPainter(
-                    text: TextSpan(text: label, style: labelStyle),
-                    textDirection: Directionality.of(context),
-                    textScaler: MediaQuery.textScalerOf(context),
-                    locale: Localizations.maybeLocaleOf(context),
-                  )..layout();
-                  widest = math.max(
-                    widest,
-                    painter.width +
-                        iconSize +
-                        AppSpacing.xxs +
-                        2 * AppSpacing.sm,
-                  );
-                  painter.dispose();
-                }
-                final scrollable =
-                    widest * tabs.length >
-                    constraints.maxWidth - 2 * AppSpacing.sm;
-                final tabBar = TabBar(
-                  isScrollable: scrollable,
-                  tabAlignment: scrollable
-                      ? TabAlignment.start
-                      : TabAlignment.fill,
-                  // Scrolling tabs start at the drawer gutter: 8dp bar inset
-                  // plus the 8dp label padding puts the first glyph on 16.
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                  ),
-                  labelPadding: EdgeInsets.symmetric(
-                    horizontal: scrollable ? AppSpacing.sm : 0,
-                  ),
-                  tabs: [
-                    for (final tab in tabs)
-                      Tab(
-                        child: _ReaderDrawerTabLabel(
-                          icon: switch (tab) {
-                            ReaderContentsTab.chapters => AppIcons.toc,
-                            ReaderContentsTab.pages => AppIcons.viewGrid,
-                            ReaderContentsTab.bookmarks => AppIcons.bookmark,
-                            ReaderContentsTab.highlights => AppIcons.highlight,
-                          },
-                          label: labelOf(tab),
-                        ),
-                      ),
-                  ],
-                  labelColor: colors.selectedControlForeground,
-                  unselectedLabelColor: colors.onSurfaceVariant,
-                  labelStyle: labelStyle,
-                  unselectedLabelStyle: labelStyle,
-                  indicator: BoxDecoration(
-                    color: colors.selectedControlBackground,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                  ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicatorPadding: const EdgeInsets.all(AppSpacing.xs),
-                  dividerHeight: 0,
-                );
-                // A label cut by the sheet edge fades into the sheet, so it
-                // reads as more tabs to scroll to; the divider stays whole.
-                // Always wrapped, so the TabBar keeps its element when a
-                // PDF's late page count makes the tabs scroll.
-                return ScrollEdgeFadeStack(
-                  axis: Axis.horizontal,
-                  enabled: scrollable,
-                  surfaceColor:
-                      Theme.of(context).bottomSheetTheme.backgroundColor ??
-                      colors.surface,
-                  fadeInsets: EdgeInsets.only(
-                    bottom: TabBarTheme.of(context).dividerHeight ?? 1,
-                  ),
-                  child: tabBar,
-                );
-              },
-            ),
+            ReaderContentsTabBar(tabs: tabs),
           ],
         ),
         body: TabBarView(
@@ -533,36 +444,6 @@ class _ReaderDrawerTitle extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-}
-
-class _ReaderDrawerTabLabel extends StatelessWidget {
-  const _ReaderDrawerTabLabel({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: readerControlIconSize(context)),
-        const SizedBox(width: AppSpacing.xxs),
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.visible,
-            softWrap: false,
-          ),
-        ),
-      ],
     );
   }
 }
