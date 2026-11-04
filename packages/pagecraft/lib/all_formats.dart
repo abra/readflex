@@ -4,6 +4,7 @@ library;
 
 export 'article.dart';
 export 'comic.dart';
+export 'djvu.dart';
 export 'epub.dart';
 export 'fb2.dart';
 export 'mobi.dart';

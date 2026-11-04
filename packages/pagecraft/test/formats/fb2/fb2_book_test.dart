@@ -10,7 +10,7 @@ import 'package:xml/xml.dart';
 /// Parity with `fb2.js` in Chromium: `test/fixtures/fb2/expected.json`
 /// holds the converted XHTML, metadata, sizes, table of contents and
 /// link resolutions the browser produced for the fixtures (recorded by
-/// `fb2_fixtures.mjs` before the WebView reader went, R6).
+/// `fb2_fixtures.mjs` before the WebView reader's removal).
 void main() {
   const root = 'test/fixtures/fb2';
   final expected =

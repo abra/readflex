@@ -1,13 +1,13 @@
-/// What makes pagecraft hand a reflowable book to another reader: books it
-/// cannot lay out yet, so the host can open them the way it did before.
+/// Content the text renderer cannot lay out. The host handles the error;
+/// Pagecraft does not select an alternate renderer.
 library;
 
 import '../pagecraft_exception.dart';
 
-/// Why a book is not pagecraft's to lay out.
+/// Why the text renderer cannot lay out a book or section.
 enum TextBookUnsupported {
   /// Pages of a fixed size (`rendition:layout` `pre-paginated`, KF8's
-  /// fixed layout): foliate-js's fixed-layout renderer, not reflow.
+  /// fixed layout), which require a format-specific fixed-layout renderer.
   fixedLayout,
 
   /// Vertical lines (`writing-mode: vertical-rl` on the body): pagecraft

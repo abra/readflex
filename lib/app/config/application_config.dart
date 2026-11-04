@@ -169,7 +169,7 @@ class ApplicationConfig {
     }
   }
 
-  /// Prevents shipping a build-time API credential in an installable app.
+  /// Rejects static API credentials outside development builds.
   static void validateEmbeddedCredential({
     required Environment environment,
     required String credential,

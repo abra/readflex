@@ -7,7 +7,7 @@ import 'package:pagecraft/all_formats.dart';
 
 /// Checked against the WebView paginator's own `pageColumnLayout`
 /// (`test/fixtures/readflex_page_columns.json`, recorded before the
-/// WebView reader went, R6).
+/// WebView reader's removal).
 void main() {
   test('column layouts match readflex_page_columns.js', () {
     final cases =

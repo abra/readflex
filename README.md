@@ -12,6 +12,8 @@ codebase is split into small local packages instead of one large `lib/` tree.
 
 Start here:
 
+- [Team handoff guide (Russian)](docs/team-handoff.ru.md) — onboarding route,
+  runtime flows, operational handover, and PDF source.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — project shape, package boundaries, and
   handoff rules.
 - [C4_MODEL.md](C4_MODEL.md) — system context, container, component, and
@@ -31,10 +33,10 @@ Start here:
 | `packages/local_storage` | Drift database, DAOs, migrations, storage mappers |
 | `packages/domain_models` | Pure domain models, enums, and exceptions |
 | `packages/component_library` | Theme, design tokens, and reusable widgets |
-| `packages/pagecraft` | The reader engine: book formats, layout, pages, CFIs, search, internal Rust MOBI/KF8 backend |
+| `packages/pagecraft` | The reader engine: book formats, layout, pages, CFIs, search, internal Rust MOBI/KF8 and C++ DjVu backends |
 | `android`, `ios` | App runners and native platform integrations |
 | `test/ui`, `integration_test` | Root UI flows, visual comparisons and device checks |
-| `scripts`, `test/tooling` | Dart development tools and their isolated tests |
+| `scripts`, `test/tooling` | Dart development tools and their isolated tests; optional Python handoff-PDF exporter |
 | `benchmarks` | Opt-in performance comparisons, separate from the app graph |
 
 Create source subdirectories when they contain code or maintained fixtures,
@@ -56,9 +58,10 @@ make get
 ```
 
 The test harness, coverage reports and benchmark orchestration use the pinned
-Dart SDK. Node.js is optional, only for regenerating the independent ICU sentence
-reference in `packages/pagecraft/test/fixtures/icu_sentence_breaks.mjs`;
-normal builds, tests and benchmarks use the committed reference data.
+Dart SDK. Node.js is optional maintenance tooling for regenerating committed
+ICU sentence references, Unicode search-fold data and hyphenation patterns in
+Pagecraft. Normal builds, tests and benchmarks use the committed generated data;
+see [Pagecraft's README](packages/pagecraft/README.md) for the generators.
 Android builds use AGP 8.13.2 and the Gradle 8.14 wrapper, with Java 17 source
 compatibility. Run Gradle with the JDK configured for Flutter (Java 21 is
 supported), including when reproducing a build directly with `gradlew`.
@@ -68,6 +71,11 @@ targets are pinned in `packages/pagecraft/rust/rust-toolchain.toml`.
 Pagecraft's Flutter/Dart build hook compiles and bundles the library automatically,
 including for consumers importing another format. See the
 [native backend notes](packages/pagecraft/doc/mobi_native.md) for setup and checks.
+DjVu uses the vendored DjVuLibre C++ decoder through Dart FFI. The build hook
+compiles it with the target platform's native toolchain; no system DjVuLibre
+installation is needed. Its GPLv2-or-later license is separate from the
+surrounding project notices; review it before distributing linked builds. See
+[Pagecraft's DjVu notes](packages/pagecraft/README.md#djvu-srcformatsdjvu).
 
 ### Versioned Configuration
 
@@ -252,3 +260,15 @@ Some contracts are intentionally incomplete while the app is still being built:
 Dictionary lookup and Practice are active. The reader tries the platform
 dictionary before the Readflex Dictionary API; saved words and highlights
 share FSRS scheduling through `fsrs_repository`.
+
+## Team Handoff
+
+The [handoff guide](docs/team-handoff.ru.md) explains how to navigate the code,
+trace core flows, restore a development environment, and assess release gaps.
+It complements the architecture and package references rather than replacing
+them. Keep it current when those flows or operational requirements change.
+See [PDF export instructions](docs/README.md) to rebuild the deliverable locally.
+
+Backend repositories/deployments, signing access, store accounts and monitoring
+access must be transferred separately through the team's secure channels. This
+checkout does not establish their owners or a production authentication flow.

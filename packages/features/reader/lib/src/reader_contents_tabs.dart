@@ -6,7 +6,7 @@ enum ReaderContentsTab { chapters, pages, bookmarks, highlights }
 /// The Contents tabs a document has, in display order.
 ///
 /// Comics list pages instead of chapters: their table of contents is the page
-/// list. PDF keeps Chapters first, even without an outline, and adds a page
+/// list. PDF and DjVu keep Chapters first, even without an outline, and add a page
 /// grid once its page count is known. Other books list chapters.
 List<ReaderContentsTab> readerContentsTabs({
   required BookFormat? format,
@@ -16,7 +16,8 @@ List<ReaderContentsTab> readerContentsTabs({
     ReaderContentsTab.pages
   else ...[
     ReaderContentsTab.chapters,
-    if (format == BookFormat.pdf && hasPageGrid) ReaderContentsTab.pages,
+    if ((format == BookFormat.pdf || format == BookFormat.djvu) && hasPageGrid)
+      ReaderContentsTab.pages,
   ],
   ReaderContentsTab.bookmarks,
   ReaderContentsTab.highlights,

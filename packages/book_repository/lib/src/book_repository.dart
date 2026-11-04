@@ -472,10 +472,11 @@ class BookRepository {
   ///     highlights and highlight review state. Dictionary entries are
   ///     detached by nulling `sourceId`; their anchors are removed and their
   ///     review state survives. Legacy flashcards keep their `deckId`.
-  ///   * [BookDeletionScope.deleteEverything] — full cascade: every
-  ///     row that referenced this book id is removed alongside the book.
+  ///   * [BookDeletionScope.deleteEverything] — removes source-owned
+  ///     highlights, saved words, legacy flashcards and their review rows.
   ///
   /// Bookmarks and collection memberships are removed in either scope.
+  /// Append-only review logs remain for historical activity statistics.
   ///
   /// File cleanup of the per-book directory is best-effort and runs
   /// after the DB transaction commits, so a filesystem error can't roll

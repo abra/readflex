@@ -63,7 +63,13 @@ not recreate a source. Callers retain responsibility for ordering position
 writes and awaiting them on close.
 
 Deletion removes collection memberships inside the source transaction, including
-the `keepLearningData` mode. Filesystem cleanup runs only after commit.
+the `keepLearningData` mode. That default mode removes highlights and their
+review state, detaches saved words while preserving their review state, and
+retains legacy flashcards. `deleteEverything` also removes the source's saved
+words, legacy flashcards and review rows. Append-only review logs remain in
+both modes for activity statistics. Article deletion currently always removes
+its source-owned learning content; it has no corresponding preserve option.
+Filesystem cleanup runs only after commit.
 Progress-reporting imports use `IOSink.addStream` to propagate backpressure;
 imports without a progress callback retain the native `File.copy` path.
 

@@ -1,7 +1,7 @@
 # import_flow
 
 Bottom sheet for adding content to the library: import a book file
-(EPUB / PDF / FB2 / MOBI / AZW3 / CBZ) or save an article URL. Opened from the Library screen's FAB
+(EPUB / PDF / FB2 / MOBI / AZW3 / CBZ / DjVu) or save an article URL. Opened from the Library screen's FAB
 and used as the single import entry point for adding library content; callers
 that already know the path pass an `ImportFlowEntry` instead of a second sheet.
 
@@ -35,7 +35,8 @@ Future<ImportFlowResult?> showImportFlowSheet(
   metadata with `pagecraft` and persists via `BookRepository`: the title,
   author and a 480×720 JPEG cover from `readComicMetadata` (file name,
   first page), `readPdfMetadata` (Info title, or the file name; the first
-  page), `readEpubMetadata`, `readFb2Metadata` and `readMobiMetadata` (the
+  page), `readDjvuMetadata` (document metadata and first-page cover),
+  `readEpubMetadata`, `readFb2Metadata` and `readMobiMetadata` (the
   book's own metadata, authors joined with `, `, the declared cover image,
   the file name when there is no title). A file the
   engine rejects, including a password-protected PDF, fails with
@@ -87,6 +88,11 @@ symlink-resolved path lies inside `Directory.systemTemp` (iOS `tmp/`) or
 `getTemporaryDirectory()` (Android cache); originals elsewhere are never
 touched. It does not use `FilePicker.clearTemporaryFiles`, which empties all of
 iOS `tmp/`. Failures are logged as warnings and never fail the import.
+
+DjVu accepts both `.djvu` and `.djv`; both resolve to `BookFormat.djvu` and
+are copied into the repository as a managed `.djvu` source. Import reads
+metadata/cover through Pagecraft's native adapter; it does not pre-render or
+convert the whole document to PDF or images.
 
 ## Architecture
 

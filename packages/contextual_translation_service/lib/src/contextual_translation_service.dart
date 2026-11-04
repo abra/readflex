@@ -8,6 +8,7 @@ abstract class ContextualTranslationService {
     Future<void>? abortTrigger,
   });
 
+  /// Stateless providers may keep this default no-op lifecycle hook.
   void dispose() {}
 }
 
@@ -32,5 +33,6 @@ abstract class OfflineContextualTranslationService {
     required String sourceLanguage,
   });
 
+  /// Stateless providers may keep this default no-op lifecycle hook.
   void dispose() {}
 }

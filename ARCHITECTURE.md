@@ -322,7 +322,7 @@ remain for migration compatibility only (last revision `189e2cc1`).
 | `preferences_service` | Preferences model, storage, repository, service, and scope. | Used by Library, Reader, Practice, and app composition. Practice limits (`practiceNewCardsPerDay`, `practiceReviewHighlights`, `practiceDesiredRetention`) are edited in the Practice settings sheet. |
 | `review_scheduler` | FSRS-6 over the vendored `fsrs`: computes the next review state and log for a rating at the reader's desired retention, previews intervals. Study days start at 04:00; day-level intervals are at least a day, ordered by rating and capped at 365; one learning and one relearning step of 10 min because the step is not persisted; fuzzing off so previews match. Held to py-fsrs by a 118-history reference test. | Used by `fsrs_repository` only. |
 | `remote_content_policy` | Shared outbound HTTP URL and DNS safety policy plus validated direct transport. | Rejects credentials, non-HTTP(S) schemes, private/local addresses, and unsafe or mixed DNS results; connects to the accepted address without a second DNS lookup. |
-| `pagecraft` | Reader engine: Dart containers, document/CSS models, paged EPUB/FB2/MOBI, scrolling articles, comic pages, PDFium rendering, CFIs, progress, search, Flutter adaptive text selection, highlights and import metadata. Its internal Rust crate handles MOBI text-record I/O/decompression; `package:pagecraft/testing.dart` builds fixtures. | Used by Reader through `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. Format libraries export the core `pagecraft.dart`; the core imports no format and formats never import each other (`test/library_boundaries_test.dart`). See [Pagecraft's README](packages/pagecraft/README.md) for capabilities and native bundling limits. |
+| `pagecraft` | Reader engine: Dart containers, document/CSS models, paged EPUB/FB2/MOBI, scrolling articles, comic pages, PDFium and DjVuLibre rendering, CFIs, progress, search, selection, highlights and import metadata. Rust handles MOBI text-record I/O/decompression; C++ DjVuLibre handles DjVu pages/hidden text through FFI. `package:pagecraft/testing.dart` builds fixtures. | Used by Reader through `ReaderSurface` and by `import_flow` for metadata; no domain, repository or bloc dependencies. Format libraries export the core `pagecraft.dart`; the core imports no format and formats never import each other (`test/library_boundaries_test.dart`). See [Pagecraft's README](packages/pagecraft/README.md) for capabilities, native bundling and licensing limits. |
 | `screen_control_service` | Keep-awake and brightness coordination for active reading sessions. | Wraps low-level brightness plugin. |
 | `toast_service` | Thin toastification wrapper: bottom-anchored toasts that float above controls marked with `ToastAvoidArea`; `ToastNavigatorObserver` on the root navigator clears them when a sheet or dialog opens. | Feature packages do not import toastification directly. |
 
@@ -393,8 +393,8 @@ The reader is intentionally split across several packages:
 
 | Package | Responsibility |
 |---------|----------------|
-| `pagecraft` | The engine: `ComicBook` over its own ZIP reader, `FixedPagesView` (PageView spreads, pinch and double-tap zoom, tap arbitration), `ComicImageAreaLayer`, `ComicPageImage`/`ComicPageThumbnail`; PDF; reflowable books through `TextPagesView` (EPUB, FB2, MOBI); articles through `TextScrollView`. |
-| `features/reader` | Reader screen, reader bloc/cubits, chrome, Contents and Search sheets, appearance, search, selection, brightness, keep-awake, and the page's types (`BookPosition`, `ReaderTocItem`, search events, selections). Commands to the page go through `ReaderSurface`: `ReaderTextSurface` (EPUB, FB2, MOBI on pagecraft's `TextPagesView`), `ReaderComicSurface`, `ReaderPdfSurface` and `ReaderArticleSurface` (articles on pagecraft's `TextScrollView`); the source type and format pick the body and surface. |
+| `pagecraft` | The engine: `ComicBook` over its own ZIP reader, PDFium-backed PDF and DjVuLibre-backed DjVu on `FixedPagesView` (spreads, pinch/double-tap zoom, page animations); image-area and text overlays; reflowable EPUB/FB2/MOBI through `TextPagesView`; articles through `TextScrollView`. |
+| `features/reader` | Reader screen, bloc/cubits, chrome, Contents/Search sheets, appearance, search, selection, screen controls and the page's types. Commands go through `ReaderSurface`: `ReaderTextSurface`, `ReaderComicSurface`, `ReaderPdfSurface`, `ReaderDjvuSurface` and `ReaderArticleSurface`; source type and format pick the body/surface. |
 | `shared` | `TextAction` and its selection payloads; `WordSaveStatus` used by Translate and Dictionary. |
 | `features/highlight` | Implements `HighlightAction`. |
 | `features/translate` | Implements `TranslateAction` and owns the translation sheet UI/cubit. |
@@ -501,10 +501,10 @@ Reader-specific UI state is split by responsibility:
 - `ReaderAppearanceCubit` owns reader appearance preferences.
 - `ReaderBrightnessCubit` coordinates widget brightness, system brightness, and
   platform override behavior.
-- `ReaderPageThumbnailCubit` owns a Pages-tab-local queue and bounded preview
-  cache for comic and PDF pages. The reader host injects an async callback to
-  the page surface; view widgets never receive a repository, archive parser or
-  engine controller.
+- `ReaderPageThumbnailCubit` owns a tab-local queue and bounded preview
+  cache for comic and PDF pages in Pages and Highlights. The reader host
+  injects an async callback to the page surface; view widgets never receive
+  a repository, archive parser or engine controller.
   Only visible tiles request previews, one at a time, independently of book
   startup and reading-position state. Closing the tab releases its cache.
 - `ReaderSelectionTipCubit` owns the one-time "Press and hold a word" tip.
@@ -516,9 +516,9 @@ Reader-specific UI state is split by responsibility:
 
 The page is kept behind ready-state reader composition so routine UI changes
 do not recreate it. Every source is drawn by pagecraft; there is no WebView and
-no local reader server (removed in R6; the last revision with them is
+no local reader server (the last revision with them is
 `fb4b4e5c`). Books open as pages: EPUB, FB2 and MOBI/AZW3 on `TextPagesView`,
-CBZ and PDF on `FixedPagesView`. Articles scroll: `ArticleTextSource` reads
+CBZ, PDF and DjVu on `FixedPagesView`. Articles scroll: `ArticleTextSource` reads
 `content.html` cleaned as the former article shell cleaned it
 (`articleDocumentHtml`, the DOMPurify allow-list, inside
 `<main id="article-content">`), and the reader keeps the shell's stored forms,
@@ -552,8 +552,11 @@ whole page at the density its visible part is shown at, again when a crop
 arrives after the page. Comic pages are decoded from the archive on demand;
 PDF pages, tiles and previews are rendered by pdfium.
 
-Text selection is Flutter's `SelectionArea` over each page (or the scrolled
-slices of an article) with Flutter's adaptive handles and magnifier: a word on a
+Text selection in reflowable books and articles is Flutter's `SelectionArea`
+over each page (or the scrolled slices of an article) with Flutter's adaptive
+handles and magnifier. PDF uses Pagecraft's `PdfTextOverlay` with its own handles
+and selection painter; DjVu uses `DjvuTextOverlay` over stored word zones.
+Reflowable selection starts with a word on a
 long press, word by word on a drag. `TextSelectionDetails` (books) and
 `ArticleSelection` (articles) read it into the context panel's payload: the
 exact and whole-word text and CFIs, the sentence as context, and the saved
@@ -574,10 +577,10 @@ runs in write-ahead mode with `synchronous = NORMAL`, so these commits need no
 fsync. A delayed source refresh preserves live position and document
 capabilities, and closing the bloc drains both queued and active writes. A
 book reports its position once it shows the saved page, so a reopened book
-keeps its place. The saved progress travels with the saved CFI: when the CFI
-no longer resolves in its chapter (book update, document normalization
-change), the reader opens at that progress, or at the chapter start without
-one, instead of failing to load. Book bookmarks with an anchor version keep
+keeps its place. When a CFI's section resolves but its node offset does not,
+the text controller opens that section's first page. If the section itself
+cannot resolve, initial navigation tries the saved fraction and then the first
+linear section. Book bookmarks with an anchor version keep
 the CFI of a word on their own page and survive repagination; older ones
 navigate by their visual page anchor. CBZ page ordering is versioned in the
 Book/ReaderDocument contract: existing rows keep legacy indices, while new
@@ -748,10 +751,12 @@ registered for disposal before the services and closes after them, also on
 bootstrap rollback; services close only clients they created. Article page
 downloads never use it: they keep the extraction service's own pinned client.
 
-Every book and article is drawn by `pagecraft`; there is no engine switch. A
-book the text body does not lay out yet (vertical writing, a fixed-layout
-EPUB: `TextBookUnsupported`) shows the open error until pagecraft draws it
-(R3/R4 in the native reader plan).
+Every book and article is drawn by `pagecraft`; there is no engine switch.
+`TextBookLayout` rejects vertical writing, and `TextPagesController` rejects
+sources marked as fixed layout, including fixed-layout EPUB and KF8, with
+`TextBookUnsupported`. Reader shows its open-error state; there is no alternate
+renderer for these documents.
+See Pagecraft's `text_book_support_test.dart` for the supported-layout boundary.
 
 `pagecraft` delegates only MOBI/KF8 text-record I/O, trailing-entry removal and
 PalmDOC/HUFF-CDIC decompression to its Rust crate in `packages/pagecraft/rust` over
@@ -767,10 +772,27 @@ on the FRB pool and drains them before closing its file/dictionary/opaque handle
 Failed book opening closes both native and PDB resources. Native read errors
 surface as `PagecraftException`; there is no silent backend retry.
 
+DjVu uses the vendored DjVuLibre 3.5.30 C++ decoder under
+`packages/pagecraft/native/djvu/`, called through a narrow C ABI and Dart FFI.
+Each `DjvuBook` owns a worker isolate and native document; requests serialize
+there, and close drains accepted work before releasing the handle. Page
+headers/navigation load on open; bounded RGBA page images, zoom regions and
+hidden text load on demand. `DjvuPages` implements `FixedPageSource`, retaining
+the shared page animations, zoom and preview machinery. Word-zone text supports
+search, selection and text actions; image-only pages use image-area selection
+and have no OCR-derived text. The decoder rejects indirect multi-file sources
+and standalone external includes; JPEG-in-DjVu is not enabled in this build.
+Its GPLv2-or-later notices and distribution requirements remain separate from
+the project's surrounding notices; review them before distributing linked builds.
+
 Pagecraft's `hook/build.dart` compiles the locked Cargo crate in release mode
 with its pinned rustup compiler and bundles it through Native Assets. Native
-assets, including PDFium, are built/bundled even for consumers importing another
-Pagecraft format. Generated bindings and build lockfiles are versioned; development
+assets are built/bundled even for consumers importing another Pagecraft format.
+PDFium is also bundled: native assets on Android, XCFramework on Apple.
+The hook also compiles DjVuLibre with the target C++ toolchain. Its vendored
+sources are built locally, without a system DjVuLibre installation or runtime
+downloads. The decoder is bundled even when another format alone is imported.
+Generated bindings and build lockfiles are versioned; development
 requires rustup and the target platform toolchain. Host tests/CLI resolve the
 build-hook asset, and packaged apps use FRB's platform loader. `make analyze`
 includes Rust checks; `make test` includes Rust and bridge/session tests.
@@ -820,6 +842,13 @@ Rust, Dart and Flutter tests, including the Dart development-tool tests in
 `test/tooling/`. `make test-tools` runs that subset separately. Rust formatting
 and Clippy are part of `make analyze`.
 
+Architecture enforcement is partial: `check_widget_helpers.dart` rejects
+widget-returning helpers, and Pagecraft's `library_boundaries_test.dart` checks
+its internal format dependencies. The general rule against sibling-feature
+imports remains a review convention, not a repository-wide automated gate.
+There is no committed CI workflow in this checkout; the Make targets describe
+local checks, not evidence that a remote pipeline has run.
+
 `make test-ui-contracts` is a focused subset for shared components, accessibility,
 theme contrast, import/Display navigation and representative root layouts. It
 does not modify goldens or replace feature, native or performance checks. These
@@ -859,19 +888,24 @@ keyboard frames rebuild no grid tile; bursty reader search bounds emissions
 and published result entries without losing matches. `make test-performance` records workload timing separately in
 `.local/performance/`. Timings are diagnostic, not machine-independent CI limits.
 
-Development tools under `scripts/` use the pinned Dart SDK for coverage reports,
-benchmark orchestration and corpus selection. Their tests validate frozen
+The coverage, benchmark and corpus tools under `scripts/` use the pinned Dart
+SDK. Their tests validate frozen
 inputs, source/artifact hashes and worker evidence; benchmark raw samples and
 median/p95 definitions are unchanged. Corpus files with equal sizes are ordered
 by path code units, independent of the host locale, so a newly selected corpus
 can differ from an older locale-collated selection. Preserve frozen datasets
 for comparisons.
 
-Node.js is optional only for regenerating Pagecraft's independent ICU sentence
-reference (`test/fixtures/icu_sentence_breaks.mjs` within that package). Normal
-builds and tests use committed reference data and need no browser engine. The
-Foliate fixture recordings and search-fold generator names in Pagecraft's docs
-describe historical provenance, not steps in the current test harness.
+The optional `scripts/render_handoff.py` exporter uses separate Python
+documentation dependencies pinned in `docs/pdf-requirements.txt`. It is not
+part of the application build or normal test toolchain. Its maintained source
+and export instructions live under `docs/`; generated PDFs stay in `.local/`.
+
+Node.js is optional maintenance tooling for Pagecraft's committed data:
+`test/fixtures/icu_sentence_breaks.mjs`, `tool/search_fold_table.mjs` and
+`tool/hyphenation_patterns.mjs`. Normal builds and tests use their committed
+outputs and need no browser engine. Historical Foliate fixture recordings
+describe compatibility provenance, not steps in the current test harness.
 
 Focused package changes can use package-level `flutter test` or `dart test`.
 Use broader checks when changing:
@@ -903,6 +937,9 @@ Documentation should explain contracts, responsibilities, and boundaries:
 
 Before handing the project to another maintainer:
 
+- Follow the onboarding route and operational transfer checklist in the
+  [team handoff guide](docs/team-handoff.ru.md). Keep the PDF and its source
+  revision together; an exported PDF is a snapshot, not a live code reference.
 - Read `README.md`, `ARCHITECTURE.md`, and the README for each changed package.
 - Confirm feature dependencies still flow through `routing.dart` -> `Screen` or
   `Sheet` -> `Bloc`/`Cubit` -> `View`.

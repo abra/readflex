@@ -231,7 +231,7 @@ class ReadflexLocalizationsAr extends ReadflexLocalizations {
 
   @override
   String get onboardingFeatureBooksDescription =>
-      'EPUB وFB2 وMOBI وAZW3 وPDF وCBZ';
+      'EPUB وFB2 وMOBI وAZW3 وDjVu وPDF وCBZ';
 
   @override
   String get onboardingFeatureArticlesTitle => 'مقالات من رابط';

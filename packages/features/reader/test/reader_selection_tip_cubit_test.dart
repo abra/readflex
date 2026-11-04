@@ -232,6 +232,12 @@ void main() {
       expect(supports(BookFormat.pdf, hasSearchableText: false), isFalse);
       expect(supports(BookFormat.pdf), isFalse, reason: 'not known yet');
     });
+
+    test('DjVu offers selection guidance only after finding hidden text', () {
+      expect(supports(BookFormat.djvu), isFalse);
+      expect(supports(BookFormat.djvu, hasSearchableText: false), isFalse);
+      expect(supports(BookFormat.djvu, hasSearchableText: true), isTrue);
+    });
   });
 
   group('isReaderPageTurn', () {

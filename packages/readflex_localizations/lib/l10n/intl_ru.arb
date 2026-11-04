@@ -67,7 +67,7 @@
   "onboardingWelcomeTitle": "Добро пожаловать в Readflex",
   "onboardingWelcomeSubtitle": "Книги, комиксы, PDF и статьи из интернета в одной читалке.",
   "onboardingFeatureBooksTitle": "Книги, комиксы и PDF",
-  "onboardingFeatureBooksDescription": "EPUB, FB2, MOBI, AZW3, PDF и CBZ",
+  "onboardingFeatureBooksDescription": "EPUB, FB2, MOBI, AZW3, DjVu, PDF и CBZ",
   "onboardingFeatureArticlesTitle": "Статьи по ссылке",
   "onboardingFeatureArticlesDescription": "Чистая копия для чтения офлайн",
   "onboardingFeatureLookupTitle": "Перевод и словарь",

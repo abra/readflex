@@ -8,7 +8,7 @@ import 'package:xml/xml.dart';
 
 /// Parity with `mobi.js` in Chromium: `test/fixtures/mobi/expected.json`
 /// records what the browser made of the fixture books (recorded by
-/// `mobi_fixtures.mjs` before the WebView reader went, R6): metadata,
+/// `mobi_fixtures.mjs` before the WebView reader's removal): metadata,
 /// every section's parsed document, sizes, navigation and resolutions.
 void main() {
   const dir = 'test/fixtures/mobi';

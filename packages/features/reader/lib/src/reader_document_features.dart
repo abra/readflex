@@ -15,10 +15,10 @@ class ReaderDocumentFeatures {
   final bool? hasTableOfContents;
 
   /// Unknown (null) until the document shows text or proves it has some;
-  /// PDF reports `true` once a page with text renders.
+  /// PDF and DjVu report `true` once a loaded page contains selectable text.
   final bool? hasSearchableText;
 
-  /// Number of fixed pages (PDF), for the Pages grid. Null for reflowable
+  /// Number of fixed pages (PDF/DjVu), for the Pages grid. Null for reflowable
   /// formats, whose page count depends on layout.
   final int? pageCount;
 

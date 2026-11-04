@@ -8,7 +8,7 @@ import 'package:pagecraft/all_formats.dart';
 
 /// Parity with `epub.js` in Chromium: `test/fixtures/epub/expected.json`
 /// records what the browser made of each fixture directory (recorded by
-/// `epub_fixtures.mjs` before the WebView reader went, R6); the same
+/// `epub_fixtures.mjs` before the WebView reader's removal); the same
 /// files must give the same spine, navigation, metadata, cover and
 /// resolutions here.
 void main() {

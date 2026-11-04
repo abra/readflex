@@ -12,6 +12,7 @@ void main() {
   const modules = {
     'article.dart': 'src/article/',
     'comic.dart': 'src/formats/comic/',
+    'djvu.dart': 'src/formats/djvu/',
     'epub.dart': 'src/formats/epub/',
     'fb2.dart': 'src/formats/fb2/',
     'mobi.dart': 'src/formats/mobi/',

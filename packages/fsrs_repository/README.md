@@ -12,7 +12,9 @@ state. `fsrs_repository` is the single store for `stability`, `difficulty`,
 `nextReviewAt` and `reps`, indexed by `itemId`, plus the review log.
 
 - Practice asks one question, "what's due?", and gets a mixed queue.
-- A new reviewable type only needs a new `ReviewableType` value.
+- A new reviewable type reuses the scheduler and review tables. It also needs
+  content save/delete registration, storage enum handling, and Practice queue
+  hydration and presentation; adding a `ReviewableType` value alone is not enough.
 - The FSRS v6 algorithm lives once in `review_scheduler`.
 
 ## Tracking lifecycle
@@ -22,6 +24,15 @@ saves the content (`DictionaryRepository.addEntry`,
 `HighlightRepository.addHighlight` for new text highlights) and delete it with
 the content. `ensureReviewItems` backfills rows for content saved before
 tracking existed; `recordReview` still creates a missing row implicitly.
+
+Current Practice sessions load saved words and text highlights. The legacy
+`flashcard` enum and stored rows remain for database compatibility; image-area
+highlights do not enter the review queue. Content IDs are globally unique
+because the review table is keyed by `itemId`, not by type plus ID.
+
+Removing review tracking or deleting content does not erase append-only review
+logs. Activity totals can therefore include reviews of content that is no
+longer saved; current due/total/mastered counts come from review items instead.
 
 ## Public API
 

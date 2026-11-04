@@ -17,6 +17,21 @@ LibrarySource _source({
 );
 
 void main() {
+  test('DjVu remains a book with review support, not a comic scope', () {
+    final source = LibrarySource.fromBook(
+      Book(
+        id: 'djvu-1',
+        title: 'Scanned book',
+        filePath: '/book.djvu',
+        format: BookFormat.djvu,
+        addedAt: DateTime(2026),
+      ),
+    );
+    expect(source.sourceType, SourceType.book);
+    expect(source.typeLabel, 'DJVU');
+    expect(source.isComic, isFalse);
+    expect(source.supportsReview, isTrue);
+  });
   group('LibrarySource.readingCharactersPerMinute', () {
     test('is ~240 words per minute at 5 characters per word', () {
       expect(LibrarySource.readingCharactersPerMinute, 240 * 5);

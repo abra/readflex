@@ -14,23 +14,24 @@ import 'import_flow_result.dart';
 
 /// Shows the multi-step Add-to-Library bottom sheet.
 ///
-/// The sheet is driven by an [ImportFlowCubit] over a sealed
-/// [ImportFlowState] hierarchy: menu → uploading → done.
+/// [ImportFlowCubit] owns menu, consent/URL entry, progress and result states.
 ///
-/// Two callbacks are injected from the composition root:
+/// Work is injected from the composition root:
 ///   * [onPickBookFile] opens the platform file picker and returns the
 ///     selected file (or `null` on cancel).
 ///   * [onImportBook] takes that file, parses metadata, and persists
 ///     the book — exposing byte-level progress through `onProgress` so
 ///     the sheet can show a real progress bar.
+///   * [onImportArticle] extracts and persists a submitted article URL.
 ///   * [isOffline] / [isOfflineStream] disable article import because it
 ///     depends on network extraction; local book uploads remain available.
 ///   * [onOpenTerms] and [onOpenPrivacy] open legal documents outside
 ///     the sheet; the cubit never launches URLs directly.
 ///   * [entry] starts on the menu, the file path or the article URL step.
 ///
-/// Returns [ImportFlowResult.bookImported] when the user finished an
-/// import, or `null` if they dismissed without finishing.
+/// Done returns [ImportFlowResult.bookImported] or
+/// [ImportFlowResult.articleImported]. Dismissal returns `null` and does not
+/// cancel an already-started import.
 Future<ImportFlowResult?> showImportFlowSheet(
   BuildContext context, {
   required PickBookFile onPickBookFile,
@@ -1520,8 +1521,8 @@ class _FailureView extends StatelessWidget {
   }
 }
 
-/// Spring-animated checkmark, title, detail line, optional subtitle,
-/// full-width Done button — used for the book-done success state.
+/// Static checkmark, title, detail, optional subtitle and Done action shared
+/// by book and article success states.
 class _SuccessLayout extends StatelessWidget {
   const _SuccessLayout({
     required this.title,

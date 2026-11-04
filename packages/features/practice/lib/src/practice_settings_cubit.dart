@@ -8,8 +8,8 @@ part 'practice_settings_state.dart';
 
 /// The Practice settings sheet's state: the three preferences a session
 /// reads, as the sheet's choices. A change shows at once and is written to
-/// [PreferencesService]; a failed write is reported and the choice goes
-/// back, so the sheet never shows a setting that was not kept.
+/// [PreferencesService]. An update error rolls the choice back; disk-save
+/// failures are logged by the service and keep the in-memory choice.
 class PracticeSettingsCubit extends Cubit<PracticeSettingsState> {
   PracticeSettingsCubit({required PreferencesService preferencesService})
     : _preferencesService = preferencesService,

@@ -28,6 +28,7 @@ Dart code:
 | `package:pagecraft/mobi.dart` | the core and MOBI 6/KF8: `MobiBook`, `mobiTextSource`, `readMobiMetadata` |
 | `package:pagecraft/comic.dart` | the core and CBZ: `ComicBook`, `ComicPages`, `readComicMetadata` |
 | `package:pagecraft/pdf.dart` | the core and PDF: `PdfBook`, `PdfPages`, the text layer, `readPdfMetadata` |
+| `package:pagecraft/djvu.dart` | the core and DjVu: `DjvuBook`, `DjvuPages`, hidden-text search/selection and `readDjvuMetadata` |
 | `package:pagecraft/article.dart` | the core and saved articles: `ArticleTextSource`, anchors, search |
 | `package:pagecraft/all_formats.dart` | all of them and `textBookSourceOf`, which picks a reflowable book's source by its type |
 | `package:pagecraft/testing.dart` | fixtures for tests: archives, comics, MOBI files, PDFs built in memory |
@@ -36,10 +37,43 @@ Each format lives in one folder (`src/formats/<format>/`, articles in
 `src/article/`) with its parser, its `TextBookSource` or page source and
 its import metadata; the core imports no format and no format imports
 another. `test/library_boundaries_test.dart` walks the import graph from
-every library to keep it so. PDFium's native dependency and the internal MOBI
-Rust backend are built/bundled even when a consumer imports only another format.
+every library to keep it so. PDFium, the internal MOBI Rust backend and the
+DjVuLibre C++ decoder are built/bundled even when a consumer imports only another
+format. The DjVu native component has its own GPLv2-or-later license; see its
+[upstream notice](native/djvu/upstream/COPYRIGHT) before distributing a build.
 The Rust crate and library retain the name `pagecraft_mobi_native`; the only Dart
 package is `pagecraft`. See [native backend setup and maintenance](doc/mobi_native.md).
+
+## Maintainer reading path
+
+Read the public library for the format being changed, then follow its adapter
+into the shared engine. The main paths are:
+
+| Concern | Entry points and checks |
+|---|---|
+| Container and parser | [ZIP](lib/src/container/zip_archive.dart), `lib/src/formats/<format>/`; [container tests](test/container/) and [format tests](test/formats/) |
+| Reflowable rendering | [TextBookSource](lib/src/text_book/text_book_source.dart) → [TextBookLayout](lib/src/text_book/text_book_layout.dart) → [TextPagesController](lib/src/text_book/text_pages_controller.dart) / [TextScrollController](lib/src/text_book/text_scroll_controller.dart) → their Flutter views; [text-book tests](test/text_book/) |
+| Image pages | [FixedPageSource](lib/src/fixed_layout/fixed_page_source.dart) → [FixedPagesController](lib/src/fixed_layout/fixed_pages_controller.dart) / [FixedPagesView](lib/src/fixed_layout/fixed_pages_view.dart); [fixed-layout tests](test/fixed_layout/) |
+| Public dependency boundaries | [Library graph test](test/library_boundaries_test.dart); format-specific imports must not pull in sibling formats |
+| Native maintenance | [MOBI backend guide](doc/mobi_native.md), [build hook](hook/build.dart), [native/Dart parity tests](test/formats/mobi/mobi_native_reader_test.dart); PDF uses PDFium through `pdfrx_engine` |
+
+Opening is format-specific, not a promise to stream every book: EPUB/CBZ read ZIP
+entries on demand, MOBI reads records by offset (MOBI 6 then assembles the full
+text stream), and FB2 reads and parses the complete XML file or ZIP entry.
+Articles read and normalize their saved HTML in an isolate. PDF opening reads
+page sizes and navigation; page bitmaps and text layers are requested later.
+DjVu opens its self-contained document on a worker isolate, reads page headers
+and navigation, and decodes page images and hidden text only when requested.
+The host owns opened sources and controllers and must close/dispose them;
+Pagecraft does not persist app reading history or preferences.
+
+The text renderer currently accepts horizontal, reflowable content. Fixed-layout
+EPUB/KF8 and vertical writing raise
+[UnsupportedTextBookException](lib/src/text_book/text_book_support.dart).
+`FixedPagesView` supports PDF/comic/DjVu page sources; it does not provide a
+fixed-layout EPUB renderer. Pagecraft reports unsupported content to the host
+and does not choose another engine. The CSS section below describes the
+implemented subset rather than browser-complete CSS support.
 
 ## Modules
 
@@ -73,13 +107,15 @@ fixtures preserve the behavior that saved positions and content depend on.
 
 ## Layers
 
-`container`, `epubcfi`, `document` and the format parsers have no
+`container`, `epubcfi`, `document` and the Dart EPUB/FB2/MOBI/comic parsers have no
 `dart:ui` dependency: they run in isolates and are tested without a Flutter
 binding. MOBI text-record I/O and decoding use the internal Rust crate in
 `rust/`, through private bindings in `src/formats/mobi/native/`;
 `formats/pdf/pdf_book.dart` talks to pdfium through `pdfrx_engine` and one
 FFI call of its own; `formats/pdf/pdf_engine.dart` is the Flutter side of
-that (loading the library the app bundles). `metadata`, `layout`,
+that (loading the library the app bundles). DjVu's worker calls its bundled C++
+decoder through Dart FFI; its text-layer model uses Flutter rectangles, as the
+PDF text layer does. `metadata`, `layout`,
 `text_book`, `fixed_layout` and the page views are Flutter and use the
 framework's own primitives:
 `TextPainter` metrics, `RenderBox` layout, `PageView` physics,
@@ -233,6 +269,10 @@ FB2 name as its class, `a` becomes an anchor with the XLink href (and
 `data:` URI for an inline `binary`, `stanza` lines become text and
 `br`s. Elements the tables do not know are dropped with their subtrees,
 as in the browser; prefixed FB2 names are matched by local name.
+
+Opening reads the whole XML input and builds its tree in Dart, including inline
+binaries. Sections serialize from that tree when requested; this is not
+record-offset loading or Rust parsing.
 
 The first body's top-level elements each become a section, every further
 body one non-linear section with the `notesBodyType` class, each wrapped
@@ -983,7 +1023,8 @@ section load, style pass and layout and records the process memory growth
 (`PAGECRAFT_CORPUS_REPORT` writes the Markdown table). `corpus_census_test.dart`
 counts what the books ask of the engine that pagecraft does not draw yet. Both
 are skipped when `PAGECRAFT_CORPUS` is unset: the corpus is not in the
-repository. Until R6 a browser snapshot of foliate-js was the reference
+repository. Before the WebView reader was removed, a browser snapshot of
+foliate-js was the reference
 for every section's document tree, navigation and link targets; what it
 taught the document model: XHTML needs the HTML named entities
 (`&nbsp;`), attribute values fold line breaks, text folds CRLF, and a
@@ -1036,7 +1077,8 @@ destination is missing or out of range keeps `pageIndex` null), and
 `Title`/`Author` of the Info dictionary through `FPDF_GetMetaText`, which
 `pdfrx_engine` does not expose; that call runs while the engine's worker
 is paused, as pdfium allows one caller at a time. Page sizes are read in
-one pass in the worker isolate: 200 pages take well under a second.
+one pass in the worker isolate; the cost grows with page count and does not
+include rendering every page.
 An encrypted file without the right password throws
 `PdfPasswordRequiredException`; anything pdfium cannot read throws
 `PagecraftException` with pdfium's reason. The app calls
@@ -1126,6 +1168,63 @@ arrives; `searchPdfBook` streams hits page by page through it (or loads
 and drops layers without it) and stops when the subscription is
 cancelled.
 
+## DjVu (`src/formats/djvu/`)
+
+`DjvuBook.open(path)` opens a self-contained `.djvu`/`.djv` document through
+DjVuLibre's C++ decoder. Dart calls a narrow C ABI with `dart:ffi`; this format
+does not use Rust or FRB. `DjvuPages` implements the core `FixedPageSource`, so
+the existing view owns page turns, animations, RTL, spreads and zoom. Pagecraft
+does not convert DjVu to PDF, HTML or a directory of pre-rendered pages.
+
+Each opened book owns a worker isolate and native document handle. Requests are
+serialized there, including rendering and hidden-text reads; wrapping a blocking
+FFI call in a Future on the UI isolate would not provide this isolation.
+`close()` refuses new work, drains accepted requests and releases the decoder
+once. Page metadata stays readable after closing. Failed opening releases the
+partially created native resources.
+
+`DjvuPageImage` keys include document identity, page, render width and optional
+region. Full-page rendering is bounded to six million pixels; sharp zoom tiles
+render only the requested region at the full-page scale. Replies transfer owned
+RGBA bytes to Flutter. The image provider uses Flutter's normal image cache;
+there is no whole-document bitmap cache. Text has a separate bounded LRU.
+
+DjVu's optional hidden text describes word zones rather than PDF-style glyph
+boxes. `DjvuTextLayer` retains those zones in top-left page coordinates and uses
+Dart UTF-16 text offsets. Search follows the core case/diacritic folding rules;
+`searchDjvuBook` streams page hits. `DjvuTextOverlay` adapts word selection to
+reader actions and saved text highlights. If a document stores only coarser
+line/page zones, selection keeps that supplied granularity instead of inventing
+word or glyph geometry. A page without hidden text has no
+searchable/selectable text; this backend does not run OCR. Page CFIs use the
+core fixed-page anchors, and text ranges add the `pagecraft-djvu` marker so they
+cannot be mistaken for EPUB or PDF text positions.
+
+The decoder accepts single-page and bundled multi-page documents. Indirect
+multi-file documents and standalone external `INCL` references are refused;
+the engine does not fetch document components from arbitrary paths or URLs.
+The vendored release includes the documented upstream INCL nesting guard;
+cyclic bundled includes fail with a typed error instead of overflowing the
+decoder stack. The [native backend notes](native/djvu/README.md) record the
+backport provenance and platform adaptation.
+The optional JPEG-in-DjVu codec is disabled in this build; the usual JB2/IW44
+DjVu encodings are decoded by the vendored library.
+
+The native build hook compiles the committed sources under `native/djvu/` for
+the target platform; a system DjVuLibre installation is not required and normal
+builds do not fetch source code. Preserve its source pin, license notices and
+upstream changes when updating it. The vendored DjVuLibre component is licensed
+under GPLv2 or later, independently of the surrounding Dart code's notices;
+distributing linked application builds requires evaluating those obligations.
+
+The original three-page fixture in `test/formats/djvu/djvu_fixture.dart` contains
+portrait/landscape pages, Unicode hidden text, a nested outline and an image-only
+page. Its generator uses DjVuLibre maintenance tools and original artwork;
+normal tests read the committed bytes and do not use user books or network.
+Core checks cover rendering/tiles, search/anchors, malformed inputs, bounded
+text caching and document disposal. The app's device smoke is
+`integration_test/djvu_reader_test.dart` in the repository root.
+
 ## Metadata (`src/metadata`)
 
 `readComicMetadata(path)` is what the app's import calls instead of the
@@ -1173,7 +1272,8 @@ change format parsers, positions or gesture arbitration. Only implemented
 effects belong in the public enum and app settings.
 
 `FixedPagesView` draws any `FixedPageSource` (`ComicPages` over a
-`ComicPageSource`, `PdfPages` over a `PdfBook`) with framework parts:
+`ComicPageSource`, `PdfPages` over a `PdfBook`, `DjvuPages` over a `DjvuBook`)
+with framework parts:
 `PageView` under a `Directionality` for the reading direction (its
 `axis` turns pages sideways or, for the reader's vertical page turn, up
 and down, where reading direction does not apply),
@@ -1246,8 +1346,8 @@ manifest and points the engine at the library. PDF fixtures live in
 regenerates them with Ghostscript (outline, rotated page and Info
 dictionary through pdfmarks, a user-password file, 200 pages).
 `test/fixtures/icu_sentence_breaks.json` holds ICU's sentence breaks for
-curated and random strings. Node.js is optional only when regenerating this
-independent ICU reference, from this package directory:
+curated and random strings. To regenerate this independent ICU reference with
+Node.js, run from this package directory:
 
 ```sh
 node test/fixtures/icu_sentence_breaks.mjs test/fixtures/icu_sentence_breaks.json

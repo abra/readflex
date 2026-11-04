@@ -67,7 +67,7 @@
   "onboardingWelcomeTitle": "欢迎使用 Readflex",
   "onboardingWelcomeSubtitle": "图书、漫画、PDF 和网页文章，尽在一个阅读器。",
   "onboardingFeatureBooksTitle": "图书、漫画和 PDF",
-  "onboardingFeatureBooksDescription": "EPUB、FB2、MOBI、AZW3、PDF 和 CBZ",
+  "onboardingFeatureBooksDescription": "EPUB、FB2、MOBI、AZW3、DjVu、PDF 和 CBZ",
   "onboardingFeatureArticlesTitle": "通过链接保存文章",
   "onboardingFeatureArticlesDescription": "干净的副本，可离线阅读",
   "onboardingFeatureLookupTitle": "翻译和释义",

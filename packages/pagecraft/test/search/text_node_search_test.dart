@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pagecraft/all_formats.dart';
 
 /// Checked against foliate-js itself: `test/fixtures/foliate_search.json`
-/// records its `search()` (before the WebView reader went, R6),
+/// records its `search()` before the WebView reader's removal;
 /// `tool/search_fold_table.mjs` folds every code point the way
 /// `normalizeSearchText` does.
 void main() {

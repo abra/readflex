@@ -5,6 +5,33 @@ Full-screen reader for books, comics, and saved articles. The single route
 chrome, and a text-selection context panel populated by pluggable
 `TextAction`s.
 
+## Maintainer reading path
+
+Start with the dependency injection in [app routing](../../../lib/app/routing.dart),
+then [ReaderScreen](lib/src/reader_screen.dart), the
+[state owners](#architecture--independent-units-of-state) and the format bodies
+below. `reader_screen.dart` and its ten `part` files form **one Dart library**:
+they share imports and private declarations. The split groups screen composition,
+lifecycle, five format bodies, chrome, drawers and context panels; these files
+are not independently importable modules.
+
+| Step | Owner and contract |
+|---|---|
+| Resolve source | [ReaderBloc](lib/src/reader_bloc.dart) loads repositories into `ReaderDocument`, annotations and a saved position. `ReaderStatus.ready` means this data is available; it does not mean a page has been rendered. |
+| Open and draw | [Screen content](lib/src/reader_screen_content.dart) selects the text, article, comic, PDF or DjVu body. The body owns its Pagecraft source/controller, reports first-page readiness and releases them on disposal. |
+| Navigate and select | [ReaderSurface](lib/src/reader_surface.dart) receives commands from chrome/drawers; body callbacks report positions, search and selection to their state owners. Views receive state and UI callbacks, not repositories. |
+| Persist and leave | `ReaderBloc` updates live position immediately, debounces writes by 500ms and drains pending writes on `close`. [Lifecycle scopes](lib/src/reader_screen_lifecycle.dart) release temporary brightness and keep-awake requests on background/disposal. |
+
+For changes to opening, restoration or disposal, begin with
+[bloc tests](test/reader_bloc_test.dart) and the screen tests for
+[text](test/reader_screen_text_test.dart),
+[articles](test/reader_screen_article_test.dart),
+[comics](test/reader_screen_comic_test.dart) and
+[PDF](test/reader_screen_pdf_test.dart). Surface tests exercise the command
+contract separately from rendering; native selection handles and device frame
+timing still need device checks. Pagecraft's parser/layout responsibilities are
+documented in its [README](../../pagecraft/README.md).
+
 ## Public API
 
 ```dart
@@ -199,12 +226,13 @@ from the page (positions, selections, taps, annotations, load state) are
 callbacks of the body that draws it, wired to the blocs where it is built.
 `_ReadyContent` picks the body and surface by source type and format
 (`_PageKind`): articles scroll on `ReaderArticleSurface`, CBZ on
-`ReaderComicSurface`, PDF on `ReaderPdfSurface`, EPUB, FB2 and MOBI/AZW3 on
+`ReaderComicSurface`, PDF on `ReaderPdfSurface`, DjVu on `ReaderDjvuSurface`,
+EPUB, FB2 and MOBI/AZW3 on
 `ReaderTextSurface`, all on `package:pagecraft`. The types the page reports
 (`BookPosition`, `ReaderTocItem`, `ReaderDocumentFeatures`, search events,
 `ReaderSelection` and its parts) live in this package. A body that cannot
 open or lay out its document adds `ReaderSurfaceFailed` with the error.
-There is no WebView: until R6 (2026-10-30) the WebView reader with
+There is no WebView: before its removal on 2026-10-30, the WebView reader with
 foliate-js drew books behind the same contract; the last revision with it
 is `fb4b4e5c`. Saved positions, highlights and bookmarks keep the forms it
 wrote.
@@ -277,6 +305,35 @@ opening the hit's page and marking its range, selection preview colour
 and retention on the `PdfTextSelection`, previews as `PdfPageImage`
 providers; image-area commands are inert.
 
+### DjVu (`_ReaderDjvuBody`, `ReaderDjvuSurface`)
+
+The DjVu body opens `DjvuBook` and draws `DjvuPages` on `FixedPagesView`,
+reusing the existing page animation, zoom, spread and navigation controls.
+DjVu remains a book in Library; it does not join the Comics collection scope.
+The picker accepts `.djvu` and `.djv`, persisted as `BookFormat.djvu`.
+
+The native decoder runs outside the UI isolate. Reader owns the opened book,
+controller and bounded `DjvuTextLayerCache`; closing the body detaches its
+session and releases them. A stale opening cannot replace a newer source.
+Source/open failures use the existing loading/error/retry contract.
+Positions and bookmarks use fixed-page CFIs, restored before the first page.
+The outline populates Chapters, while the separate Pages grid requests only
+mounted thumbnails through `ReaderPageThumbnailCubit`.
+
+`ReaderDjvuSurface` searches the hidden text with `searchDjvuBook`, emits
+excerpts and navigates to the hit's page/range. `DjvuTextOverlay` selects
+whole words using the file's word rectangles; selection payloads contain text,
+sentence context and range CFIs for the normal reader actions. Saved text
+highlights and search marks share those anchors. This uses the existing hidden
+text; there is no on-device OCR or invented character geometry.
+
+A page with no hidden text uses `ComicImageAreaLayer` for area highlights.
+Only one selection layer is active per page, so text selection and area
+dragging do not compete for the same long press. The selection tip appears
+only after a loaded page proves that the document has selectable text.
+DjVu chrome exposes Contents, page direction, Bookmark and Search, without
+font controls or PDF-specific margin trimming/page-colour settings.
+
 ### Text books (`_ReaderTextBody`, `ReaderTextSurface`)
 
 For an EPUB, FB2 or MOBI/AZW3 book the body mounts `_ReaderTextBody`: it
@@ -284,7 +341,9 @@ opens the file with pagecraft (`EpubBook`, `Fb2Book`, `MobiBook` from
 `package:pagecraft/all_formats.dart`, the source by `textBookSourceOf`; a
 failure reports `ReaderSurfaceFailed`) and shows `TextPagesView` over a
 `TextPagesController` restored from the saved CFI, or the fraction for rows
-saved without one. Its effective `rtl` drives swipes, spread order and reported
+saved without one. Fixed-layout EPUB/KF8 and vertical writing are unsupported by
+the text engine and reach the reader's error/retry UI; there is no alternate
+renderer fallback. Its effective `rtl` drives swipes, spread order and reported
 `BookPosition.pageProgressionRtl` for edge taps. Pagecraft resolves it once before
 the first spread from declared RTL, an RTL language or bounded body-text
 sampling, retaining Readflex's former foliate-js fallback for books with

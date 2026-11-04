@@ -9,6 +9,7 @@ void main() {
     test('comics and PDF zoom; reflowable books do not', () {
       expect(readerHasZoomablePages(BookFormat.cbz), isTrue);
       expect(readerHasZoomablePages(BookFormat.pdf), isTrue);
+      expect(readerHasZoomablePages(BookFormat.djvu), isTrue);
       for (final format in [
         BookFormat.epub,
         BookFormat.fb2,
@@ -26,6 +27,40 @@ void main() {
   });
 
   group('readerProgressLabel', () {
+    test(
+      'DjVu uses discrete zero-indexed document pages for labels and seek',
+      () {
+        expect(
+          readerProgressLabel(
+            format: BookFormat.djvu,
+            progress: 0.5,
+            chapterCurrentPage: 4,
+            chapterTotalPages: 10,
+            isDragging: false,
+            formatPageOfTotal: _format,
+          ),
+          '5 / 10',
+        );
+        expect(
+          readerSliderDivisions(
+            sourceType: SourceType.book,
+            format: BookFormat.djvu,
+            totalPages: 10,
+          ),
+          9,
+        );
+        expect(
+          readerSliderValue(
+            sourceType: SourceType.book,
+            format: BookFormat.djvu,
+            progress: 0.5,
+            currentPage: 4,
+            totalPages: 10,
+          ),
+          closeTo(4 / 9, 0.0001),
+        );
+      },
+    );
     test('PDF pages count from one on the zero-based page index', () {
       String label(int pageIndex) => readerProgressLabel(
         format: BookFormat.pdf,

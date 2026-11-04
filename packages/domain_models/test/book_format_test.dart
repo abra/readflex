@@ -10,6 +10,7 @@ void main() {
       expect(BookFormat.from('pdf'), BookFormat.pdf);
       expect(BookFormat.from('azw3'), BookFormat.azw3);
       expect(BookFormat.from('cbz'), BookFormat.cbz);
+      expect(BookFormat.from('djvu'), BookFormat.djvu);
     });
 
     test('returns epub for unsupported strings', () {
@@ -34,6 +35,8 @@ void main() {
       expect(BookFormat.fromExtension('.pdf'), BookFormat.pdf);
       expect(BookFormat.fromExtension('.azw3'), BookFormat.azw3);
       expect(BookFormat.fromExtension('.cbz'), BookFormat.cbz);
+      expect(BookFormat.fromExtension('.djvu'), BookFormat.djvu);
+      expect(BookFormat.fromExtension('.djv'), BookFormat.djvu);
     });
 
     test('returns null for unsupported extensions like .txt', () {
@@ -43,6 +46,7 @@ void main() {
     test('is case-insensitive', () {
       expect(BookFormat.fromExtension('.EPUB'), BookFormat.epub);
       expect(BookFormat.fromExtension('.Pdf'), BookFormat.pdf);
+      expect(BookFormat.fromExtension('.DJV'), BookFormat.djvu);
     });
 
     test('returns null for unknown extension', () {

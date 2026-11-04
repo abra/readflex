@@ -6,8 +6,9 @@ import 'package:highlight_repository/highlight_repository.dart';
 import 'practice_item.dart';
 import 'practice_source_index.dart';
 
-/// Turns review rows into display-ready [PracticeItem]s: one batch query per
-/// type, due order kept, items whose content was deleted dropped.
+/// Turns review rows into display-ready [PracticeItem]s: content is batched by
+/// type, word anchors are read per entry, and due order is kept. Missing
+/// content is dropped.
 class PracticeItemLoader {
   const PracticeItemLoader({
     required DictionaryRepository dictionaryRepository,

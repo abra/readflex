@@ -11,8 +11,8 @@ import '../../pagecraft_exception.dart';
 /// outline and the Info dictionary. The counterpart of `pdf.js` in the
 /// WebView reader, which read the same three things to open a document.
 ///
-/// Opening reads the size of every page in the engine's worker isolate,
-/// so a thousand-page scan costs about a second once; nothing is rendered
+/// Opening reads the size of every page in the engine's worker isolate;
+/// this cost grows with page count. Nothing is rendered
 /// until a page is asked for. The engine must be loaded first:
 /// `initializePdfEngine()` in the app, `preparePdfEngineForTests()` in
 /// tests.
@@ -171,7 +171,8 @@ List<PdfOutlineEntry> pdfOutlineEntriesFrom(
 }
 
 /// Thrown by [PdfBook.open] for an encrypted file without the right
-/// password. The reader asks for one; the import refuses the file.
+/// password. The host can retry with a password; Readflex currently reports an
+/// open/import error and has no password-entry UI.
 class PdfPasswordRequiredException extends PagecraftException {
   const PdfPasswordRequiredException(String path)
     : super('PDF is password-protected: $path');

@@ -93,7 +93,7 @@ class ReaderSelectionTipCubit extends Cubit<ReaderSelectionTipPhase> {
 }
 
 /// Whether the reader can select text in a source, so the tip has something
-/// to teach: articles and reflowable books, PDFs only with a text layer,
+/// to teach: articles and reflowable books, PDFs/DjVu only with a text layer,
 /// never comics.
 bool readerSupportsSelectionTip({
   required SourceType sourceType,
@@ -103,7 +103,7 @@ bool readerSupportsSelectionTip({
   if (sourceType == SourceType.article) return true;
   return switch (format) {
     BookFormat.cbz => false,
-    BookFormat.pdf => hasSearchableText == true,
+    BookFormat.pdf || BookFormat.djvu => hasSearchableText == true,
     BookFormat.epub ||
     BookFormat.fb2 ||
     BookFormat.mobi ||

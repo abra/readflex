@@ -225,7 +225,7 @@ class ReadflexLocalizationsZh extends ReadflexLocalizations {
 
   @override
   String get onboardingFeatureBooksDescription =>
-      'EPUB、FB2、MOBI、AZW3、PDF 和 CBZ';
+      'EPUB、FB2、MOBI、AZW3、DjVu、PDF 和 CBZ';
 
   @override
   String get onboardingFeatureArticlesTitle => '通过链接保存文章';

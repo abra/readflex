@@ -132,7 +132,7 @@
   "@onboardingFeatureBooksTitle": {
     "description": "Onboarding feature row title: the file types the app opens."
   },
-  "onboardingFeatureBooksDescription": "EPUB, FB2, MOBI, AZW3, PDF and CBZ",
+  "onboardingFeatureBooksDescription": "EPUB, FB2, MOBI, AZW3, DjVu, PDF and CBZ",
   "@onboardingFeatureBooksDescription": {
     "description": "Onboarding feature row detail: supported file formats. Format names are not translated; only the list conjunction is."
   },

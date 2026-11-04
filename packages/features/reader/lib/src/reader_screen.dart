@@ -36,6 +36,7 @@ import 'reader_comic_surface.dart';
 import 'reader_contents_tabs.dart';
 import 'reader_control_styles.dart';
 import 'reader_device_font_scale.dart';
+import 'reader_djvu_surface.dart';
 import 'reader_directional_layout.dart';
 import 'reader_document_features.dart';
 import 'reader_drawer_layout.dart';
@@ -84,10 +85,13 @@ import 'reader_toc_item.dart';
 import 'reader_toc_progress.dart';
 import 'reader_ui_cubit.dart';
 
+// These parts share this library's private screen composition and imports;
+// source/controller lifetimes belong to each format body.
 part 'reader_screen_lifecycle.dart';
 part 'reader_screen_content.dart';
 part 'reader_screen_comic_body.dart';
 part 'reader_screen_pdf_body.dart';
+part 'reader_screen_djvu_body.dart';
 part 'reader_screen_text_body.dart';
 part 'reader_screen_article_body.dart';
 part 'reader_screen_chrome.dart';

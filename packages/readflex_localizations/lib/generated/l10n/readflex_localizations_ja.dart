@@ -224,7 +224,8 @@ class ReadflexLocalizationsJa extends ReadflexLocalizations {
   String get onboardingFeatureBooksTitle => '本、コミック、PDF';
 
   @override
-  String get onboardingFeatureBooksDescription => 'EPUB、FB2、MOBI、AZW3、PDF、CBZ';
+  String get onboardingFeatureBooksDescription =>
+      'EPUB、FB2、MOBI、AZW3、DjVu、PDF、CBZ';
 
   @override
   String get onboardingFeatureArticlesTitle => 'リンクから記事';

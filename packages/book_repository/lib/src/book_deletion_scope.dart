@@ -3,5 +3,6 @@
 ///
 /// `keepLearningData` preserves saved words and their review state, plus
 /// legacy flashcard rows, when the book is removed.
-/// `deleteEverything` is opt-in for users who want a clean slate.
+/// `deleteEverything` also removes that learning content and its review rows.
+/// Historical review logs remain in either scope.
 enum BookDeletionScope { keepLearningData, deleteEverything }

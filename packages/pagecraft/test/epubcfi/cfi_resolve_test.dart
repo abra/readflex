@@ -6,7 +6,7 @@ import 'package:pagecraft/all_formats.dart';
 
 /// Parity with `epubcfi.js` in Chromium: `test/fixtures/cfi/expected.json`
 /// records what the browser produced for the fixture documents (recorded
-/// by `cfi_fixtures.mjs` before the WebView reader went, R6); the same
+/// by `cfi_fixtures.mjs` before the WebView reader's removal); the same
 /// positions must give the same strings here, and the strings must
 /// resolve to the same nodes.
 void main() {

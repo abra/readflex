@@ -28,9 +28,15 @@ const _articleHtmlReaderActions = {
   ReaderChromeAction.textSearch,
 };
 
+const _searchableImagePageReaderActions = {
+  ..._imagePageReaderActions,
+  ReaderChromeAction.textSearch,
+};
+
 Set<ReaderChromeAction> readerChromeActionsForFormat(BookFormat? format) {
   return switch (format) {
     BookFormat.cbz => _imagePageReaderActions,
+    BookFormat.djvu => _searchableImagePageReaderActions,
     _ => _textReaderActions,
   };
 }

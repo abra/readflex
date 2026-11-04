@@ -55,14 +55,14 @@ String readerProgressLabel({
 }
 
 bool isImagePageFormat(BookFormat? format) {
-  return format == BookFormat.cbz;
+  return format == BookFormat.cbz || format == BookFormat.djvu;
 }
 
-/// Comic and PDF pages are page images: they pinch and double-tap zoom and
+/// Comic, DjVu and PDF pages are images: they pinch and double-tap zoom and
 /// have page previews. Unlike [isImagePageFormat], PDF
 /// keeps text-book progress, selection and chrome taps.
 bool readerHasZoomablePages(BookFormat? format) {
-  return format == BookFormat.cbz || format == BookFormat.pdf;
+  return isImagePageFormat(format) || format == BookFormat.pdf;
 }
 
 const readerDefaultSeekSettleTimeout = Duration(milliseconds: 600);

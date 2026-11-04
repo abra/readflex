@@ -207,6 +207,9 @@ class ArticleRepository {
     }
   }
 
+  /// Removes source-owned content and review rows atomically, then files.
+  /// Unlike book deletion, this has no keep-learning-data scope. Historical
+  /// review logs remain for activity statistics.
   Future<void> deleteArticle(String id) async {
     try {
       await _db.transaction(() async {

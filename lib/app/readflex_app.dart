@@ -18,7 +18,7 @@ import 'package:toast_service/toast_service.dart';
 class ReadflexApp extends StatefulWidget {
   const ReadflexApp({this.initialLocation = AppRoutes.root, super.key});
 
-  /// Where the router starts; tests open a tab directly.
+  /// Where the router starts; tests can open a route directly.
   final String initialLocation;
 
   @override

@@ -2,8 +2,8 @@ import 'package:drift/drift.dart';
 
 /// Append-only record of every FSRS review across all reviewable types.
 /// Each row captures the rating plus a snapshot of the pre-review FSRS
-/// state, used for analytics and parameter optimization. The current state
-/// itself lives in `review_items_table`.
+/// state. Activity statistics read these rows; no parameter-optimization
+/// pipeline is wired. Current state lives in `review_items_table`.
 class ReviewLogsTable extends Table {
   TextColumn get id => text()();
 

@@ -26,7 +26,7 @@ typedef PageOverlayBuilder =
 /// whole page: a margin crop.
 typedef VisibleRectOf = Rect? Function(int page);
 
-/// Pages of a comic or a PDF: a `PageView` of single pages or spreads,
+/// Fixed-page documents (comics, PDF, DjVu): single pages or spreads,
 /// presented with [pageTurnAnimation],
 /// pinch and double-tap zoom, and the tap arbitration of the WebView
 /// reader. The pages come from a [FixedPageSource]; the view knows nothing

@@ -7,6 +7,8 @@ lower levels of abstraction.
 
 The implementation is the source of truth. Update this model when package
 boundaries, runtime containers, storage ownership, or integration points change.
+For a guided onboarding route and operational transfer checklist, see the
+[team handoff guide](docs/team-handoff.ru.md).
 
 ## Level 1: System Context
 
@@ -46,8 +48,8 @@ flowchart LR
 
 The backend implementations are outside this checkout. Their provider calls,
 server-side caches and deployment details are not client-owned contracts.
-PDFium and the Rust MOBI library are bundled reader dependencies, not system
-PDF or dictionary services.
+PDFium, the Rust MOBI library and the C++ DjVuLibre decoder are bundled reader
+dependencies, not system document viewers or dictionary services.
 
 ## Level 2: Containers
 
@@ -65,7 +67,7 @@ flowchart TB
     repos["Repositories and services\ncontent, preferences, connectivity, translation, dictionary, screen control"]
     db["Drift SQLite database\nreadflex.db"]
     files["App documents files\nbooks, articles"]
-    engine["pagecraft reader engine\nDart formats/layout, PDFium, Rust MOBI backend"]
+    engine["pagecraft reader engine\nDart formats/layout, PDFium, Rust MOBI, C++ DjVu"]
   end
 
   cleaner["Article Cleaner API"]
@@ -94,7 +96,7 @@ flowchart TB
 | Repositories/services | `packages/*_repository`, `packages/*_service`, specialized packages | Data source orchestration, platform/backend contracts, persistence boundaries. |
 | Local database | `packages/local_storage` | Drift schema, DAOs, migrations, storage rows. |
 | App files | App documents directory | Imported books, extracted article HTML and assets. |
-| Reader engine | `packages/pagecraft` | Opens EPUB, FB2, MOBI/KF8, CBZ, PDF and saved articles from their files, lays them out and draws their pages; import metadata, search, selection, CFIs. Its internal Rust crate in `rust/` handles MOBI record I/O and PalmDOC/HUFF-CDIC decoding over FRB, with lazy KF8 reads and batched MOBI 6 text. Pagecraft's build hook bundles it through Native Assets. |
+| Reader engine | `packages/pagecraft` | Opens EPUB, FB2, MOBI/KF8, CBZ, PDF, DjVu and saved articles; import metadata, layout, pages, search, selection and CFIs. Rust handles MOBI record I/O and decompression over FRB. DjVuLibre C++ handles DjVu decoding and hidden text over a narrow C ABI on a document-owned Dart worker isolate. Pagecraft's build hook bundles the MOBI and DjVu backends through Native Assets. |
 
 ## Level 3: Components
 
@@ -265,6 +267,57 @@ sequenceDiagram
   ReaderBloc->>ReaderBloc: debounce pending persistence
   ReaderBloc->>Repository: updateReadingPosition(id, cfi, progress)
 ```
+
+### Saved Word to Review
+
+```mermaid
+sequenceDiagram
+  participant Sheet as Translation sheet
+  participant Words as DictionaryRepository
+  participant DB as AppDatabase
+  participant Practice as PracticeItemLoader / ReviewSessionBloc
+  participant FSRS as FsrsRepository
+  participant Scheduler as review_scheduler
+
+  Sheet->>Words: addEntry(content and source anchor)
+  Words->>DB: transaction: word, anchor and review item
+  Practice->>FSRS: load eligible review rows
+  Practice->>Words: hydrate saved word content and anchors
+  Practice->>FSRS: recordReview(rating)
+  FSRS->>Scheduler: compute next state with FSRS v6
+  FSRS->>DB: persist review state and log
+```
+
+The content repositories own registration/deletion alongside content changes;
+`fsrs_repository` owns scheduling state. The Library's foreground timer observes
+the earliest stored deadline; it does not compute FSRS intervals. Queue status
+reads do not reload the source list or review history.
+
+### Translation and Offline Fallback
+
+```mermaid
+sequenceDiagram
+  participant UI as TranslateCubit
+  participant Coordinator as ContextualTranslationCoordinator
+  participant Remote as Remote translation service
+  participant Offline as ML Kit adapter
+
+  UI->>Coordinator: translate(selection, context, languages)
+  Coordinator->>Coordinator: validate and check memory cache
+  Coordinator->>Remote: request unless usable remote cache hit
+  alt eligible network or availability failure
+    Coordinator->>Offline: translate with concrete source language
+    Offline-->>Coordinator: missing-model outcome when models are absent
+    Coordinator-->>UI: explicit download consent required
+  else authentication, validation or invalid response
+    Coordinator-->>UI: typed failure without offline fallback
+  end
+```
+
+Offline models are downloaded on demand with consent. The bundled ML Kit native
+engine is separate from those language models. Cancellation aborts an HTTP
+request where possible and discards stale results; it cannot interrupt an
+already running native translation.
 
 ## Architectural Invariants
 

@@ -8,7 +8,7 @@ import 'comic_page_source.dart';
 /// A CBZ comic: the images of a ZIP archive in reading order.
 ///
 /// The counterpart of `comic-book.js`. Every page is one section of equal
-/// weight, so progress reads as `pageIndex / pageCount`; the first page is
+/// weight, so progress reads as `(pageIndex + 1) / pageCount`; the first page is
 /// the cover; the table of contents lists page names. Bytes are read on
 /// demand and never cached here: decoding to the screen size and the memory
 /// budget belong to the image layer above.

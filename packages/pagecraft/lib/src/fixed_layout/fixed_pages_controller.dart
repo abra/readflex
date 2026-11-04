@@ -16,7 +16,7 @@ enum PageRelocationReason {
   navigation,
 }
 
-/// Where a comic is open and what to show there: the model behind
+/// Where an image-page document is open: the model behind
 /// `FixedPagesView`, usable without it.
 ///
 /// A `ChangeNotifier` like `PageController`: the view listens for the unit

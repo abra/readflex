@@ -6,7 +6,7 @@ import 'reader_selection.dart';
 /// Commands the reader screen sends to whatever draws a book or an article.
 ///
 /// One implementation per kind of page: `ReaderTextSurface` (EPUB, FB2,
-/// MOBI), `ReaderComicSurface`, `ReaderPdfSurface` and
+/// MOBI), `ReaderComicSurface`, `ReaderPdfSurface`, `ReaderDjvuSurface` and
 /// `ReaderArticleSurface`, which scrolls. Every command is safe before the
 /// surface is mounted: navigation and previews are dropped, queries answer
 /// null. The screen's events (positions, selections, taps, annotations)
@@ -68,7 +68,7 @@ abstract interface class ReaderSurface {
 
   void clearSelectionHighlightPreview();
 
-  // Image areas (comics, PDF).
+  // Image areas (comics and DjVu scans).
 
   void showImageAreaSelectionPreview({
     required int pageIndex,

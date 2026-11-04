@@ -165,15 +165,18 @@ void main() {
                 AppSpacing.lg -
                 kLibraryFloatingActionsLift;
             expect(close.bottom, closeTo(expectedBottom, .1));
-            final action = find.widgetWithIcon(
-              AppPlainIconButton,
-              AppIcons.delete,
+            final action = find.byKey(
+              const ValueKey('libraryDeleteSelectedButton'),
             );
             expect(tester.getSize(action), const Size(48, 48));
+            final button = tester.widget<IconButton>(action);
+            final colors = tester.element(action).colors;
             expect(
-              tester.widget<AppPlainIconButton>(action).color,
-              tester.element(action).colors.error,
+              button.style!.backgroundColor!.resolve({}),
+              colors.error,
             );
+            expect(button.style!.foregroundColor!.resolve({}), colors.onError);
+            expect(button.style!.shape!.resolve({}), isA<CircleBorder>());
             final add = find.byKey(
               const ValueKey('libraryAddToCollectionButton'),
             );

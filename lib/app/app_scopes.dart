@@ -20,7 +20,7 @@ class AppScopes extends StatelessWidget {
 
   final DependenciesContainer dependencies;
 
-  /// Where the router starts; tests open a tab directly.
+  /// Where the router starts; tests can open a route directly.
   final String initialLocation;
 
   @override

@@ -66,6 +66,8 @@ The repository writes metadata to `local_storage` through `ArticlesDao` and wrap
 storage failures in `StorageException`. Deleting an article also removes related
 review items, highlights, flashcards, dictionary entries, bookmarks and collection
 memberships in one transaction. The article directory is cleaned after commit.
+Unlike book deletion, this API has no keep-learning-data scope. Append-only
+review logs remain for historical activity statistics.
 
 Library uses `ArticlesDao.libraryEntries`, an explicit SQL column projection
 that excludes `plainText`, reader anchors, and asset paths. It returns typed

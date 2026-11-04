@@ -6,7 +6,7 @@ void main() {
   group('readerChromeActionsForFormat', () {
     test('keeps text-reader controls for regular books', () {
       for (final format in BookFormat.values.where(
-        (f) => f != BookFormat.cbz,
+        (f) => f != BookFormat.cbz && f != BookFormat.djvu,
       )) {
         final actions = readerChromeActionsForFormat(format);
 
@@ -33,6 +33,20 @@ void main() {
 
       expect(actions, contains(ReaderChromeAction.textAppearance));
       expect(actions, contains(ReaderChromeAction.textSearch));
+    });
+
+    test('DjVu combines image-page controls with hidden-text search', () {
+      final actions = readerChromeActionsForFormat(BookFormat.djvu);
+      expect(
+        actions,
+        containsAll([
+          ReaderChromeAction.contents,
+          ReaderChromeAction.pageTurn,
+          ReaderChromeAction.bookmark,
+          ReaderChromeAction.textSearch,
+        ]),
+      );
+      expect(actions, isNot(contains(ReaderChromeAction.textAppearance)));
     });
   });
 

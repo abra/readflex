@@ -101,7 +101,7 @@ class _ReaderChromeDismissBarrierDriver extends StatelessWidget {
     );
     final shouldBlockPage = shouldBlockReaderPageInput(
       isComic: context.select<ReaderBloc, bool>(
-        (bloc) => bloc.state.document?.format == BookFormat.cbz,
+        (bloc) => isImagePageFormat(bloc.state.document?.format),
       ),
       chromeVisible: chromeOverlay.chromeVisible,
       overlayVisible: chromeOverlay.overlay != ReaderOverlay.none,

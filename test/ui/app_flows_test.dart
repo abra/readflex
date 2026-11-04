@@ -136,11 +136,33 @@ void main() {
       find.widgetWithText(TextField, 'New collection name'),
       'Reading list',
     );
-    await tapUi(tester, find.text('Create and add'));
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('createCollectionSubmitButton')),
+    );
     await waitForUi(
       tester,
-      () => find.text('Create and add').evaluate().isEmpty,
+      () => find
+          .byKey(const ValueKey('addToCollectionCreateStep'))
+          .evaluate()
+          .isEmpty,
       description: 'collection created',
+    );
+    final created = await tester.runAsync(
+      app.collectionRepository.getCollections,
+    );
+    expect(created!.single.sourceCount, 0);
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('addToCollectionsSubmitButton')),
+    );
+    await waitForUi(
+      tester,
+      () => find
+          .byKey(const ValueKey('addToCollectionsSubmitButton'))
+          .evaluate()
+          .isEmpty,
+      description: 'collection membership confirmed',
     );
     final collections = await tester.runAsync(
       app.collectionRepository.getCollections,

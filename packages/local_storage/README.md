@@ -100,13 +100,14 @@ do not need cross-feature query composition yet. It stores both the navigation
 CFI plus optional text and visual-page anchor fields so readers can
 distinguish pages when a book format reports coarse section-level CFI values.
 
-`articles_table` stores saved web-article metadata and reader state. Heavy
-article payloads stay on disk under `articles/<id>/`; the row stores local
-filenames/paths plus extracted metadata such as language, author, site, CFI,
-and reading progress. Upgrades from the historical v5-v12 article schemas
-migrate rows directly into the current table. Inline v5 HTML, v6 absolute
-paths, and later filename-only layouts are copied into the current per-article
-directory instead of being deleted.
+`articles_table` stores saved web-article metadata, reader state and the complete
+extracted `plain_text`. Structured JSON, generated reader HTML and images live
+on disk under `articles/<id>/`; the row stores their filenames/paths plus
+language, author, site, CFI and reading progress. Metadata-only Library queries
+exclude `plain_text`; full article reads include it. Upgrades from the historical
+v5-v12 article schemas migrate rows directly into the current table. Inline v5
+HTML, v6 absolute paths, and later filename-only layouts are copied into the
+current per-article directory instead of being deleted.
 
 `collections_table` stores manual collection metadata;
 `collection_sources_table` stores manual and protected favourites membership.

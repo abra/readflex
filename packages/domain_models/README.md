@@ -42,7 +42,7 @@ is outside the active app graph.
 | Enum                   | Values                                        |
 |------------------------|-----------------------------------------------|
 | `SourceType`           | `book`, `article`                             |
-| `BookFormat`           | `epub`, `fb2`, `mobi`, `pdf`, `azw3`, `cbz`   |
+| `BookFormat`           | `epub`, `fb2`, `mobi`, `pdf`, `azw3`, `cbz`, `djvu` |
 | `ArticleTextDirection` | `ltr`, `rtl`                                  |
 | `HighlightColor`       | `yellow`, `green`, `blue`, `pink`, `purple`   |
 | `HighlightKind`        | `text`, `imageArea`                           |
@@ -51,6 +51,9 @@ is outside the active app graph.
 | `Rating`               | `again`, `hard`, `good`, `easy`               |
 | `CreationSource`       | `manual`, `aiHighlight`, `aiSelection`        |
 | `DictionaryAnchorKind` | `exactSelection`, `normalizedSelection`, `expression`, `longSelection` |
+
+DjVu files accept `.djvu` and `.djv` at the import boundary; both persist the
+single `BookFormat.djvu` value. DjVu remains a book, not a comic category.
 
 ## Exceptions
 

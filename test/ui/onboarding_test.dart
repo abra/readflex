@@ -598,7 +598,8 @@ void main() {
       );
       expect(tile.left, greaterThan(title.right));
       expect(tester.takeException(), isNull);
-    });
+      await expectUiGolden(tester, VisualProfile.phone, 'onboarding-phone-rtl');
+    }, tags: ['golden']);
 
     testWidgets(
       'the screen runs no animation, with or without reduced motion',

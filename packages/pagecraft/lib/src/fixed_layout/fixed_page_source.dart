@@ -3,7 +3,7 @@ import 'package:flutter/painting.dart';
 /// What `FixedPagesView` draws: pages that are images of a known count,
 /// each an [ImageProvider] at the width the view asks for.
 ///
-/// A comic decodes its stored images; a PDF renders its pages. Two sources
+/// A comic decodes its stored images; PDF and DjVu render their pages. Two sources
 /// are the same page set when they are the same object, which is what the
 /// providers' cache keys compare.
 abstract interface class FixedPageSource {

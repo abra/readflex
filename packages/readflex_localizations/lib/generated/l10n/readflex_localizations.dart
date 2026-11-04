@@ -522,7 +522,7 @@ abstract class ReadflexLocalizations {
   /// Onboarding feature row detail: supported file formats. Format names are not translated; only the list conjunction is.
   ///
   /// In en, this message translates to:
-  /// **'EPUB, FB2, MOBI, AZW3, PDF and CBZ'**
+  /// **'EPUB, FB2, MOBI, AZW3, DjVu, PDF and CBZ'**
   String get onboardingFeatureBooksDescription;
 
   /// Onboarding feature row title: web articles saved from a link.

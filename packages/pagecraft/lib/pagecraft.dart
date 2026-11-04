@@ -4,10 +4,10 @@
 /// document model, CSS, layout, the text and fixed-layout page views,
 /// CFIs, search, progress and the library's cover thumbnails. Formats
 /// have libraries of their own, each exporting this one: `epub.dart`,
-/// `fb2.dart`, `mobi.dart`, `comic.dart`, `pdf.dart` and `article.dart`;
+/// `fb2.dart`, `mobi.dart`, `comic.dart`, `pdf.dart`, `djvu.dart` and `article.dart`;
 /// `all_formats.dart` exports them all. An app imports the formats it
-/// reads; release builds can drop unreachable Dart code. The PDFium and
-/// MOBI native assets remain package dependencies for every consumer.
+/// reads; release builds can drop unreachable Dart code. PDFium, MOBI and
+/// DjVu native assets remain package dependencies for every consumer.
 /// Nothing here knows about the app's domain models or storage.
 library;
 

@@ -9,6 +9,7 @@ import 'package:pagecraft/all_formats.dart'
         BookMetadata,
         PagecraftException,
         readComicMetadata,
+        readDjvuMetadata,
         readEpubMetadata,
         readFb2Metadata,
         readMobiMetadata,
@@ -27,6 +28,8 @@ const bookExtensions = [
   'pdf',
   'azw3',
   'cbz',
+  'djvu',
+  'djv',
 ];
 
 /// Opens the platform file picker filtered to [bookExtensions]. Returns
@@ -92,6 +95,7 @@ Future<BookMetadata> _readMetadata(String filePath, BookFormat format) async {
       BookFormat.fb2 => await readFb2Metadata(filePath),
       BookFormat.mobi || BookFormat.azw3 => await readMobiMetadata(filePath),
       BookFormat.cbz => await readComicMetadata(filePath),
+      BookFormat.djvu => await readDjvuMetadata(filePath),
     };
   } on PagecraftException catch (e) {
     throw BookImportException(e.message);

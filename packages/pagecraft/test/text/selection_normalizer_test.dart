@@ -6,8 +6,8 @@ import 'package:pagecraft/all_formats.dart';
 
 /// Every range of short texts against what the WebView reader's
 /// `readflex_selection_normalizer.js` computes
-/// (`test/fixtures/readflex_selection.json`, recorded before the WebView
-/// reader went, R6).
+/// (`test/fixtures/readflex_selection.json`, recorded before that reader's
+/// removal; historical sources are identified in the package README).
 void main() {
   final fixture =
       jsonDecode(

@@ -12,7 +12,16 @@ import 'package:import_flow/import_flow.dart';
 void main() {
   group('bookExtensions', () {
     test('matches reader-supported import formats', () {
-      expect(bookExtensions, ['epub', 'fb2', 'mobi', 'pdf', 'azw3', 'cbz']);
+      expect(bookExtensions, [
+        'epub',
+        'fb2',
+        'mobi',
+        'pdf',
+        'azw3',
+        'cbz',
+        'djvu',
+        'djv',
+      ]);
     });
   });
 

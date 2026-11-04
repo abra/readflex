@@ -7,7 +7,7 @@ import 'package:pagecraft/all_formats.dart';
 
 /// The anchors the WebView article shell wrote for selections of
 /// `fixtures/article/article.html` in Chromium, and the text each
-/// restored (recorded by `article_anchor_fixtures.mjs` before it went, R6):
+/// restored (recorded by `article_anchor_fixtures.mjs` before its removal):
 /// pagecraft writes the same anchors and restores the same text.
 void main() {
   final html = File('test/fixtures/article/article.html').readAsStringSync();

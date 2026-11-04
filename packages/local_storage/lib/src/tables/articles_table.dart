@@ -2,8 +2,9 @@ import 'package:drift/drift.dart';
 
 /// Drift schema for web articles saved through the extraction backend.
 ///
-/// Heavy content stays on disk under `articles/<id>/`; [contentPath] stores
-/// only the JSON filename so rows survive iOS Documents-directory changes.
+/// Structured JSON, reader HTML and images live under `articles/<id>/`;
+/// [contentPath] stores the JSON filename so paths survive iOS directory changes.
+/// [plainText] also keeps the extracted body in SQLite for full article reads.
 class ArticlesTable extends Table {
   TextColumn get id => text()();
 

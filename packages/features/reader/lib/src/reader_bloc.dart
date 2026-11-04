@@ -49,7 +49,7 @@ String? _normalizedHighlightNote(String? note) {
   return normalized;
 }
 
-/// Owns the loaded source document and its highlights for the reader screen.
+/// Owns the loaded source document and its annotations for the reader screen.
 ///
 /// Responsibilities:
 ///   * resolve a [sourceId] into a reader document on load and bump its
@@ -59,9 +59,8 @@ String? _normalizedHighlightNote(String? note) {
 ///     `onReadingPositionSaved`;
 ///   * refresh highlights when a TextAction (e.g. "Highlight") completes.
 ///
-/// UI-only concerns (chrome/drawer state, search drawer state, selection,
-/// selection) live in separate cubits — see [ReaderUiCubit],
-/// [ReaderSearchCubit], and [ReaderSelectionCubit].
+/// UI-only concerns (chrome/drawers, search and selection) live in
+/// `ReaderUiCubit`, `ReaderSearchCubit` and `ReaderSelectionCubit`.
 class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc({
     required BookRepository bookRepository,

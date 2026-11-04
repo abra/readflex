@@ -166,7 +166,7 @@ class _ReaderBodyState extends State<_ReaderBody> {
 }
 
 /// What draws the page of the open source.
-enum _PageKind { article, comic, pdf, text }
+enum _PageKind { article, comic, pdf, djvu, text }
 
 /// Ready reader content: the page surface, its chrome, drawers and panels,
 /// and the commands between them.
@@ -194,6 +194,7 @@ class _ReadyContent extends StatefulWidget {
 class _ReadyContentState extends State<_ReadyContent> {
   final ReaderComicSurface _comicSurface = ReaderComicSurface();
   final ReaderPdfSurface _pdfSurface = ReaderPdfSurface();
+  final ReaderDjvuSurface _djvuSurface = ReaderDjvuSurface();
   final ReaderTextSurface _textSurface = ReaderTextSurface();
   final ReaderArticleSurface _articleSurface = ReaderArticleSurface();
 
@@ -205,6 +206,7 @@ class _ReadyContentState extends State<_ReadyContent> {
     _PageKind.article => _articleSurface,
     _PageKind.comic => _comicSurface,
     _PageKind.pdf => _pdfSurface,
+    _PageKind.djvu => _djvuSurface,
     _PageKind.text => _textSurface,
   };
   String? _readySourceId;
@@ -513,6 +515,7 @@ class _ReadyContentState extends State<_ReadyContent> {
       (SourceType.article, _) => _PageKind.article,
       (_, BookFormat.cbz) => _PageKind.comic,
       (_, BookFormat.pdf) => _PageKind.pdf,
+      (_, BookFormat.djvu) => _PageKind.djvu,
       _ => _PageKind.text,
     };
     final surfaceReady = sourceId != null && _readySourceId == sourceId;
@@ -612,6 +615,20 @@ class _ReadyContentState extends State<_ReadyContent> {
                               surface: _textSurface,
                               onLoading: _onSurfaceLoading,
                               onExternalLink: widget.onExternalLink,
+                              onPositionChanged: _handleReaderPositionChanged,
+                              onReady: _onSurfaceReady,
+                            ),
+                            _PageKind.djvu => _ReaderDjvuBody(
+                              key: ValueKey('djvu:$sourceId'),
+                              document: context
+                                  .read<ReaderBloc>()
+                                  .state
+                                  .document!,
+                              readerTheme: readerTheme,
+                              surface: _djvuSurface,
+                              pageTurnStyle: appearance.pageTurnStyle,
+                              pageAnimation: appearance.pageAnimation,
+                              onLoading: _onSurfaceLoading,
                               onPositionChanged: _handleReaderPositionChanged,
                               onReady: _onSurfaceReady,
                             ),

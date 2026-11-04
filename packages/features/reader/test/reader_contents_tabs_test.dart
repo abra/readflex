@@ -47,4 +47,13 @@ void main() {
       highlights,
     ]);
   });
+
+  test('DjVu offers its outline and adds Pages when the document opens', () {
+    expect(tabs(BookFormat.djvu, hasPageGrid: false), [
+      chapters,
+      bookmarks,
+      highlights,
+    ]);
+    expect(tabs(BookFormat.djvu), [chapters, pages, bookmarks, highlights]);
+  });
 }

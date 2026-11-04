@@ -231,7 +231,7 @@ class ReadflexLocalizationsEn extends ReadflexLocalizations {
 
   @override
   String get onboardingFeatureBooksDescription =>
-      'EPUB, FB2, MOBI, AZW3, PDF and CBZ';
+      'EPUB, FB2, MOBI, AZW3, DjVu, PDF and CBZ';
 
   @override
   String get onboardingFeatureArticlesTitle => 'Articles from a link';

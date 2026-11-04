@@ -67,7 +67,7 @@
   "onboardingWelcomeTitle": "Readflexへようこそ",
   "onboardingWelcomeSubtitle": "本、コミック、PDF、ウェブ記事をひとつのリーダーで。",
   "onboardingFeatureBooksTitle": "本、コミック、PDF",
-  "onboardingFeatureBooksDescription": "EPUB、FB2、MOBI、AZW3、PDF、CBZ",
+  "onboardingFeatureBooksDescription": "EPUB、FB2、MOBI、AZW3、DjVu、PDF、CBZ",
   "onboardingFeatureArticlesTitle": "リンクから記事",
   "onboardingFeatureArticlesDescription": "オフラインで読めるすっきりしたコピー",
   "onboardingFeatureLookupTitle": "翻訳と辞書",

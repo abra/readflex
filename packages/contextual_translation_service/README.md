@@ -14,9 +14,12 @@ cache details.
 | `ContextualTranslationRequest` | Versioned request payload with selected text, marked context, language direction, and source anchor |
 | `ContextualTranslationResult` | Versioned response payload with detected language, translation, alternatives, explanation, and source metadata |
 | `ContextualTranslationService` | Common translation service contract |
+| `OfflineContextualTranslationService` | Model availability, explicit download, and on-device translation contract |
 | `RemoteContextualTranslationService` | HTTP client for `/v1/contextual-translation/analyze` |
 | `MlKitOfflineTranslationService` | On-device fallback using Google ML Kit models |
 | `ContextualTranslationCoordinator` | Cache-first remote call with controlled offline fallback |
+| `ContextualTranslationCache` / `MemoryContextualTranslationCache` | Injectable cache contract and bounded in-memory implementation |
+| `ContextualTranslationException` / `ContextualTranslationFailureReason` | Typed failures and recovery outcomes used by feature state |
 
 Requests use `contextual_lookup` for short lexical selections and
 `text_translation` for complete sentences or longer fragments. The latter
@@ -67,6 +70,12 @@ Both language models must already be downloaded, or the caller must explicitly
 allow a download. Downloading requires connectivity, so offline translation is
 not guaranteed on a fresh installation. The adapter currently exposes the ten
 app languages, not every language supported by ML Kit.
+
+Language-model data is downloaded on demand after the caller permits it; it is
+not shipped as a model bundle in app assets. ML Kit's native translation engine
+is still a platform build dependency, so APK size and downloaded model storage
+are separate costs. The Translate sheet's Download models action opts into the
+required language pair through `allowOfflineModelDownload: true`.
 
 `MlKitOfflineTranslationService` keeps one native translator for the current
 language pair instead of loading its models for every request. It is closed

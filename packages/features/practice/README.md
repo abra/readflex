@@ -70,9 +70,11 @@ built like Library's Display sheet (`ActionBottomSheetLayout.scrollable`,
 what a session reviews (Vocabulary only / With highlights) and the memory
 target (Lighter / Balanced / Stronger: FSRS desired retention 0.8 / 0.9 /
 0.95, `PracticeMemoryTarget`). `PracticeSettingsCubit` shows each choice at
-once and writes it to `PreferencesService`; a failed write is reported and
-the choice goes back. A stored value the sheet does not offer shows as its
-nearest choice (`practice_settings_presets.dart`) and is rewritten only when
+once and writes it to `PreferencesService`. An update error rolls the choice
+back; disk-save failures are logged by the service and keep the in-memory
+choice for the current session. On restart, preferences return to the last
+successfully saved snapshot. A stored value the sheet does not offer shows as
+its nearest choice (`practice_settings_presets.dart`) and is rewritten only when
 the user picks one. The hub reloads when the sheet closes, since the
 highlights setting changes what counts as due; the Library's due count
 follows the same setting.
@@ -90,8 +92,9 @@ follows the same setting.
 - `ReviewSessionScreen` → `ReviewSessionBloc`: the queue and one card at a
   time. Events are start, reveal, rate, remove and again.
 - `PracticeItemLoader` turns review rows into `PracticeWordItem` /
-  `PracticeHighlightItem` with one batch query per type, keeps the due order
-  and drops rows whose content was deleted. `PracticeSourceIndex` names
+  `PracticeHighlightItem` with one content query per type and a separate
+  anchor lookup for each saved word, keeps the due order and drops rows whose
+  content was deleted. `PracticeSourceIndex` names
   where items came from; a missing source leaves `sourceTitle` null.
 - Views read only state and dispatch events or callbacks. `PracticeScreen`
   owns the settings-sheet callback, so its view never receives a service.
@@ -112,8 +115,11 @@ follows the same setting.
 - Words are rated Again / Hard / Good with the interval each would give,
   from `previewIntervals`. Highlights are Keep (recorded as Good) or Show
   less (recorded as Easy). There is no Easy for words.
-- Remove deletes the card's review row and drops it from the queue; a
-  session emptied by removals ends as empty when nothing was rated.
+- Remove deletes the card's review row and drops it from the queue; the saved
+  word or highlight remains. A session emptied by removals ends as empty when
+  nothing was rated. The legacy-highlight backfill currently registers text
+  highlights without a review row again on a later load; removal is not a
+  persistent opt-out for highlights.
 - Cards rated Again are collected; the summary offers a second pass over
   them.
 
@@ -203,7 +209,9 @@ follows the same setting.
   `test/practice_highlights_cubit_test.dart` cover loading with titles and
   anchors, search and filters, removal and grouping.
 - `test/practice_settings_cubit_test.dart` covers the presets, each choice's
-  write, no-op choices and the roll-back on a failed write.
+  update, no-op choices and roll-back when the preferences service throws.
+  That fake throws from `update`; it does not exercise the real service's
+  non-fatal disk-save failure path.
 - `test/practice_screens_test.dart` covers the hub, Vocabulary, Highlights and
   the session end to end with fakes, the app bar of each pushed screen
   (title, `AppBackButton`, localized Back, pop), plus 200% text at 320×568

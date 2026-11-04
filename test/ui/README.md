@@ -223,6 +223,7 @@ same as for `test-device` above.
 | Native book actions | Expand word to phrase, translate exact final range, copy result, Define fallback, dismiss selection menu | `integration_test/reader_flows_test.dart` |
 | Native persistence | Explicit highlight writes text/CFI to real repository, renders nonzero geometry after reopen, and opens by tapping its Highlights row without copy/arrow controls | `integration_test/reader_flows_test.dart` |
 | Native book import | EPUB, FB2 and MOBI built in the test import through `pagecraft` on the device: title and author from the book, the cover decoded by the platform codecs and scaled to 480×720, each import under 5 s, all three shown in the Library | `integration_test/native_import_test.dart` |
+| Native DjVu | Original three-page fixture imports through the production helper with document metadata and a first-page cover; native DjVu pages render, hidden-text search opens its result, Pages requests previews, a page bookmark persists, and reopening restores the saved page | `integration_test/djvu_reader_test.dart`; reader `reader_djvu_surface_test.dart`, `reader_screen_djvu_test.dart` |
 | Initial position persistence | A reopened book opens on its saved page and closing it keeps the saved position | reader `reader_screen_text_test.dart` |
 | Active chapter contrast | Actual selected TOC tile uses paired foreground/background colors, including alpha compositing; light/dark, large text and phone RTL snapshots | `reader_contents_golden_test.dart` |
 | Native reader lifecycle | Search navigation and CFI survive synthetic pause/resume without replacing the page view; the page keeps its text | `integration_test/reader_flows_test.dart` |
@@ -277,6 +278,11 @@ in dark Arabic under `goldens/dark/*-phone-rtl.png`; this does not use the
 tablet RTL viewport. Library press snapshots allow one 100ms frame for gesture
 recognition and another for the highlight to paint before release, then assert
 that the action opens Display or clears the search.
+
+Onboarding has an additional 390 x 844 light Arabic phone capture at
+`goldens/phone/onboarding-phone-rtl.png`, alongside its normal dark Arabic
+tablet profile. Its supported-format caption includes DjVu in every locale;
+the 320 x 568/200% cases check all locales for overflow and reachable actions.
 
 Only widget goldens use these dimensions. The native suite keeps the device's
 real viewport and records it in its results. Large-text onboarding content is
@@ -399,7 +405,8 @@ simulator/emulator rather than a device holding valuable app data.
 - VoiceOver/TalkBack interaction. Semantics assertions are useful but do not
   run an operating system screen reader.
 - Physical Android/iOS variations and all supported book formats. Native
-  fixtures currently cover FB2 and an article; they are not a full format matrix.
+  fixtures cover text books, articles, CBZ, PDF and DjVu in separate scenarios;
+  they are not a complete format, decoder or device matrix.
 - Live backend authentication, timeouts and provider quality. No external
   service is contacted by fixture flows.
 

@@ -1,3 +1,16 @@
+DjVuLibre native decoder
+
+Pagecraft bundles DjVuLibre 3.5.30 under native/djvu/upstream/.
+Copyright (c) 2002 Leon Bottou and Yann Le Cun.
+Copyright (c) 2001 AT&T.
+
+DjVuLibre is distributed under the GNU General Public License, version 2
+or (at your option) any later version. Its complete original notices and
+license text are retained in native/djvu/upstream/COPYRIGHT and COPYING
+and registered in the Flutter license bundle. The MIT notices below do not
+replace the native decoder's license.
+
+--------------------------------------------------------------------------------
 foliate-js
 
 pagecraft ports foliate-js (https://github.com/johnfactotum/foliate-js)

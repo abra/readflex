@@ -11,6 +11,8 @@ import 'package:pagecraft/testing.dart';
 import 'package:pagecraft/all_formats.dart'
     show ImageDimensions, probeImageDimensions;
 
+import '../../../pagecraft/test/formats/djvu/djvu_fixture.dart';
+
 const pdfFixtures = '../../pagecraft/test/fixtures/pdf';
 
 void main() {
@@ -116,6 +118,47 @@ void main() {
           contains('password'),
         ),
       ),
+    );
+    expect(books.added, isEmpty);
+  });
+
+  test(
+    'imports both DjVu aliases with document metadata and first-page cover',
+    () async {
+      for (final extension in ['djvu', 'djv']) {
+        books = _RecordingBookRepository();
+        final source = await writeComic(
+          'original.$extension',
+          djvuFixtureBytes(),
+        );
+        final book = await importBookFile(
+          sourceFile: source,
+          bookRepository: books,
+          logger: logger,
+        );
+        expect(book, isNotNull, reason: extension);
+        final added = books.added.single;
+        expect(added.format, BookFormat.djvu);
+        expect(added.title, 'Pagecraft DjVu fixture');
+        expect(added.author, 'Readflex Tests');
+        expect(added.coverMimeType, 'image/jpeg');
+        expect(
+          probeImageDimensions(added.coverData!),
+          const ImageDimensions(480, 720),
+        );
+      }
+    },
+  );
+
+  test('a malformed DjVu file fails without inserting a source', () async {
+    final source = await writeComic('broken.djvu', utf8.encode('not DjVu'));
+    await expectLater(
+      importBookFile(
+        sourceFile: source,
+        bookRepository: books,
+        logger: logger,
+      ),
+      throwsA(isA<BookImportException>()),
     );
     expect(books.added, isEmpty);
   });
