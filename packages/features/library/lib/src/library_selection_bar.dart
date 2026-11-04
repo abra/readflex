@@ -379,11 +379,25 @@ class _DeleteSelectedButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) => AppPlainIconButton(
-    key: const ValueKey('libraryDeleteSelectedButton'),
-    icon: AppIcons.delete,
-    tooltip: context.l10n.commonDelete,
-    color: context.colors.error,
-    onPressed: onPressed,
-  );
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return IconButton(
+      key: const ValueKey('libraryDeleteSelectedButton'),
+      onPressed: onPressed,
+      tooltip: context.l10n.commonDelete,
+      style: IconButton.styleFrom(
+        foregroundColor: colors.onError,
+        backgroundColor: colors.error,
+        disabledForegroundColor: colors.onSurface.withValues(alpha: .38),
+        disabledBackgroundColor: colors.onSurface.withValues(alpha: .12),
+        fixedSize: const Size.square(AppSizes.buttonHeight),
+        minimumSize: const Size.square(AppSizes.buttonHeight),
+        padding: EdgeInsets.zero,
+        shape: const CircleBorder(),
+        visualDensity: VisualDensity.standard,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      icon: const Icon(AppIcons.delete, size: AppIconSize.md),
+    );
+  }
 }

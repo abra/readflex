@@ -504,8 +504,9 @@ Source repositories, not LibraryBloc, own atomic membership cleanup on deletion.
 
 Selection replaces the import/filter capsule with a separate circular cancel
 FAB at the directional start and a contextual capsule at the end. The capsule
-holds the selected source count, the collection action and secondary delete;
-the trash uses `error`, while cancel remains neutral. The two floating controls
+holds the selected source count, the collection action and delete. Delete uses
+the same 48dp circle as "+", filled with `error` and an `onError` icon; cancel
+remains neutral. The two floating controls
 share a bottom anchor and retain their touch targets when labels grow.
 Counts above 999 show `999+`; semantics and the tooltip retain the exact count.
 The collection action opens a modal bottom sheet; it changes destinations,

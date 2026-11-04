@@ -416,7 +416,7 @@ void main() {
     }
 
     final close = find.byKey(const ValueKey('libraryCancelSelectionFab'));
-    final delete = find.widgetWithIcon(AppPlainIconButton, AppIcons.delete);
+    final delete = find.byKey(const ValueKey('libraryDeleteSelectedButton'));
     final add = find.byKey(const ValueKey('libraryAddToCollectionButton'));
     final capsule = find.byKey(const ValueKey('librarySelectionCapsule'));
 

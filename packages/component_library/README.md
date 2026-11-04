@@ -181,7 +181,8 @@ source quote and translated sentence for native screenshot inspection.
 - **Icon glyph colour follows the action's role, not the surface.** Inline
   delete/remove in a row: `onSurfaceVariant`; undo: `context.actionForeground`;
   overflow "more": `onSurfaceVariant`, or `selectedControlForeground` on a
-  selected row; a bulk destructive command in a selection bar: `error`.
+  selected row. Bulk deletion in the Library selection capsule uses a filled
+  `error` circle with an `onError` glyph, matching the size of the import "+".
 - **Floating action buttons are themed.** `floatingActionButtonTheme` provides
   the primary circular style; call sites pass only `onPressed`, `tooltip`,
   `heroTag` and the child.

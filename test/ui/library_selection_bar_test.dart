@@ -140,7 +140,7 @@ void main() {
           for (final control in [
             cancel,
             add,
-            find.widgetWithIcon(AppPlainIconButton, AppIcons.delete),
+            find.byKey(const ValueKey('libraryDeleteSelectedButton')),
           ]) {
             final bounds = tester.getRect(control);
             final size = tester.getSize(control);

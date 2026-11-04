@@ -150,7 +150,7 @@ void main() {
       isNull,
     );
     expect(
-      tester.widget<AppPlainIconButton>(find.byKey(_delete)).onPressed,
+      tester.widget<IconButton>(find.byKey(_delete)).onPressed,
       isNull,
     );
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -166,7 +166,7 @@ void main() {
       await _pumpActions(tester, open: true);
       expect(find.byIcon(AppIcons.chevronUp), findsOneWidget);
       expect(
-        tester.widget<AppPlainIconButton>(find.byKey(_delete)).onPressed,
+        tester.widget<IconButton>(find.byKey(_delete)).onPressed,
         isNull,
       );
       expect(
