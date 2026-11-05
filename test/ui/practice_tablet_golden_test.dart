@@ -188,9 +188,22 @@ void main() {
           find.byKey(const ValueKey('reviewSummaryCard')),
         );
         final done = find.byKey(const ValueKey('reviewDone'));
+        final doneRect = tester.getRect(done);
         expect(summary.width, lessThanOrEqualTo(480));
         expect(summary.center.dx, closeTo(size.width / 2, .01));
-        expect(summary.contains(tester.getCenter(done)), isTrue);
+        expect(doneRect.width, lessThanOrEqualTo(640));
+        expect(doneRect.center.dx, closeTo(size.width / 2, .01));
+        expect(doneRect.height, greaterThanOrEqualTo(48));
+        expect(doneRect.top, greaterThan(summary.bottom));
+        expect(doneRect.bottom, greaterThan(size.height - 100));
+        expect(doneRect.bottom, lessThanOrEqualTo(size.height - AppSpacing.lg));
+        expect(
+          find.ancestor(
+            of: done,
+            matching: find.byKey(const ValueKey('reviewSummaryViewport')),
+          ),
+          findsNothing,
+        );
         await expectUiGolden(
           tester,
           profile,

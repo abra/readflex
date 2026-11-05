@@ -343,9 +343,9 @@ void main() {
         );
         _expectTextFits(tester, counts);
         final done = find.byKey(const ValueKey('reviewDone'));
-        await tester.ensureVisible(done);
-        await tester.pumpAndSettle();
+        expect(done.hitTestable(), findsOneWidget);
         _expectTargetFits(tester.getRect(done), size);
+        expect(tester.getRect(done).bottom, greaterThan(size.height - 80));
         await tester.tap(done);
         expect(completed, 1);
         expect(tester.takeException(), isNull);
@@ -354,6 +354,90 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
       }
     });
+  }
+
+  for (final (size, locale, scale, bottomInset) in const [
+    (Size(390, 844), Locale('en'), 1.0, 34.0),
+    (Size(320, 568), Locale('de'), 2.0, 0.0),
+    (Size(320, 568), Locale('ar'), 2.0, 0.0),
+    (Size(844, 390), Locale('de'), 2.0, 0.0),
+    (Size(1280, 800), Locale('en'), 1.0, 0.0),
+  ]) {
+    testWidgets(
+      'summary actions stay reachable while results scroll $size $locale ${scale}x',
+      (tester) async {
+        tester.view
+          ..physicalSize = size
+          ..devicePixelRatio = 1
+          ..padding = FakeViewPadding(bottom: bottomInset);
+        addTearDown(tester.view.reset);
+        var completed = 0;
+        var repeated = 0;
+        await tester.pumpWidget(
+          _PracticeControlsApp(
+            locale: locale,
+            scale: scale,
+            child: SafeArea(
+              child: ReviewSessionSummary(
+                reviewed: 123456,
+                known: 123455,
+                again: 1,
+                onDone: () => completed++,
+                onReviewAgain: () => repeated++,
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final viewport = find.byKey(const ValueKey('reviewSummaryViewport'));
+        final done = find.byKey(const ValueKey('reviewDone'));
+        final again = find.byKey(const ValueKey('reviewAgain'));
+        final doneRect = tester.getRect(done);
+        final againRect = tester.getRect(again);
+        for (final action in [done, again]) {
+          expect(action.hitTestable(), findsOneWidget);
+          expect(
+            find.ancestor(of: action, matching: viewport),
+            findsNothing,
+            reason: 'Actions must remain outside the scrolling results',
+          );
+          final rect = tester.getRect(action);
+          _expectTargetFits(rect, size);
+          expect(
+            rect.top,
+            greaterThanOrEqualTo(tester.getRect(viewport).bottom),
+          );
+          expect(rect.bottom, lessThanOrEqualTo(size.height - bottomInset));
+          expect(rect.top, greaterThan(size.height - bottomInset - 240));
+        }
+
+        final scrollable = tester.state<ScrollableState>(
+          find
+              .descendant(of: viewport, matching: find.byType(Scrollable))
+              .first,
+        );
+        if (size.height == 390) {
+          expect(scrollable.position.maxScrollExtent, greaterThan(0));
+        }
+        if (scrollable.position.maxScrollExtent > 0) {
+          scrollable.position.jumpTo(scrollable.position.maxScrollExtent);
+          await tester.pump();
+          expect(tester.getRect(done), doneRect);
+          expect(tester.getRect(again), againRect);
+          expect(done.hitTestable(), findsOneWidget);
+          expect(again.hitTestable(), findsOneWidget);
+        }
+        await tester.tap(again);
+        expect(repeated, 1);
+        expect(completed, 0);
+        await tester.tap(done);
+        expect(completed, 1);
+        expect(repeated, 1);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
   }
 }
 

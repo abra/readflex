@@ -768,7 +768,14 @@ void main() {
       final done = tester.getRect(find.byKey(const ValueKey('reviewDone')));
       expect(summary.width, lessThanOrEqualTo(480));
       expect(summary.center.dx, closeTo(640, .01));
-      expect(summary.contains(done.center), isTrue);
+      expect(summary.contains(done.center), isFalse);
+      expect(done.bottom, greaterThan(720));
+      expect(done.width, closeTo(reveal.width, .01));
+      expect(done.center.dx, closeTo(640, .01));
+      expect(
+        find.byKey(const ValueKey('reviewDone')).hitTestable(),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
 
@@ -892,6 +899,10 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('reviewRate-showLess')));
         await settle(tester);
         expect(find.byType(ReviewSessionSummary), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('reviewDone')).hitTestable(),
+          findsOneWidget,
+        );
         expect(tester.takeException(), isNull);
       });
     }

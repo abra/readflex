@@ -208,8 +208,11 @@ follows the same setting.
   only those four small text runs to keep natural fallback-font metrics and
   equal button heights, without intrinsic layout or forced text struts.
   Word ratings retain their tonal colours and also stack when necessary.
-  The completion surface is at most 480dp and scrolls when needed, with Done in
-  the same quiet panel.
+  The completion summary stays at most 480dp wide and scrolls independently of
+  its pinned bottom dock. Done fills the 640dp action measure when it is the
+  only command; an optional outlined Review again shares the dock and uses
+  `AppSheetActions.stacks` for long labels or large text. Both commands remain
+  reachable without scrolling the summary and respect the bottom safe area.
 - The reading area clips painting and hit testing inside the card, with a
   minimum 12dp separation from the controls. The opaque Material dock uses
   `AppElevation.level1`
@@ -279,7 +282,9 @@ follows the same setting.
 - `test/practice_tablet_controls_test.dart` checks these control roles with
   the app fonts and multilingual golden-test fallbacks: 800×1280 and 1280×800,
   all ten locales at 200%, compact phone defaults, text/tap/semantics bounds,
-  and exact pointer and assistive activation callbacks.
+  and exact pointer and assistive activation callbacks. Completion tests cover
+  fixed bottom actions, safe insets, phone RTL and short landscape windows;
+  scrolling long summary text leaves both commands in place.
 - Root goldens (`test/ui/practice_golden_test.dart`) cover `practice`,
   `practice-empty` and the `review-*` states.
 - `test/ui/practice_highlight_reading_golden_test.dart` covers the middle and
