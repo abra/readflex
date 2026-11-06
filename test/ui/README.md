@@ -387,12 +387,16 @@ article flow separately tests import UI through that repository. Fixtures are
 original text, with no third-party books or live network content.
 
 `integration_test/library_controls_test.dart` also checks bottom Library search
-with native text input: the capsule stays above the real keyboard, Clear retains
-focus and the field's bottom position, Back restores browsing, and storage read
-counts stay unchanged. The collection flow creates an empty preselected
-destination and requires explicit Add before membership changes, then exercises
-Manage and its draft guard. Its `library-search-clear.png` records the populated
-field; iOS captures omit the operating system keyboard overlay.
+with native text input: tapping Search alone opens the keyboard and retains
+the live editor, focus and visible IME through transition cleanup, before any
+text entry or extra field tap can reconnect input. The capsule stays above the
+real keyboard, Clear retains focus and the field's bottom position, Back
+restores browsing, and storage read counts stay unchanged. The collection flow
+creates an empty preselected destination and requires explicit Add before
+membership changes, then exercises
+Manage and its draft guard. Its `library-search-open.png` records the untouched
+open field; `library-search-clear.png` records the populated field. iOS captures
+omit the operating system keyboard overlay.
 
 These tests do not open the user's application database, but installing any
 test build can replace an app with the same bundle ID. Prefer a dedicated

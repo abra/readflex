@@ -876,6 +876,95 @@ void main() {
     expect(bookRepository.getBooksCallCount, 1);
   });
 
+  testWidgets('tapping Search keeps the same focused editable and input '
+      'connection through the capsule transition and IME frames', (
+    tester,
+  ) async {
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1
+      ..viewPadding = const FakeViewPadding(bottom: 34)
+      ..padding = const FakeViewPadding(bottom: 34);
+    addTearDown(tester.view.reset);
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(
+      buildSubject(
+        theme: AppTheme.light().copyWith(platform: TargetPlatform.android),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Only the button opens input. enterText/showKeyboard would reconnect a
+    // field remounted at the end of the transition and conceal the defect.
+    await tester.tap(_searchButton);
+    await tester.pump();
+    await tester.pump();
+    final editor = find.descendant(
+      of: _searchField,
+      matching: find.byType(EditableText),
+    );
+    final originalEditor = tester.state<EditableTextState>(editor);
+    final originalFocus = originalEditor.widget.focusNode;
+    int clientId() =>
+        (tester.testTextInput.log
+                        .lastWhere(
+                          (call) => call.method == 'TextInput.setClient',
+                        )
+                        .arguments
+                    as List<dynamic>)
+                .first
+            as int;
+    expect(originalFocus.hasFocus, isTrue);
+    expect(tester.testTextInput.hasAnyClients, isTrue);
+    expect(tester.testTextInput.isVisible, isTrue);
+    final originalClient = clientId();
+    final initialLogLength = tester.testTextInput.log.length;
+    var previousTime = 0;
+
+    for (final (elapsed, keyboard) in const [
+      (0, 0.0),
+      (16, 40.0),
+      (60, 120.0),
+      (120, 240.0),
+      (200, 300.0),
+      (400, 300.0),
+    ]) {
+      tester.view
+        ..viewInsets = FakeViewPadding(bottom: keyboard)
+        ..padding = FakeViewPadding(bottom: math.max(0, 34 - keyboard));
+      await tester.pump(Duration(milliseconds: elapsed - previousTime));
+      previousTime = elapsed;
+      final currentEditor = tester.state<EditableTextState>(editor);
+      final frame =
+          '$elapsed ms: focus=${originalFocus.hasFocus}, '
+          'client=${tester.testTextInput.hasAnyClients}, '
+          'keyboard=${tester.testTextInput.isVisible}';
+      expect(currentEditor, same(originalEditor), reason: frame);
+      expect(
+        currentEditor.widget.focusNode,
+        same(originalFocus),
+        reason: frame,
+      );
+      expect(originalFocus.hasFocus, isTrue, reason: frame);
+      expect(tester.testTextInput.hasAnyClients, isTrue, reason: frame);
+      expect(tester.testTextInput.isVisible, isTrue, reason: frame);
+      expect(clientId(), originalClient, reason: frame);
+      expect(
+        tester.testTextInput.log
+            .skip(initialLogLength)
+            .where(
+              (call) =>
+                  call.method == 'TextInput.clearClient' ||
+                  call.method == 'TextInput.hide',
+            ),
+        isEmpty,
+        reason: frame,
+      );
+    }
+    expect(bookRepository.getBooksCallCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('Clear keeps search editing and focus; Close restores the '
       'ordinary controls without storage reads', (tester) async {
     bookRepository.seedBooks([_book, _secondBook]);

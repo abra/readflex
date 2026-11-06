@@ -222,15 +222,23 @@ class _LibraryFloatingActionsState extends State<LibraryFloatingActions>
                 scrollOffset: _searchSnapshotOffset,
               ),
       );
+      // Key the direct Stack children so transition cleanup retains the live
+      // editor and its native input connection.
+      final browsePosition = Positioned.fill(
+        key: const ValueKey('libraryBrowsePosition'),
+        child: browse,
+      );
+      final searchPosition = Positioned.fill(
+        key: const ValueKey('librarySearchPosition'),
+        child: search,
+      );
       final contents = Stack(
         fit: StackFit.expand,
         alignment: AlignmentDirectional.centerEnd,
         children: [
-          if (widget.searchActive && _mode.value < 1)
-            Positioned.fill(child: browse),
-          if (!widget.searchActive && _mode.value > 0)
-            Positioned.fill(child: search),
-          Positioned.fill(child: widget.searchActive ? search : browse),
+          if (widget.searchActive && _mode.value < 1) browsePosition,
+          if (!widget.searchActive && _mode.value > 0) searchPosition,
+          widget.searchActive ? searchPosition : browsePosition,
         ],
       );
       final onPracticePressed = widget.onPracticePressed;

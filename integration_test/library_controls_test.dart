@@ -212,6 +212,43 @@ void main() {
     await capture(tester, 'library-header');
     await tapUi(tester, find.byKey(const ValueKey('librarySearchButton')));
     final search = find.byKey(const ValueKey('librarySearchField'));
+    // Text entry or a second tap can reconnect native input and mask a lost
+    // connection during the opening transition.
+    await waitForUi(
+      tester,
+      () => tester.view.viewInsets.bottom > 0,
+      description: 'Library search opens the native keyboard by itself',
+    );
+    final searchEditable = find.descendant(
+      of: search,
+      matching: find.byType(EditableText),
+    );
+    final openedEditable = tester.state<EditableTextState>(searchEditable);
+    final keyboardObservation = Stopwatch()..start();
+    while (keyboardObservation.elapsed < const Duration(milliseconds: 600)) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 50)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.state<EditableTextState>(searchEditable),
+        same(openedEditable),
+        reason: 'opening and keyboard frames must retain the live editor',
+      );
+      expect(
+        openedEditable.widget.focusNode.hasFocus,
+        isTrue,
+        reason: 'Search must retain focus without tapping the field',
+      );
+      expect(
+        tester.view.viewInsets.bottom,
+        greaterThan(0),
+        reason: 'the native keyboard must stay open after tapping Search',
+      );
+    }
+    keyboardObservation.stop();
+    await capture(tester, 'library-search-open');
     final initialReads = app.bookRepository.reads;
     await tester.enterText(search, 'no matching title');
     await tester.pumpAndSettle(const Duration(milliseconds: 400));

@@ -349,7 +349,9 @@ end and bottom anchor. The surface resizes over `AppMotion.short` (200ms), with
 incoming controls become visible, so labels never paint over each other.
 Exiting controls are inert and excluded
 from focus and semantics. There is one live editable field, even through rapid
-reversals; the screen performs no extra storage reads to enter or leave search.
+reversals. Stable keys on the Stack's direct positioned children keep the live
+editor mounted when the outgoing mode is removed, preserving its native input
+connection. The screen performs no extra storage reads to enter or leave search.
 Practice is hidden while editing so the field owns the floating group.
 
 The capsule appears only once the library has loaded items: the empty

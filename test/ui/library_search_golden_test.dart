@@ -96,6 +96,11 @@ void main() {
       );
       final controller = tester.widget<TextField>(field).controller!;
       expect(editable.widget.focusNode.hasFocus, isTrue);
+      expect(
+        tester.testTextInput.hasAnyClients,
+        isTrue,
+        reason: 'opening Search must attach input without tapping the field',
+      );
       expect(find.byType(TextField), findsOneWidget);
       await expectUiGolden(tester, profile, 'library-search-empty-$suffix');
 
