@@ -611,12 +611,19 @@ sliver viewport while keeping Save available on the same 24dp gutters. No
 collection/source is deleted by leaving the form.
 Removing membership retains the row and replaces trash with `AppIcons.undo`,
 the same curved-arrow role as bookmark restoration. A localized status explains
-that removal takes effect after Save. The status slot retains its height;
-Undo does not shift neighboring rows, shrink the sheet or move the footer.
+that removal takes effect after Save. The status slot retains its height, so
+the label transition does not resize source rows or move their action targets
+and footer.
+The title is vertically centered beside the source icon until removal is staged.
+It then moves upward within the reserved text area over `AppMotion.short`
+(200ms), with the status fading in after the title clears its line. Undo reverses
+the same row-local animation from its current position; reduced motion switches
+immediately. Text metrics follow the active font, locale and text scale.
 Several removals can be staged/restored independently, including after a save
 failure. Only Save writes membership changes; restoring all edits disables it.
 The source snapshot and counts are prepared once; toggles update counts and a
-set in constant time without removal-animation ticks or whole-list copies.
+set in constant time without whole-list copies. Only the affected label animates;
+animation frames reuse its text children without rebuilding the form or rows.
 Rows remain lazily built. Only navigation between form steps animates height.
 The preferred height includes the source rows' 48dp action targets, row and list
 padding, dividers, and footer. A short list must fit without scrolling or edge

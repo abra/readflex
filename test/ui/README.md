@@ -438,7 +438,10 @@ the non-expiring accessible-navigation error policy.
 and nested collection routes with 0/24/34dp system insets and an open keyboard,
 plus bulk-action glyph gutters in both directions. Manage tests cover independent
 trash/curved-arrow Undo toggles, stable row/footer bounds, cancel/save/failure
-and lazy source rows without removal-animation ticks. Collection goldens include
+and lazy source rows with finite row-local animation. Titles center beside the
+source icon before removal, move up as the status fades in, and return on Undo;
+interrupted transitions and reduced motion retain stable row/footer bounds.
+Collection goldens include
 the pending-removal state; native Library controls check the same Undo target
 and the footer's actual screen-to-button gap. The reader search-overlay test
 also checks equal 48dp chrome targets and circular feedback without remounting

@@ -1108,34 +1108,9 @@ class _CollectionSourceRow extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      source.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.text.bodyMedium.copyWith(
-                        color: removed
-                            ? colors.onSurfaceVariant
-                            : colors.onSurface,
-                      ),
-                    ),
-                    Visibility(
-                      visible: removed,
-                      maintainSize: true,
-                      maintainState: true,
-                      maintainAnimation: true,
-                      child: Text(
-                        context.l10n.libraryRemovalPending,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.text.bodySmall.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
+                child: _CollectionSourceLabel(
+                  title: source.title,
+                  removed: removed,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -1172,6 +1147,87 @@ class _CollectionSourceRow extends StatelessWidget {
       SourceType.article => AppIcons.article,
       SourceType.book => AppIcons.book,
     };
+  }
+}
+
+class _CollectionSourceLabel extends StatelessWidget {
+  const _CollectionSourceLabel({required this.title, required this.removed});
+
+  final String title;
+  final bool removed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final status = context.l10n.libraryRemovalPending;
+    final statusStyle = context.text.bodySmall.copyWith(
+      color: colors.onSurfaceVariant,
+    );
+    final titleLabel = Text(
+      title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: context.text.bodyMedium.copyWith(
+        color: removed ? colors.onSurfaceVariant : colors.onSurface,
+      ),
+    );
+    final statusLabel = Text(
+      status,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: statusStyle,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: status,
+            style: DefaultTextStyle.of(context).style.merge(statusStyle),
+          ),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+          locale: Localizations.maybeLocaleOf(context),
+          maxLines: 1,
+          ellipsis: '…',
+        )..layout(maxWidth: constraints.maxWidth);
+        final titleOffset = painter.height / 2;
+        painter.dispose();
+
+        return TweenAnimationBuilder<double>(
+          // A motion-policy change also settles an already running tween.
+          key: ValueKey(context.reduceMotion),
+          tween: Tween(begin: removed ? 1 : 0, end: removed ? 1 : 0),
+          duration: context.motion(AppMotion.short),
+          builder: (context, progress, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Both lines keep their space; only the title's paint moves.
+              Transform.translate(
+                offset: Offset(
+                  0,
+                  titleOffset * (1 - Curves.easeOutCubic.transform(progress)),
+                ),
+                child: titleLabel,
+              ),
+              IgnorePointer(
+                child: ExcludeSemantics(
+                  excluding: !removed,
+                  child: Opacity(
+                    opacity: const Interval(
+                      .4,
+                      1,
+                      curve: Curves.easeOutCubic,
+                    ).transform(progress),
+                    child: statusLabel,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 

@@ -362,7 +362,294 @@ void main() {
     }
   }
 
-  testWidgets('staged removal has no animation ticks or eager source rows', (
+  for (final (locale, size, scale) in const [
+    (Locale('en'), Size(390, 844), 1.0),
+    (Locale('de'), Size(320, 568), 2.0),
+    (Locale('ar'), Size(390, 844), 2.0),
+    (Locale('en'), Size(800, 1280), 1.0),
+  ]) {
+    for (final kind in ['book', 'article', 'comic']) {
+      testWidgets('source title centres on its icon, lifts for removal and '
+          'returns on Undo: $kind $locale $size ${scale}x', (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final source = LibrarySource(
+          id: 'source',
+          sourceType: kind == 'article' ? SourceType.article : SourceType.book,
+          title: kind == 'book'
+              ? 'Book'
+              : 'A very long $kind title that must retain its full text while '
+                    'using the available row width at the selected text size',
+          typeLabel: kind == 'comic' ? 'CBZ' : kind,
+          isComic: kind == 'comic',
+          addedAt: DateTime(2026),
+        );
+        await open(tester, sources: [source], locale: locale);
+        final row = find.byKey(const ValueKey('collectionSource-source'));
+        final title = find.descendant(
+          of: row,
+          matching: find.text(source.title),
+        );
+        final icon = find.descendant(
+          of: row,
+          matching: find.byIcon(
+            kind == 'article' ? AppIcons.article : AppIcons.book,
+          ),
+        );
+        final remove = find.byKey(
+          const ValueKey('collectionSourceRemove-source'),
+        );
+        await tester.ensureVisible(remove);
+        await tester.pumpAndSettle();
+        final strings = tester.element(row).l10n;
+        final status = find.descendant(
+          of: row,
+          matching: find.text(strings.libraryRemovalPending),
+        );
+        final save = find.widgetWithText(FilledButton, strings.commonSave);
+        final titleBounds = tester.getRect(title);
+        final rowBounds = tester.getRect(row);
+        final buttonBounds = tester.getRect(remove);
+        final sheetBounds = tester.getRect(find.byType(BottomSheet));
+        final saveBounds = tester.getRect(save);
+        final iconCenter = tester.getCenter(icon).dy;
+        expect(titleBounds.center.dy, closeTo(iconCenter, .01));
+        expect(tester.widget<Text>(title).maxLines, 1);
+        expect(tester.widget<Text>(title).overflow, TextOverflow.ellipsis);
+
+        final semantics = tester.ensureSemantics();
+        try {
+          final statusSemantics = find.bySemanticsLabel(
+            RegExp(RegExp.escape(strings.libraryRemovalPending)),
+          );
+          expect(statusSemantics, findsNothing);
+          await tester.tap(remove);
+          await tester.pumpAndSettle();
+          final undo = find.byKey(
+            const ValueKey('collectionSourceUndo-source'),
+          );
+          final removedTitle = tester.getRect(title);
+          expect(removedTitle.top, lessThan(titleBounds.top));
+          expect(
+            removedTitle.expandToInclude(tester.getRect(status)).center.dy,
+            closeTo(iconCenter, .01),
+          );
+          expect(statusSemantics, findsWidgets);
+          expect(tester.getRect(undo), rectMoreOrLessEquals(buttonBounds));
+          expect(tester.getRect(row), rectMoreOrLessEquals(rowBounds));
+          expect(
+            tester.getRect(find.byType(BottomSheet)),
+            rectMoreOrLessEquals(sheetBounds),
+          );
+          expect(tester.getRect(save), rectMoreOrLessEquals(saveBounds));
+          expect(repository.addedSourceIdsByCollection.values.single, {
+            source.id,
+          });
+
+          await tester.tap(undo);
+          await tester.pump();
+          await tester.pump();
+          expect(statusSemantics, findsNothing);
+          await tester.pumpAndSettle();
+          expect(tester.getRect(title), rectMoreOrLessEquals(titleBounds));
+          expect(tester.getRect(row), rectMoreOrLessEquals(rowBounds));
+          expect(tester.getRect(remove), rectMoreOrLessEquals(buttonBounds));
+          expect(tester.getRect(save), rectMoreOrLessEquals(saveBounds));
+          expect(tester.widget<FilledButton>(save).onPressed, isNull);
+          expect(tester.takeException(), isNull);
+        } finally {
+          semantics.dispose();
+        }
+      });
+    }
+  }
+
+  testWidgets('interrupted source label motion keeps the row, neighbours and '
+      'footer fixed', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final sources = List.generate(
+      3,
+      (i) => LibrarySource.fromBook(
+        Book(
+          id: 'book-$i',
+          title: 'Book $i',
+          filePath: '/book.epub',
+          format: BookFormat.epub,
+          addedAt: DateTime(2026),
+        ),
+      ),
+    );
+    await open(tester, sources: sources);
+    final row = find.byKey(const ValueKey('collectionSource-book-0'));
+    final next = find.byKey(const ValueKey('collectionSource-book-1'));
+    final title = find.descendant(of: row, matching: find.text('Book 0'));
+    final status = find.descendant(
+      of: row,
+      matching: find.text(tester.element(row).l10n.libraryRemovalPending),
+    );
+    final remove = find.byKey(const ValueKey('collectionSourceRemove-book-0'));
+    final undo = find.byKey(const ValueKey('collectionSourceUndo-book-0'));
+    final save = find.widgetWithText(FilledButton, 'Save');
+    final rowBounds = tester.getRect(row);
+    final nextBounds = tester.getRect(next);
+    final actionBounds = tester.getRect(remove);
+    final sheetBounds = tester.getRect(find.byType(BottomSheet));
+    final saveBounds = tester.getRect(save);
+    final titleBounds = tester.getRect(title);
+    final finalTitleTop = titleBounds.top - tester.getSize(status).height / 2;
+    void expectStableGeometry() {
+      expect(tester.getRect(row), rectMoreOrLessEquals(rowBounds));
+      expect(tester.getRect(next), rectMoreOrLessEquals(nextBounds));
+      expect(tester.getRect(save), rectMoreOrLessEquals(saveBounds));
+      expect(
+        tester.getRect(find.byType(BottomSheet)),
+        rectMoreOrLessEquals(sheetBounds),
+      );
+      expect(
+        tester.getRect(undo.evaluate().isEmpty ? remove : undo),
+        rectMoreOrLessEquals(actionBounds),
+      );
+    }
+
+    await tester.tap(remove);
+    await tester.pump();
+    await tester.pump();
+    expect(tester.getRect(title), rectMoreOrLessEquals(titleBounds));
+    await tester.pump(const Duration(milliseconds: 50));
+    final intermediate = tester.getRect(title);
+    expect(intermediate.top, lessThan(titleBounds.top));
+    expect(intermediate.top, greaterThan(finalTitleTop));
+    expectStableGeometry();
+
+    await tester.tap(undo);
+    await tester.pump();
+    await tester.pump();
+    expect(tester.getRect(title), rectMoreOrLessEquals(intermediate));
+    var previousTop = intermediate.top;
+    for (var frame = 0; frame < 15; frame++) {
+      await tester.pump(const Duration(milliseconds: 16));
+      final top = tester.getRect(title).top;
+      expect(top, greaterThanOrEqualTo(previousTop - .01));
+      expect(top, lessThanOrEqualTo(titleBounds.top + .01));
+      expectStableGeometry();
+      previousTop = top;
+    }
+    expect(tester.getRect(title), rectMoreOrLessEquals(titleBounds));
+    expect(repository.addedSourceIdsByCollection.values.single, {
+      'book-0',
+      'book-1',
+      'book-2',
+    });
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reduced motion centres and lifts the source title without '
+      'elapsed animation time', (tester) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(
+      tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+    await open(
+      tester,
+      sources: [
+        LibrarySource.fromBook(
+          Book(
+            id: 'book',
+            title: 'Book',
+            filePath: '/book.epub',
+            format: BookFormat.epub,
+            addedAt: DateTime(2026),
+          ),
+        ),
+      ],
+    );
+    final row = find.byKey(const ValueKey('collectionSource-book'));
+    final title = find.descendant(of: row, matching: find.text('Book'));
+    final icon = find.descendant(of: row, matching: find.byIcon(AppIcons.book));
+    final status = find.descendant(
+      of: row,
+      matching: find.text(tester.element(row).l10n.libraryRemovalPending),
+    );
+    final initial = tester.getRect(title);
+    final rowBounds = tester.getRect(row);
+    final iconCenter = tester.getCenter(icon).dy;
+    expect(initial.center.dy, closeTo(iconCenter, .01));
+    await tester.tap(find.byKey(const ValueKey('collectionSourceRemove-book')));
+    await tester.pump();
+    await tester.pump();
+    final removed = tester.getRect(title);
+    expect(removed.top, lessThan(initial.top));
+    expect(
+      removed.expandToInclude(tester.getRect(status)).center.dy,
+      closeTo(iconCenter, .01),
+    );
+    expect(tester.getRect(row), rectMoreOrLessEquals(rowBounds));
+    await tester.tap(find.byKey(const ValueKey('collectionSourceUndo-book')));
+    await tester.pump();
+    await tester.pump();
+    expect(tester.getRect(title), rectMoreOrLessEquals(initial));
+    expect(tester.getRect(row), rectMoreOrLessEquals(rowBounds));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('enabling reduced motion settles an in-flight source label', (
+    tester,
+  ) async {
+    addTearDown(
+      tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    );
+    final source = LibrarySource.fromBook(
+      Book(
+        id: 'book',
+        title: 'Book',
+        filePath: '/book.epub',
+        format: BookFormat.epub,
+        addedAt: DateTime(2026),
+      ),
+    );
+    await open(tester, sources: [source]);
+    final row = find.byKey(const ValueKey('collectionSource-book'));
+    final title = find.descendant(of: row, matching: find.text(source.title));
+    final status = find.descendant(
+      of: row,
+      matching: find.text(tester.element(row).l10n.libraryRemovalPending),
+    );
+    final icon = find.descendant(of: row, matching: find.byIcon(AppIcons.book));
+    final initial = tester.getRect(title);
+    final finalTop = initial.top - tester.getSize(status).height / 2;
+    await tester.tap(find.byKey(const ValueKey('collectionSourceRemove-book')));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(tester.getRect(title).top, inExclusiveRange(finalTop, initial.top));
+
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    await tester.pump();
+    await tester.pump();
+    final settled = tester.getRect(title);
+    expect(settled.top, closeTo(finalTop, .01));
+    expect(
+      settled.expandToInclude(tester.getRect(status)).center.dy,
+      closeTo(tester.getCenter(icon).dy, .01),
+    );
+    await tester.pump(const Duration(milliseconds: 32));
+    expect(tester.getRect(title), rectMoreOrLessEquals(settled));
+    await tester.tap(find.byKey(const ValueKey('collectionSourceUndo-book')));
+    await tester.pump();
+    await tester.pump();
+    expect(tester.getRect(title), rectMoreOrLessEquals(initial));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('source label motion leaves siblings unchanged and source rows '
+      'lazy', (
     tester,
   ) async {
     final sources = List.generate(
@@ -943,6 +1230,7 @@ void main() {
     final gate = Completer<void>();
     repository.writeGate = gate;
     final save = find.widgetWithText(FilledButton, 'Save');
+    final titleBounds = tester.getRect(find.text('Book'));
     expect(find.byType(OutlinedButton), findsNothing);
     final saveRect = tester.getRect(save);
     await tester.tap(save);
@@ -965,6 +1253,17 @@ void main() {
     );
     expect(tester.widget<FilledButton>(save).onPressed, isNull);
     expect(tester.getRect(save), saveRect);
+    expect(
+      tester.getRect(find.text('Book')),
+      rectMoreOrLessEquals(titleBounds),
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('collectionSource-book')),
+        matching: find.text('Removed after Save'),
+      ),
+      findsOneWidget,
+    );
     expect(
       tester
           .widget<TextButton>(
