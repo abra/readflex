@@ -274,26 +274,26 @@ Switching collections belongs to the bottom capsule alone, so the top of the
 screen has no second, out-of-reach way to do it. Under it a muted `bodySmall`
 subtitle counts the current scope (`LibraryState.scopeItemCount`: the whole
 library or the selected collection, ignoring search). There is no count pill,
-collection pill, folder button or chip row; the header ends with the search
-field and a `kLibraryHeaderBottomPadding` (12dp) background band under it.
+collection pill, folder button or chip row; the header ends with a
+`kLibraryHeaderBottomPadding` (12dp) background band under the count.
 The scroll view starts below the band, so scrolled covers clip at its lower
-edge and the top scroll fade starts there, never flush against the field.
+edge and the top scroll fade starts there.
 The compact offline icon stays reserved after the title.
 
-The header's only action is Display (⋮), the shared `AppPlainIconButton`: a
+The header's only action is Display, the shared `AppPlainIconButton`: a
 transparent resting surface, circular pressed feedback and a 48dp target. The
 title row ends `AppSizes.iconActionOutset` short of the 16dp edge so the
-Display target bleeds into the gutter and its 20dp glyph ends exactly where
-the search field does. Search uses the same utility-action behavior
-for its smaller clear glyph. Muted header glyphs use `onSurfaceVariant`, not
+Display target bleeds into the gutter and its 20dp glyph ends on the content
+edge. Search uses the same utility-action behavior for its smaller clear glyph.
+Muted header glyphs use `onSurfaceVariant`, not
 an alpha over `onSurface`.
 
-Adding and switching collections happen where the thumb rests, in one
+Adding, switching collections and searching happen where the thumb rests, in one
 bottom capsule, `LibraryFloatingActions`, in the Scaffold's floating action
 slot: the shared `AppFloatingCapsule` (translucent surface, hairline outline,
 popover shadow, as the reader chrome), `kLibraryFloatingActionsHeight` (56dp)
 tall and lifted `kLibraryFloatingActionsLift` (8dp) above the Scaffold's
-margin. Two 48dp controls sit 4dp inside it and 4dp apart; the row follows
+margin. Its controls have 48dp targets inside a 4dp inset; the row follows
 the reading direction, so "+" keeps the outer corner in RTL too.
 When cards are due and Practice has a destination, its 48dp action sits 8dp
 above the capsule, centred over "+" in both directions. The floating group
@@ -323,17 +323,34 @@ Scaffold animates the button to every new location.
   filled colours while an import is open; switching collections stays
   available meanwhile. Colours are explicit because `iconButtonTheme` styles
   secondary square buttons.
+- Search sits between the collection switcher and "+". It changes the same
+  capsule into a field above the keyboard, with Back at its directional start
+  and a separate Clear search control when the query is nonempty. Back clears
+  the query, closes editing and drops focus; Clear only empties the query and
+  retains focus. Both keep the selected collection. The field uses the user's
+  text scale and a compact localized hint when needed, with the full hint in
+  semantics. The screen owns its controller, focus and search mode; content
+  widgets receive values and UI callbacks only.
 
-The capsule is at most `kLibraryFloatingActionsMaxWidth` (320dp) wide and
+Browsing is at most `kLibraryFloatingActionsMaxWidth` (320dp) wide and
 stops 16dp short of the start edge on narrow screens, so a long name
-truncates instead of becoming a bar over the covers. The floating action
-slot strips safe insets; side insets only occur in landscape, where the cap
-binds first. Its height is fixed, so its text scales up to
+truncates instead of becoming a bar over the covers. The screen supplies the
+original horizontal safe insets, which the Scaffold strips from its floating
+action slot, so neither mode can enter a landscape cutout. Its height is fixed,
+so its text scales up to
 `kLibraryFloatingActionsMaxTextScale` (200%), which still fits one line in
-48dp. A new name resizes it over `AppMotion.short` with "+" anchored at the
-outer end; under reduced motion there is no `AnimatedSize` at all, because a
-zero-duration one re-dirties itself during its own layout. Only the capsule
-selects the collection scope; the Scaffold rebuilds for its visibility alone.
+48dp. Name changes tween from the current width over `AppMotion.short`, with
+"+" anchored at the outer end. Reduced motion settles the explicit width
+directly. Scope-only changes stay in the capsule's selector; entering or leaving
+search also updates the screen's editing and focus state.
+Search uses the available width up to 480dp, preserving the same directional
+end and bottom anchor. The surface resizes over `AppMotion.short` (200ms), with
+`AppMotion.quick` (120ms) fade-through: outgoing controls disappear before the
+incoming controls become visible, so labels never paint over each other.
+Exiting controls are inert and excluded
+from focus and semantics. There is one live editable field, even through rapid
+reversals; the screen performs no extra storage reads to enter or leave search.
+Practice is hidden while editing so the field owns the floating group.
 
 The capsule appears only once the library has loaded items: the empty
 library offers its own two import commands, while an empty collection keeps
@@ -343,7 +360,12 @@ The floating controls switch immediately at their resting position.
 The Scaffold slot stays mounted with a `Visibility` wrapper and
 `FloatingActionButtonAnimator.noAnimation`, so it cannot cache exiting controls
 or scale/rotate the whole group. Hidden controls leave layout, input and
-semantics; collection-name changes still use the capsule's `AnimatedSize`.
+semantics; collection-name and browse/search changes animate inside the capsule.
+System Back first leaves selection, then search, before navigating away; the
+native keyboard handles its own first Back dismissal. Selecting a source while
+searching retains the query and scope; cancelling selection restores the field
+without requesting focus. Opening a reader or Practice suspends search focus;
+returning preserves editing and the query without reopening the keyboard.
 The header keeps
 orientation (the title and count) and the rare Display action. See the
 thumb-reach rule in the root `test/ui/README.md`.
@@ -419,16 +441,19 @@ so the keyboard resizing the body relayouts the grid without rebuilding its
 tiles or the Continue reading card.
 Covers sit directly on the 16dp gutter with no tile
 inset, and both layouts start their first cover `kLibraryContentTopPadding`
-(12dp) below the header's band, 24dp under the search field: the list row's
+(12dp) below the title/count header's band: the list row's
 own padding supplies it, the grid adds it as top padding. Content bottom
 padding comes from `libraryContentBottomPadding(context)`: the bottom capsule
 (56dp), another 56dp only while its due-card action is shown (48dp target plus
 8dp gap), its 8dp lift, the Scaffold's 16dp margin and a 16dp gap over the body's
 bottom padding (the safe inset the keyboard leaves uncovered), so the last row ends
 16dp above the highest floating action with or without a home indicator and
-on every keyboard frame. "No results"
-pads its scroll view the same way so its command can scroll clear of it;
-the empty library has no capsule and no padding. Selection also uses floating
+on every keyboard frame. Ordinary "No results" feedback
+pads its scroll view the same way so its command can scroll clear of it.
+When the keyboard leaves very little height above an active search capsule,
+feedback becomes a compact message; Clear and Back remain in the capsule
+instead of a second recovery command behind it.
+The empty library has no capsule and no padding. Selection also uses floating
 controls, preserving the body's safe inset and content geometry when it starts
 or ends. The floating groups are `ToastAvoidArea`s: toasts float above the
 visible controls and leave them tappable.

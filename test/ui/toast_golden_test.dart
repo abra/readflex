@@ -16,6 +16,12 @@ void main() {
     testWidgets('toast over Library ${profile.name}', (tester) async {
       final app = (await tester.runAsync(UiTestApp.create))!;
       addTearDown(app.dispose);
+      addTearDown(() async {
+        // A failed comparison must not leave a toast on the next test's overlay.
+        await tester.pump(const Duration(seconds: 8));
+        await tester.pumpAndSettle();
+        await unmountUi(tester);
+      });
       tester.view.physicalSize = profile == VisualProfile.tabletRtl
           ? VisualProfile.phone.size
           : profile.size;

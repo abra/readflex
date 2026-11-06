@@ -97,8 +97,9 @@ void main() {
     await tapUi(tester, find.byKey(const ValueKey('importMenu-article')));
     expect(
       find.byType(TextField),
-      findsOneWidget,
-      reason: 'only Library search, no URL form',
+      findsNothing,
+      reason:
+          'offline article import stays closed and Library search is inactive',
     );
     expect(find.text('Add to Library'), findsOneWidget);
     await capture(tester, 'import-menu-offline');
@@ -190,8 +191,7 @@ void main() {
       () => tile.evaluate().isNotEmpty,
       description: 'library',
     );
-    // The title is a heading and Display the header's only action; the
-    // bottom capsule holds the collection switcher and +.
+    // The title orients; collections, Search and + stay under the thumb.
     expect(find.byKey(const ValueKey('libraryHeaderTitle')), findsOneWidget);
     expect(
       tester
@@ -210,17 +210,34 @@ void main() {
       AppSizes.floatingActionButton,
     );
     await capture(tester, 'library-header');
-    final search = find.byType(TextField);
+    await tapUi(tester, find.byKey(const ValueKey('librarySearchButton')));
+    final search = find.byKey(const ValueKey('librarySearchField'));
     final initialReads = app.bookRepository.reads;
     await tester.enterText(search, 'no matching title');
     await tester.pumpAndSettle(const Duration(milliseconds: 400));
     expect(tile, findsNothing);
+    // enterText uses the harness connection; a tap restores native input.
+    await tapUi(tester, search);
+    await waitForUi(
+      tester,
+      () => tester.view.viewInsets.bottom > 0,
+      description: 'native Library search keyboard',
+    );
     final fieldRect = tester.getRect(search);
+    final libraryKeyboardTop =
+        (tester.view.physicalSize.height - tester.view.viewInsets.bottom) /
+        tester.view.devicePixelRatio;
+    expect(
+      tester
+          .getRect(find.byKey(const ValueKey('libraryFloatingActions')))
+          .bottom,
+      lessThanOrEqualTo(libraryKeyboardTop - AppSpacing.lg),
+    );
     await capture(tester, 'library-search-clear');
     await tapUi(tester, find.byTooltip('Clear search'));
     await tester.pumpAndSettle(const Duration(milliseconds: 400));
     expect(tile, findsOneWidget);
-    expect(tester.getRect(search), fieldRect);
+    expect(tester.getRect(search).bottom, fieldRect.bottom);
     expect(
       tester
           .state<EditableTextState>(find.byType(EditableText))
@@ -230,11 +247,24 @@ void main() {
       isTrue,
     );
     expect(app.bookRepository.reads, initialReads);
-    FocusManager.instance.primaryFocus?.unfocus();
+    await tapUi(tester, find.byKey(const ValueKey('librarySearchCloseButton')));
     await tester.pumpAndSettle();
+    await waitForUi(
+      tester,
+      () => tester.view.viewInsets.bottom == 0,
+      description: 'closed Library search keyboard',
+    );
+    expect(search, findsNothing);
+    expect(find.byKey(const ValueKey('librarySearchButton')), findsOneWidget);
     await tester.longPress(tile);
     await tester.pumpAndSettle();
-    expect(find.text('Selected: 1'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('librarySelectedCount')),
+        matching: find.text('1'),
+      ),
+      findsOneWidget,
+    );
     await capture(tester, 'library-selection');
     await tapUi(tester, find.byTooltip('Cancel selection'));
     expect(
@@ -355,21 +385,69 @@ void main() {
     await tapUi(tester, find.byTooltip('Close'));
     await tester.longPress(tile);
     await tester.pumpAndSettle();
-    await tapUi(tester, find.byIcon(AppIcons.collectionAdd));
-    await tapUi(tester, find.text('New collection'));
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('libraryAddToCollectionButton')),
+    );
+    final newCollection = find.byKey(const ValueKey('libraryNewCollectionRow'));
+    await tester.ensureVisible(newCollection);
+    await tapUi(tester, newCollection);
     await tester.enterText(
-      find.widgetWithText(TextField, 'New collection name'),
+      find.byKey(const ValueKey('newCollectionNameField')),
       'Reading',
     );
-    await tapUi(tester, find.text('Create and add'));
+    final create = find.byKey(const ValueKey('createCollectionSubmitButton'));
+    await tester.ensureVisible(create);
+    await tapUi(tester, create);
     await waitForUi(
       tester,
-      () => find.text('Create and add').evaluate().isEmpty,
-      description: 'saved collection',
+      () => find
+          .byKey(const ValueKey('addToCollectionCreateStep'))
+          .evaluate()
+          .isEmpty,
+      description: 'created collection destination',
+    );
+    final created = (await app.collectionRepository.getCollections()).single;
+    expect(created.name, 'Reading');
+    expect(created.sourceCount, 0);
+    final destination = find.byKey(
+      ValueKey('addToCollectionDestination-${created.id}'),
+    );
+    expect(tester.widget<CheckboxListTile>(destination).value, isTrue);
+    expect(
+      (await app.collectionRepository.getCollectionSourceIds())[created.id] ??
+          const <String>{},
+      isEmpty,
+      reason: 'creating a destination does not confirm book membership',
+    );
+    final addToCollections = find.byKey(
+      const ValueKey('addToCollectionsSubmitButton'),
+    );
+    await tester.ensureVisible(addToCollections);
+    await tapUi(tester, addToCollections);
+    await waitForUi(
+      tester,
+      () => addToCollections.evaluate().isEmpty,
+      description: 'confirmed collection membership',
+    );
+    await waitForUi(
+      tester,
+      () => tester.view.viewInsets.bottom == 0,
+      description: 'closed collection creation keyboard',
     );
     final collection = (await app.collectionRepository.getCollections()).single;
+    expect(collection.id, created.id);
+    expect(collection.sourceCount, 1);
+    expect(
+      (await app.collectionRepository.getCollectionSourceIds())[collection.id],
+      {app.book!.id},
+    );
     await tapUi(tester, find.byKey(const ValueKey('libraryCollectionsButton')));
-    await tester.enterText(find.byType(TextField).last, 'Reading');
+    final collectionSearch = find.descendant(
+      of: find.byType(BottomSheet),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(collectionSearch, 'Reading');
     await tester.pumpAndSettle();
     final collectionsSheet = tester.element(find.byType(BottomSheet));
     await tapUi(
@@ -380,7 +458,7 @@ void main() {
     expect(tester.element(find.byType(BottomSheet)), same(collectionsSheet));
     await tapUi(tester, find.byTooltip('Back'));
     expect(
-      tester.widget<TextField>(find.byType(TextField).last).controller!.text,
+      tester.widget<TextField>(collectionSearch).controller!.text,
       'Reading',
     );
     await capture(tester, 'collection-return-to-query');

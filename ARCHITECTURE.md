@@ -213,8 +213,11 @@ or scale the reading engine's text. Resizing is driven by the window's
   generated artwork keeps its title and author/site text on the cover.
   Lists show two columns on expanded windows.
   Continue Reading is an inset panel, paired with Practice when there is room;
-  full titles keep their bounded fit and the bottom collection/add capsule
-  remains in thumb reach. Empty states stop at 480dp.
+  full titles keep their bounded fit and the bottom collection/search/add
+  capsule remains in thumb reach. The screen owns search mode, controller and
+  focus; its presentation-only capsule changes to an editable field above the
+  keyboard. Back clears the query and leaves search without changing the scope;
+  Clear only empties the query. Empty states stop at 480dp.
 - Practice: the expanded hub pairs the review overview with supporting lists;
   enlarged text returns it to one column. Review content and controls share a
   bounded workspace, with a 640dp study card and 480dp completion summary.

@@ -25,6 +25,44 @@ class LibraryCollectionsButton extends StatelessWidget {
   final LibraryCollectionScope? scope;
   final VoidCallback onPressed;
 
+  /// Natural width before the capsule bounds the label, using its real style.
+  static double naturalWidthOf(
+    BuildContext context,
+    LibraryCollectionScope? scope, {
+    required TextScaler textScaler,
+  }) {
+    var style =
+        Theme.of(context).textButtonTheme.style?.textStyle?.resolve({}) ??
+        context.text.labelLarge;
+    style = DefaultTextStyle.of(context).style.merge(style);
+    if (MediaQuery.boldTextOf(context)) {
+      style = style.copyWith(fontWeight: FontWeight.bold);
+    }
+    final painter = TextPainter(
+      text: TextSpan(
+        text: scope == null
+            ? context.l10n.libraryTitle
+            : libraryCollectionScopeLabel(context.l10n, scope),
+        style: style,
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: textScaler,
+      locale: Localizations.maybeLocaleOf(context),
+      maxLines: 1,
+    )..layout();
+    try {
+      return AppPlainIconButton.defaultIconOutsetOf(context) +
+          AppPlainIconButton.defaultIconSizeOf(context) +
+          AppSpacing.sm +
+          painter.width +
+          AppSpacing.xs +
+          AppIconSize.xs +
+          AppSpacing.md;
+    } finally {
+      painter.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;

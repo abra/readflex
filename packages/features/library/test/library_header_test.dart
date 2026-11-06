@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_bloc.dart';
 import 'package:library_feature/src/library_header.dart';
+import 'package:library_feature/src/library_layout.dart';
 import 'package:library_feature/src/library_title_layout.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -51,10 +52,6 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-    final controller = TextEditingController();
-    final focus = FocusNode();
-    addTearDown(controller.dispose);
-    addTearDown(focus.dispose);
     await tester.pumpWidget(
       MaterialApp(
         theme: theme ?? AppTheme.light(),
@@ -62,12 +59,14 @@ void main() {
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         home: Scaffold(
-          body: LibraryHeader(
-            state: state ?? LibraryState(),
-            isOffline: isOffline,
-            searchController: controller,
-            searchFocusNode: focus,
-            onSearchChanged: (_) {},
+          body: Column(
+            children: [
+              LibraryHeader(
+                state: state ?? LibraryState(),
+                isOffline: isOffline,
+                onDisplayPressed: () {},
+              ),
+            ],
           ),
         ),
       ),
@@ -190,8 +189,9 @@ void main() {
           closeTo(tester.getRect(_displayButton).bottom, .01),
         );
         expect(
-          tester.getRect(find.byType(SearchField)).top - subtitleRect.bottom,
-          closeTo(AppSpacing.lg, .01),
+          tester.getRect(find.byType(LibraryHeader)).bottom -
+              subtitleRect.bottom,
+          closeTo(kLibraryHeaderBottomPadding, .01),
         );
       });
     }
@@ -289,13 +289,12 @@ void main() {
               matching: find.byIcon(AppIcons.settings),
             ),
           );
-          final search = tester.getRect(find.byType(SearchField));
           final title = tester.getRect(titleText(strings.libraryTitle));
           final offline = tester.getRect(find.byIcon(AppIcons.offline));
 
           expect(display.size, const Size.square(48));
-          expect(search.left, AppSpacing.lg);
-          expect(search.right, 390 - AppSpacing.lg);
+          expect(find.byType(SearchField), findsNothing);
+          expect(find.byType(TextField), findsNothing);
           if (rtl) {
             expect(displayGlyph.left, closeTo(AppSpacing.lg, .01));
             expect(title.right, closeTo(390 - AppSpacing.lg, .01));

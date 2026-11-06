@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
@@ -42,6 +44,7 @@ class LibraryBody extends StatelessWidget {
     required this.onClearSearch,
     required this.onShowWholeLibrary,
     this.onPracticePressed,
+    this.searchActive = false,
     this.selectionActionsHeight,
     super.key,
   });
@@ -64,6 +67,7 @@ class LibraryBody extends StatelessWidget {
 
   /// Opens Practice from its row; `null` leaves the content without it.
   final VoidCallback? onPracticePressed;
+  final bool searchActive;
 
   /// Selection clearance computed before SafeArea removes window insets.
   final double? selectionActionsHeight;
@@ -72,41 +76,57 @@ class LibraryBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final visibleItems = state.visibleItems;
     final hasPracticeAction =
-        onPracticePressed != null && (state.practice?.due ?? 0) > 0;
+        !searchActive &&
+        onPracticePressed != null &&
+        (state.practice?.due ?? 0) > 0;
 
     if (visibleItems.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: onRefresh,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          // "No results" keeps the floating actions: its command must scroll
-          // clear of them, like the last row. An empty library has none.
-          padding: state.isEmpty
-              ? null
-              : EdgeInsets.only(
-                  bottom: libraryContentBottomPadding(
-                    context,
-                    hasPracticeAction: hasPracticeAction,
-                    selectionActionsHeight:
-                        selectionActionsHeight ?? kLibraryFloatingActionsHeight,
-                  ),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          // Measure the viewport above the keyboard, rather than the full
+          // screen, and keep recovery commands clear of the bottom capsule.
+          final bottomPadding = state.isEmpty
+              ? 0.0
+              : libraryContentBottomPadding(
+                  context,
+                  hasPracticeAction: hasPracticeAction,
+                  selectionActionsHeight:
+                      selectionActionsHeight ?? kLibraryFloatingActionsHeight,
+                );
+          final contentHeight = math.max(
+            0.0,
+            constraints.maxHeight - bottomPadding,
+          );
+          final compactSearch =
+              searchActive &&
+              state.searchQuery.trim().isNotEmpty &&
+              contentHeight < AppSizes.buttonHeight * 4;
+          return RefreshIndicator(
+            onRefresh: onRefresh,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              padding: state.isEmpty
+                  ? null
+                  : EdgeInsets.only(bottom: bottomPadding),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: contentHeight,
                 ),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: MediaQuery.sizeOf(context).height * 0.6,
+                child: state.isEmpty
+                    ? LibraryEmptyState(onImportPressed: onImportPressed)
+                    : _LibraryNoMatches(
+                        searching: state.searchQuery.trim().isNotEmpty,
+                        compact: compactSearch,
+                        scope: state.selectedCollectionScope,
+                        onClearSearch: onClearSearch,
+                        onShowWholeLibrary: onShowWholeLibrary,
+                      ),
+              ),
             ),
-            child: state.isEmpty
-                ? LibraryEmptyState(onImportPressed: onImportPressed)
-                : _LibraryNoMatches(
-                    searching: state.searchQuery.trim().isNotEmpty,
-                    scope: state.selectedCollectionScope,
-                    onClearSearch: onClearSearch,
-                    onShowWholeLibrary: onShowWholeLibrary,
-                  ),
-          ),
-        ),
+          );
+        },
       );
     }
 
@@ -166,12 +186,14 @@ class LibraryBody extends StatelessWidget {
 class _LibraryNoMatches extends StatelessWidget {
   const _LibraryNoMatches({
     required this.searching,
+    required this.compact,
     required this.scope,
     required this.onClearSearch,
     required this.onShowWholeLibrary,
   });
 
   final bool searching;
+  final bool compact;
   final LibraryCollectionScope? scope;
   final VoidCallback onClearSearch;
   final VoidCallback onShowWholeLibrary;
@@ -181,6 +203,14 @@ class _LibraryNoMatches extends StatelessWidget {
     final l10n = context.l10n;
     final scope = this.scope;
     if (searching || scope == null) {
+      // In a short keyboard viewport, Clear and Back already live in the
+      // capsule. Keep the result message visible instead of duplicating them.
+      if (compact) {
+        return EmptyState(
+          message: l10n.libraryNoResultsTitle,
+          compact: true,
+        );
+      }
       return EmptyState(
         icon: AppIcons.searchOff,
         message: l10n.libraryNoResultsTitle,

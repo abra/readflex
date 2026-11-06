@@ -315,7 +315,11 @@ void main() {
       expect(tester.getRect(find.byType(BottomSheet)), displayRect);
       await tapUi(tester, find.byTooltip(strings.commonClose));
       expect(find.byType(BottomSheet), findsNothing);
-      await tester.enterText(find.byType(TextField), 'no matching title');
+      await tapUi(tester, find.byKey(const ValueKey('librarySearchButton')));
+      await tester.enterText(
+        find.byKey(const ValueKey('librarySearchField')),
+        'no matching title',
+      );
       await tester.pumpAndSettle(const Duration(milliseconds: 400));
       await expectUiGolden(tester, profile, 'library-no-results$suffix');
       final clearPress = await tester.startGesture(
@@ -365,13 +369,17 @@ void main() {
     );
     await tester.pumpAndSettle();
     await expectUiGolden(tester, VisualProfile.dark, 'library-list-phone-rtl');
-    await tester.enterText(find.byType(TextField), 'missing');
+    await tapUi(tester, find.byKey(const ValueKey('librarySearchButton')));
+    await tester.enterText(
+      find.byKey(const ValueKey('librarySearchField')),
+      'missing',
+    );
     await tester.pumpAndSettle(const Duration(milliseconds: 400));
     final strings = ReadflexLocalizations.of(
       tester.element(find.byType(LibraryScreen)),
     )!;
     final clear = find.byTooltip(strings.commonClearSearch);
-    final prefix = find.byIcon(AppIcons.search);
+    final prefix = find.byKey(const ValueKey('librarySearchCloseButton'));
     expect(tester.getCenter(clear).dx, lessThan(tester.getCenter(prefix).dx));
     final gesture = await tester.startGesture(tester.getCenter(clear));
     await tester.pump(const Duration(milliseconds: 100));
@@ -384,6 +392,7 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle(const Duration(milliseconds: 400));
     expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
+    await tapUi(tester, find.byKey(const ValueKey('librarySearchCloseButton')));
     await tapUi(tester, find.byKey(const ValueKey('libraryCollectionsButton')));
     await expectUiGolden(
       tester,

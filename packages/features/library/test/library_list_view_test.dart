@@ -705,11 +705,7 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final controller = ScrollController();
-      final searchController = TextEditingController();
-      final focus = FocusNode();
       addTearDown(controller.dispose);
-      addTearDown(searchController.dispose);
-      addTearDown(focus.dispose);
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
@@ -722,9 +718,7 @@ void main() {
                 LibraryHeader(
                   state: LibraryState(),
                   isOffline: false,
-                  searchController: searchController,
-                  searchFocusNode: focus,
-                  onSearchChanged: (_) {},
+                  onDisplayPressed: () {},
                 ),
                 Expanded(
                   child: LibraryContentScrollView(

@@ -228,6 +228,7 @@ Reusable presentation-only widgets used across features:
 | `AppSourceCover` / `AppSourceCoverFrame` | Shared source cover rendering and frame |
 | `appSourceCoverImageFromPath`       | Resolves an optional local cover image path    |
 | `SearchField`                       | App search field with an adaptive primary-tone clear action and circular press feedback; optional `compactHintText` replaces a hint that would be cut |
+| `SearchFieldHint`                   | Adaptive hint for custom search inputs, with full semantics and support for input-decorator intrinsic layout |
 | `ScrollEdgeFadeStack`               | Scroll-edge fade/scrim wrapper; `axis: Axis.horizontal` fades the start/end of a scrolling strip (tab bar), `enabled` turns the fades off when the child stops scrolling |
 | `ScrollEdgeFade`                    | Scroll-edge fade: top/bottom darken (0.14 alpha in light mode); start/end dissolve a horizontal strip into `surfaceColor` (default scaffold background) |
 | `SelectionPreviewCard`              | Compact preview of selected text with its own `textDirection` |

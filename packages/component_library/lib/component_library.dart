@@ -42,6 +42,7 @@ export 'src/app_first_run_state.dart';
 export 'src/empty_state.dart';
 export 'src/error_state.dart';
 export 'src/search_field.dart';
+export 'src/search_field_hint.dart' show SearchFieldHint;
 export 'src/selection_preview_card.dart';
 export 'src/show_app_bottom_sheet.dart';
 export 'src/source_cover_tokens.dart';

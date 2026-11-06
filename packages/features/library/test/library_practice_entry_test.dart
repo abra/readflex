@@ -30,6 +30,10 @@ final _button = find.byKey(const ValueKey('libraryPracticeButton'));
 final _badge = find.byKey(const ValueKey('libraryPracticeBadge'));
 final _capsule = find.byKey(const ValueKey('libraryFloatingActions'));
 final _add = find.byKey(const ValueKey('libraryAddButton'));
+final _searchButton = find.byKey(const ValueKey('librarySearchButton'));
+final _searchField = find.byKey(const ValueKey('librarySearchField'));
+final _searchClear = find.byKey(const ValueKey('librarySearchClearButton'));
+final _searchClose = find.byKey(const ValueKey('librarySearchCloseButton'));
 
 final _book = Book(
   id: 'b-1',
@@ -41,8 +45,8 @@ final _book = Book(
 
 bool _badgeVisible(WidgetTester tester) => _badge.evaluate().isNotEmpty;
 
-/// Every entry into Practice the Library offers: the row under the search
-/// field once something is saved, and the floating button with its due
+/// Every entry into Practice the Library offers: the row under the header
+/// once something is saved, and the floating button with its due
 /// badge only while cards are due.
 void main() {
   late FakeBookRepository bookRepository;
@@ -109,6 +113,11 @@ void main() {
       bloc.add(LibraryRefreshRequested(completer: done));
       await tester.pumpAndSettle();
       await done.future;
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> openSearch(WidgetTester tester) async {
+      await tester.tap(_searchButton);
       await tester.pumpAndSettle();
     }
 
@@ -508,7 +517,7 @@ void main() {
     }
 
     testWidgets(
-      'no results reserves extra clearance only while cards are due',
+      'no results keeps its search clearance when review cards become due',
       (
         tester,
       ) async {
@@ -521,7 +530,8 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        await tester.enterText(find.byType(TextField), 'no matching title');
+        await openSearch(tester);
+        await tester.enterText(_searchField, 'no matching title');
         await tester.pumpAndSettle(const Duration(milliseconds: 400));
         final clearSearch = find.byKey(
           const ValueKey('libraryClearSearchButton'),
@@ -536,18 +546,29 @@ void main() {
             .state<ScrollableState>(scrollable)
             .position
             .maxScrollExtent;
-        expect(initialExtent, greaterThan(0));
+        final viewport = find.descendant(
+          of: find.byType(LibraryBody),
+          matching: find.byType(SingleChildScrollView),
+        );
+        final initialPadding = tester
+            .widget<SingleChildScrollView>(viewport)
+            .padding;
+        expect(initialExtent, greaterThanOrEqualTo(0));
 
         fsrsRepository.stats = reviewStats(words: 1, due: 1);
         await refresh(tester);
 
         expect(clearSearch, findsOneWidget);
-        expect(_button, findsOneWidget);
+        expect(_button, findsNothing);
         final dueExtent = tester
             .state<ScrollableState>(scrollable)
             .position
             .maxScrollExtent;
-        expect(dueExtent - initialExtent, closeTo(56, .01));
+        expect(dueExtent, closeTo(initialExtent, .01));
+        expect(
+          tester.widget<SingleChildScrollView>(viewport).padding,
+          initialPadding,
+        );
 
         fsrsRepository.stats = reviewStats(words: 1);
         await refresh(tester);
@@ -556,6 +577,10 @@ void main() {
         expect(
           tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
           closeTo(initialExtent, .01),
+        );
+        expect(
+          tester.widget<SingleChildScrollView>(viewport).padding,
+          initialPadding,
         );
         expect(tester.takeException(), isNull);
       },
@@ -843,7 +868,8 @@ void main() {
       expect(find.text(_book.title), findsOneWidget);
     });
 
-    testWidgets('a search or a collection hides the row with the band', (
+    testWidgets('a query hides the Practice row and search editing keeps '
+        'the floating reminder hidden until Close', (
       tester,
     ) async {
       fsrsRepository.stats = reviewStats(words: 1, highlights: 1, due: 2);
@@ -851,16 +877,23 @@ void main() {
       await tester.pumpAndSettle();
       expect(_row, findsOneWidget);
 
-      await tester.enterText(find.byType(TextField), 'flutter');
+      await openSearch(tester);
+      await tester.enterText(_searchField, 'flutter');
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pumpAndSettle();
       expect(find.text(_book.title), findsOneWidget);
       expect(_row, findsNothing);
-      expect(_button, findsOneWidget);
+      expect(_button, findsNothing);
 
-      await tester.tap(find.byTooltip('Clear search'));
+      await tester.tap(_searchClear);
       await tester.pumpAndSettle();
       expect(_row, findsOneWidget);
+      expect(_searchField, findsOneWidget);
+      expect(_button, findsNothing);
+      await tester.tap(_searchClose);
+      await tester.pumpAndSettle();
+      expect(_row, findsOneWidget);
+      expect(_button, findsOneWidget);
     });
 
     testWidgets('selecting hides the capsule and keeps the row', (

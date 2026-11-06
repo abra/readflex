@@ -1,16 +1,10 @@
 import 'package:component_library/component_library.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
 import 'library_collection_scope_label.dart';
 import 'library_layout.dart';
-import 'library_layout_cubit.dart';
-import 'library_display_sheet.dart';
-import 'library_locale_cubit.dart';
-import 'library_page_animation_cubit.dart';
-import 'library_theme_cubit.dart';
 import 'library_title_layout.dart';
 
 const double _offlineGap = AppSpacing.xs;
@@ -21,30 +15,25 @@ const double _titleActionsGap = AppSpacing.md;
 const double _titleChromeWidth = _offlineGap + AppIconSize.xs;
 
 /// Top-of-screen sticky header for the library: the serif title naming the
-/// shown collection, its item count, the Display action and the search
-/// field, over a [kLibraryHeaderBottomPadding] band the content scrolls
+/// shown collection, its item count and the Display action, over a
+/// [kLibraryHeaderBottomPadding] band the content scrolls
 /// under. The title is a heading, not a control: what the Library shows is
 /// chosen in one place, the Collections picker (Books, Articles, Comics and
 /// New are collections there), opened from the bottom capsule beside "+",
 /// under the thumb.
 ///
-/// Search changes use the parent's callback; Display reads the UI cubits
-/// provided by LibraryScreen and opens their settings sheet.
+/// Display is opened by the owning screen, which also suspends search focus.
 class LibraryHeader extends StatelessWidget {
   const LibraryHeader({
     required this.state,
     required this.isOffline,
-    required this.searchController,
-    required this.searchFocusNode,
-    required this.onSearchChanged,
+    required this.onDisplayPressed,
     super.key,
   });
 
   final LibraryState state;
   final bool isOffline;
-  final TextEditingController searchController;
-  final FocusNode searchFocusNode;
-  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onDisplayPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +51,11 @@ class LibraryHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _LibraryTitleBar(title: title, isOffline: isOffline),
+          _LibraryTitleBar(
+            title: title,
+            isOffline: isOffline,
+            onDisplayPressed: onDisplayPressed,
+          ),
           // An empty library says so in its body; "0 items" would repeat it.
           if (!state.isEmpty)
             Padding(
@@ -79,17 +72,6 @@ class LibraryHeader extends StatelessWidget {
                         ),
               ),
             ),
-          const SizedBox(height: AppSpacing.lg),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: SearchField(
-              hintText: l10n.librarySearchHint,
-              clearButtonSemanticsLabel: l10n.commonClearSearch,
-              controller: searchController,
-              focusNode: searchFocusNode,
-              onChanged: onSearchChanged,
-            ),
-          ),
           const SizedBox(height: kLibraryHeaderBottomPadding),
         ],
       ),
@@ -100,10 +82,15 @@ class LibraryHeader extends StatelessWidget {
 /// Title and the Display action on one row, or the action above a
 /// full-width title when they do not fit at the current text scale.
 class _LibraryTitleBar extends StatelessWidget {
-  const _LibraryTitleBar({required this.title, required this.isOffline});
+  const _LibraryTitleBar({
+    required this.title,
+    required this.isOffline,
+    required this.onDisplayPressed,
+  });
 
   final String title;
   final bool isOffline;
+  final VoidCallback onDisplayPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +99,7 @@ class _LibraryTitleBar extends StatelessWidget {
     );
     final actionOutset = AppPlainIconButton.defaultIconOutsetOf(context);
     // The action target extends into the gutter; its glyph stays on the
-    // search field's content edge at either control size.
+    // content edge at either control size.
     return Padding(
       padding: EdgeInsetsDirectional.only(
         start: AppSpacing.lg,
@@ -126,7 +113,10 @@ class _LibraryTitleBar extends StatelessWidget {
               : AppSizes.buttonHeight;
           final actions = SizedBox(
             width: actionsWidth,
-            child: _DisplayMenuButton(showLabel: showLabel),
+            child: _DisplayMenuButton(
+              showLabel: showLabel,
+              onPressed: onDisplayPressed,
+            ),
           );
           final layout = resolveLibraryTitleLayout(
             title: title,
@@ -232,9 +222,10 @@ class _LibraryOfflineStatus extends StatelessWidget {
 }
 
 class _DisplayMenuButton extends StatelessWidget {
-  const _DisplayMenuButton({required this.showLabel});
+  const _DisplayMenuButton({required this.showLabel, required this.onPressed});
 
   final bool showLabel;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -250,13 +241,7 @@ class _DisplayMenuButton extends StatelessWidget {
             textStyle: context.text.labelLarge,
             foregroundColor: context.colors.onSurfaceVariant,
           ),
-          onPressed: () => showLibraryDisplaySheet(
-            context: context,
-            layoutCubit: context.read<LibraryLayoutCubit>(),
-            localeCubit: context.read<LibraryLocaleCubit>(),
-            themeCubit: context.read<LibraryThemeCubit>(),
-            pageAnimationCubit: context.read<LibraryPageAnimationCubit>(),
-          ),
+          onPressed: onPressed,
           icon: const Icon(AppIcons.settings, size: AppIconSize.md),
           label: Text(context.l10n.libraryDisplayOptions),
         ),
@@ -267,13 +252,7 @@ class _DisplayMenuButton extends StatelessWidget {
       tooltip: context.l10n.libraryDisplayOptions,
       icon: AppIcons.settings,
       color: context.colors.onSurfaceVariant,
-      onPressed: () => showLibraryDisplaySheet(
-        context: context,
-        layoutCubit: context.read<LibraryLayoutCubit>(),
-        localeCubit: context.read<LibraryLocaleCubit>(),
-        themeCubit: context.read<LibraryThemeCubit>(),
-        pageAnimationCubit: context.read<LibraryPageAnimationCubit>(),
-      ),
+      onPressed: onPressed,
     );
   }
 }

@@ -3,9 +3,8 @@ import 'dart:math' as math;
 import 'package:component_library/component_library.dart';
 import 'package:flutter/widgets.dart';
 
-/// Background band under the header's search field. Scrolled content
-/// clips at its lower edge, where the top scroll fade starts, so covers
-/// never run flush against the field.
+/// Background band under the header. Scrolled content clips at its lower
+/// edge, where the top scroll fade starts, clear of the title and item count.
 const double kLibraryHeaderBottomPadding = AppSpacing.md;
 
 /// Gap between the header (its [kLibraryHeaderBottomPadding] band) and the
@@ -28,7 +27,7 @@ const double kLibraryListCoverWidth = 60;
 const double kLibraryListCoverHeight = 90;
 const double kLibraryListCoverToTextGap = AppSpacing.md + AppSpacing.xxs;
 
-/// Height of the bottom capsule (collection switcher and "+"): Material's
+/// Height of the bottom capsule (collection switcher, Search and "+"): Material's
 /// regular floating action height, holding 48dp controls 4dp from its edge.
 const double kLibraryFloatingActionsHeight = AppSizes.floatingActionButton;
 

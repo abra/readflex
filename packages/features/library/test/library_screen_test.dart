@@ -21,6 +21,8 @@ import 'package:library_feature/src/library_list_sliver.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -39,6 +41,10 @@ final _collectionsButton = find.byKey(
   const ValueKey('libraryCollectionsButton'),
 );
 final _capsule = find.byKey(const ValueKey('libraryFloatingActions'));
+final _searchButton = find.byKey(const ValueKey('librarySearchButton'));
+final _searchField = find.byKey(const ValueKey('librarySearchField'));
+final _searchClose = find.byKey(const ValueKey('librarySearchCloseButton'));
+final _searchClear = find.byKey(const ValueKey('librarySearchClearButton'));
 
 /// Lets every toast expire and leave. The toast overlay outlives a test, so a
 /// toast still showing at its end would break the next test's toasts.
@@ -51,6 +57,12 @@ Future<void> _expireToasts(WidgetTester tester) async {
 Future<void> _openCollections(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(_collectionsButton);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openSearch(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+  await tester.tap(_searchButton);
   await tester.pumpAndSettle();
 }
 
@@ -127,6 +139,7 @@ void main() {
     ArticleRepository? articleRepository,
     FakeFsrsRepository? fsrsRepository,
     ThemeData? theme,
+    GlobalKey<NavigatorState>? navigatorKey,
     bool isOffline = false,
     bool openImportOnStart = false,
     LibraryImportLauncher? onAddPressed,
@@ -136,6 +149,7 @@ void main() {
     service: preferencesService,
     child: Builder(
       builder: (context) => MaterialApp(
+        navigatorKey: navigatorKey,
         locale: PreferencesScope.localeOf(context),
         supportedLocales: ReadflexSupportedLocales.locales,
         localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
@@ -382,7 +396,8 @@ void main() {
     await _openCollections(tester);
     await tester.tap(_builtInRow(LibraryCollectionScopeType.comics));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'missing');
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'missing');
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pumpAndSettle();
     expect(find.text('No results found'), findsOneWidget);
@@ -391,11 +406,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('libraryClearSearchButton')));
     await tester.pumpAndSettle();
     expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      tester.widget<TextField>(_searchField).controller!.text,
       '',
     );
     expect(
-      tester.widget<TextField>(find.byType(TextField)).focusNode!.hasFocus,
+      tester.widget<TextField>(_searchField).focusNode!.hasFocus,
       isFalse,
     );
     // Still inside Comics: the comic is back, the book stays out.
@@ -787,7 +802,6 @@ void main() {
         matching: find.byIcon(AppIcons.settings),
       ),
     );
-    final searchRect = tester.getRect(find.byType(SearchField));
 
     // The 48dp target bleeds into the gutter; its glyph ends on it.
     expect(displayButtonRect.size, const Size.square(48));
@@ -801,7 +815,6 @@ void main() {
       ),
     );
     expect(glyphRect.right, closeTo(scaffoldRect.right - AppSpacing.lg, 1));
-    expect(glyphRect.right, closeTo(searchRect.right, 1));
   });
 
   testWidgets('shows offline status next to Library title', (tester) async {
@@ -842,13 +855,374 @@ void main() {
     expect(find.byIcon(AppIcons.offline).hitTestable(), findsNothing);
   });
 
-  testWidgets('shows search field', (tester) async {
+  testWidgets('opens the search field from the bottom capsule', (tester) async {
     bookRepository.seedBooks([_book]);
 
     await tester.pumpWidget(buildSubject());
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    expect(_searchButton, findsOneWidget);
+    await _openSearch(tester);
+    expect(_searchField, findsOneWidget);
+    final hint = find.descendant(
+      of: _searchField,
+      matching: find.byType(SearchFieldHint),
+    );
+    expect(hint, findsOneWidget);
+    expect(tester.widget<SearchFieldHint>(hint).text, 'Search library');
+    expect(_searchClose, findsOneWidget);
+    expect(_searchClear, findsNothing);
+    expect(tester.widget<TextField>(_searchField).focusNode!.hasFocus, isTrue);
+    expect(bookRepository.getBooksCallCount, 1);
+  });
 
-    expect(find.text('Search library'), findsOneWidget);
+  testWidgets('Clear keeps search editing and focus; Close restores the '
+      'ordinary controls without storage reads', (tester) async {
+    bookRepository.seedBooks([_book, _secondBook]);
+    await tester.pumpWidget(buildSubject());
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'Flutter');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    final focus = tester.widget<TextField>(_searchField).focusNode!;
+    expect(_addButton, findsNothing);
+    expect(_collectionsButton, findsNothing);
+    expect(_searchClear, findsOneWidget);
+    expect(find.text(_secondBook.title), findsNothing);
+
+    await tester.tap(_searchClear);
+    await tester.pumpAndSettle();
+    expect(_searchField, findsOneWidget);
+    expect(_searchClose, findsOneWidget);
+    expect(_searchClear, findsNothing);
+    expect(tester.widget<TextField>(_searchField).controller!.text, isEmpty);
+    expect(focus.hasFocus, isTrue);
+    expect(find.text(_secondBook.title), findsWidgets);
+
+    await tester.tap(_searchClose);
+    await tester.pumpAndSettle();
+    expect(_searchField, findsNothing);
+    expect(_searchButton, findsOneWidget);
+    expect(_collectionsButton, findsOneWidget);
+    expect(_addButton, findsOneWidget);
+    expect(focus.hasFocus, isFalse);
+    expect(bookRepository.getBooksCallCount, 1);
+  });
+
+  testWidgets('closing search cancels a pending query before it can hide '
+      'the library', (tester) async {
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(buildSubject());
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'missing');
+    await tester.tap(_searchClose);
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(_searchButton, findsOneWidget);
+    expect(_searchField, findsNothing);
+    expect(find.text('No results found'), findsNothing);
+    expect(find.text(_book.title), findsWidgets);
+    expect(
+      tester
+          .widget<LibraryHeader>(find.byType(LibraryHeader))
+          .state
+          .searchQuery,
+      isEmpty,
+    );
+
+    await _openSearch(tester);
+    expect(tester.widget<TextField>(_searchField).controller!.text, isEmpty);
+    expect(tester.widget<TextField>(_searchField).focusNode!.hasFocus, isTrue);
+    expect(bookRepository.getBooksCallCount, 1);
+  });
+
+  testWidgets('short German keyboard viewport keeps no-results text above '
+      'the capsule and recovers through its Clear action', (tester) async {
+    for (final (family, asset) in const [
+      ('SearchViewportGeist', 'Geist-Variable.ttf'),
+      ('SearchViewportLiterata', 'Literata-Variable.ttf'),
+    ]) {
+      await (FontLoader(family)..addFont(
+            rootBundle.load('packages/component_library/fonts/$asset'),
+          ))
+          .load();
+    }
+    tester.view
+      ..physicalSize = const Size(320, 568)
+      ..devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await preferencesService.update(
+      (preferences) => preferences.copyWith(locale: const Locale('de')),
+    );
+    final baseTheme = AppTheme.light();
+    final text = baseTheme.textTheme.apply(fontFamily: 'SearchViewportGeist');
+    final theme = baseTheme.copyWith(
+      textTheme: text.copyWith(
+        headlineMedium: baseTheme.textTheme.headlineMedium!.copyWith(
+          fontFamily: 'SearchViewportLiterata',
+        ),
+      ),
+    );
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(buildSubject(theme: theme));
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'missing');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    final strings = tester.element(find.byType(LibraryBody)).l10n;
+    final message = find.text(strings.libraryNoResultsTitle);
+    final bodyClear = find.byKey(const ValueKey('libraryClearSearchButton'));
+    expect(bodyClear, findsOneWidget);
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 216);
+    await tester.pumpAndSettle();
+    final messageBounds = tester.getRect(message);
+    final capsuleBounds = tester.getRect(_capsule);
+    final bodyBounds = tester.getRect(find.byType(LibraryBody));
+    expect(messageBounds.top, greaterThanOrEqualTo(bodyBounds.top));
+    expect(messageBounds.left, greaterThanOrEqualTo(0));
+    expect(messageBounds.right, lessThanOrEqualTo(320));
+    expect(messageBounds.bottom, lessThanOrEqualTo(capsuleBounds.top - 8));
+    expect(bodyClear, findsNothing);
+    expect(find.text(strings.libraryNoResultsSubtitle), findsNothing);
+    for (final control in [_searchClear, _searchClose]) {
+      final bounds = tester.getRect(control);
+      expect(bounds.width, closeTo(48, .01));
+      expect(bounds.height, closeTo(48, .01));
+      expect(control.hitTestable(), findsOneWidget);
+    }
+
+    tester.view.viewInsets = const FakeViewPadding();
+    await tester.pumpAndSettle();
+    expect(bodyClear, findsOneWidget);
+    expect(find.text(strings.libraryNoResultsSubtitle), findsOneWidget);
+
+    tester.view.viewInsets = const FakeViewPadding(bottom: 216);
+    await tester.pumpAndSettle();
+    await tester.tap(_searchClear);
+    await tester.pumpAndSettle();
+    expect(message, findsNothing);
+    expect(find.text(_book.title), findsWidgets);
+    expect(_searchField, findsOneWidget);
+    expect(tester.widget<TextField>(_searchField).controller!.text, isEmpty);
+    expect(_searchClose.hitTestable(), findsOneWidget);
+    expect(bookRepository.getBooksCallCount, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('closing a scoped search retains the chosen collection', (
+    tester,
+  ) async {
+    bookRepository.seedBooks([_book, _comicBook]);
+    await tester.pumpWidget(buildSubject());
+    await _openCollections(tester);
+    await tester.tap(_builtInRow(LibraryCollectionScopeType.comics));
+    await tester.pumpAndSettle();
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'missing');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(find.text('No results found'), findsOneWidget);
+
+    await tester.tap(_searchClose);
+    await tester.pumpAndSettle();
+    expect(_headerText('Comics'), findsOneWidget);
+    expect(find.text(_comicBook.title), findsWidgets);
+    expect(find.text(_book.title), findsNothing);
+    expect(_searchButton, findsOneWidget);
+    expect(_searchField, findsNothing);
+    expect(bookRepository.getBooksCallCount, 1);
+  });
+
+  testWidgets('an empty collection still offers search and returns to the '
+      'same empty scope', (tester) async {
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(buildSubject());
+    await _openCollections(tester);
+    await tester.tap(
+      find.byKey(
+        const ValueKey('collectionScopeRow-favourites-readflex:favourites'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('This collection is empty'), findsOneWidget);
+    await _openSearch(tester);
+    expect(_searchField, findsOneWidget);
+    await tester.tap(_searchClose);
+    await tester.pumpAndSettle();
+    expect(_headerText('Favourites'), findsOneWidget);
+    expect(find.text('This collection is empty'), findsOneWidget);
+    expect(_searchButton, findsOneWidget);
+    expect(bookRepository.getBooksCallCount, 1);
+  });
+
+  testWidgets('an empty-library refresh closes search before a later import '
+      'restores the ordinary controls', (tester) async {
+    late VoidCallback imported;
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(
+      buildSubject(
+        onAddPressed:
+            ({required onImported, entry = LibraryImportEntry.menu}) async {
+              imported = onImported;
+            },
+      ),
+    );
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'Flutter');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    bookRepository.seedBooks([]);
+    await tester
+        .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+        .onRefresh();
+    await tester.pumpAndSettle();
+    expect(find.text('Your library is empty'), findsOneWidget);
+    expect(_searchField, findsNothing);
+    expect(_searchButton, findsNothing);
+
+    bookRepository.seedBooks([_secondBook]);
+    await tester.tap(find.text('Upload a file'));
+    await tester.pumpAndSettle();
+    imported();
+    await tester.pumpAndSettle();
+    expect(find.text(_secondBook.title), findsWidgets);
+    expect(_searchButton, findsOneWidget);
+    expect(_searchField, findsNothing);
+    expect(
+      tester
+          .widget<LibraryHeader>(find.byType(LibraryHeader))
+          .state
+          .searchQuery,
+      isEmpty,
+    );
+    expect(bookRepository.getBooksCallCount, 3);
+  });
+
+  testWidgets('selection and its collection sheet retain search; cancel '
+      'restores the query without reopening the keyboard', (tester) async {
+    bookRepository.seedBooks([_book, _secondBook]);
+    await tester.pumpWidget(buildSubject());
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'Flutter');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    final focus = tester.widget<TextField>(_searchField).focusNode!;
+    await tester.longPress(find.text(_book.title));
+    await tester.pumpAndSettle();
+    expect(find.byType(LibrarySelectionBar), findsOneWidget);
+    expect(_searchField, findsNothing);
+    expect(focus.hasFocus, isFalse);
+    await tester.tap(
+      find.byKey(const ValueKey('libraryAddToCollectionButton')),
+    );
+    await tester.pumpAndSettle();
+    final sheet = find.byType(AddToCollectionSheet);
+    await tester.tap(
+      find.descendant(of: sheet, matching: find.byTooltip('Close')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(LibrarySelectionBar), findsOneWidget);
+    expect(_searchField, findsNothing);
+
+    await tester.tap(find.byTooltip('Cancel selection'));
+    await tester.pumpAndSettle();
+    expect(_searchField, findsOneWidget);
+    expect(tester.widget<TextField>(_searchField).controller!.text, 'Flutter');
+    expect(focus.hasFocus, isFalse);
+    expect(find.text(_secondBook.title), findsNothing);
+    expect(bookRepository.getBooksCallCount, 1);
+  });
+
+  testWidgets('system Back leaves selection, then search, before leaving '
+      'the Library', (tester) async {
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(buildSubject());
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'Flutter');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    await tester.longPress(find.text(_book.title));
+    await tester.pumpAndSettle();
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(LibrarySelectionBar), findsNothing);
+    expect(_searchField, findsOneWidget);
+    expect(tester.widget<TextField>(_searchField).controller!.text, 'Flutter');
+    expect(tester.widget<TextField>(_searchField).focusNode!.hasFocus, isFalse);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(_searchField, findsNothing);
+    expect(_searchButton, findsOneWidget);
+    expect(find.byType(LibraryHeader), findsOneWidget);
+    expect(
+      tester
+          .widget<LibraryHeader>(find.byType(LibraryHeader))
+          .state
+          .searchQuery,
+      isEmpty,
+    );
+    expect(bookRepository.getBooksCallCount, 1);
+  });
+
+  testWidgets('Display returns to the current search without restoring '
+      'its keyboard focus', (tester) async {
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(buildSubject());
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'Flutter');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    final focus = tester.widget<TextField>(_searchField).focusNode!;
+    await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
+    await tester.pumpAndSettle();
+    final sheet = find.byType(BottomSheet);
+    await tester.tap(
+      find.descendant(of: sheet, matching: find.byTooltip('Close')),
+    );
+    await tester.pumpAndSettle();
+    expect(_searchField, findsOneWidget);
+    expect(tester.widget<TextField>(_searchField).controller!.text, 'Flutter');
+    expect(focus.hasFocus, isFalse);
+    expect(focus.canRequestFocus, isTrue);
+    expect(bookRepository.getBooksCallCount, 1);
+  });
+
+  testWidgets('Practice returns to empty search editing without refocusing '
+      'its field', (tester) async {
+    final navigator = GlobalKey<NavigatorState>();
+    final reviews = FakeFsrsRepository()..stats = reviewStats(words: 1, due: 1);
+    bookRepository.seedBooks([_book]);
+    await tester.pumpWidget(
+      buildSubject(
+        navigatorKey: navigator,
+        fsrsRepository: reviews,
+        onPracticePressed: () async {
+          await navigator.currentState!.push<void>(
+            MaterialPageRoute(
+              builder: (_) => const Scaffold(body: Text('Practice route')),
+            ),
+          );
+        },
+      ),
+    );
+    await _openSearch(tester);
+    final focus = tester.widget<TextField>(_searchField).focusNode!;
+    await tester.tap(find.byKey(const ValueKey('libraryPracticeRow')));
+    await tester.pumpAndSettle();
+    expect(find.text('Practice route'), findsOneWidget);
+    expect(focus.hasFocus, isFalse);
+    expect(focus.canRequestFocus, isFalse);
+    navigator.currentState!.pop();
+    await tester.pumpAndSettle();
+    expect(_searchField, findsOneWidget);
+    expect(tester.widget<TextField>(_searchField).controller!.text, isEmpty);
+    expect(focus.hasFocus, isFalse);
+    expect(focus.canRequestFocus, isTrue);
   });
 
   testWidgets('source tap keeps search unfocused after reader route returns', (
@@ -881,9 +1255,10 @@ void main() {
     );
     await tester.pump();
 
-    final searchField = find.widgetWithText(TextField, 'Search library');
-    await tester.tap(searchField);
-    await tester.pump();
+    await _openSearch(tester);
+    await tester.enterText(_searchField, 'Flutter');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
 
     final searchEditable = tester.widget<EditableText>(
       find.byType(EditableText),
@@ -905,6 +1280,15 @@ void main() {
     expect(_headerText('Library'), findsOneWidget);
     expect(searchFocusNode.hasFocus, isFalse);
     expect(searchFocusNode.canRequestFocus, isTrue);
+    expect(_searchField, findsOneWidget);
+    expect(tester.widget<TextField>(_searchField).controller!.text, 'Flutter');
+    expect(
+      tester
+          .widget<LibraryHeader>(find.byType(LibraryHeader))
+          .state
+          .searchQuery,
+      'Flutter',
+    );
   });
 
   group('built-in collections', () {
@@ -1142,6 +1526,7 @@ void main() {
       final capsule = tester.getRect(_capsule);
       final add = tester.getRect(_addButton);
       final collections = tester.getRect(_collectionsButton);
+      final search = tester.getRect(_searchButton);
       expect(capsule.height, closeTo(kLibraryFloatingActionsHeight, .01));
       // Scaffold's 16dp margin over the 34dp inset, plus the 8dp lift.
       expect(
@@ -1151,19 +1536,24 @@ void main() {
       expect(add.width, closeTo(AppSizes.buttonHeight, .01));
       expect(add.height, closeTo(AppSizes.buttonHeight, .01));
       expect(collections.height, closeTo(AppSizes.buttonHeight, .01));
+      expect(search.width, closeTo(AppSizes.buttonHeight, .01));
+      expect(search.height, closeTo(AppSizes.buttonHeight, .01));
       expect(add.center.dy, closeTo(capsule.center.dy, .01));
       expect(collections.center.dy, closeTo(capsule.center.dy, .01));
-      // Controls sit 4dp inside the capsule and 4dp apart.
+      expect(search.center.dy, closeTo(capsule.center.dy, .01));
+      // Search is between the collection target and the inset filled action.
       const inset = (kLibraryFloatingActionsHeight - AppSizes.buttonHeight) / 2;
       if (rtl) {
         expect(capsule.left, closeTo(AppSpacing.lg, .01));
         expect(add.left - capsule.left, closeTo(inset, .01));
-        expect(collections.left - add.right, closeTo(inset, .01));
+        expect(search.left - add.right, closeTo(inset, .01));
+        expect(collections.left - search.right, closeTo(0, .01));
         expect(capsule.right - collections.right, closeTo(inset, .01));
       } else {
         expect(capsule.right, closeTo(390 - AppSpacing.lg, .01));
         expect(capsule.right - add.right, closeTo(inset, .01));
-        expect(add.left - collections.right, closeTo(inset, .01));
+        expect(add.left - search.right, closeTo(inset, .01));
+        expect(search.left - collections.right, closeTo(0, .01));
         expect(collections.left - capsule.left, closeTo(inset, .01));
       }
     });
@@ -1457,24 +1847,54 @@ void main() {
         seedDune();
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
-        final resize = find.descendant(
-          of: _capsule,
-          matching: find.byType(AnimatedSize),
+        final before = tester.getRect(_capsule);
+        final addAnchor = tester.getCenter(_addButton);
+        final bloc = tester
+            .element(find.byType(LibraryHeader))
+            .read<LibraryBloc>();
+        final scope = bloc.state.collectionScopes.firstWhere(
+          (scope) => scope.label == 'Dune',
         );
-        if (reduceMotion) {
-          expect(resize, findsNothing);
-        } else {
-          expect(tester.widget<AnimatedSize>(resize).duration, AppMotion.short);
-        }
 
-        // Switching scope settles without layout errors either way.
-        await _openCollections(tester);
-        await tester.tap(find.text('Dune'));
+        // Drive the loaded scope directly so closing a modal does not hide
+        // the intermediate width frames under its own route transition.
+        bloc.add(LibraryCollectionScopeChanged(scope));
+        await tester.pump();
+        await tester.pump();
+        final start = tester.getRect(_capsule);
+        await tester.pump(const Duration(milliseconds: 50));
+        final intermediate = tester.getRect(_capsule);
+        expect(
+          tester.getCenter(_addButton),
+          offsetMoreOrLessEquals(addAnchor, epsilon: .01),
+        );
         await tester.pumpAndSettle();
+        final settled = tester.getRect(_capsule);
+        expect((settled.width - before.width).abs(), greaterThan(.01));
+        expect(settled.bottomRight, offsetMoreOrLessEquals(before.bottomRight));
+        if (reduceMotion) {
+          expect(start, rectMoreOrLessEquals(settled));
+          expect(intermediate, rectMoreOrLessEquals(settled));
+        } else {
+          expect(start, rectMoreOrLessEquals(before));
+          expect(
+            intermediate.width,
+            greaterThan(math.min(before.width, settled.width)),
+          );
+          expect(
+            intermediate.width,
+            lessThan(math.max(before.width, settled.width)),
+          );
+        }
+        expect(
+          tester.getCenter(_addButton),
+          offsetMoreOrLessEquals(addAnchor, epsilon: .01),
+        );
         expect(
           find.descendant(of: _collectionsButton, matching: find.text('Dune')),
           findsOneWidget,
         );
+        expect(bookRepository.getBooksCallCount, 1);
         expect(tester.takeException(), isNull);
       });
     }
@@ -3802,13 +4222,14 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
       expect(card, findsOneWidget);
-      await tester.enterText(find.byType(TextField), 'Reading');
+      await _openSearch(tester);
+      await tester.enterText(_searchField, 'Reading');
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
       expect(card, findsNothing);
       // Without the card the book is listed again.
       expect(listed(reading.id), findsOneWidget);
-      await tester.enterText(find.byType(TextField), '');
+      await tester.enterText(_searchField, '');
       await tester.pumpAndSettle();
       expect(card, findsOneWidget);
     });
@@ -4033,8 +4454,8 @@ void main() {
     );
 
     for (final mode in LibraryLayoutMode.values) {
-      testWidgets('a long list scrolls under a band below the search field, '
-          'never flush against it: ${mode.id}', (tester) async {
+      testWidgets('a long list scrolls under the header bottom band: '
+          '${mode.id}', (tester) async {
         tester.view.physicalSize = const Size(390, 844);
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.reset);
@@ -4051,12 +4472,14 @@ void main() {
           matching: find.byType(Scrollable),
         );
         final firstCover = find.byType(AppSourceCoverFrame).first;
-        final search = tester.getRect(find.byType(SearchField));
+        final subtitle = tester.getRect(
+          find.byKey(const ValueKey('libraryHeaderItemCount')),
+        );
         final header = tester.getRect(find.byType(LibraryHeader));
 
         expect(
           header.bottom,
-          closeTo(search.bottom + kLibraryHeaderBottomPadding, .01),
+          closeTo(subtitle.bottom + kLibraryHeaderBottomPadding, .01),
         );
         expect(tester.getRect(viewport).top, closeTo(header.bottom, .01));
         expect(
@@ -4069,14 +4492,14 @@ void main() {
         await tester.pumpAndSettle();
 
         // The first cover has passed under the band's lower edge, where the
-        // viewport clips it and the fade starts, clear of the field.
+        // viewport clips it and the fade starts, clear of the subtitle.
         expect(tester.getRect(firstCover).top, lessThan(header.bottom));
         expect(tester.getRect(viewport).top, closeTo(header.bottom, .01));
         expect(tester.widget<ScrollEdgeFade>(topFade).visible, isTrue);
         expect(tester.getRect(topFade).top, closeTo(header.bottom, .01));
         // A 12dp band, the same gap the content starts below it.
         expect(
-          tester.getRect(topFade).top - search.bottom,
+          tester.getRect(topFade).top - subtitle.bottom,
           closeTo(AppSpacing.md, .01),
         );
       });
@@ -4105,6 +4528,7 @@ void main() {
       bookRepository.seedBooks(_longList);
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
+      await _openSearch(tester);
     }
 
     // One keyboard frame. dart:ui reports padding as the part of the view
@@ -4119,6 +4543,30 @@ void main() {
 
     double capsuleGap(WidgetTester tester) =>
         height - tester.getRect(_capsule).bottom;
+
+    testWidgets('closing search while the keyboard dismisses keeps the safe '
+        'inset and never restores focus', (tester) async {
+      await pumpPhone(tester, LibraryLayoutMode.list);
+      final focus = tester.widget<TextField>(_searchField).focusNode!;
+      await setKeyboard(tester, 320);
+      await tester.tap(_searchClose);
+      await tester.pumpAndSettle();
+      expect(_searchField, findsNothing);
+      expect(_searchButton, findsOneWidget);
+      expect(focus.hasFocus, isFalse);
+      for (final keyboard in [320.0, 200.0, safeInset, 20.0, 1.0, 0.0]) {
+        await setKeyboard(tester, keyboard);
+        expect(
+          capsuleGap(tester),
+          closeTo(expectedCapsuleGap(keyboard), .01),
+          reason: 'keyboard $keyboard',
+        );
+        expect(focus.hasFocus, isFalse);
+        expect(_searchField, findsNothing);
+      }
+      expect(bookRepository.getBooksCallCount, 1);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('keyboard frames past the safe inset rebuild no grid tile '
         'or Continue reading card', (tester) async {
@@ -4144,12 +4592,8 @@ void main() {
       ]);
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
-      await tester.showKeyboard(
-        find.descendant(
-          of: find.byType(LibraryHeader),
-          matching: find.byType(TextField),
-        ),
-      );
+      await _openSearch(tester);
+      await tester.showKeyboard(_searchField);
       // Until the keyboard covers the safe inset, the content's bottom
       // padding follows it.
       await setKeyboard(tester, 40);

@@ -16,6 +16,7 @@ import 'add_to_collection_cubit.dart';
 import 'add_to_collection_sheet.dart';
 import 'library_bloc.dart';
 import 'library_body.dart';
+import 'library_display_sheet.dart';
 import 'library_floating_actions.dart';
 import 'library_floating_actions_location.dart';
 import 'library_header.dart';
@@ -187,6 +188,8 @@ class _LibraryViewState extends State<_LibraryView>
   /// and owning a controller lets us clear the field from the clear button.
   final _searchController = TextEditingController();
   final _searchFocusNode = FocusNode(debugLabel: 'Library search');
+  bool _searchActive = false;
+  bool _searchFocusAllowed = true;
 
   /// Prevents duplicate import sheets and disables the import actions while
   /// the current import flow is open.
@@ -229,6 +232,48 @@ class _LibraryViewState extends State<_LibraryView>
     context.read<LibraryBloc>().add(
       LibraryForegroundChanged(state == AppLifecycleState.resumed),
     );
+  }
+
+  void _openSearch() {
+    if (_searchActive || ModalRoute.of(context)?.isCurrent == false) return;
+    setState(() => _searchActive = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_searchActive) return;
+      final state = context.read<LibraryBloc>().state;
+      if (state.status == LibraryStatus.success &&
+          !state.isEmpty &&
+          !context.read<LibrarySelectionCubit>().state.isActive &&
+          ModalRoute.of(context)?.isCurrent != false) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+    _searchFocusNode.unfocus();
+    context.read<LibraryBloc>().add(const LibrarySearchQueryChanged(''));
+  }
+
+  void _closeSearch() {
+    _clearSearch();
+    if (_searchActive) setState(() => _searchActive = false);
+  }
+
+  Future<void> _handleDisplayPressed() async {
+    if (ModalRoute.of(context)?.isCurrent == false) return;
+    _suspendSearchFocus();
+    try {
+      await showLibraryDisplaySheet(
+        context: context,
+        layoutCubit: context.read<LibraryLayoutCubit>(),
+        localeCubit: context.read<LibraryLocaleCubit>(),
+        themeCubit: context.read<LibraryThemeCubit>(),
+        pageAnimationCubit: context.read<LibraryPageAnimationCubit>(),
+      );
+    } finally {
+      if (mounted) _restoreSearchFocusAfterRouteFrame();
+    }
   }
 
   Future<void> _handleAdd(
@@ -327,6 +372,7 @@ class _LibraryViewState extends State<_LibraryView>
   }
 
   void _suspendSearchFocus() {
+    if (_searchFocusAllowed) setState(() => _searchFocusAllowed = false);
     _searchFocusNode.canRequestFocus = false;
     _dismissCurrentFocus();
   }
@@ -334,6 +380,7 @@ class _LibraryViewState extends State<_LibraryView>
   void _restoreSearchFocusAfterRouteFrame() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      setState(() => _searchFocusAllowed = true);
       _searchFocusNode.canRequestFocus = true;
       _dismissCurrentFocus();
     });
@@ -509,13 +556,28 @@ class _LibraryViewState extends State<_LibraryView>
   Widget build(BuildContext context) {
     // The Scaffold's floating-action slot removes these insets from its scope.
     final viewPadding = MediaQuery.viewPaddingOf(context);
-    return BlocListener<LibraryBloc, LibraryState>(
-      listenWhen: (prev, curr) =>
-          prev.deletionEffect != curr.deletionEffect &&
-          curr.deletionEffect != null,
-      listener: _onDeletionEffect,
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<LibraryBloc, LibraryState>(
+          listenWhen: (prev, curr) =>
+              prev.deletionEffect != curr.deletionEffect &&
+              curr.deletionEffect != null,
+          listener: _onDeletionEffect,
+        ),
+        BlocListener<LibraryBloc, LibraryState>(
+          listenWhen: (prev, curr) =>
+              curr.status == LibraryStatus.success &&
+              curr.isEmpty &&
+              (prev.status != curr.status || !prev.isEmpty),
+          listener: (context, state) {
+            if (_searchActive) _closeSearch();
+          },
+        ),
+      ],
       child: _LibrarySelectionPopScope(
         onCancelSelection: () => context.read<LibrarySelectionCubit>().clear(),
+        searchActive: _searchActive,
+        onCloseSearch: _closeSearch,
         child: BlocSelector<LibrarySelectionCubit, LibrarySelectionState, bool>(
           selector: (selection) => selection.isActive,
           builder: (context, selectionActive) =>
@@ -570,6 +632,17 @@ class _LibraryViewState extends State<_LibraryView>
                                   final (scope, practiceDue) = selected;
                                   return LibraryFloatingActions(
                                     scope: scope,
+                                    horizontalViewPadding:
+                                        viewPadding.horizontal,
+                                    searchActive: _searchActive,
+                                    searchController: _searchController,
+                                    searchFocusNode: _searchFocusNode,
+                                    canRequestSearchFocus: _searchFocusAllowed,
+                                    onSearchPressed: _openSearch,
+                                    onSearchChanged: (query) => context
+                                        .read<LibraryBloc>()
+                                        .add(LibrarySearchQueryChanged(query)),
+                                    onSearchClosed: _closeSearch,
                                     practiceDue: practiceDue,
                                     onCollectionsPressed: () =>
                                         _handleCollectionScopePressed(
@@ -634,16 +707,13 @@ class _LibraryViewState extends State<_LibraryView>
                                 LibraryHeader(
                                   state: state,
                                   isOffline: widget.isOffline,
-                                  searchController: _searchController,
-                                  searchFocusNode: _searchFocusNode,
-                                  onSearchChanged: (query) => bloc.add(
-                                    LibrarySearchQueryChanged(query),
-                                  ),
+                                  onDisplayPressed: _handleDisplayPressed,
                                 ),
                                 Expanded(
                                   child: ScrollEdgeFadeStack(
                                     child: LibraryBody(
                                       state: state,
+                                      searchActive: _searchActive,
                                       selectionActionsHeight: selectionActive
                                           ? LibrarySelectionBar.heightOf(
                                               context,
@@ -675,15 +745,7 @@ class _LibraryViewState extends State<_LibraryView>
                                         );
                                         return done.future;
                                       },
-                                      onClearSearch: () {
-                                        _searchController.clear();
-                                        _searchFocusNode.unfocus();
-                                        bloc.add(
-                                          const LibrarySearchQueryChanged(
-                                            '',
-                                          ),
-                                        );
-                                      },
+                                      onClearSearch: _clearSearch,
                                       onShowWholeLibrary: () => bloc.add(
                                         const LibraryCollectionScopeChanged(
                                           null,
@@ -713,14 +775,18 @@ class _LibraryViewState extends State<_LibraryView>
   }
 }
 
-/// Converts system back into "cancel selection" while multi-select is active.
+/// System Back leaves selection, then search, before navigating away.
 class _LibrarySelectionPopScope extends StatelessWidget {
   const _LibrarySelectionPopScope({
     required this.onCancelSelection,
+    required this.searchActive,
+    required this.onCloseSearch,
     required this.child,
   });
 
   final VoidCallback onCancelSelection;
+  final bool searchActive;
+  final VoidCallback onCloseSearch;
   final Widget child;
 
   @override
@@ -729,13 +795,14 @@ class _LibrarySelectionPopScope extends StatelessWidget {
       selector: (state) => state.isActive,
       builder: (context, selectionActive) {
         return PopScope(
-          // Intercept the system back gesture only while a selection is
-          // active so the user can cancel multi-select without leaving
-          // the tab.
-          canPop: !selectionActive,
+          canPop: !selectionActive && !searchActive,
           onPopInvokedWithResult: (didPop, _) {
             if (didPop) return;
-            onCancelSelection();
+            if (selectionActive) {
+              onCancelSelection();
+            } else if (searchActive) {
+              onCloseSearch();
+            }
           },
           child: child,
         );

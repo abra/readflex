@@ -35,11 +35,16 @@ void main() {
   ) async {
     await launch(tester);
     final initialReads = app.bookRepository.reads;
-    await tester.enterText(find.byType(TextField), 'missing');
+    await tapUi(tester, find.byKey(const ValueKey('librarySearchButton')));
+    await tester.enterText(
+      find.byKey(const ValueKey('librarySearchField')),
+      'missing',
+    );
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.text(ReadingFixture.bookTitle), findsNothing);
     await tapUi(tester, find.byTooltip('Clear search'));
     expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
+    await tapUi(tester, find.byKey(const ValueKey('librarySearchCloseButton')));
     await tapUi(tester, find.byTooltip('Display options'));
     await tapUi(tester, find.text('List'));
     expect(app.preferencesService.current.libraryLayoutMode, 'list');

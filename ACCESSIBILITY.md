@@ -86,11 +86,20 @@ only scroll the list. Close and the dismissible scrim remain available.
 
 The Library's bottom capsule keeps each control its own node: the collection
 switcher merges into one button (label Choose collection, value the shown
-collection) and keeps its enabled state, and "+" is a labelled filled icon
-button. The header title above it is a heading that names the shown
-collection; it has no tap action. The capsule's height is fixed, so its text
-scales to 200% and no further; at 320dp and 200% it still fits within the
-gutters, truncating a long collection name rather than clipping.
+collection), Search has a labelled 48dp target between the switcher and "+",
+and "+" is a labelled filled icon button. The header title above it is a heading
+that names the shown collection; it has no tap action. Browse captions scale to
+200%; at 320dp and 200% the capsule remains within the gutters, truncating a long
+collection name rather than clipping.
+Opening Search changes the capsule into one editable field. Back and Clear
+search are distinct labelled controls: Back clears the query and leaves search;
+Clear retains editing and focus. The field follows the user's text scale, using
+a shorter visible hint when needed while retaining the full search description
+in semantics. Outgoing controls leave input, focus and semantics during their
+fade; reduced motion settles the change immediately. Returning from a reader or
+Practice preserves the query without automatically reopening the keyboard.
+With little room above the keyboard, compact no-results feedback stays above
+the field; its labelled Clear and Back controls remain available.
 
 The separate Practice icon appears only when its destination is available and
 at least one card is due; zero or unknown counts remove its button semantics.
