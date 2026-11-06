@@ -73,8 +73,41 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
   Future<List<DictionaryAnchorsTableData>> anchorsByEntry(String entryId) =>
       (select(dictionaryAnchorsTable)
             ..where((t) => t.entryId.equals(entryId))
-            ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.createdAt),
+              (t) => OrderingTerm.asc(t.rowId),
+            ]))
           .get();
+
+  /// Reads only the earliest anchor per entry, breaking timestamp ties by
+  /// insertion order like [anchorsByEntry]. Chunks stay below SQLite's 999
+  /// parameter baseline, including for large imported vocabularies.
+  Future<List<DictionaryAnchorsTableData>> firstAnchorsByEntries(
+    Iterable<String> entryIds,
+  ) async {
+    final ids = entryIds.toSet().toList();
+    final result = <DictionaryAnchorsTableData>[];
+    const batchSize = 500;
+    for (var offset = 0; offset < ids.length; offset += batchSize) {
+      final chunk = ids.skip(offset).take(batchSize).toList();
+      final rows = await customSelect(
+        '''
+        WITH requested(entry_id) AS (VALUES ${List.filled(chunk.length, '(?)').join(', ')})
+        SELECT anchor.* FROM requested
+        JOIN dictionary_anchors_table AS anchor ON anchor.rowid = (
+          SELECT candidate.rowid FROM dictionary_anchors_table AS candidate
+          WHERE candidate.entry_id = requested.entry_id
+          ORDER BY candidate.created_at ASC, candidate.rowid ASC
+          LIMIT 1
+        )
+        ''',
+        variables: [for (final id in chunk) Variable.withString(id)],
+        readsFrom: {dictionaryAnchorsTable},
+      ).get();
+      result.addAll(rows.map((row) => dictionaryAnchorsTable.map(row.data)));
+    }
+    return result;
+  }
 
   Future<void> insertAnchor(DictionaryAnchorsTableCompanion anchor) =>
       into(dictionaryAnchorsTable).insert(anchor);

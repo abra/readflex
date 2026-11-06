@@ -74,6 +74,7 @@ run "component_library"            "$FLUTTER test test/" "$SCRIPT_DIR/packages/c
 run "local_storage"                "$FLUTTER test test/" "$SCRIPT_DIR/packages/local_storage"
 run "book_repository"              "$FLUTTER test test/" "$SCRIPT_DIR/packages/book_repository"
 run "collection_repository"        "$FLUTTER test test/" "$SCRIPT_DIR/packages/collection_repository"
+run "bounded_http"                 "$DART test test/" "$SCRIPT_DIR/packages/bounded_http"
 run "article_extraction_service"   "$DART test test/" "$SCRIPT_DIR/packages/article_extraction_service"
 run "remote_content_policy"        "$DART test test/" "$SCRIPT_DIR/packages/remote_content_policy"
 run "article_repository"           "$FLUTTER test test/" "$SCRIPT_DIR/packages/article_repository"

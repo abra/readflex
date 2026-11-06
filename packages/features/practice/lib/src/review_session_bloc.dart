@@ -42,11 +42,12 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
          fsrsRepository: fsrsRepository,
        ),
        super(const ReviewSessionState()) {
-    on<ReviewSessionStarted>(_onStarted);
-    on<ReviewSessionAnswerRevealed>(_onRevealed);
-    on<ReviewSessionCardRated>(_onRated);
-    on<ReviewSessionCardRemoved>(_onRemoved);
-    on<ReviewSessionAgainRequested>(_onAgainRequested);
+    // Related writes and restarts share one queue, regardless of the app's
+    // default transformer. Card identities reject stale queued gestures.
+    on<ReviewSessionEvent>(
+      _onEvent,
+      transformer: (events, mapper) => events.asyncExpand(mapper),
+    );
   }
 
   /// Cards per session at most.
@@ -66,6 +67,25 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
   /// The reader's memory target, read once when the session starts so every
   /// preview and rating in it schedules the same way.
   double _desiredRetention = Preferences.defaultPracticeDesiredRetention;
+  int _cardRevision = 0;
+
+  Future<void> _onEvent(
+    ReviewSessionEvent event,
+    Emitter<ReviewSessionState> emit,
+  ) async {
+    switch (event) {
+      case ReviewSessionStarted():
+        await _onStarted(event, emit);
+      case ReviewSessionAnswerRevealed():
+        _onRevealed(event, emit);
+      case ReviewSessionCardRated():
+        await _onRated(event, emit);
+      case ReviewSessionCardRemoved():
+        await _onRemoved(event, emit);
+      case ReviewSessionAgainRequested():
+        _onAgainRequested(event, emit);
+    }
+  }
 
   Future<void> _onStarted(
     ReviewSessionStarted event,
@@ -83,6 +103,7 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
         ),
         _fsrsRepository.getStats(),
       ).wait;
+      if (emit.isDone) return;
       var newBudget = prefs.practiceNewCardsPerDay - stats.newReviewedToday;
       final queue = <ReviewItem>[];
       for (final row in rows) {
@@ -98,9 +119,11 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
         if (queue.length >= sessionLimit) break;
       }
       final items = await _loader.resolve(queue, sources);
+      if (emit.isDone) return;
       emit(_begin(items));
     } catch (e, st) {
       addError(e, st);
+      if (emit.isDone) return;
       emit(state.copyWith(status: ReviewSessionStatus.failure));
     }
   }
@@ -144,6 +167,7 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     return ReviewSessionState(
       status: ReviewSessionStatus.reviewing,
       items: items,
+      cardRevision: ++_cardRevision,
       intervals: _fsrsRepository.previewIntervals(
         items.first.fsrs,
         desiredRetention: _desiredRetention,
@@ -155,8 +179,7 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     ReviewSessionAnswerRevealed event,
     Emitter<ReviewSessionState> emit,
   ) {
-    if (state.status != ReviewSessionStatus.reviewing ||
-        state.current is! PracticeWordItem) {
+    if (!_isCurrentCard(event.card) || state.current is! PracticeWordItem) {
       return;
     }
     emit(state.copyWith(revealed: true));
@@ -167,9 +190,15 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     Emitter<ReviewSessionState> emit,
   ) async {
     final item = state.current;
-    if (item == null || state.status != ReviewSessionStatus.reviewing) return;
+    if (item == null ||
+        !_isCurrentCard(event.card) ||
+        (item is PracticeWordItem && !state.revealed)) {
+      return;
+    }
+    emit(state.copyWith(isSaving: true));
+    late final FsrsCardData updatedFsrs;
     try {
-      await _fsrsRepository.recordReview(
+      updatedFsrs = await _fsrsRepository.recordReview(
         itemId: item.itemId,
         itemType: item.itemType,
         rating: event.rating,
@@ -178,14 +207,18 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
       );
     } catch (e, st) {
       addError(e, st);
-      emit(state.copyWith(status: ReviewSessionStatus.failure));
+      if (emit.isDone) return;
+      emit(
+        state.copyWith(status: ReviewSessionStatus.failure, isSaving: false),
+      );
       return;
     }
+    if (emit.isDone) return;
     _advance(
       emit,
       ratings: {...state.ratings, item.itemId: event.rating},
       again: event.rating == Rating.again
-          ? [...state.again, item]
+          ? [...state.again, item.withFsrs(updatedFsrs)]
           : state.again,
     );
   }
@@ -195,29 +228,39 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     Emitter<ReviewSessionState> emit,
   ) async {
     final item = state.current;
-    if (item == null || state.status != ReviewSessionStatus.reviewing) return;
+    if (item == null || !_isCurrentCard(event.card)) return;
+    emit(state.copyWith(isSaving: true));
     try {
       await _fsrsRepository.deleteReviewItem(item.itemId);
     } catch (e, st) {
       addError(e, st);
+      if (emit.isDone) return;
+      emit(
+        state.copyWith(status: ReviewSessionStatus.failure, isSaving: false),
+      );
+      return;
     }
+    if (emit.isDone) return;
     final items = [...state.items]..removeAt(state.index);
-    if (items.isEmpty) {
+    if (state.index >= items.length) {
       emit(
         state.copyWith(
           status: state.ratings.isEmpty
               ? ReviewSessionStatus.empty
               : ReviewSessionStatus.completed,
           items: items,
+          isSaving: false,
         ),
       );
       return;
     }
-    final index = state.index.clamp(0, items.length - 1);
+    final index = state.index;
     emit(
       state.copyWith(
         items: items,
         index: index,
+        cardRevision: ++_cardRevision,
+        isSaving: false,
         revealed: false,
         intervals: _fsrsRepository.previewIntervals(
           items[index].fsrs,
@@ -231,9 +274,16 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     ReviewSessionAgainRequested event,
     Emitter<ReviewSessionState> emit,
   ) {
-    if (state.again.isEmpty) return;
+    if (state.status != ReviewSessionStatus.completed || state.again.isEmpty) {
+      return;
+    }
     emit(_begin(state.again));
   }
+
+  bool _isCurrentCard(ReviewSessionCardIdentity card) =>
+      state.status == ReviewSessionStatus.reviewing &&
+      !state.isSaving &&
+      state.cardIdentity == card;
 
   void _advance(
     Emitter<ReviewSessionState> emit, {
@@ -248,6 +298,7 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
           ratings: ratings,
           again: again,
           revealed: false,
+          isSaving: false,
         ),
       );
       return;
@@ -255,6 +306,8 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     emit(
       state.copyWith(
         index: next,
+        cardRevision: ++_cardRevision,
+        isSaving: false,
         revealed: false,
         ratings: ratings,
         again: again,

@@ -85,7 +85,8 @@ follows the same setting.
   and the highlights setting. Every load first backfills review rows for text
   highlights saved before review tracking existed, so counts include them.
 - `PracticeWordsScreen` → `PracticeWordsCubit`: every saved word newest
-  first, search, All / Learning / Mastered, remove.
+  first, search, All / Learning / Mastered, remove. First source anchors use
+  bounded batch queries; stale or closed loads stop before further lookups.
 - `PracticeHighlightsScreen` → `PracticeHighlightsCubit`: every text
   highlight newest first, search, a colour filter, grouped by source in
   order of first appearance.
@@ -93,7 +94,7 @@ follows the same setting.
   time. Events are start, reveal, rate, remove and again.
 - `PracticeItemLoader` turns review rows into `PracticeWordItem` /
   `PracticeHighlightItem` with one content query per type and a separate
-  anchor lookup for each saved word, keeps the due order and drops rows whose
+  batch lookup for first word anchors, keeps the due order and drops rows whose
   content was deleted. Highlights carry an immutable `LibrarySource` from the
   existing `PracticeSourceIndex`, including cover and author metadata. This
   adds no per-card repository query. A missing source keeps the title/chapter
@@ -104,6 +105,18 @@ follows the same setting.
   after each pushed destination (Vocabulary, Highlights, a session) closes.
 
 ### Session rules
+
+- Reveal, rate and remove capture `state.cardIdentity` (item ID plus presentation
+  revision). All session events share an explicitly sequential queue; stale
+  gestures cannot affect the next card or a new presentation after Retry/Again.
+  Word ratings require a revealed answer. While a write commits the card stays
+  mounted, its progress line shows activity, and rating/reveal/menu actions are
+  disabled. Close remains available; accepted writes drain on close and ignore
+  cancelled emitters. Failed writes clear the saving state and keep the card in
+  the queue rather than silently advancing.
+- Removing the final unreviewed card completes the session; already rated cards
+  are not shown again. Review again retains the newly committed FSRS state, so
+  repeated-pass interval previews match the stored schedule.
 
 - The queue honours Practice settings: highlights only when
   `practiceReviewHighlights` is on; never-reviewed cards only up to

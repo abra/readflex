@@ -2,6 +2,17 @@ part of 'review_session_bloc.dart';
 
 enum ReviewSessionStatus { loading, reviewing, completed, empty, failure }
 
+/// Identifies one presentation of a card, including after Retry or Review again.
+class ReviewSessionCardIdentity extends Equatable {
+  const ReviewSessionCardIdentity(this.itemId, this.revision);
+
+  final String itemId;
+  final int revision;
+
+  @override
+  List<Object?> get props => [itemId, revision];
+}
+
 class ReviewSessionState extends Equatable {
   const ReviewSessionState({
     this.status = ReviewSessionStatus.loading,
@@ -11,11 +22,17 @@ class ReviewSessionState extends Equatable {
     this.intervals = const {},
     this.ratings = const {},
     this.again = const [],
+    this.cardRevision = 0,
+    this.isSaving = false,
   });
 
   final ReviewSessionStatus status;
   final List<PracticeItem> items;
   final int index;
+  final int cardRevision;
+
+  /// Keeps the displayed card mounted while its mutation commits.
+  final bool isSaving;
 
   /// Whether the current word's answer is visible; highlights need no reveal.
   final bool revealed;
@@ -31,6 +48,13 @@ class ReviewSessionState extends Equatable {
 
   PracticeItem? get current => index < items.length ? items[index] : null;
 
+  ReviewSessionCardIdentity? get cardIdentity {
+    final item = current;
+    return item == null
+        ? null
+        : ReviewSessionCardIdentity(item.itemId, cardRevision);
+  }
+
   int get reviewed => ratings.length;
 
   /// Rated Good or better: words known, highlights kept.
@@ -45,6 +69,8 @@ class ReviewSessionState extends Equatable {
     Map<Rating, Duration>? intervals,
     Map<String, Rating>? ratings,
     List<PracticeItem>? again,
+    int? cardRevision,
+    bool? isSaving,
   }) => ReviewSessionState(
     status: status ?? this.status,
     items: items ?? this.items,
@@ -53,6 +79,8 @@ class ReviewSessionState extends Equatable {
     intervals: intervals ?? this.intervals,
     ratings: ratings ?? this.ratings,
     again: again ?? this.again,
+    cardRevision: cardRevision ?? this.cardRevision,
+    isSaving: isSaving ?? this.isSaving,
   );
 
   @override
@@ -64,5 +92,7 @@ class ReviewSessionState extends Equatable {
     intervals,
     ratings,
     again,
+    cardRevision,
+    isSaving,
   ];
 }

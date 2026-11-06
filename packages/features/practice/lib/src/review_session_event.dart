@@ -11,22 +11,31 @@ final class ReviewSessionStarted extends ReviewSessionEvent {
   const ReviewSessionStarted();
 }
 
-final class ReviewSessionAnswerRevealed extends ReviewSessionEvent {
-  const ReviewSessionAnswerRevealed();
+sealed class ReviewSessionCardEvent extends ReviewSessionEvent {
+  const ReviewSessionCardEvent(this.card);
+
+  final ReviewSessionCardIdentity card;
+
+  @override
+  List<Object?> get props => [card];
 }
 
-final class ReviewSessionCardRated extends ReviewSessionEvent {
-  const ReviewSessionCardRated(this.rating);
+final class ReviewSessionAnswerRevealed extends ReviewSessionCardEvent {
+  const ReviewSessionAnswerRevealed(super.card);
+}
+
+final class ReviewSessionCardRated extends ReviewSessionCardEvent {
+  const ReviewSessionCardRated(super.card, this.rating);
 
   final Rating rating;
 
   @override
-  List<Object?> get props => [rating];
+  List<Object?> get props => [card, rating];
 }
 
-/// Drops the current card from review for good.
-final class ReviewSessionCardRemoved extends ReviewSessionEvent {
-  const ReviewSessionCardRemoved();
+/// Removes the displayed card's current review row.
+final class ReviewSessionCardRemoved extends ReviewSessionCardEvent {
+  const ReviewSessionCardRemoved(super.card);
 }
 
 /// Starts over with the cards rated Again in the finished session.

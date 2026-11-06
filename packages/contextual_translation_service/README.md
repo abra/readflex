@@ -102,6 +102,13 @@ start offline fallback or model downloads. Already running native ML Kit work
 cannot be interrupted by its API; cancelled results are discarded, not cached.
 Disconnecting HTTP does not guarantee cancellation of a backend LLM job.
 
+Backend bodies are streamed through `bounded_http` with a default 1 MiB
+`maxResponseBytes` budget before JSON parsing, including non-success responses.
+The limit counts actual delivered/decompressed bytes, independently of
+`Content-Length`. Exceeding it cancels the stream and maps to `invalidResponse`,
+so a malformed oversized response cannot trigger offline fallback. The
+constructor accepts a smaller budget for tests or a deployment-specific limit.
+
 ## Language outcomes
 
 `isSameTranslationLanguage` and `translationLanguagePrimaryCode` compare codes

@@ -33,6 +33,7 @@ void main() {
     String entryId = 'e1',
     String sourceId = 's1',
     String cfiRange = 'epubcfi(/6/4)',
+    String createdAt = '2026-01-01T00:00:00.000Z',
   }) => DictionaryAnchorsTableCompanion.insert(
     id: id,
     entryId: entryId,
@@ -41,7 +42,7 @@ void main() {
     anchorText: 'hello',
     cfiRange: cfiRange,
     kind: 'exactSelection',
-    createdAt: '2026-01-01T00:00:00.000Z',
+    createdAt: createdAt,
   );
 
   test('insert and retrieve entry', () async {
@@ -152,6 +153,41 @@ void main() {
 
     expect(await dao.anchorsByEntry('e1'), isEmpty);
   });
+
+  test('first anchors preserve oldest date and insertion-order ties', () async {
+    await dao.insertEntry(makeEntry());
+    await dao.insertEntry(makeEntry(id: 'e2'));
+    await dao.insertAnchor(makeAnchor(id: 'newer', createdAt: '2026-02-01'));
+    await dao.insertAnchor(makeAnchor(id: 'z-first'));
+    await dao.insertAnchor(makeAnchor(id: 'a-second'));
+    await dao.insertAnchor(makeAnchor(id: 'other', entryId: 'e2'));
+
+    final result = await dao.firstAnchorsByEntries(['e1', 'missing', 'e1']);
+
+    expect(result.map((row) => row.id), ['z-first']);
+    expect(result.single.id, (await dao.anchorsByEntry('e1')).first.id);
+    expect(await dao.firstAnchorsByEntries([]), isEmpty);
+  });
+
+  test(
+    'first anchors handle more than 999 requested IDs in bounded batches',
+    () async {
+      final ids = List.generate(1201, (index) => 'entry-$index');
+      for (final index in [0, 500, 1000, 1200]) {
+        await dao.insertEntry(makeEntry(id: ids[index]));
+        await dao.insertAnchor(
+          makeAnchor(id: 'anchor-$index', entryId: ids[index]),
+        );
+      }
+      final result = await dao.firstAnchorsByEntries(ids);
+      expect(result.map((row) => row.entryId).toSet(), {
+        ids[0],
+        ids[500],
+        ids[1000],
+        ids[1200],
+      });
+    },
+  );
 
   test('clearSourceForEntries deletes anchors and detaches entries', () async {
     await dao.insertEntry(makeEntry(id: 'e1', sourceId: 's1'));

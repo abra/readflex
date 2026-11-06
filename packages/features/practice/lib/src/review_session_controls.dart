@@ -10,6 +10,7 @@ class ReviewSessionTopBar extends StatelessWidget {
     required this.onClose,
     required this.onOpenInSource,
     required this.onRemove,
+    this.isSaving = false,
     super.key,
   });
 
@@ -19,6 +20,7 @@ class ReviewSessionTopBar extends StatelessWidget {
   final VoidCallback onClose;
   final VoidCallback onOpenInSource;
   final VoidCallback onRemove;
+  final bool isSaving;
 
   @override
   Widget build(BuildContext context) {
@@ -57,13 +59,15 @@ class ReviewSessionTopBar extends StatelessWidget {
                 menuChildren: [
                   MenuItemButton(
                     key: const ValueKey('reviewMenuOpen'),
-                    onPressed: canOpenInSource ? onOpenInSource : null,
+                    onPressed: canOpenInSource && !isSaving
+                        ? onOpenInSource
+                        : null,
                     leadingIcon: const Icon(AppIcons.book),
                     child: Text(l10n.practiceOpenInBook),
                   ),
                   MenuItemButton(
                     key: const ValueKey('reviewMenuRemove'),
-                    onPressed: onRemove,
+                    onPressed: isSaving ? null : onRemove,
                     leadingIcon: const Icon(AppIcons.delete),
                     child: Text(l10n.practiceRemoveFromReview),
                   ),
@@ -73,9 +77,11 @@ class ReviewSessionTopBar extends StatelessWidget {
                   tooltip: l10n.practiceMoreActions,
                   icon: AppIcons.moreVertical,
                   color: colors.onSurfaceVariant,
-                  onPressed: () => controller.isOpen
-                      ? controller.close()
-                      : controller.open(),
+                  onPressed: isSaving
+                      ? null
+                      : () => controller.isOpen
+                            ? controller.close()
+                            : controller.open(),
                 ),
               ),
             ],
@@ -85,12 +91,19 @@ class ReviewSessionTopBar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.full),
-            child: LinearProgressIndicator(
-              key: const ValueKey('reviewProgress'),
-              value: total == 0 ? 0 : (position - 1) / total,
-              minHeight: 3,
-              backgroundColor: colors.surfaceContainerHighest,
-              color: context.actionForeground,
+            child: TickerMode(
+              enabled: !context.reduceMotion,
+              child: LinearProgressIndicator(
+                key: const ValueKey('reviewProgress'),
+                value: isSaving
+                    ? null
+                    : total == 0
+                    ? 0
+                    : (position - 1) / total,
+                minHeight: 3,
+                backgroundColor: colors.surfaceContainerHighest,
+                color: context.actionForeground,
+              ),
             ),
           ),
         ),
@@ -108,6 +121,7 @@ class ReviewSessionControls extends StatelessWidget {
     required this.intervals,
     required this.onReveal,
     required this.onRated,
+    this.isSaving = false,
     super.key,
   });
 
@@ -116,6 +130,7 @@ class ReviewSessionControls extends StatelessWidget {
   final Map<Rating, Duration> intervals;
   final VoidCallback onReveal;
   final ValueChanged<Rating> onRated;
+  final bool isSaving;
 
   @override
   Widget build(BuildContext context) {
@@ -133,17 +148,17 @@ class ReviewSessionControls extends StatelessWidget {
           child: item is PracticeWordItem && !revealed
               ? FilledButton(
                   key: const ValueKey('reviewShowAnswer'),
-                  onPressed: onReveal,
+                  onPressed: isSaving ? null : onReveal,
                   child: AppButtonLabel(l10n.practiceShowAnswer),
                 )
               : switch (item) {
                   PracticeWordItem() => _WordRatingControls(
                     intervals: intervals,
-                    onRated: onRated,
+                    onRated: isSaving ? null : onRated,
                   ),
                   PracticeHighlightItem() => _HighlightRatingControls(
                     intervals: intervals,
-                    onRated: onRated,
+                    onRated: isSaving ? null : onRated,
                   ),
                 },
         ),
@@ -191,7 +206,7 @@ class _HighlightRatingControls extends StatelessWidget {
   });
 
   final Map<Rating, Duration> intervals;
-  final ValueChanged<Rating> onRated;
+  final ValueChanged<Rating>? onRated;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -236,7 +251,7 @@ class _HighlightRatingControls extends StatelessWidget {
         emphasis: ReviewRatingEmphasis.primary,
         horizontal: stacked,
         minimumHeight: minimumHeight,
-        onPressed: () => onRated(Rating.good),
+        onPressed: onRated == null ? null : () => onRated!(Rating.good),
       );
       final showLess = ReviewRatingButton(
         key: const ValueKey('reviewRate-showLess'),
@@ -246,7 +261,7 @@ class _HighlightRatingControls extends StatelessWidget {
         emphasis: ReviewRatingEmphasis.secondary,
         horizontal: stacked,
         minimumHeight: minimumHeight,
-        onPressed: () => onRated(Rating.easy),
+        onPressed: onRated == null ? null : () => onRated!(Rating.easy),
       );
       return stacked
           ? Column(
@@ -311,7 +326,7 @@ class _WordRatingControls extends StatelessWidget {
   const _WordRatingControls({required this.intervals, required this.onRated});
 
   final Map<Rating, Duration> intervals;
-  final ValueChanged<Rating> onRated;
+  final ValueChanged<Rating>? onRated;
 
   @override
   Widget build(BuildContext context) {
@@ -336,7 +351,7 @@ class _WordRatingControls extends StatelessWidget {
                 _ => context.appColors.ratingGood,
               },
               horizontal: stacked,
-              onPressed: () => onRated(rating),
+              onPressed: onRated == null ? null : () => onRated!(rating),
             ),
         ];
         if (stacked) {
@@ -373,7 +388,7 @@ class ReviewRatingButton extends StatelessWidget {
   final String label;
   final Duration? interval;
   final Color color;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final ReviewRatingEmphasis emphasis;
   final bool horizontal;
   final double minimumHeight;
@@ -382,21 +397,24 @@ class ReviewRatingButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final interval = this.interval;
     final l10n = context.l10n;
-    final foreground = emphasis == ReviewRatingEmphasis.primary
+    final enabled = onPressed != null;
+    final foreground = !enabled
+        ? Theme.of(context).disabledColor
+        : emphasis == ReviewRatingEmphasis.primary
         ? context.colors.onPrimary
         : context.colors.onSurface;
     final content = _ReviewRatingButtonLabel(
       label: label,
       interval: interval == null ? null : reviewIntervalLabel(l10n, interval),
       foreground: foreground,
-      intervalColor: emphasis == ReviewRatingEmphasis.tonal
+      intervalColor: enabled && emphasis == ReviewRatingEmphasis.tonal
           ? context.colors.onSurfaceVariant
           : foreground,
       horizontal: horizontal,
     );
     return Semantics(
       button: true,
-      enabled: true,
+      enabled: enabled,
       label: label,
       value: interval == null ? null : reviewIntervalLabel(l10n, interval),
       onTap: onPressed,

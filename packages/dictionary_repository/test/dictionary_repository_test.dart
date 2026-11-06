@@ -211,5 +211,44 @@ void main() {
 
       expect(await repo.getAnchorsByEntry(created.id), isEmpty);
     });
+
+    test(
+      'batch first anchors map domain values without missing or duplicate IDs',
+      () async {
+        final entry = await repo.addEntry(word: 'word', translation: 'meaning');
+        final without = await repo.addEntry(
+          word: 'without',
+          translation: 'none',
+        );
+        await repo.addAnchor(
+          entryId: entry.id,
+          sourceId: 'book',
+          sourceType: SourceType.book,
+          text: 'newer',
+          cfiRange: 'newer',
+          createdAt: DateTime(2026, 2),
+        );
+        final first = await repo.addAnchor(
+          entryId: entry.id,
+          sourceId: 'book',
+          sourceType: SourceType.book,
+          text: 'older',
+          cfiRange: 'older',
+          createdAt: DateTime(2026, 1),
+          kind: DictionaryAnchorKind.normalizedSelection,
+        );
+
+        final anchors = await repo.getFirstAnchorsByEntries([
+          entry.id,
+          without.id,
+          'missing',
+          entry.id,
+        ]);
+
+        expect(anchors.keys, [entry.id]);
+        expect(anchors[entry.id], first);
+        expect(await repo.getFirstAnchorsByEntries([]), isEmpty);
+      },
+    );
   });
 }

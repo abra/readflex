@@ -17,6 +17,9 @@ sealed class PracticeItem extends Equatable {
   String? get sourceId;
   String? get cfiRange;
 
+  /// Keeps source/content metadata when a committed review updates scheduling.
+  PracticeItem withFsrs(FsrsCardData fsrs);
+
   /// Never reviewed yet.
   bool get isNew => fsrs.state == FsrsState.newCard;
 
@@ -50,6 +53,14 @@ final class PracticeWordItem extends PracticeItem {
   String? get cfiRange => anchorCfiRange;
 
   @override
+  PracticeWordItem withFsrs(FsrsCardData fsrs) => PracticeWordItem(
+    entry: entry,
+    fsrs: fsrs,
+    sourceTitle: sourceTitle,
+    anchorCfiRange: anchorCfiRange,
+  );
+
+  @override
   List<Object?> get props => [entry, fsrs, sourceTitle, anchorCfiRange];
 }
 
@@ -78,6 +89,14 @@ final class PracticeHighlightItem extends PracticeItem {
 
   @override
   String? get cfiRange => highlight.cfiRange;
+
+  @override
+  PracticeHighlightItem withFsrs(FsrsCardData fsrs) => PracticeHighlightItem(
+    highlight: highlight,
+    fsrs: fsrs,
+    sourceTitle: sourceTitle,
+    source: source,
+  );
 
   @override
   List<Object?> get props => [highlight, fsrs, sourceTitle, source];

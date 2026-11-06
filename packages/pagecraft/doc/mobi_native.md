@@ -32,8 +32,12 @@ decoding with another backend. Invalid indices are `RangeError`; reads after
 close are `StateError`.
 
 Budgets bound damaged input: 64 MiB per stored record, 64 MiB of dictionary
-input, 64 MiB of expanded dictionary cache, 64 MiB decoded HUFF output and
-256 MiB per batch. PalmDOC limits
+input, one 64 MiB dictionary budget shared by packed/decoded entry payloads,
+entry metadata and in-progress recursive output, 64 MiB decoded HUFF text and
+256 MiB per batch. The dictionary budget is checked before copying entries
+and as recursive output grows; repeated CDIC offsets cannot bypass it. These
+byte budgets do not include allocator bookkeeping or spare vector capacity.
+PalmDOC limits
 packed input to one fifth of the decoded budget, its worst-case expansion.
 Recursive HUFF expansion is limited to 128 levels; cycles are errors. Normal
 MOBI text records are usually 4 KiB. A book exceeding a budget reports an error.

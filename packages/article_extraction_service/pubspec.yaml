@@ -7,6 +7,8 @@ environment:
   sdk: ^3.11.1
 
 dependencies:
+  bounded_http:
+    path: ../bounded_http
   domain_models:
     path: ../domain_models
   remote_content_policy:

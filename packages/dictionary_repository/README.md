@@ -17,6 +17,7 @@ wrapped into `StorageException` (from `domain_models`) before surfacing.
 | `getEntriesByIds(ids)`                      | Batch lookup                                  |
 | `getEntryCountBySource(sourceId)`           | Count entries saved from one source           |
 | `getAnchorsBySource(sourceId)` / `getAnchorsByEntry(entryId)` | Source locations for saved entries |
+| `getFirstAnchorsByEntries(entryIds)` | Earliest anchor per entry, in bounded SQL batches |
 | `addEntry({word, translation, lemma, baseTranslation, contextTranslation, pronunciation, partOfSpeech, context, sourceId, sourceType, usageExamples, anchor…})` | Create entry and its review row |
 | `addAnchor({entryId, sourceId, sourceType, text, cfiRange, ...})` | Attach another source location to an entry |
 | `deleteAnchorsBySource(sourceId)`           | Remove source locations while retaining entries |
@@ -43,6 +44,12 @@ to this stream and reloads without depending on the translate feature.
 entry and review row when source id/type, anchor text and CFI are present.
 Anchors live separately from entries so deleting a source can remove its
 underlines while retaining saved words.
+
+`getFirstAnchorsByEntries` returns a map keyed by entry ID and omits entries
+without anchors. It deduplicates requested IDs and reads at most 500 IDs per
+SQL statement, returning only the oldest anchor per entry. Timestamp ties keep
+insertion order, matching `getAnchorsByEntry`; Vocabulary and review loading use
+this instead of one anchor query per word.
 
 ## Review state
 

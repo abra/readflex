@@ -27,6 +27,34 @@ fn dictionary(entries: &[(bool, &[u8])]) -> Vec<Vec<u8>> {
     vec![huff, cdic]
 }
 
+fn repeated_dictionary(states: &[bool], length: usize) -> Vec<Vec<u8>> {
+    let packed_offset = states.len() * 2;
+    let decoded_offset = packed_offset + 2 + length;
+    assert!(decoded_offset <= usize::from(u16::MAX));
+    assert!(length <= 0x7fff);
+    let mut records = dictionary(&[]);
+    let mut cdic = vec![0; 16 + packed_offset];
+    cdic[..4].copy_from_slice(b"CDIC");
+    write_u32(&mut cdic, 4, 16);
+    write_u32(&mut cdic, 8, states.len() as u32);
+    write_u32(&mut cdic, 12, states.len().next_power_of_two().ilog2());
+    for (index, decoded) in states.iter().enumerate() {
+        let offset = if *decoded {
+            decoded_offset
+        } else {
+            packed_offset
+        };
+        cdic[16 + index * 2..18 + index * 2].copy_from_slice(&(offset as u16).to_be_bytes());
+    }
+    for decoded in [false, true] {
+        let word = length as u16 | if decoded { 0x8000 } else { 0 };
+        cdic.extend_from_slice(&word.to_be_bytes());
+        cdic.resize(cdic.len() + length, b'x');
+    }
+    records[1] = cdic;
+    records
+}
+
 #[test]
 fn palmdoc_literals_spaces_and_zero() {
     assert_eq!(
@@ -53,11 +81,14 @@ fn palmdoc_truncation_matches_dart() {
 fn huff_literals_and_lazy_dictionary_cache() -> Result<()> {
     let records = dictionary(&[(false, &[254, 254]), (true, b"word ")]);
     let mut decoder = HuffDecoder::load(&records)?;
+    let metadata_bytes = 2 * size_of::<Entry>();
+    assert_eq!(decoder.dictionary_bytes, metadata_bytes + 7);
     assert_eq!(decoder.decode(&[255, 254], 0)?, b"word word word ");
     assert!(decoder.dictionary[0].state == EntryState::Decoded);
-    let cached = decoder.cached_bytes;
+    assert_eq!(decoder.dictionary_bytes, metadata_bytes + 15);
     assert_eq!(decoder.decode(&[255], 0)?, b"word word ");
-    assert_eq!(decoder.cached_bytes, cached);
+    assert_eq!(decoder.dictionary_bytes, metadata_bytes + 15);
+    assert_eq!(decoder.expanding_bytes, 0);
     assert!(decoder.decode(&[], 0)?.is_empty());
     Ok(())
 }
@@ -90,11 +121,80 @@ fn huff_dictionary_spanning_cdic_records() -> Result<()> {
 
 #[test]
 fn huff_cycles_fail_and_leave_session_usable() -> Result<()> {
-    let records = dictionary(&[(false, &[255]), (true, b"ok")]);
+    let records = dictionary(&[(false, &[254, 255]), (true, b"ok")]);
     let mut decoder = HuffDecoder::load(&records)?;
+    let initial_bytes = decoder.dictionary_bytes;
     assert!(decoder.decode(&[255], 0).is_err());
     assert!(decoder.decode(&[255], 0).is_err());
+    assert_eq!(decoder.expanding_bytes, 0);
+    assert_eq!(decoder.dictionary_bytes, initial_bytes);
+    assert_eq!(decoder.dictionary[0].bytes, [254, 255]);
     assert_eq!(decoder.decode(&[254], 0)?, b"ok");
+    Ok(())
+}
+
+#[test]
+fn huff_repeated_offsets_share_one_packed_and_decoded_budget() {
+    for states in [
+        vec![false; 2049],
+        (0..2049).map(|index| index % 2 == 0).collect(),
+    ] {
+        let records = repeated_dictionary(&states, 32767);
+        assert!(records.iter().map(Vec::len).sum::<usize>() < 100_000);
+        let error = HuffDecoder::load(&records)
+            .err()
+            .expect("repeated offsets must not allocate over the dictionary budget");
+        assert!(error.to_string().contains("HUFF dictionary cache limit"));
+    }
+}
+
+#[test]
+fn huff_empty_entries_cannot_bypass_the_dictionary_metadata_budget() {
+    let count = MAX_CACHE_BYTES / size_of::<Entry>() + 1;
+    let mut records = dictionary(&[]);
+    let mut cdic = vec![0; 16 + count * 2];
+    cdic[..4].copy_from_slice(b"CDIC");
+    write_u32(&mut cdic, 4, 16);
+    write_u32(&mut cdic, 8, count as u32);
+    write_u32(&mut cdic, 12, count.next_power_of_two().ilog2());
+    records[1] = cdic;
+    let error = HuffDecoder::load(&records)
+        .err()
+        .expect("entry slots must be bounded before allocating the vector");
+    assert!(error.to_string().contains("HUFF dictionary cache limit"));
+}
+
+#[test]
+fn huff_pending_recursive_outputs_share_the_dictionary_budget() -> Result<()> {
+    let depth = 20;
+    let literal = vec![b'x'; 32767];
+    let literal_code = (255 - depth) as u8;
+    let packed: Vec<_> = (0..depth)
+        .map(|index| {
+            let mut phrase = vec![literal_code; 128];
+            phrase.push((254 - index) as u8);
+            phrase
+        })
+        .collect();
+    let mut entries: Vec<_> = packed
+        .iter()
+        .map(|bytes| (false, bytes.as_slice()))
+        .collect();
+    entries.push((true, literal.as_slice()));
+    let mut decoder = HuffDecoder::load(&dictionary(&entries))?;
+    let initial_bytes = decoder.dictionary_bytes;
+    let error = decoder.decode(&[255], 0).unwrap_err();
+    assert!(error.to_string().contains("HUFF dictionary cache limit"));
+    assert_eq!(decoder.expanding_bytes, 0);
+    assert_eq!(decoder.dictionary_bytes, initial_bytes);
+    assert!(
+        decoder
+            .dictionary
+            .iter()
+            .all(|entry| entry.state != EntryState::Expanding)
+    );
+    assert!(decoder.decode(&[255], 0).is_err());
+    assert_eq!(decoder.decode(&[literal_code], 0)?, literal);
     Ok(())
 }
 

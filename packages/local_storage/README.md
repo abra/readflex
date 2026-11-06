@@ -43,6 +43,12 @@ subqueries let the existing type/deadline index restrict each lookup. An
 explicit set of types filters both values; an empty set returns an empty
 queue. It reads no review history and requires no schema change.
 
+`DictionaryDao.firstAnchorsByEntries` selects only the oldest anchor for each
+requested entry, with insertion order breaking equal timestamps. It deduplicates
+IDs and binds at most 500 per statement, below SQLite's 999-parameter baseline.
+Vocabulary and review loading use this bounded lookup rather than individual
+anchor reads; it uses the existing entry index and requires no schema change.
+
 Schema v27 adds the indexed `dictionary_table.word_key`. `DictionaryDao`
 normalizes both saved words and lookup terms with Dart's Unicode lowercase
 conversion and trimming; insert and rename keep the key current. Migration

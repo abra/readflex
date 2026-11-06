@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+use std::mem::size_of;
+
 use anyhow::{Context, Result, bail, ensure};
 
 pub(crate) enum Decoder {
@@ -101,7 +103,10 @@ pub(crate) struct HuffDecoder {
     prefixes: [Prefix; 256],
     ranges: [CodeRange; 33],
     dictionary: Vec<Entry>,
-    cached_bytes: usize,
+    // Entry metadata and all retained payloads, including buffers moved out
+    // temporarily while expanding. Recursive output shares the same budget.
+    dictionary_bytes: usize,
+    expanding_bytes: usize,
 }
 
 impl HuffDecoder {
@@ -130,7 +135,7 @@ impl HuffDecoder {
             };
         }
         let mut dictionary = Vec::new();
-        let mut cached_bytes = 0usize;
+        let mut dictionary_bytes = 0usize;
         for record in &records[1..] {
             ensure!(record.starts_with(b"CDIC"), "Invalid CDIC record");
             let header_length = read_u32(record, 4)? as usize;
@@ -147,24 +152,36 @@ impl HuffDecoder {
                 .get(header_length..)
                 .context("Invalid CDIC header length")?;
             ensure!(count <= buffer.len() / 2, "Truncated CDIC offset table");
+            ensure!(
+                count <= (MAX_CACHE_BYTES - dictionary_bytes) / size_of::<Entry>(),
+                "HUFF dictionary cache limit exceeded"
+            );
+            dictionary_bytes += count * size_of::<Entry>();
+            dictionary
+                .try_reserve_exact(count)
+                .context("Cannot allocate HUFF dictionary entries")?;
             for i in 0..count {
                 let offset = usize::from(read_u16(buffer, i * 2)?);
                 let word = read_u16(buffer, offset)?;
                 let length = usize::from(word & 0x7fff);
-                let bytes = buffer
+                let source = buffer
                     .get(offset + 2..offset + 2 + length)
-                    .context("Truncated CDIC dictionary entry")?
-                    .to_vec();
+                    .context("Truncated CDIC dictionary entry")?;
+                ensure!(
+                    length <= MAX_CACHE_BYTES - dictionary_bytes,
+                    "HUFF dictionary cache limit exceeded"
+                );
+                let mut bytes = Vec::new();
+                bytes
+                    .try_reserve_exact(length)
+                    .context("Cannot allocate HUFF dictionary entry")?;
+                bytes.extend_from_slice(source);
+                dictionary_bytes += length;
                 let state = if word & 0x8000 != 0 {
-                    cached_bytes += length;
                     EntryState::Decoded
                 } else {
                     EntryState::Packed
                 };
-                ensure!(
-                    cached_bytes <= MAX_CACHE_BYTES,
-                    "HUFF dictionary cache limit exceeded"
-                );
                 dictionary.push(Entry { bytes, state });
             }
         }
@@ -172,15 +189,28 @@ impl HuffDecoder {
             prefixes,
             ranges,
             dictionary,
-            cached_bytes,
+            dictionary_bytes,
+            expanding_bytes: 0,
         })
     }
 
     fn decode(&mut self, input: &[u8], depth: usize) -> Result<Vec<u8>> {
         ensure!(depth <= MAX_DEPTH, "HUFF dictionary nesting limit exceeded");
+        let mut output = Vec::new();
+        match self.decode_into(input, depth, &mut output) {
+            Ok(()) => Ok(output),
+            Err(error) => {
+                if depth > 0 {
+                    self.expanding_bytes -= output.len();
+                }
+                Err(error)
+            }
+        }
+    }
+
+    fn decode_into(&mut self, input: &[u8], depth: usize, output: &mut Vec<u8>) -> Result<()> {
         let bit_length = input.len().checked_mul(8).context("HUFF input too large")?;
         let mut cursor = 0;
-        let mut output = Vec::new();
         while cursor < bit_length {
             let bits = read_bits(input, cursor);
             let prefix = self.prefixes[(bits >> 24) as usize];
@@ -209,14 +239,26 @@ impl HuffDecoder {
                 "Huffman code outside the dictionary"
             );
             self.expand(code, depth)?;
-            let bytes = &self.dictionary[code].bytes;
+            let length = self.dictionary[code].bytes.len();
             ensure!(
-                bytes.len() <= MAX_OUTPUT_BYTES - output.len(),
+                length <= MAX_OUTPUT_BYTES - output.len(),
                 "HUFF output limit exceeded"
             );
-            output.extend_from_slice(bytes);
+            if depth > 0 {
+                ensure!(
+                    length <= MAX_CACHE_BYTES - self.dictionary_bytes - self.expanding_bytes,
+                    "HUFF dictionary cache limit exceeded"
+                );
+            }
+            output
+                .try_reserve(length)
+                .context("Cannot allocate HUFF output")?;
+            if depth > 0 {
+                self.expanding_bytes += length;
+            }
+            output.extend_from_slice(&self.dictionary[code].bytes);
         }
-        Ok(output)
+        Ok(())
     }
 
     fn expand(&mut self, code: usize, depth: usize) -> Result<()> {
@@ -226,20 +268,26 @@ impl HuffDecoder {
             EntryState::Packed => {}
         }
         self.dictionary[code].state = EntryState::Expanding;
-        let packed = self.dictionary[code].bytes.clone();
+        let packed = std::mem::take(&mut self.dictionary[code].bytes);
         let decoded = self.decode(&packed, depth + 1);
-        self.dictionary[code].state = EntryState::Packed;
-        let bytes = decoded?;
-        ensure!(
-            bytes.len() <= MAX_CACHE_BYTES - self.cached_bytes,
-            "HUFF dictionary cache limit exceeded"
-        );
-        self.cached_bytes += bytes.len();
-        self.dictionary[code] = Entry {
-            bytes,
-            state: EntryState::Decoded,
-        };
-        Ok(())
+        match decoded {
+            Ok(bytes) => {
+                self.expanding_bytes -= bytes.len();
+                self.dictionary_bytes = self.dictionary_bytes - packed.len() + bytes.len();
+                self.dictionary[code] = Entry {
+                    bytes,
+                    state: EntryState::Decoded,
+                };
+                Ok(())
+            }
+            Err(error) => {
+                self.dictionary[code] = Entry {
+                    bytes: packed,
+                    state: EntryState::Packed,
+                };
+                Err(error)
+            }
+        }
     }
 }
 

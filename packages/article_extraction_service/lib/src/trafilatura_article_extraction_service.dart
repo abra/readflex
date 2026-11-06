@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show SocketException;
+import 'dart:isolate';
 
+import 'package:bounded_http/bounded_http.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
@@ -17,6 +19,7 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     String? apiKey,
     Duration timeout = const Duration(seconds: 45),
     int maxDownloadBytes = defaultMaxDownloadBytes,
+    int maxResponseBytes = defaultMaxResponseBytes,
     int maxRedirects = 5,
     RemoteUriPolicy? remoteUriPolicy,
   }) : _baseUri = baseUri,
@@ -35,12 +38,14 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
        _apiKey = apiKey,
        _timeout = timeout,
        _maxDownloadBytes = maxDownloadBytes,
+       _maxResponseBytes = maxResponseBytes,
        _maxRedirects = maxRedirects,
        _remoteUriPolicy = remoteUriPolicy ?? RemoteUriPolicy(),
        assert(maxDownloadBytes > 0),
        assert(maxRedirects >= 0);
 
   static const defaultMaxDownloadBytes = 8 * 1024 * 1024;
+  static const defaultMaxResponseBytes = 16 * 1024 * 1024;
 
   final Uri _baseUri;
   final http.Client _httpClient;
@@ -50,6 +55,7 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
   final String? _apiKey;
   final Duration _timeout;
   final int _maxDownloadBytes;
+  final int _maxResponseBytes;
   final int _maxRedirects;
   final RemoteUriPolicy _remoteUriPolicy;
 
@@ -78,7 +84,7 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
         favorPrecision: true,
         favorRecall: false,
       );
-      if (_shouldRetryWithRecall(response)) {
+      if (await _shouldRetryWithRecall(response)) {
         final retryResponse = await _postExtractHtml(
           uri: uri,
           article: article,
@@ -91,6 +97,10 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     } on TimeoutException {
       throw const ArticleExtractionException(
         'Article cleaner request timed out',
+      );
+    } on HttpResponseTooLargeException {
+      throw const ArticleExtractionException(
+        'Article cleaner response is too large',
       );
     } on http.ClientException {
       throw const ArticleExtractionException(
@@ -115,7 +125,7 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
         favorPrecision: true,
         favorRecall: false,
       );
-      if (_shouldRetryWithRecall(response)) {
+      if (await _shouldRetryWithRecall(response)) {
         final retryResponse = await _postExtractUrl(
           uri: uri,
           url: url,
@@ -128,6 +138,10 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     } on TimeoutException {
       throw const ArticleExtractionException(
         'Article cleaner request timed out',
+      );
+    } on HttpResponseTooLargeException {
+      throw const ArticleExtractionException(
+        'Article cleaner response is too large',
       );
     } on http.ClientException {
       throw const ArticleExtractionException(
@@ -252,27 +266,28 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     required bool favorPrecision,
     required bool favorRecall,
   }) {
-    return _httpClient
-        .post(
-          uri,
-          headers: _cleanerHeaders(_apiKey),
-          body: jsonEncode({
-            'url': article.requestedUrl,
-            'resolved_url': article.resolvedUrl,
-            'html_base64': base64Encode(article.bodyBytes),
-            'content_type': article.contentType,
-            'body_format': 'blocks',
-            'include_comments': false,
-            'include_tables': true,
-            'include_images': true,
-            'include_links': false,
-            'target_language': null,
-            'fast': false,
-            'favor_precision': favorPrecision,
-            'favor_recall': favorRecall,
-          }),
-        )
-        .timeout(_timeout);
+    return postBoundedResponse(
+      client: _httpClient,
+      uri: uri,
+      headers: _cleanerHeaders(_apiKey),
+      body: jsonEncode({
+        'url': article.requestedUrl,
+        'resolved_url': article.resolvedUrl,
+        'html_base64': base64Encode(article.bodyBytes),
+        'content_type': article.contentType,
+        'body_format': 'blocks',
+        'include_comments': false,
+        'include_tables': true,
+        'include_images': true,
+        'include_links': false,
+        'target_language': null,
+        'fast': false,
+        'favor_precision': favorPrecision,
+        'favor_recall': favorRecall,
+      }),
+      maxResponseBytes: _maxResponseBytes,
+      timeout: _timeout,
+    );
   }
 
   Future<http.Response> _postExtractUrl({
@@ -281,32 +296,36 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     required bool favorPrecision,
     required bool favorRecall,
   }) {
-    return _httpClient
-        .post(
-          uri,
-          headers: _cleanerHeaders(_apiKey),
-          body: jsonEncode({
-            'url': url,
-            'body_format': 'blocks',
-            'include_comments': false,
-            'include_tables': true,
-            'include_images': true,
-            'include_links': false,
-            'target_language': null,
-            'fast': false,
-            'favor_precision': favorPrecision,
-            'favor_recall': favorRecall,
-          }),
-        )
-        .timeout(_timeout);
+    return postBoundedResponse(
+      client: _httpClient,
+      uri: uri,
+      headers: _cleanerHeaders(_apiKey),
+      body: jsonEncode({
+        'url': url,
+        'body_format': 'blocks',
+        'include_comments': false,
+        'include_tables': true,
+        'include_images': true,
+        'include_links': false,
+        'target_language': null,
+        'fast': false,
+        'favor_precision': favorPrecision,
+        'favor_recall': favorRecall,
+      }),
+      maxResponseBytes: _maxResponseBytes,
+      timeout: _timeout,
+    );
   }
 
-  ExtractedArticle _decodeArticleResponse(
+  Future<ExtractedArticle> _decodeArticleResponse(
     http.Response response,
     _DownloadedArticleDocument article,
-  ) {
+  ) async {
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final error = _errorPayloadFor(response);
+      final error = await _readCleanerError(
+        response.bodyBytes,
+        response.statusCode,
+      );
       throw ArticleExtractionException(
         error.message,
         statusCode: response.statusCode,
@@ -314,17 +333,15 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
       );
     }
 
-    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
-    if (decoded is! Map<String, dynamic>) {
-      throw const ArticleExtractionException('Invalid article response');
-    }
-    final recovered = _withRecoveredImageBlocks(decoded, article);
-    return _articleFromJson(_withClientMetadata(recovered, article.metadata));
+    return _readCleanerArticle(response.bodyBytes, article);
   }
 
-  bool _shouldRetryWithRecall(http.Response response) {
+  Future<bool> _shouldRetryWithRecall(http.Response response) async {
     if (response.statusCode != 422) return false;
-    final error = _errorPayloadFor(response);
+    final error = await _readCleanerError(
+      response.bodyBytes,
+      response.statusCode,
+    );
     return error.code == 'extract_failed' ||
         error.message.toLowerCase().contains('could not extract');
   }
@@ -348,6 +365,48 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
     if (_ownsClient) _httpClient.close();
     if (_ownsRemoteContentClient) _remoteContentHttpClient.close();
   }
+}
+
+const _cleanerDecodeIsolateThreshold = 256 * 1024;
+
+// Top-level launchers capture only response bytes and document metadata, never
+// the service, its shared HTTP client or an AbortableRequest.
+Future<ExtractedArticle> _readCleanerArticle(
+  List<int> bytes,
+  _DownloadedArticleDocument article,
+) {
+  if (bytes.length < _cleanerDecodeIsolateThreshold) {
+    return Future.sync(() => _decodeCleanerArticle(bytes, article));
+  }
+  return Isolate.run(() => _decodeCleanerArticle(bytes, article));
+}
+
+ExtractedArticle _decodeCleanerArticle(
+  List<int> bytes,
+  _DownloadedArticleDocument article,
+) {
+  try {
+    final decoded = jsonDecode(utf8.decode(bytes));
+    if (decoded is! Map<String, dynamic>) {
+      throw const ArticleExtractionException('Invalid article response');
+    }
+    final recovered = _withRecoveredImageBlocks(decoded, article);
+    return _articleFromJson(_withClientMetadata(recovered, article.metadata));
+  } on FormatException {
+    throw const ArticleExtractionException('Invalid article response');
+  } on TypeError {
+    throw const ArticleExtractionException('Invalid article response');
+  }
+}
+
+Future<_CleanerErrorPayload> _readCleanerError(
+  List<int> bytes,
+  int statusCode,
+) {
+  if (bytes.length < _cleanerDecodeIsolateThreshold) {
+    return Future.value(_errorPayloadFor(bytes, statusCode));
+  }
+  return Isolate.run(() => _errorPayloadFor(bytes, statusCode));
 }
 
 const _clientHtmlFallbackErrorCodes = {
@@ -746,9 +805,9 @@ ExtractedArticle _articleFromJson(Map<String, dynamic> json) {
   );
 }
 
-_CleanerErrorPayload _errorPayloadFor(http.Response response) {
+_CleanerErrorPayload _errorPayloadFor(List<int> bytes, int statusCode) {
   try {
-    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final decoded = jsonDecode(utf8.decode(bytes));
     if (decoded is Map) {
       final detail =
           decoded['detail'] ?? decoded['message'] ?? decoded['error'];
@@ -757,7 +816,7 @@ _CleanerErrorPayload _errorPayloadFor(http.Response response) {
         return _CleanerErrorPayload(
           code: _string(detail['code']),
           message: message == null || message.trim().isEmpty
-              ? _defaultErrorMessageFor(response.statusCode)
+              ? _defaultErrorMessageFor(statusCode)
               : message,
         );
       }
@@ -778,7 +837,7 @@ _CleanerErrorPayload _errorPayloadFor(http.Response response) {
   } catch (_) {}
 
   return _CleanerErrorPayload(
-    message: _defaultErrorMessageFor(response.statusCode),
+    message: _defaultErrorMessageFor(statusCode),
   );
 }
 

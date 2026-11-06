@@ -82,6 +82,7 @@ class PracticeWordsCubit extends Cubit<PracticeWordsState> {
   int _generation = 0;
 
   Future<void> load() async {
+    if (isClosed) return;
     final generation = ++_generation;
     if (state.status == PracticeWordsStatus.initial) {
       emit(state.copyWith(status: PracticeWordsStatus.loading));
@@ -94,29 +95,33 @@ class PracticeWordsCubit extends Cubit<PracticeWordsState> {
           articleRepository: _articleRepository,
         ),
       ).wait;
+      if (!_isCurrentLoad(generation)) return;
       final states = await _fsrsRepository.getReviewStates([
         for (final entry in entries) entry.id,
       ]);
-      final words = <PracticeWordItem>[];
-      for (final entry in entries) {
-        final anchors = await _dictionaryRepository.getAnchorsByEntry(entry.id);
-        words.add(
+      if (!_isCurrentLoad(generation)) return;
+      final anchors = await _dictionaryRepository.getFirstAnchorsByEntries([
+        for (final entry in entries) entry.id,
+      ]);
+      if (!_isCurrentLoad(generation)) return;
+      final words = [
+        for (final entry in entries)
           PracticeWordItem(
             entry: entry,
             fsrs: states[entry.id] ?? const FsrsCardData(),
             sourceTitle: sources.titleOf(entry.sourceId),
-            anchorCfiRange: anchors.firstOrNull?.cfiRange,
+            anchorCfiRange: anchors[entry.id]?.cfiRange,
           ),
-        );
-      }
-      if (isClosed || generation != _generation) return;
+      ];
       emit(state.copyWith(status: PracticeWordsStatus.ready, words: words));
     } catch (e, st) {
       addError(e, st);
-      if (isClosed || generation != _generation) return;
+      if (!_isCurrentLoad(generation)) return;
       emit(state.copyWith(status: PracticeWordsStatus.failure));
     }
   }
+
+  bool _isCurrentLoad(int generation) => !isClosed && generation == _generation;
 
   void setQuery(String query) => emit(state.copyWith(query: query));
 
@@ -125,6 +130,8 @@ class PracticeWordsCubit extends Cubit<PracticeWordsState> {
 
   /// Deletes the word and its review row; the list drops it at once.
   Future<void> remove(PracticeWordItem word) async {
+    if (isClosed) return;
+    ++_generation;
     final remaining = [
       for (final item in state.words)
         if (item.itemId != word.itemId) item,

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:bounded_http/bounded_http.dart';
 import 'package:http/http.dart' as http;
 
 import 'contextual_translation_errors.dart';
@@ -14,17 +15,22 @@ class RemoteContextualTranslationService
     http.Client? httpClient,
     String? apiKey,
     Duration timeout = const Duration(seconds: 45),
+    int maxResponseBytes = defaultMaxResponseBytes,
   }) : _baseUri = baseUri,
        _httpClient = httpClient ?? http.Client(),
        _ownsClient = httpClient == null,
        _apiKey = apiKey,
-       _timeout = timeout;
+       _timeout = timeout,
+       _maxResponseBytes = maxResponseBytes;
+
+  static const defaultMaxResponseBytes = 1024 * 1024;
 
   final Uri _baseUri;
   final http.Client _httpClient;
   final bool _ownsClient;
   final String? _apiKey;
   final Duration _timeout;
+  final int _maxResponseBytes;
 
   @override
   Future<ContextualTranslationResult> translate(
@@ -33,27 +39,16 @@ class RemoteContextualTranslationService
     Future<void>? abortTrigger,
   }) async {
     final uri = _baseUri.resolve('/v1/contextual-translation/analyze');
-    final abort = Completer<void>();
-    void cancel() {
-      if (!abort.isCompleted) abort.complete();
-    }
-
-    abortTrigger?.then((_) => cancel());
     try {
-      final httpRequest =
-          http.AbortableRequest('POST', uri, abortTrigger: abort.future)
-            ..headers.addAll(_headers(_apiKey))
-            ..body = jsonEncode(request.toJson());
-      final response = await _httpClient
-          .send(httpRequest)
-          .then(http.Response.fromStream)
-          .timeout(
-            _timeout,
-            onTimeout: () {
-              cancel();
-              throw TimeoutException('Translation request timed out', _timeout);
-            },
-          );
+      final response = await postBoundedResponse(
+        client: _httpClient,
+        uri: uri,
+        headers: _headers(_apiKey),
+        body: jsonEncode(request.toJson()),
+        maxResponseBytes: _maxResponseBytes,
+        timeout: _timeout,
+        abortTrigger: abortTrigger,
+      );
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ContextualTranslationException(
           ContextualTranslationFailureReason.http,
@@ -81,6 +76,12 @@ class RemoteContextualTranslationService
       return result;
     } on ContextualTranslationException {
       rethrow;
+    } on HttpResponseTooLargeException catch (error) {
+      throw ContextualTranslationException(
+        ContextualTranslationFailureReason.invalidResponse,
+        'Translation response is too large',
+        cause: error,
+      );
     } on TimeoutException catch (error) {
       throw ContextualTranslationException(
         ContextualTranslationFailureReason.network,

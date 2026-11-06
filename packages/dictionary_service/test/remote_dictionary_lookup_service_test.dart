@@ -38,6 +38,28 @@ class _PendingClient extends http.BaseClient {
 }
 
 void main() {
+  for (final status in [200, 503]) {
+    test(
+      'rejects an oversized $status body before parsing or caching',
+      () async {
+        final service = RemoteDictionaryLookupService(
+          baseUri: Uri.parse('https://api.readflex.app'),
+          httpClient: MockClient((_) async => http.Response('x' * 33, status)),
+          maxResponseBytes: 32,
+        );
+        await expectLater(
+          service.lookup(DictionaryLookupRequest(term: 'word')),
+          throwsA(
+            isA<DictionaryLookupException>().having(
+              (error) => error.reason,
+              'reason',
+              DictionaryLookupFailureReason.invalidResponse,
+            ),
+          ),
+        );
+      },
+    );
+  }
   for (final (cancelExplicitly, sendHeaders) in [
     (true, false),
     (false, false),

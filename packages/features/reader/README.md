@@ -955,6 +955,12 @@ capsule's 16dp content gutter. The transient CBZ page pill sits
 (`selectedControlBackground/Foreground` while a custom level is active) whose
 "System" label comes from `readerBrightnessSystem`.
 Brightness diagnostic formatting/logging runs only in debug builds.
+Brightness input queues its platform target before awaiting preference storage.
+Intent and lifecycle checks discard stale reads and adjustments, so a pending
+System action or activation cannot override newer slider or button input.
+Relative button steps compose while the initial system level is loading;
+absolute slider/System choices cancel pending steps. Activation drains the
+previous lifecycle's platform reset before sampling a new brightness baseline.
 
 `ReaderBookPositionUpdated.fromBookPosition` maps every body's positions,
 including the article's `minutesLeft` (`BookPosition.minutesLeft`; books send

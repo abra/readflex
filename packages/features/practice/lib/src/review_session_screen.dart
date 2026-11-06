@@ -118,14 +118,16 @@ class _ReviewSessionView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     ReviewSessionTopBar(
+                      isSaving: state.isSaving,
                       position: state.index + 1,
                       total: state.items.length,
                       canOpenInSource: current.sourceId != null,
                       onClose: () => Navigator.of(context).pop(),
                       onOpenInSource: () =>
                           onOpenInSource(current.sourceId!, current.cfiRange),
-                      onRemove: () =>
-                          bloc.add(const ReviewSessionCardRemoved()),
+                      onRemove: () => bloc.add(
+                        ReviewSessionCardRemoved(state.cardIdentity!),
+                      ),
                     ),
                     Expanded(
                       child: switch (current) {
@@ -142,7 +144,8 @@ class _ReviewSessionView extends StatelessWidget {
                           child: ReviewHighlightCard(
                             key: ValueKey('reviewCard-${current.itemId}'),
                             item: current,
-                            onOpenInSource: current.sourceId == null
+                            onOpenInSource:
+                                current.sourceId == null || state.isSaving
                                 ? null
                                 : () => onOpenInSource(
                                     current.sourceId!,
@@ -153,13 +156,16 @@ class _ReviewSessionView extends StatelessWidget {
                       },
                     ),
                     ReviewSessionControls(
+                      isSaving: state.isSaving,
                       item: current,
                       revealed: state.revealed,
                       intervals: state.intervals,
-                      onReveal: () =>
-                          bloc.add(const ReviewSessionAnswerRevealed()),
-                      onRated: (rating) =>
-                          bloc.add(ReviewSessionCardRated(rating)),
+                      onReveal: () => bloc.add(
+                        ReviewSessionAnswerRevealed(state.cardIdentity!),
+                      ),
+                      onRated: (rating) => bloc.add(
+                        ReviewSessionCardRated(state.cardIdentity!, rating),
+                      ),
                     ),
                   ],
                 ),

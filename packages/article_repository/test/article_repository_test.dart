@@ -322,6 +322,58 @@ void main() {
     );
   });
 
+  test('saved sentence spans preserve every source character', () async {
+    const samples = [
+      '...Hello world.',
+      'Wait. !Really?',
+      '  …؟مرحبا؟ !التالي.  ',
+      '。！？こんにちは。 …次へ！',
+      '... !!! ؟ …',
+      'First.\n\nSecond?! ”) …',
+      '  Before <tag> & "quote". After…  ',
+      'No punctuation\nwith whitespace  ',
+    ];
+    final extracted = _extractedArticle(
+      plainText: samples.join('\n'),
+      blocks: [
+        for (final text in samples) ...[
+          ArticleParagraphBlock(text: text),
+          ArticleQuoteBlock(text: text),
+          ArticleListBlock(items: [text]),
+          ArticleUnknownBlock(type: 'future-block', text: text),
+        ],
+      ],
+    );
+    final article = await repository.addExtractedArticle(extracted);
+    final reopened = (await repository.getArticleById(article.id))!;
+    expect(reopened.plainText, extracted.plainText);
+    expect(await File(reopened.contentPath).readAsString(), extracted.rawJson);
+
+    final html = await File(reopened.contentHtmlPath).readAsString();
+    final textBlocks = RegExp(
+      r'<(p|blockquote|li) id="([^"]+)" data-rf-block-id="[^"]+">(.*?)</\1>',
+      dotAll: true,
+    ).allMatches(html).toList();
+    expect(textBlocks, hasLength(samples.length * 4));
+    for (var i = 0; i < textBlocks.length; i++) {
+      final block = textBlocks[i];
+      final spans = RegExp(
+        r'<span id="([^"]+)" data-rf-sentence="(\d+)">(.*?)</span>',
+        dotAll: true,
+      ).allMatches(block.group(3)!);
+      expect(
+        spans.map((span) => span.group(3)!).join(),
+        const HtmlEscape().convert(samples[i ~/ 4]),
+        reason: 'Saved text block $i must preserve punctuation and whitespace',
+      );
+      var sentence = 0;
+      for (final span in spans) {
+        expect(span.group(1), '${block.group(2)}-s$sentence');
+        expect(span.group(2), '${sentence++}');
+      }
+    }
+  });
+
   test(
     'addExtractedArticle writes article HTML images next to content',
     () async {

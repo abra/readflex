@@ -7,7 +7,7 @@ import 'practice_item.dart';
 import 'practice_source_index.dart';
 
 /// Turns review rows into display-ready [PracticeItem]s: content is batched by
-/// type, word anchors are read per entry, and due order is kept. Missing
+/// type, first word anchors are batched, and due order is kept. Missing
 /// content is dropped.
 class PracticeItemLoader {
   const PracticeItemLoader({
@@ -42,15 +42,9 @@ class PracticeItemLoader {
       _dictionaryRepository.getEntriesByIds(wordIds),
       _highlightRepository.getHighlightsByIds(highlightIds),
     ).wait;
-    final anchors = <String, String>{};
-    for (final entry in entries) {
-      final entryAnchors = await _dictionaryRepository.getAnchorsByEntry(
-        entry.id,
-      );
-      if (entryAnchors.isNotEmpty) {
-        anchors[entry.id] = entryAnchors.first.cfiRange;
-      }
-    }
+    final anchors = await _dictionaryRepository.getFirstAnchorsByEntries([
+      for (final entry in entries) entry.id,
+    ]);
     final entryById = {for (final e in entries) e.id: e};
     final highlightById = {for (final h in highlights) h.id: h};
     return [
@@ -61,7 +55,7 @@ class PracticeItemLoader {
               entry: entryById[row.itemId]!,
               fsrs: row.fsrs,
               sourceTitle: sources.titleOf(entryById[row.itemId]!.sourceId),
-              anchorCfiRange: anchors[row.itemId],
+              anchorCfiRange: anchors[row.itemId]?.cfiRange,
             ),
           ReviewableType.highlight
               when highlightById[row.itemId]?.kind == HighlightKind.text =>

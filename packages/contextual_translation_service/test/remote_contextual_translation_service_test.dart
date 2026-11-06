@@ -38,6 +38,28 @@ class _PendingClient extends http.BaseClient {
 }
 
 void main() {
+  for (final status in [200, 503]) {
+    test(
+      'rejects an oversized $status body before parsing or fallback',
+      () async {
+        final service = RemoteContextualTranslationService(
+          baseUri: Uri.parse('https://api.readflex.app'),
+          httpClient: MockClient((_) async => http.Response('x' * 33, status)),
+          maxResponseBytes: 32,
+        );
+        await expectLater(
+          service.translate(_request),
+          throwsA(
+            isA<ContextualTranslationException>().having(
+              (error) => error.reason,
+              'reason',
+              ContextualTranslationFailureReason.invalidResponse,
+            ),
+          ),
+        );
+      },
+    );
+  }
   for (final (cancelExplicitly, sendHeaders) in [
     (true, false),
     (false, false),

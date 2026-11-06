@@ -228,6 +228,7 @@ owners. Передавать сервис в дочерний View для удо
 | Организация | `collection_repository`: collections/membership; `highlight_repository`: annotations |
 | Слова и review | `dictionary_repository`: saved words; `fsrs_repository`: state/log; `review_scheduler`: FSRS |
 | Remote import | `article_extraction_service`: cleaner client; `remote_content_policy`: guarded remote access |
+| Backend transport | `bounded_http`: deadline, отмена запроса и лимит streamed response; без Flutter/domain dependencies |
 | Языковые сервисы | `contextual_translation_service`: remote/cache/ML Kit; `dictionary_service`: system/backend lookup |
 | Platform/UI infrastructure | `connectivity_service`, `screen_control_service`, `toast_service`, `monitoring` |
 | Reader engine | `pagecraft`: форматы, layout, views и internal Rust crate |
@@ -539,6 +540,10 @@ ReaderScreen создаёт state owners. Внутренний `_ReaderView` и 
 state только ради меньшего количества providers: они имеют разную частоту
 обновления и разные lifecycle.
 
+Яркость применяется к платформе до ожидания записи preferences. Проверки intent
+и lifecycle не позволяют старому System action, platform read или activation
+перезаписать более новое значение slider.
+
 ### Позиция и восстановление
 
 После готовности документа Reader применяет initial или сохранённую позицию.
@@ -626,6 +631,9 @@ FRB `2.13.0` связывает Dart wrapper с crate `pagecraft_mobi_native`
 on-demand reads и Dart range caches. Native session открывается лениво,
 сериализует операции и дожидается их перед освобождением handle.
 Ошибка native read становится PagecraftException; silent fallback отсутствует.
+HUFF/CDIC имеет общий бюджет 64 MiB на packed/decoded dictionary, metadata
+записей и временный recursive output. Повторяющиеся offsets не обходят лимит;
+ошибка расширения восстанавливает packed entry для корректного освобождения.
 
 Dart implementation сохраняется как explicit parity reference:
 `MobiContainer.open(..., useDartTextReader: true)` или диагностический define
@@ -683,6 +691,9 @@ styles → box tree → paragraph/column layout → pagination → Flutter rende
 Articles используют scrolling path; image/PDF sources — fixed pages.
 Publisher JavaScript не исполняется. WebView и локального reader server
 в текущем runtime нет; старые anchors поддерживаются для compatibility.
+При новом импорте статьи sentence spans сохраняют исходную пунктуацию и
+пробелы. Уже сохранённый HTML не пересоздаётся, чтобы не сдвинуть reading
+positions и привязки highlights/bookmarks.
 
 Page progression определяется metadata книги и bounded content sample,
 независимо от locale интерфейса. RTL UI и RTL source — отдельные случаи.
@@ -781,6 +792,12 @@ lookup или проверенные словарём сведения.
 translation и dictionary. Connect timeout 10 s позволяет недоступному host
 дать network outcome; default idle timeout 15 s. Untrusted publisher pages
 имеют отдельный pinned client.
+`bounded_http` ограничивает фактически полученные, в том числе распакованные,
+байты backend response: 1 MiB для translation/dictionary и 16 MiB для cleaner.
+Один deadline покрывает headers и body. Превышение лимита или timeout отменяет
+конкретный запрос и body subscription, сохраняя shared client для следующего.
+JSON cleaner response от 256 KiB разбирается и маппится в отдельном isolate;
+для малых ответов сохраняется прямой путь без запуска isolate.
 
 Контракты: [translation service](../packages/contextual_translation_service/README.md),
 [dictionary service](../packages/dictionary_service/README.md),
@@ -810,9 +827,11 @@ Save word / text highlight
 Review table keyed по itemId, поэтому IDs разных reviewable content должны
 быть глобально уникальны.
 
-PracticeItemLoader получает content batches по типам. При этом word anchors
-читаются отдельно для каждой entry; нельзя называть весь сценарий одной
-query независимо от размера очереди. Hydration и scheduler — разные затраты.
+PracticeItemLoader получает content batches по типам. Первые word anchors
+читаются через DictionaryRepository SQL-пакетами до 500 IDs, как и в Vocabulary:
+отдельного запроса на каждое слово нет. Выбирается самый ранний anchor,
+при одинаковом createdAt — первый вставленный. Hydration и scheduler — разные
+затраты. Vocabulary прекращает дальнейшие чтения после устаревания load.
 
 ### Время и due badge
 
@@ -838,6 +857,10 @@ Practice имеет due sessions, Review ahead и source-scoped sessions. FSRS
 интервалы и подписи ratings зависят от desired retention. Статистика использует
 study day с границей 04:00; due instants и отображение локального времени
 не следует заменять сравнением только календарных дат.
+События карточки несут ID и revision показанного экземпляра. Rating, Remove,
+Reveal и restart обрабатываются одной последовательной очередью; повторный
+tap не оценивает следующую карточку. На время записи controls отключены,
+а для word rating требуется раскрытый ответ.
 
 Команда Remove в review session удаляет review row, сохраняя content.
 Для text highlights существует legacy backfill при последующей загрузке:

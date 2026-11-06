@@ -72,6 +72,8 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   final String _sourceId;
   bool _active = false;
   int _lifecycleGeneration = 0;
+  // Absolute controls cancel pending steps; relative button steps compose.
+  int _brightnessIntent = 0;
   int _platformSyncRequest = 0;
   Future<void> _platformSyncQueue = Future<void>.value();
 
@@ -79,19 +81,21 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     if (_active) return Future<void>.value();
     _active = true;
     final generation = ++_lifecycleGeneration;
-    return _activate(generation);
+    return _activate(generation, _platformSyncRequest);
   }
 
-  Future<void> _activate(int generation) async {
+  Future<void> _activate(int generation, int request) async {
     await _clearLegacySourceBrightnessOverride();
-    if (!_isCurrentLifecycle(generation)) return;
+    if (!_isCurrentPlatformRequest(generation, request)) return;
+    await _platformSyncQueue;
+    if (!_isCurrentPlatformRequest(generation, request)) return;
     _refreshStoredBrightness();
     if (state.usesSystemBrightness) {
       await _readPlatformBrightness(generation);
       return;
     }
     await _readPlatformBrightness(generation);
-    if (!_isCurrentLifecycle(generation)) return;
+    if (!_isCurrentPlatformRequest(generation, request)) return;
     await _queueCurrentPlatformSync();
   }
 
@@ -99,6 +103,7 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     if (!_active) return;
     _active = false;
     _lifecycleGeneration++;
+    _brightnessIntent++;
     await _queuePlatformSync(
       const _ReaderBrightnessPlatformTarget.system(),
       force: true,
@@ -106,6 +111,12 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   }
 
   void previewBrightness(double value) {
+    if (isClosed) return;
+    _brightnessIntent++;
+    _previewBrightness(value);
+  }
+
+  void _previewBrightness(double value) {
     final nextValue = _clampBrightness(value);
     final next = ReaderBrightnessState(
       brightnessOverride: nextValue,
@@ -117,9 +128,15 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   }
 
   void commitBrightness(double value) {
+    if (isClosed) return;
+    _brightnessIntent++;
+    _commitBrightness(value);
+  }
+
+  void _commitBrightness(double value) {
     final nextValue = _clampBrightness(value);
     if (state.brightnessOverride != nextValue) {
-      previewBrightness(nextValue);
+      _previewBrightness(nextValue);
     }
     unawaited(_storeCustomBrightness(nextValue));
   }
@@ -136,12 +153,14 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
       return;
     }
 
+    final generation = _lifecycleGeneration;
+    final intent = _brightnessIntent;
     final baseValue = await _readAdjustmentBaseBrightness();
-    if (!_active || isClosed) return;
+    if (!_isCurrentLifecycle(generation) || !_isCurrentIntent(intent)) return;
     _applyBrightnessDelta(
-      baseValue,
+      _knownAdjustmentBaseBrightness() ?? baseValue,
       delta,
-      fromSystemBrightness: usesSystemBrightness,
+      fromSystemBrightness: state.usesSystemBrightness,
     );
   }
 
@@ -162,12 +181,15 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
       targetBrightness: nextValue,
     );
     if (nextValue == state.controlValue) return;
-    previewBrightness(nextValue);
-    commitBrightness(nextValue);
+    // Button steps compose; a slider or System choice supersedes pending steps.
+    _previewBrightness(nextValue);
+    _commitBrightness(nextValue);
   }
 
   Future<void> useSystemBrightness() async {
-    await _clearLegacySourceBrightnessOverride();
+    if (isClosed) return;
+    _brightnessIntent++;
+    final generation = _lifecycleGeneration;
     if (!state.usesSystemBrightness) {
       emit(
         ReaderBrightnessState(
@@ -177,9 +199,13 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
         ),
       );
     }
+    // Queue the visible intent before persistence can yield to another input.
+    final platformSync = _queueCurrentPlatformSync();
+    final request = _platformSyncRequest;
     await _preferencesService.setReaderBrightness(null);
-    await _queuePlatformSync(const _ReaderBrightnessPlatformTarget.system());
-    await _readPlatformBrightness(_lifecycleGeneration);
+    await _clearLegacySourceBrightnessOverride();
+    await platformSync;
+    await _readPlatformBrightness(generation, request: request);
   }
 
   void _refreshStoredBrightness() {
@@ -255,12 +281,16 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
     return _platformSyncQueue;
   }
 
-  Future<void> _readPlatformBrightness(int generation) async {
-    if (!_isCurrentLifecycle(generation)) return;
+  Future<void> _readPlatformBrightness(int generation, {int? request}) async {
+    final readRequest = request ?? _platformSyncRequest;
+    if (!_isCurrentPlatformRequest(generation, readRequest)) return;
     try {
       final brightness = await _screenControlService
           .readApplicationBrightness();
-      if (brightness == null || !_isCurrentLifecycle(generation)) return;
+      if (brightness == null ||
+          !_isCurrentPlatformRequest(generation, readRequest)) {
+        return;
+      }
       final systemBrightness = _platformToControlBrightness(brightness);
       _logBrightness(
         'read-platform',
@@ -281,6 +311,11 @@ class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
 
   bool _isCurrentLifecycle(int generation) =>
       _active && !isClosed && _lifecycleGeneration == generation;
+
+  bool _isCurrentIntent(int intent) => !isClosed && intent == _brightnessIntent;
+
+  bool _isCurrentPlatformRequest(int generation, int request) =>
+      _isCurrentLifecycle(generation) && request == _platformSyncRequest;
 
   Future<void> _setPlatformBrightness(double value) async {
     try {

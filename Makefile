@@ -22,6 +22,7 @@ PACKAGES = \
 	packages/local_storage \
 	packages/book_repository \
 	packages/collection_repository \
+	packages/bounded_http \
 	packages/article_extraction_service \
 	packages/remote_content_policy \
 	packages/article_repository \

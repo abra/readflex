@@ -321,10 +321,18 @@ saved (`insertOrIgnore`, so re-saving never resets scheduling);
 writes the word with the definition as its meaning. Legacy flashcard tables
 remain for migration compatibility only (last revision `189e2cc1`).
 
+Review actions carry the displayed item's ID and presentation revision. One
+sequential event queue covers ratings, removal, reveal and restarts; stale taps
+cannot mutate the next card. Controls stay mounted but disabled while saving.
+Vocabulary and session hydration batch first-anchor reads in groups of up to
+500 entry IDs, selecting the earliest anchor with insertion-order timestamp
+ties instead of issuing one request per word.
+
 ### Services and Infrastructure
 
 | Package | Responsibility | Notes |
 |---------|----------------|-------|
+| `bounded_http` | Bounded, abortable backend HTTP POST transport. | Pure Dart; enforces one total deadline and a streamed byte limit, cancels late responses, and never closes the caller's client. Used by article extraction, translation and dictionary services; separate from public-content URL/DNS policy. |
 | `article_extraction_service` | Remote article cleaner client and guarded client-fetch fallback extraction contract. | Validates every URL and redirect hop, bounds response size/time, and returns `ExtractedArticle` domain data. |
 | `connectivity_service` | Reactive connectivity status and UI scope. | UI signal only; services still handle their own failures. |
 | `contextual_translation_service` | Contextual translation request/result contracts, remote client, cache, and ML Kit offline fallback coordinator. | Used by the `translate` feature. |
@@ -512,7 +520,8 @@ Reader-specific UI state is split by responsibility:
   adjustment phase; it never performs pagination or DOM geometry work.
 - `ReaderAppearanceCubit` owns reader appearance preferences.
 - `ReaderBrightnessCubit` coordinates widget brightness, system brightness, and
-  platform override behavior.
+  platform override behavior. Platform targets are queued before preference
+  writes; intent and lifecycle checks discard obsolete reads and adjustments.
 - `ReaderPageThumbnailCubit` owns a tab-local queue and bounded preview
   cache for comic and PDF pages in Pages and Highlights. The reader host
   injects an async callback to the page surface; view widgets never receive
@@ -541,6 +550,10 @@ minutes left at 1200 characters a minute, headings (or up to twelve blocks) as
 contents with their start share. Search runs over the sentences and tints
 every hit; the active hit hidden under the search bar is marked on the bar's
 edge (`ReaderSearchOcclusionMarker`, shared with books).
+
+New article imports preserve punctuation and whitespace across sentence spans.
+Existing saved HTML is not regenerated, keeping persisted positions and
+annotation anchors stable.
 
 Link taps are resolved in Dart: in-document fragments and book links navigate
 in place, a note reference opens over the page, everything else is reported
@@ -767,6 +780,13 @@ timeout stays because the backend keep-alive is unknown. The client is
 registered for disposal before the services and closes after them, also on
 bootstrap rollback; services close only clients they created. Article page
 downloads never use it: they keep the extraction service's own pinned client.
+
+`bounded_http` limits actual streamed response bytes, including error responses
+and decompressed bodies: 1 MiB for translation/dictionary, 16 MiB for cleaner
+JSON. A deadline or byte-limit failure aborts that request and cancels its body
+subscription, leaving the pool usable for subsequent requests.
+Cleaner JSON and domain mapping run in an isolate for responses of 256 KiB or
+more; smaller responses keep the direct path.
 
 Every book and article is drawn by `pagecraft`; there is no engine switch.
 `TextBookLayout` rejects vertical writing, and `TextPagesController` rejects

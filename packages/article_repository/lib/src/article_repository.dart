@@ -606,11 +606,18 @@ List<String> _sentenceSegments(String text) {
     r'''[^.!?…。！？؟]+(?:[.!?…。！？؟]+["'”’)\]]*\s*|$)''',
     unicode: true,
   ).allMatches(text);
-  final sentences = [
-    for (final match in matches)
-      if ((match.group(0) ?? '').trim().isNotEmpty) match.group(0)!,
-  ];
-  return sentences.isEmpty ? [text] : sentences;
+  final sentences = <String>[];
+  var start = 0;
+  for (final match in matches) {
+    // Include gaps before a match, such as leading or standalone punctuation.
+    sentences.add(text.substring(start, match.end));
+    start = match.end;
+  }
+  if (sentences.isEmpty) return [text];
+  if (start < text.length) {
+    sentences[sentences.length - 1] += text.substring(start);
+  }
+  return sentences;
 }
 
 int _safeHeadingLevel(int level) => level.clamp(1, 6).toInt();

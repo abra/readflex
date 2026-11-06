@@ -50,6 +50,12 @@ guarantee cancellation of work already started by the backend. The app injects
 the HTTP client shared with translation and article extraction; the service
 closes only a client it created itself.
 
+`bounded_http` limits every backend response to 1 MiB by default through
+`maxResponseBytes`, before parsing or caching. Actual delivered/decompressed
+bytes are counted even when `Content-Length` is absent or incorrect and for
+error bodies. Exceeding the budget cancels that request and maps to
+`invalidResponse`. Tests can configure a smaller budget.
+
 `MemoryDictionaryLookupCache` (`DictionaryLookupCache`) mirrors the translation
 cache: an in-memory LRU of 128 answers for 30 minutes from each write, keyed by
 the request's wire payload without `request_id` (term, source language and

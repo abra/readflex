@@ -59,6 +59,9 @@ query strings.
 `content.html` is the primary article reading file. Text blocks are marked with
 stable block ids and sentence anchors so the vertical HTML reader can restore
 position without depending on paginated EPUB layout.
+Sentence segmentation preserves every character in each text block, including
+standalone punctuation and whitespace. Existing saved HTML is left intact to
+preserve reading positions and annotation anchors; this applies to new imports.
 
 ## Storage Contract
 

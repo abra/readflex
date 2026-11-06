@@ -72,6 +72,19 @@ class DictionaryRepository {
     }
   }
 
+  /// Earliest source anchor per entry, in bounded SQL batches. Entries without
+  /// an anchor are absent; duplicate IDs do not duplicate work or results.
+  Future<Map<String, DictionaryAnchor>> getFirstAnchorsByEntries(
+    Iterable<String> entryIds,
+  ) async {
+    try {
+      final rows = await _dao.firstAnchorsByEntries(entryIds);
+      return {for (final row in rows) row.entryId: row.toDomainModel()};
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   Future<int> getEntryCountBySource(String sourceId) async {
     try {
       return await _dao.entryCountBySource(sourceId);

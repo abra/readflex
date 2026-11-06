@@ -6,19 +6,31 @@ import 'package:reader/src/reader_brightness_cubit.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:shared_preferences_platform_interface/types.dart';
 
 void main() {
   const sourceId = 'source-1';
   const otherSourceId = 'source-2';
   late PreferencesService preferencesService;
+  late _DelayedPreferencesPlatform preferencesPlatform;
   late _FakeScreenControlService screenControlService;
 
   setUp(() async {
-    SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty();
+    final previousPlatform = SharedPreferencesAsyncPlatform.instance;
+    addTearDown(
+      () => SharedPreferencesAsyncPlatform.instance = previousPlatform,
+    );
+    preferencesPlatform = _DelayedPreferencesPlatform();
+    SharedPreferencesAsyncPlatform.instance = preferencesPlatform;
     preferencesService = await PreferencesService.create(
       supportedCodes: const ['en'],
     );
+    addTearDown(preferencesService.dispose);
+    addTearDown(() {
+      if (!preferencesPlatform.release.isCompleted) {
+        preferencesPlatform.release.complete();
+      }
+    });
     screenControlService = _FakeScreenControlService();
   });
 
@@ -102,6 +114,165 @@ void main() {
     expect(screenControlService.calls, const ['set:0.55']);
   });
 
+  test('a pending System save cannot reset a newer custom value', () async {
+    await preferencesService.setReaderBrightness(0.55);
+    final cubit = buildCubit();
+    addTearDown(cubit.close);
+    await cubit.activate();
+    screenControlService.calls.clear();
+
+    preferencesPlatform.delayNextWrite = true;
+    final systemChange = cubit.useSystemBrightness();
+    await preferencesPlatform.started.future;
+    cubit.previewBrightness(0.8);
+    cubit.commitBrightness(0.8);
+    await _flushAsync();
+    preferencesPlatform.release.complete();
+    await systemChange;
+    await preferencesService.update((current) => current);
+
+    expect(cubit.state.brightnessOverride, 0.8);
+    expect(preferencesService.readerBrightness, 0.8);
+    expect(screenControlService.brightness, 0.8);
+    expect(screenControlService.calls.last, 'set:0.80');
+  });
+
+  test(
+    'a pending System save cannot read a newer button value as system',
+    () async {
+      await preferencesService.setReaderBrightness(0.55);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.activate();
+
+      preferencesPlatform.delayNextWrite = true;
+      final systemChange = cubit.useSystemBrightness();
+      await preferencesPlatform.started.future;
+      await cubit.changeBrightnessBy(0.05);
+      await _flushAsync();
+      preferencesPlatform.release.complete();
+      await systemChange;
+      await preferencesService.update((current) => current);
+
+      expect(cubit.state.brightnessOverride, 0.45);
+      expect(cubit.state.systemBrightness, 0.4);
+      expect(preferencesService.readerBrightness, 0.45);
+      expect(screenControlService.brightness, 0.45);
+    },
+  );
+
+  test(
+    'activation cleanup cannot restore an older saved custom value',
+    () async {
+      await preferencesService.setReaderBrightness(0.55);
+      await preferencesService.setReaderBrightnessOverride(sourceId, 0.12);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      preferencesPlatform.delayNextWrite = true;
+      final activation = cubit.activate();
+      await preferencesPlatform.started.future;
+      cubit.previewBrightness(0.8);
+      cubit.commitBrightness(0.8);
+      await _flushAsync();
+      preferencesPlatform.release.complete();
+      await activation;
+      await preferencesService.update((current) => current);
+
+      expect(cubit.state.brightnessOverride, 0.8);
+      expect(preferencesService.readerBrightness, 0.8);
+      expect(screenControlService.brightness, 0.8);
+      expect(screenControlService.calls, ['set:0.80']);
+    },
+  );
+
+  test(
+    'activation cleanup cannot read a newer button value as system',
+    () async {
+      await preferencesService.setReaderBrightness(0.55);
+      await preferencesService.setReaderBrightnessOverride(sourceId, 0.12);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+
+      preferencesPlatform.delayNextWrite = true;
+      final activation = cubit.activate();
+      await preferencesPlatform.started.future;
+      await cubit.changeBrightnessBy(0.05);
+      await _flushAsync();
+      preferencesPlatform.release.complete();
+      await activation;
+      await preferencesService.update((current) => current);
+
+      expect(cubit.state.brightnessOverride, 0.6);
+      expect(cubit.state.systemBrightness, isNull);
+      expect(preferencesService.readerBrightness, 0.6);
+      expect(screenControlService.brightness, 0.6);
+      expect(screenControlService.calls, ['set:0.60']);
+    },
+  );
+
+  test(
+    'a stale System read cannot treat a custom override as system',
+    () async {
+      await preferencesService.setReaderBrightness(0.55);
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      await cubit.activate();
+      final readStarted = Completer<void>();
+      final readDelay = Completer<void>();
+      screenControlService.readStartedSignals.add(readStarted);
+      screenControlService.readDelays.add(readDelay);
+
+      final systemChange = cubit.useSystemBrightness();
+      await readStarted.future;
+      cubit.previewBrightness(0.8);
+      cubit.commitBrightness(0.8);
+      await _flushAsync();
+      readDelay.complete();
+      await systemChange;
+
+      expect(cubit.state.brightnessOverride, 0.8);
+      expect(cubit.state.systemBrightness, 0.4);
+      expect(screenControlService.brightness, 0.8);
+    },
+  );
+
+  test(
+    'an awaiting button adjustment cannot override a newer slider input',
+    () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      final activationStarted = Completer<void>();
+      final activationDelay = Completer<void>();
+      final adjustmentStarted = Completer<void>();
+      final adjustmentDelay = Completer<void>();
+      screenControlService.readStartedSignals.addAll([
+        activationStarted,
+        adjustmentStarted,
+      ]);
+      screenControlService.readDelays.addAll([
+        activationDelay,
+        adjustmentDelay,
+      ]);
+
+      final activation = cubit.activate();
+      await activationStarted.future;
+      final adjustment = cubit.changeBrightnessBy(0.05);
+      await adjustmentStarted.future;
+      cubit.previewBrightness(0.8);
+      cubit.commitBrightness(0.8);
+      await _flushAsync();
+      activationDelay.complete();
+      adjustmentDelay.complete();
+      await Future.wait([activation, adjustment]);
+
+      expect(cubit.state.brightnessOverride, 0.8);
+      expect(cubit.state.systemBrightness, isNull);
+      expect(screenControlService.brightness, 0.8);
+      expect(screenControlService.calls, ['set:0.80']);
+    },
+  );
+
   test(
     'legacy per-source brightness is ignored and cleared on activate',
     () async {
@@ -179,6 +350,32 @@ void main() {
       screenControlService.calls,
       const ['resetBrightness'],
     );
+  });
+
+  test('reactivation reads its baseline after the pending reset', () async {
+    await preferencesService.setReaderBrightness(0.55);
+    final cubit = buildCubit();
+    addTearDown(cubit.close);
+    await cubit.activate();
+    screenControlService.calls.clear();
+    final resetStarted = Completer<void>();
+    final resetDelay = Completer<void>();
+    screenControlService.resetStartedSignals.add(resetStarted);
+    screenControlService.resetDelays.add(resetDelay);
+
+    final deactivation = cubit.deactivate();
+    await resetStarted.future;
+    screenControlService.systemBrightness = 0.3;
+    final reactivation = cubit.activate();
+    await _flushAsync();
+    resetDelay.complete();
+    await Future.wait([deactivation, reactivation]);
+
+    expect(cubit.state.brightnessOverride, 0.55);
+    expect(cubit.state.systemBrightness, 0.3);
+    expect(preferencesService.readerBrightness, 0.55);
+    expect(screenControlService.brightness, 0.55);
+    expect(screenControlService.calls, ['resetBrightness', 'set:0.55']);
   });
 
   test('first custom step can start from captured system brightness', () async {
@@ -439,10 +636,102 @@ void main() {
       );
     },
   );
+
+  for (final simultaneous in [false, true]) {
+    test(
+      'pending button steps compose (simultaneous: $simultaneous)',
+      () async {
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        final started = List.generate(3, (_) => Completer<void>());
+        final delayed = List.generate(3, (_) => Completer<void>());
+        screenControlService.readStartedSignals.addAll(started);
+        screenControlService.readDelays.addAll(delayed);
+
+        final activation = cubit.activate();
+        await started[0].future;
+        final firstStep = cubit.changeBrightnessBy(0.05);
+        await started[1].future;
+        final secondStep = cubit.changeBrightnessBy(0.05);
+        await started[2].future;
+
+        delayed[1].complete();
+        if (simultaneous) {
+          delayed[2].complete();
+          await Future.wait([firstStep, secondStep]);
+        } else {
+          await firstStep;
+          await _flushAsync();
+          expect(cubit.state.brightnessOverride, 0.45);
+          delayed[2].complete();
+          await secondStep;
+        }
+        delayed[0].complete();
+        await activation;
+        await _flushAsync();
+
+        expect(cubit.state.brightnessOverride, 0.5);
+        expect(cubit.state.systemBrightness, 0.4);
+        expect(preferencesService.readerBrightness, 0.5);
+        expect(screenControlService.brightness, 0.5);
+      },
+    );
+  }
+
+  test(
+    'System selection cancels button steps awaiting the initial read',
+    () async {
+      final cubit = buildCubit();
+      addTearDown(cubit.close);
+      final started = List.generate(2, (_) => Completer<void>());
+      final delayed = List.generate(2, (_) => Completer<void>());
+      screenControlService.readStartedSignals.addAll(started);
+      screenControlService.readDelays.addAll(delayed);
+
+      final activation = cubit.activate();
+      await started[0].future;
+      final adjustment = cubit.changeBrightnessBy(0.05);
+      await started[1].future;
+      await cubit.useSystemBrightness();
+      for (final read in delayed) {
+        read.complete();
+      }
+      await Future.wait([activation, adjustment]);
+      await _flushAsync();
+
+      expect(cubit.state.brightnessOverride, isNull);
+      expect(cubit.state.systemBrightness, 0.4);
+      expect(preferencesService.readerBrightness, isNull);
+      expect(screenControlService.brightness, 0.4);
+      expect(screenControlService.calls, ['resetBrightness']);
+    },
+  );
 }
 
 double _controlToPlatform(double value) =>
     value.clamp(ReaderBrightnessCubit.minBrightness, 1.0).toDouble();
+
+final class _DelayedPreferencesPlatform extends InMemorySharedPreferencesAsync {
+  _DelayedPreferencesPlatform() : super.empty();
+
+  bool delayNextWrite = false;
+  final started = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<bool> setString(
+    String key,
+    String value,
+    SharedPreferencesOptions options,
+  ) async {
+    if (delayNextWrite) {
+      delayNextWrite = false;
+      started.complete();
+      await release.future;
+    }
+    return super.setString(key, value, options);
+  }
+}
 
 class _FakeScreenControlService implements ScreenControlService {
   final List<String> calls = [];

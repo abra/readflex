@@ -7,6 +7,8 @@ environment:
   sdk: ^3.11.1
 
 dependencies:
+  bounded_http:
+    path: ../bounded_http
   flutter:
     sdk: flutter
   equatable: ^2.0.8

@@ -313,6 +313,9 @@ start leaves nothing, a size of 0 leaves the record whole, where
 decompression in the [internal Rust backend](doc/mobi_native.md).
 The native reader is opened lazily on the first text request, owns one file
 handle and dictionary cache, and runs I/O/decoding on the FRB worker pool.
+HUFF's 64 MiB dictionary budget covers packed and decoded entry payloads,
+entry metadata and temporary recursive output. Each copied CDIC entry counts
+even when offsets repeat; exceeding the budget reports a decoding error.
 MOBI 6 uses `loadAllText()` for one batch; KF8 retains individual `loadText`
 requests. `MobiContainer.close()` drains accepted reads and releases both
 native and PDB resources, including when book opening fails. Resources come back deobfuscated and

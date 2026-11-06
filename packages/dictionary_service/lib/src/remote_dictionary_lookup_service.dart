@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:bounded_http/bounded_http.dart';
 import 'package:http/http.dart' as http;
 
 import 'dictionary_errors.dart';
@@ -15,12 +16,16 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
     DictionaryLookupCache? cache,
     String? apiKey,
     Duration timeout = const Duration(seconds: 40),
+    int maxResponseBytes = defaultMaxResponseBytes,
   }) : _baseUri = baseUri,
        _httpClient = httpClient ?? http.Client(),
        _ownsClient = httpClient == null,
        _cache = cache ?? MemoryDictionaryLookupCache(),
        _apiKey = apiKey,
-       _timeout = timeout;
+       _timeout = timeout,
+       _maxResponseBytes = maxResponseBytes;
+
+  static const defaultMaxResponseBytes = 1024 * 1024;
 
   final Uri _baseUri;
   final http.Client _httpClient;
@@ -28,6 +33,7 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
   final DictionaryLookupCache _cache;
   final String? _apiKey;
   final Duration _timeout;
+  final int _maxResponseBytes;
 
   @override
   Future<DictionaryLookupResult> lookup(
@@ -38,27 +44,16 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
     if (cached != null) return _resultForRequest(cached, request.requestId);
 
     final uri = _baseUri.resolve('/v1/dictionary/lookup');
-    final abort = Completer<void>();
-    void cancel() {
-      if (!abort.isCompleted) abort.complete();
-    }
-
-    abortTrigger?.then((_) => cancel());
     try {
-      final httpRequest =
-          http.AbortableRequest('POST', uri, abortTrigger: abort.future)
-            ..headers.addAll(_headers(_apiKey))
-            ..body = jsonEncode(request.toJson());
-      final response = await _httpClient
-          .send(httpRequest)
-          .then(http.Response.fromStream)
-          .timeout(
-            _timeout,
-            onTimeout: () {
-              cancel();
-              throw TimeoutException('Dictionary request timed out', _timeout);
-            },
-          );
+      final response = await postBoundedResponse(
+        client: _httpClient,
+        uri: uri,
+        headers: _headers(_apiKey),
+        body: jsonEncode(request.toJson()),
+        maxResponseBytes: _maxResponseBytes,
+        timeout: _timeout,
+        abortTrigger: abortTrigger,
+      );
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw DictionaryLookupException(
           DictionaryLookupFailureReason.http,
@@ -86,6 +81,12 @@ class RemoteDictionaryLookupService implements DictionaryLookupService {
       return result;
     } on DictionaryLookupException {
       rethrow;
+    } on HttpResponseTooLargeException catch (error) {
+      throw DictionaryLookupException(
+        DictionaryLookupFailureReason.invalidResponse,
+        'Dictionary response is too large',
+        cause: error,
+      );
     } on TimeoutException catch (error) {
       throw DictionaryLookupException(
         DictionaryLookupFailureReason.network,

@@ -43,6 +43,20 @@ created. Downloads are capped at
 connection, and body streaming, and an expired or oversized stream is
 cancelled.
 
+Each cleaner POST uses `bounded_http`: its absolute request deadline covers
+headers and body, and expiry aborts only that request, preserving the shared
+client. The default `maxResponseBytes` is 16 MiB so the structured response has
+room for blocks and metadata from an 8 MiB downloaded document. The configurable
+budget counts actual delivered/decompressed bytes, including error responses,
+without trusting `Content-Length`. An oversized response is cancelled and
+reported as an extraction failure; it does not trigger another HTML fetch.
+Late responses from injected clients that ignore abort are cancelled too.
+Cleaner JSON of at least 256 KiB is decoded, normalized and mapped to domain
+blocks in a worker isolate, including structured error parsing. Smaller replies
+stay inline. Malformed JSON remains a typed `ArticleExtractionException` in
+either path. This threshold avoids starting an isolate for ordinary short
+responses; it is not a measured device-FPS guarantee.
+
 ## Configuration
 
 The app wires this package in `lib/app/composition.dart` using:
@@ -58,6 +72,7 @@ The ngrok skip-warning header is intentionally sent for development tunnels.
 
 ## Dependencies
 
+- `bounded_http` - per-request backend response budget, deadline and cancellation
 - `domain_models` - `ExtractedArticle`, `ArticleBlock`, language/direction helpers
 - `http` - backend and article download requests
 - `remote_content_policy` - URL, DNS, and redirect safety policy

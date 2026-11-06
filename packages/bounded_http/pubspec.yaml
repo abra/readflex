@@ -1,0 +1,14 @@
+name: bounded_http
+description: Per-request deadlines, cancellation and bounded backend response buffering.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  http: ^1.6.0
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.31.0
