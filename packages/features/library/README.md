@@ -536,6 +536,8 @@ the same 48dp circle as "+", filled with `error` and an `onError` icon; cancel
 remains neutral. The two floating controls
 share a bottom anchor and retain their touch targets when labels grow.
 Counts above 999 show `999+`; semantics and the tooltip retain the exact count.
+The count starts 24dp inside the capsule in both single-row and stacked layouts,
+mirrored in RTL.
 The collection action opens a modal bottom sheet; it changes destinations,
 not the Library's current filter. Closing that sheet leaves book selection
 active. System Back closes the sheet before it clears selection. Display and

@@ -24,14 +24,16 @@ void main() {
     required double ratio,
     required double textScale,
     required Locale locale,
+    int count = 2,
   }) async {
     tester.view
       ..physicalSize = window * ratio
       ..devicePixelRatio = ratio;
     addTearDown(tester.view.reset);
-    final cubit = LibrarySelectionCubit()
-      ..toggle('a')
-      ..toggle('b');
+    final cubit = LibrarySelectionCubit();
+    for (var index = 0; index < count; index++) {
+      cubit.toggle('source-$index');
+    }
     addTearDown(cubit.close);
     await tester.pumpWidget(
       MaterialApp(
@@ -86,6 +88,70 @@ void main() {
     }
     return lines;
   }
+
+  testWidgets('large selected count keeps Collections on one line at 390dp', (
+    tester,
+  ) async {
+    await pumpBar(
+      tester,
+      window: const Size(390, 844),
+      ratio: 1,
+      textScale: 1,
+      locale: const Locale('en'),
+      count: 1200,
+    );
+    expect(find.text('999+'), findsOneWidget);
+    final count = paragraph(
+      tester,
+      find.byKey(const ValueKey('librarySelectedCount')),
+    );
+    final command = paragraph(tester, find.text('Collections'));
+    expect(lines(count), 1);
+    expect(count.didExceedMaxLines, isFalse);
+    expect(lines(command), 1);
+    expect(command.didExceedMaxLines, isFalse);
+    for (final key in const [
+      'libraryCancelSelectionFab',
+      'libraryAddToCollectionButton',
+      'libraryDeleteSelectedButton',
+    ]) {
+      final control = find.byKey(ValueKey(key));
+      final size = tester.getSize(control);
+      expect(size.width, greaterThanOrEqualTo(48));
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(control.hitTestable(), findsOneWidget);
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('large selected count fits stacked German controls at 200%', (
+    tester,
+  ) async {
+    await pumpBar(
+      tester,
+      window: const Size(320, 568),
+      ratio: 1,
+      textScale: 2,
+      locale: const Locale('de'),
+      count: 1200,
+    );
+    final countFinder = find.byKey(const ValueKey('librarySelectedCount'));
+    final count = paragraph(tester, countFinder);
+    final capsule = tester.getRect(
+      find.byKey(const ValueKey('librarySelectionCapsule')),
+    );
+    final countBounds = tester.getRect(countFinder);
+    expect(find.text('999+'), findsOneWidget);
+    expect(count.didExceedMaxLines, isFalse);
+    expect(lines(count), 1);
+    expect(capsule.inflate(.01).contains(countBounds.topLeft), isTrue);
+    expect(capsule.inflate(.01).contains(countBounds.bottomRight), isTrue);
+    final deletion = tester.getRect(
+      find.byKey(const ValueKey('libraryDeleteSelectedButton')),
+    );
+    expect(countBounds.right, lessThanOrEqualTo(deletion.left + .01));
+    expect(tester.takeException(), isNull);
+  });
 
   for (final locale in ReadflexSupportedLocales.locales) {
     for (final (window, ratio, textScale) in const [

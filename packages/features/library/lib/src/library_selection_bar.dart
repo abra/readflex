@@ -8,6 +8,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'library_selection_cubit.dart';
 
 const double _controlInset = AppSpacing.xs;
+const double _countStartInset = AppSpacing.xl - _controlInset;
 const double _capsuleMaxWidth = 320;
 const double _cancelExtent = AppSizes.floatingActionButton;
 const double _collectionLabelPadding = AppSpacing.md;
@@ -238,7 +239,7 @@ class _SelectionCapsule extends StatelessWidget {
                   height: layout.summaryHeight,
                   child: Row(
                     children: [
-                      const SizedBox(width: AppSpacing.sm),
+                      const SizedBox(width: _countStartInset),
                       Expanded(child: _SelectedCount(count: count)),
                       _DeleteSelectedButton(
                         onPressed: busy || open ? null : onDelete,
@@ -258,7 +259,7 @@ class _SelectionCapsule extends StatelessWidget {
             )
           : Row(
               children: [
-                const SizedBox(width: AppSpacing.md),
+                const SizedBox(width: _countStartInset),
                 _SelectedCount(count: count),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
