@@ -109,6 +109,10 @@ Analyze:
 make analyze
 ```
 
+This includes package dependency checks and the widget/View boundary checks.
+Run those separately with `make check-architecture`; see the scope and limits
+in [Architecture](ARCHITECTURE.md#testing-and-verification).
+
 Test:
 
 ```sh
@@ -116,7 +120,9 @@ make test
 ```
 
 `make test` includes Dart development-tool tests in `test/tooling/`. Run that
-subset with `make test-tools` when changing coverage or benchmark orchestration.
+subset with `make test-tools` when changing architecture checks, coverage or
+benchmark orchestration. Resolved widget/View checker tests live in
+`test/scripts/` and run with `fvm flutter test test/scripts`.
 
 UI flows and committed visual comparisons run without API keys:
 

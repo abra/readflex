@@ -125,14 +125,22 @@ Rules:
 
 - `routing.dart` is allowed to import feature packages and connect them.
 - Feature packages must not import sibling feature packages.
+- Imports between owned packages use public libraries, rather than another
+  package's `src/` files or relative paths into its implementation.
+- Production Dart library sources stay inside their package's `lib/` tree;
+  imports, exports and parts must not pull in test, tool or build-hook sources.
 - Feature `View` widgets must not receive repositories, services, parsers,
   DAOs, or backend clients directly.
 - Small UI-only state may use a feature-local UI cubit.
 - Feature widgets can use `context.read<T>()` for their own bloc/cubit. Prefer
   assigning it near the top of `build()` or the callback scope when that makes
   callbacks easier to read.
-- Navigation belongs to the root app/router layer. Features receive callbacks
-  such as `onSourcePressed`, `onReadPressed`, or `onArticleTitlePressed`.
+- The root app/router chooses destinations, pushes or replaces routes, and
+  connects features through callbacks such as `onSourcePressed`, `onReadPressed`,
+  or `onArticleTitlePressed`.
+- Features may handle local Back/Close by dismissing their own screen or sheet
+  with `Navigator.pop`/`maybePop`. Use the supplied UI callback when the parent
+  owns closing the surface, including a step inside a retained modal route.
 
 This keeps feature UI testable and prevents accidental coupling between
 features.
@@ -284,7 +292,7 @@ When adding or renaming a localized key:
 |---------|----------------|--------------------|
 | `domain_models` | Pure domain models, enums, value objects, and app/domain exceptions. No Flutter, storage, or service dependencies. | none |
 | `local_storage` | Single Drift database (`readflex.db`, write-ahead log), tables, DAOs, migrations, storage rows. | none |
-| `component_library` | Design tokens, theme extensions, reusable UI components, bottom-sheet shell, shared visual primitives. | none |
+| `component_library` | Design tokens, theme extensions, reusable UI components, bottom-sheet shell, shared visual primitives. | `native_text_selection` |
 | `readflex_localizations` | Generated Flutter localizations, ARB files, supported locale metadata, and `BuildContext` localization helpers. | none |
 | `shared` | Narrow cross-feature UI/action contracts, selection payloads, and saved-word presentation status (`WordSaveStatus`). | `domain_models` |
 
@@ -354,8 +362,8 @@ they keep their upstream license, structure and style, and each one's
 | `import_flow` | Import bottom sheet for books/articles. | `book_repository`, `component_library`, `domain_models`, `monitoring`, `readflex_localizations`, `pagecraft` |
 | `reader` | Full-screen reader route and reader UI state. | `article_repository`, `book_repository`, `component_library`, `domain_models`, `highlight_repository`, `preferences_service`, `readflex_localizations`, `screen_control_service`, `shared`, `toast_service`, `pagecraft` |
 | `highlight` | Reader text action and highlight bottom sheet. | `component_library`, `domain_models`, `highlight_repository`, `readflex_localizations`, `shared` |
-| `translate` | Reader text action and contextual translation bottom sheet; Save in the word header keeps the word for review. | `component_library`, `contextual_translation_service`, `dictionary_repository`, `preferences_service`, `readflex_localizations`, `shared`, `toast_service` |
-| `dictionary` | Reader Define action and monolingual definition bottom sheet with system-first fallback; Save in the word header keeps the word for review (only in the Readflex sheet, the native UI has none). | `component_library`, `dictionary_repository`, `dictionary_service`, `readflex_localizations`, `shared`, `toast_service` |
+| `translate` | Reader text action and contextual translation bottom sheet; Save in the word header keeps the word for review. | `component_library`, `contextual_translation_service`, `dictionary_repository`, `domain_models`, `preferences_service`, `readflex_localizations`, `shared`, `toast_service` |
+| `dictionary` | Reader Define action and monolingual definition bottom sheet with system-first fallback; Save in the word header keeps the word for review (only in the Readflex sheet, the native UI has none). | `component_library`, `dictionary_repository`, `dictionary_service`, `domain_models`, `readflex_localizations`, `shared`, `toast_service` |
 | `onboarding` | First-launch welcome screen; the router persists completion and picks the destination. | `component_library`, `readflex_localizations` |
 
 `library_feature` is the Dart package name because `library` is a Dart language
@@ -851,10 +859,25 @@ Rust, Dart and Flutter tests, including the Dart development-tool tests in
 `test/tooling/`. `make test-tools` runs that subset separately. Rust formatting
 and Clippy are part of `make analyze`.
 
-Architecture enforcement is partial: `check_widget_helpers.dart` rejects
-widget-returning helpers, and Pagecraft's `library_boundaries_test.dart` checks
-its internal format dependencies. The general rule against sibling-feature
-imports remains a review convention, not a repository-wide automated gate.
+`make check-architecture`, also part of `make analyze`, runs two static gates:
+
+- `scripts/check_architecture.dart` checks production package declarations and
+  Dart directives, including conditional imports/exports and cross-package
+  relative paths. It rejects sibling-feature dependencies, infrastructure
+  dependencies on features or the app, direct feature/storage coupling,
+  non-public package imports, sources outside `lib/`, undeclared local production
+  dependencies, local dependency cycles and local/Flutter dependencies in
+  `domain_models`.
+- `scripts/check_widget_helpers.dart` rejects widget-returning helpers and
+  resolved infrastructure types in declared fields and constructor parameters
+  of feature Widget classes ending in `View` and their `State` classes. Domain/service
+  data models and UI callbacks remain valid; Screen/Sheet composition and
+  documented renderer hosts keep their existing responsibilities.
+
+These checks do not prove all dependency flow: dynamically typed objects,
+closure captures, method-local service access and UI classes without the
+`View` naming convention still need review. Pagecraft's
+`library_boundaries_test.dart` additionally checks its internal format graph.
 There is no committed CI workflow in this checkout; the Make targets describe
 local checks, not evidence that a remote pipeline has run.
 

@@ -1,6 +1,6 @@
 .PHONY: get format format-check analyze test test-ui test-ui-contracts test-goldens update-goldens test-device coverage test-performance benchmark-mobi get-mobi-rust generate-mobi-rust build-mobi-rust test-mobi-rust benchmark-mobi-rust compare-mobi get-reader-native generate-reader-native build-reader-native test-reader-native benchmark-reader-parts verify clean build build-android build-apk analyze-apk run help
 .PHONY: generate-pagecraft-mobi-native analyze-pagecraft-mobi-rust test-pagecraft-mobi-rust
-.PHONY: test-tools
+.PHONY: test-tools check-architecture
 .PHONY: test-phone test-tablet test-tablet-layout
 .PHONY: test-native-selection
 
@@ -81,14 +81,18 @@ format:
 format-check:
 	$(DART) format --output=none --set-exit-if-changed $(ROOT_ANALYZE_PATHS) packages
 
-## Analyze all Dart code, then reject widget-returning helpers in lib/
+## Analyze all Dart code and check production architecture boundaries
 analyze: analyze-pagecraft-mobi-rust
 	$(FLUTTER) analyze $(ROOT_ANALYZE_PATHS)
 	@set -e; for pkg in $(PACKAGES); do \
 		echo "▶ analyze $$pkg"; \
 		(cd $$pkg && $(FLUTTER) analyze); \
 	done
-	@echo "▶ widget helpers"
+	@$(MAKE) --no-print-directory check-architecture
+
+## Check package dependencies, widget helpers and named View dependencies
+check-architecture:
+	$(DART) run scripts/check_architecture.dart .
 	$(DART) run scripts/check_widget_helpers.dart . $(filter packages/%,$(PACKAGES))
 
 ## Run all tests across packages

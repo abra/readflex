@@ -239,6 +239,13 @@ Vendored packages требуют отдельного review локальных 
 Benchmarks с самостоятельными pubspec не входят в production app graph.
 Публичные exports и точные зависимости смотрите в package pubspec/README;
 не подключайте соседний feature ради переиспользования одного widget.
+Production Dart-код библиотек остаётся внутри `lib/` своего пакета: imports,
+exports и parts не должны подключать test, tool или build-hook файлы.
+
+Выбор маршрутов и переходы между features принадлежат root router и передаются
+через callbacks. Локальный Back/Close может закрыть собственный экран или sheet
+через `Navigator.pop`/`maybePop`; если закрытием управляет родитель, используется
+его callback.
 
 UI строится классами widgets. Вспомогательные функции, методы и getters,
 возвращающие Widget или список Widget, запрещены; override `build` и builder
@@ -247,12 +254,17 @@ closures допустимы. Проверка `scripts/check_widget_helpers.dart
 
 ### Что проверяется автоматически
 
-Анализатор, Rust fmt/Clippy и запрет widget helpers проверяются Makefile.
-Pagecraft отдельно проверяет внутренние границы format-библиотек тестом
-`library_boundaries_test.dart`. Общее правило отсутствия sibling-feature
-imports пока является правилом review: отдельного полного automated gate для
-него нет. В checkout нет committed CI workflow, поэтому успешный локальный
-Make target не означает существования или успешности удалённого CI.
+Анализатор, Rust fmt/Clippy и архитектурные проверки входят в `make analyze`.
+Отдельно их можно запустить через `make check-architecture`: проверяются
+production-зависимости и Dart directives пакетов, циклы, публичные границы,
+зависимости `domain_models`, widget helpers и инфраструктурные типы в полях и
+параметрах конструкторов feature View/State. Модели данных сервисов и UI callbacks
+допустимы. Динамические типы, захваты замыканий, локальное получение сервисов и
+UI-классы без суффикса `View` всё ещё требуют review. Pagecraft дополнительно
+проверяет внутренние границы format-библиотек тестом
+`library_boundaries_test.dart`. В checkout нет committed CI workflow, поэтому
+успешный локальный Make target не означает существования или успешности
+удалённого CI.
 
 ## 5. Запуск, владение ресурсами и навигация
 
@@ -904,7 +916,8 @@ Widget tests проверяют semantic tree, но не запускают Voic
 | Команда | Что проверяет |
 | --- | --- |
 | `make format-check` | Dart formatting без переписывания файлов |
-| `make analyze` | Root/packages analyzer, widget helpers, Rust fmt/Clippy |
+| `make analyze` | Root/packages analyzer, архитектурные проверки, Rust fmt/Clippy |
+| `make check-architecture` | Граф production-пакетов, widget helpers и зависимости View |
 | `make test` | Rust и normal Dart/Flutter suites, tooling tests |
 | `make verify` | Formatting + analyze + test |
 | `make test-tools` | Изолированные Dart development tools |
