@@ -11,9 +11,9 @@ import 'theme/tokens/app_sizes.dart';
 /// The visible circle is [size] wide and sits centered in an
 /// [AppSizes.buttonHeight] square with circular ink. Selection thickens the
 /// `onSurface` ring and draws a check whose ink is `onLightSwatch` or
-/// `onDarkSwatch`, chosen by the sample's luminance so it stays visible on
-/// pale yellow and deep purple alike. The ring and check settle in one frame
-/// under reduced motion. Pass `null` [onPressed] to disable.
+/// `onDarkSwatch`, chosen by their contrast against the sample so it stays
+/// visible on pale yellow and deep purple alike. The ring and check settle in
+/// one frame under reduced motion. Pass `null` [onPressed] to disable.
 class AppColorSwatchButton extends StatelessWidget {
   const AppColorSwatchButton({
     required this.color,
@@ -42,14 +42,13 @@ class AppColorSwatchButton extends StatelessWidget {
   static const selectedRingAlpha = 0.42;
   static const restingRingAlpha = 0.16;
 
-  /// Luminance above which the check uses the light-swatch ink.
-  static const lightSwatchLuminance = 0.5;
-
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
     final appColors = context.appColors;
-    final checkColor = color.computeLuminance() > lightSwatchLuminance
+    final checkColor =
+        _contrastRatio(color, appColors.onLightSwatch) >=
+            _contrastRatio(color, appColors.onDarkSwatch)
         ? appColors.onLightSwatch
         : appColors.onDarkSwatch;
     final ringColor = context.colors.onSurface.withValues(
@@ -103,4 +102,16 @@ class AppColorSwatchButton extends StatelessWidget {
       ),
     );
   }
+}
+
+double _contrastRatio(Color first, Color second) {
+  final firstLuminance = first.computeLuminance();
+  final secondLuminance = second.computeLuminance();
+  final lighter = firstLuminance > secondLuminance
+      ? firstLuminance
+      : secondLuminance;
+  final darker = firstLuminance < secondLuminance
+      ? firstLuminance
+      : secondLuminance;
+  return (lighter + 0.05) / (darker + 0.05);
 }

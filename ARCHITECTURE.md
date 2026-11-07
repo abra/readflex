@@ -577,6 +577,17 @@ whole page at the density its visible part is shown at, again when a crop
 arrives after the page. Comic pages are decoded from the archive on demand;
 PDF pages, tiles and previews are rendered by pdfium.
 
+Comic and scan-only DjVu area gestures stay in Pagecraft. A single pointer
+owns each draft edit; visible corner grips have larger touch targets outside
+the crop that adapt at page edges. Only adjustment boundaries and final geometry
+reach `ReaderImageSelectionCubit`, avoiding per-pixel app rebuilds. Reader hides
+the retained action popup during edits and places it clear of corner targets
+after release. Cancel, outside taps and Back clear both the engine draft and
+its app mirror; note sheets retain the engine draft directly.
+Draft presentation IDs scope preview cleanup and save completion. Accepted
+writes refresh annotations even after their popup is dismissed, without
+clearing a newer selection or sending UI feedback to a disposed route.
+
 Text selection in reflowable books and articles keeps Flutter's `SelectionArea`
 and Pagecraft's exact source mapping. After the initial long press releases,
 `native_text_selection` supplies system handles and selection interactions on

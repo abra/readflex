@@ -57,6 +57,7 @@ import 'reader_image_highlight_cubit.dart';
 import 'reader_image_highlight_preview.dart';
 import 'reader_image_page_progress_overlay.dart';
 import 'reader_image_selection_cubit.dart';
+import 'reader_image_selection_popup_layout.dart';
 import 'reader_keep_awake_cubit.dart';
 import 'reader_page_grid.dart';
 import 'reader_page_thumbnail_cubit.dart';

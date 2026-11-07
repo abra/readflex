@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_back_guard.dart';
 import 'package:reader/src/reader_back_navigation.dart';
 import 'package:reader/src/reader_highlight_focus_cubit.dart';
+import 'package:reader/src/reader_image_selection_cubit.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_event.dart';
 import 'package:reader/src/reader_selection.dart';
@@ -69,24 +70,48 @@ void main() {
         ReaderBackTarget.route,
       );
     });
+
+    test('an area draft is dismissed before leaving or ending navigation', () {
+      expect(
+        readerBackTargetFor(
+          overlay: ReaderOverlay.none,
+          highlightPopupVisible: false,
+          searchNavigating: true,
+          imageSelectionVisible: true,
+        ),
+        ReaderBackTarget.imageSelection,
+      );
+      expect(
+        readerBackTargetFor(
+          overlay: ReaderOverlay.toc,
+          highlightPopupVisible: false,
+          searchNavigating: false,
+          imageSelectionVisible: true,
+        ),
+        ReaderBackTarget.tocDrawer,
+      );
+    });
   });
 
   group('ReaderBackGuard', () {
     late ReaderUiCubit ui;
     late ReaderHighlightFocusCubit focus;
     late ReaderSearchCubit search;
+    late ReaderImageSelectionCubit imageSelection;
     final log = <String>[];
 
     setUp(() {
       ui = ReaderUiCubit();
       focus = ReaderHighlightFocusCubit();
       search = ReaderSearchCubit();
+      imageSelection = ReaderImageSelectionCubit();
       log.clear();
     });
     tearDown(() async {
       await ui.close();
       await focus.close();
       await search.close();
+      await imageSelection.close();
     });
 
     Future<NavigatorState> pump(WidgetTester tester) async {
@@ -105,6 +130,7 @@ void main() {
                 BlocProvider.value(value: ui),
                 BlocProvider.value(value: focus),
                 BlocProvider.value(value: search),
+                BlocProvider.value(value: imageSelection),
               ],
               child: ReaderBackGuard(
                 onCloseSearchPanel: () {
@@ -118,6 +144,10 @@ void main() {
                 onDismissHighlightPopup: () {
                   log.add('popup');
                   focus.clear();
+                },
+                onDismissImageSelection: () {
+                  log.add('image');
+                  imageSelection.deselect();
                 },
                 onEndSearch: () {
                   log.add('end');
@@ -159,6 +189,26 @@ void main() {
       await tester.pumpAndSettle();
       expect(log, ['search']);
       expect(find.text('reader'), findsOneWidget);
+      await navigator.maybePop();
+      await tester.pumpAndSettle();
+      expect(find.text('reader'), findsNothing);
+    });
+
+    testWidgets('Back cancels an area draft before leaving Reader', (
+      tester,
+    ) async {
+      final navigator = await pump(tester);
+      imageSelection.select(
+        pageIndex: 0,
+        rect: const ReaderImageAreaRect(x: .1, y: .2, width: .3, height: .4),
+      );
+      await tester.pumpAndSettle();
+      await navigator.maybePop();
+      await tester.pumpAndSettle();
+      expect(log, ['image']);
+      expect(imageSelection.state.hasSelection, isFalse);
+      expect(find.text('reader'), findsOneWidget);
+
       await navigator.maybePop();
       await tester.pumpAndSettle();
       expect(find.text('reader'), findsNothing);

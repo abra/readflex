@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -35,8 +36,8 @@ class ComicImageArea {
 /// Corner a draft is resized from.
 enum ComicAreaHandle { nw, ne, sw, se }
 
-/// Geometry of image-area drafts, in fractions of the image, with the
-/// numbers of the WebView reader (`book.js`).
+/// Geometry of image-area drafts. The default and minimum rectangle sizes
+/// retain the WebView reader's normalized values (`book.js`).
 abstract final class ComicImageAreaGeometry {
   /// A new draft is this big, centred on the press.
   static const defaultWidth = 0.213333;
@@ -48,14 +49,12 @@ abstract final class ComicImageAreaGeometry {
   /// The long press that starts a draft.
   static const longPressDuration = Duration(milliseconds: 280);
 
-  /// Screen pixels: the border, the L-shaped corner marks, and the corner
-  /// drag zones, which are capped to a share of the rectangle so opposite
-  /// corners never overlap.
-  static const borderWidth = 6.0;
-  static const cornerMarkLength = 22.0;
-  static const cornerMarkStroke = 4.0;
+  /// Screen pixels for corner grips and their extra hit padding. Touch targets
+  /// extend outside the draft, with nearest-corner arbitration where they overlap.
+  static const cornerHitPadding = 1.5;
+  static const gripLeg = 48.0;
   static const handleTarget = 64.0;
-  static const handleMaxFraction = 0.4;
+  static const handleOutset = 48.0;
 
   /// The draft a press at [point] (fractions of the image) creates:
   /// default size, centred, kept inside the image.
@@ -92,27 +91,91 @@ abstract final class ComicImageAreaGeometry {
     return Rect.fromLTRB(left, top, right, bottom);
   }
 
-  /// Side of the square corner zones for a draft drawn at [drawnSize]
-  /// (logical pixels of the layer) under [zoomScale].
-  static double handleSize(Size drawnSize, double zoomScale) {
-    final target = handleTarget / zoomScale;
-    final cap = drawnSize.shortestSide * handleMaxFraction;
-    return target < cap ? target : cap;
-  }
+  /// Side of a corner's touch square in layer pixels, independent of crop size.
+  static double handleSize(Size drawnSize, double zoomScale) =>
+      handleTarget / zoomScale;
 
-  /// The corner zone under [point] of a draft drawn at [drawn], or null.
-  static ComicAreaHandle? handleAt(Offset point, Rect drawn, double zoomScale) {
+  /// Each diagonal cuts off a right triangle, without touching its opposite.
+  static double gripLegLength(Size drawnSize, double zoomScale) =>
+      math.min(gripLeg / zoomScale, drawnSize.shortestSide * .45);
+
+  /// Midpoints along the four corner bisectors, in layer coordinates.
+  static Rect gripCenters(Rect drawn, double zoomScale, {Rect? bounds}) =>
+      drawn.deflate(gripLegLength(drawn.size, zoomScale) / 4);
+
+  /// The nearest corner target under [point], or null for the central move
+  /// region. Optional page-frame [bounds] shift targets inward at page edges.
+  static ComicAreaHandle? handleAt(
+    Offset point,
+    Rect drawn,
+    double zoomScale, {
+    Rect? bounds,
+  }) {
     final size = handleSize(drawn.size, zoomScale);
-    if (!drawn.contains(point)) return null;
-    final west = point.dx < drawn.left + size;
-    final east = point.dx > drawn.right - size;
-    final north = point.dy < drawn.top + size;
-    final south = point.dy > drawn.bottom - size;
-    if (north && west) return ComicAreaHandle.nw;
-    if (north && east) return ComicAreaHandle.ne;
-    if (south && west) return ComicAreaHandle.sw;
-    if (south && east) return ComicAreaHandle.se;
-    return null;
+    final leg = gripLegLength(drawn.size, zoomScale);
+    final padding = math.min(
+      cornerHitPadding / zoomScale,
+      drawn.shortestSide / 10,
+    );
+    for (final handle in ComicAreaHandle.values) {
+      final west = handle == ComicAreaHandle.nw || handle == ComicAreaHandle.sw;
+      final north =
+          handle == ComicAreaHandle.nw || handle == ComicAreaHandle.ne;
+      final dx = west ? point.dx - drawn.left : drawn.right - point.dx;
+      final dy = north ? point.dy - drawn.top : drawn.bottom - point.dy;
+      if (dx >= -precisionErrorTolerance &&
+          dy >= -precisionErrorTolerance &&
+          dx + dy <= leg + precisionErrorTolerance) {
+        return handle;
+      }
+    }
+    final centre = Rect.fromCenter(
+      center: drawn.center,
+      width: drawn.width / 2,
+      height: drawn.height / 2,
+    );
+    if (centre.contains(point)) return null;
+    final outset = handleOutset / zoomScale;
+    final inset = size - outset;
+    ComicAreaHandle? nearest;
+    var distance = double.infinity;
+    for (final handle in ComicAreaHandle.values) {
+      final west = handle == ComicAreaHandle.nw || handle == ComicAreaHandle.sw;
+      final north =
+          handle == ComicAreaHandle.nw || handle == ComicAreaHandle.ne;
+      final corner = Offset(
+        west ? drawn.left : drawn.right,
+        north ? drawn.top : drawn.bottom,
+      );
+      var target = Rect.fromLTWH(
+        corner.dx - (west ? outset : inset),
+        corner.dy - (north ? outset : inset),
+        size,
+        size,
+      );
+      if (bounds != null) {
+        final width = math.min(size, bounds.width);
+        final height = math.min(size, bounds.height);
+        target = Rect.fromLTWH(
+          target.left.clamp(bounds.left, bounds.right - width),
+          target.top.clamp(bounds.top, bounds.bottom - height),
+          width,
+          height,
+        );
+      }
+      final candidate = (point - corner).distanceSquared;
+      final dx = west ? point.dx - corner.dx : corner.dx - point.dx;
+      final dy = north ? point.dy - corner.dy : corner.dy - point.dy;
+      final paddedTriangle =
+          dx >= -precisionErrorTolerance &&
+          dy >= -precisionErrorTolerance &&
+          dx + dy <= leg + 2 * padding + precisionErrorTolerance;
+      if ((target.contains(point) || paddedTriangle) && candidate < distance) {
+        nearest = handle;
+        distance = candidate;
+      }
+    }
+    return nearest;
   }
 
   /// The topmost saved area under [point] (fractions), or null.
@@ -135,7 +198,32 @@ class ComicImageAreaDraft extends ChangeNotifier {
   Rect? _rect;
   bool _retained = false;
   Color _color = const Color(0xFFFFE600);
-  double _opacity = 0.35;
+  double _opacity = 0.45;
+  final _pointers = <int>{};
+  int? _primaryPointer;
+  bool _multiplePointers = false;
+
+  /// Page layers share pointer ownership so touching the other half of a
+  /// spread cannot replace or move an edit already in progress.
+  void trackPointer(int pointer) {
+    if (_pointers.isEmpty) {
+      _primaryPointer = pointer;
+      _multiplePointers = false;
+    }
+    _pointers.add(pointer);
+    if (_pointers.length > 1) _multiplePointers = true;
+  }
+
+  void untrackPointer(int pointer) {
+    _pointers.remove(pointer);
+    if (_pointers.isEmpty) _primaryPointer = null;
+  }
+
+  /// Only the first pointer in a sequence may create or adjust a draft.
+  bool isPrimaryPointer(int pointer) => _primaryPointer == pointer;
+
+  /// Remains true until a fresh sequence, even after extra fingers lift.
+  bool get hasMultiplePointers => _multiplePointers;
 
   int? get page => _page;
 

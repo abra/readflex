@@ -49,7 +49,6 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
 
   List<Highlight>? _lastHighlightsRef;
   List<Highlight>? _lastAreaHighlights;
-  ReaderThemeData? _lastAreaTheme;
   List<ComicImageArea>? _cachedAreas;
   ReaderThemeData? _lastHighlightsTheme;
   final _resolvedHighlights =
@@ -72,7 +71,6 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
   @override
   void didUpdateWidget(covariant _ReaderDjvuBody oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.readerTheme != widget.readerTheme) _applyDraftStyle();
     if (oldWidget.document.id != widget.document.id ||
         oldWidget.document.filePath != widget.document.filePath) {
       _ready = false;
@@ -92,8 +90,8 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
 
   void _applyDraftStyle() {
     _draft.setStyle(
-      color: readerHighlightColor(HighlightColor.yellow, widget.readerTheme),
-      opacity: readerHighlightOpacity(widget.readerTheme),
+      color: readerImageHighlightColor(HighlightColor.yellow),
+      opacity: readerImageSelectionPreviewOpacity,
     );
   }
 
@@ -357,13 +355,10 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
 
   List<ComicImageArea> _areasFor(List<Highlight> highlights) {
     final cached = _cachedAreas;
-    if (cached != null &&
-        identical(highlights, _lastAreaHighlights) &&
-        _lastAreaTheme == widget.readerTheme) {
+    if (cached != null && identical(highlights, _lastAreaHighlights)) {
       return cached;
     }
     _lastAreaHighlights = highlights;
-    _lastAreaTheme = widget.readerTheme;
     // Oldest first: the newest area is drawn on top and answers presses.
     final ordered = [
       for (final highlight in highlights)
@@ -380,7 +375,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
             highlight.imageArea!.width,
             highlight.imageArea!.height,
           ),
-          color: readerHighlightColor(highlight.color, widget.readerTheme),
+          color: readerImageHighlightColor(highlight.color),
         ),
     ];
   }
@@ -413,7 +408,6 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
 
   void _onDraftCancelled() {
     final imageSelectionCubit = context.read<ReaderImageSelectionCubit>();
-    if (imageSelectionCubit.consumeProtectedClear()) return;
     context.read<ReaderSelectionCubit>().deselect();
     imageSelectionCubit.deselect();
   }
@@ -583,6 +577,9 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
             onDraftCommitted: (rect, viewport) =>
                 _onDraftCommitted(page, rect, viewport),
             onDraftCancelled: _onDraftCancelled,
+            onDraftAdjustmentChanged: context
+                .read<ReaderImageSelectionCubit>()
+                .setAdjustment,
             onAreaPressed: _onAreaPressed,
           );
         }

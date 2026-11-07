@@ -93,13 +93,13 @@ void main() {
       },
     );
 
-    test('corner zones are screen-sized, divided by zoom and capped', () {
+    test('corner zones retain their screen size for small drafts and zoom', () {
       expect(ComicImageAreaGeometry.handleSize(const Size(400, 300), 1), 64);
       expect(ComicImageAreaGeometry.handleSize(const Size(400, 300), 2), 32);
       expect(
         ComicImageAreaGeometry.handleSize(const Size(100, 300), 1),
-        40,
-        reason: '40% of the short side',
+        64,
+        reason: 'targets must not shrink with the selected rectangle',
       );
     });
 
@@ -131,13 +131,212 @@ void main() {
       );
       // Zoomed in, the zones shrink on the page so they stay 64 px on screen.
       expect(
-        ComicImageAreaGeometry.handleAt(const Offset(150, 150), drawn, 1),
+        ComicImageAreaGeometry.handleAt(const Offset(113, 113), drawn, 1),
         ComicAreaHandle.nw,
       );
       expect(
-        ComicImageAreaGeometry.handleAt(const Offset(150, 150), drawn, 2),
+        ComicImageAreaGeometry.handleAt(const Offset(113, 113), drawn, 2),
         isNull,
       );
+    });
+
+    test(
+      'outside targets choose the nearest corner and preserve centre moves',
+      () {
+        const drawn = Rect.fromLTWH(100, 100, 6, 9);
+        for (final zoom in [1.0, 2.5, 4.0]) {
+          expect(
+            ComicImageAreaGeometry.handleSize(drawn.size, zoom) * zoom,
+            64,
+          );
+          expect(
+            ComicImageAreaGeometry.handleAt(
+              drawn.topLeft - Offset(20 / zoom, 20 / zoom),
+              drawn,
+              zoom,
+            ),
+            ComicAreaHandle.nw,
+          );
+          expect(
+            ComicImageAreaGeometry.handleAt(drawn.center, drawn, zoom),
+            isNull,
+            reason: 'even overlapping targets leave the centre movable',
+          );
+          expect(
+            ComicImageAreaGeometry.handleAt(
+              Offset(drawn.center.dx, drawn.top - 10 / zoom),
+              drawn,
+              zoom,
+            ),
+            ComicAreaHandle.nw,
+            reason: 'equal distances use a deterministic corner order',
+          );
+        }
+      },
+    );
+
+    test('edge targets shift inside the page frame instead of shrinking', () {
+      const bounds = Rect.fromLTWH(0, 0, 390, 844);
+      expect(
+        ComicImageAreaGeometry.handleAt(
+          const Offset(30, 90),
+          const Rect.fromLTWH(0, 100, 80, 100),
+          1,
+          bounds: bounds,
+        ),
+        ComicAreaHandle.nw,
+      );
+      expect(
+        ComicImageAreaGeometry.handleAt(
+          const Offset(360, 90),
+          const Rect.fromLTWH(310, 100, 80, 100),
+          1,
+          bounds: bounds,
+        ),
+        ComicAreaHandle.ne,
+      );
+    });
+
+    test('visible triangles stay distinct and accept their whole region', () {
+      const bounds = Rect.fromLTWH(0, 0, 390, 844);
+      const crops = [
+        Rect.fromLTWH(100, 150, 83, 86),
+        Rect.fromLTWH(100, 150, 6, 9),
+        Rect.fromLTWH(0, 0, 6, 9),
+        Rect.fromLTWH(384, 835, 6, 9),
+        Rect.fromLTWH(0, 0, 390, 844),
+      ];
+      for (final zoom in [1.0, 2.5, 4.0]) {
+        for (final drawn in crops) {
+          final leg = ComicImageAreaGeometry.gripLegLength(drawn.size, zoom);
+          expect(leg * zoom, lessThanOrEqualTo(48));
+          expect(leg, lessThanOrEqualTo(drawn.shortestSide * .45));
+          final positions = ComicImageAreaGeometry.gripCenters(
+            drawn,
+            zoom,
+            bounds: bounds,
+          );
+          final centers = [
+            positions.topLeft,
+            positions.topRight,
+            positions.bottomLeft,
+            positions.bottomRight,
+          ];
+          expect(centers.toSet(), hasLength(4));
+          for (final handle in ComicAreaHandle.values) {
+            final center = centers[handle.index];
+            expect(drawn.contains(center), isTrue);
+            expect(bounds.contains(center), isTrue);
+            final west =
+                handle == ComicAreaHandle.nw || handle == ComicAreaHandle.sw;
+            final north =
+                handle == ComicAreaHandle.nw || handle == ComicAreaHandle.ne;
+            final corner = Offset(
+              west ? drawn.left : drawn.right,
+              north ? drawn.top : drawn.bottom,
+            );
+            final diagonalMidpoint =
+                corner +
+                Offset((west ? 1 : -1) * leg / 2, (north ? 1 : -1) * leg / 2);
+            expect(
+              (center - corner).distance,
+              closeTo((diagonalMidpoint - center).distance, 1e-9),
+              reason: 'the long arrow has equal clearance along the bisector',
+            );
+            expect(
+              (center.dx - corner.dx).abs(),
+              closeTo((center.dy - corner.dy).abs(), 1e-9),
+            );
+            expect(
+              ComicImageAreaGeometry.handleAt(
+                center,
+                drawn,
+                zoom,
+                bounds: bounds,
+              ),
+              handle,
+            );
+            for (final local in const [
+              Offset.zero,
+              Offset(1, 0),
+              Offset(0, 1),
+              Offset(0.49, 0.49),
+              Offset(1 / 3, 1 / 3),
+            ]) {
+              expect(
+                ComicImageAreaGeometry.handleAt(
+                  corner +
+                      Offset(
+                        (west ? 1 : -1) * local.dx * leg,
+                        (north ? 1 : -1) * local.dy * leg,
+                      ),
+                  drawn,
+                  zoom,
+                  bounds: bounds,
+                ),
+                handle,
+                reason: '$handle on $drawn at $zoom must match its triangle',
+              );
+            }
+            final padding = (1.5 / zoom).clamp(0.0, drawn.shortestSide / 10);
+            expect(
+              ComicImageAreaGeometry.handleAt(
+                corner +
+                    Offset(
+                      (west ? 1 : -1) * (leg / 2 + padding / 2),
+                      (north ? 1 : -1) * (leg / 2 + padding / 2),
+                    ),
+                drawn,
+                zoom,
+                bounds: bounds,
+              ),
+              handle,
+              reason: 'hit padding also accepts the edge of the corner grip',
+            );
+          }
+          for (final local in const [
+            Offset(.5, .5),
+            Offset(.26, .26),
+            Offset(.74, .26),
+            Offset(.26, .74),
+            Offset(.74, .74),
+          ]) {
+            expect(
+              ComicImageAreaGeometry.handleAt(
+                drawn.topLeft +
+                    Offset(local.dx * drawn.width, local.dy * drawn.height),
+                drawn,
+                zoom,
+                bounds: bounds,
+              ),
+              isNull,
+              reason: 'crop $drawn at $zoom retains its central move region',
+            );
+          }
+          if (drawn.width == 6 && drawn.height == 9) {
+            expect(
+              ComicImageAreaGeometry.handleAt(
+                Offset(drawn.center.dx, drawn.top),
+                drawn,
+                zoom,
+                bounds: bounds,
+              ),
+              ComicAreaHandle.nw,
+              reason: 'overlapping padding uses stable nearest-corner ties',
+            );
+            expect(
+              ComicImageAreaGeometry.handleAt(
+                Offset(drawn.center.dx + .01, drawn.top),
+                drawn,
+                zoom,
+                bounds: bounds,
+              ),
+              ComicAreaHandle.ne,
+              reason: 'padding must not steal the nearer opposite corner',
+            );
+          }
+        }
+      }
     });
 
     test('areaAt returns the topmost saved area', () {
@@ -215,12 +414,12 @@ void main() {
       var notified = 0;
       draft.addListener(() => notified++);
       expect(draft.color, const Color(0xFFFFE600));
-      expect(draft.opacity, 0.35);
-      draft.setStyle(color: const Color(0xFFFFE600), opacity: 0.35);
+      expect(draft.opacity, 0.45);
+      draft.setStyle(color: const Color(0xFFFFE600), opacity: 0.45);
       expect(notified, 0);
       draft.setStyle(color: const Color(0xFF00AAFF));
       expect(draft.color, const Color(0xFF00AAFF));
-      expect(draft.opacity, 0.35);
+      expect(draft.opacity, 0.45);
       expect(notified, 1);
       draft.setStyle(opacity: 0.5);
       expect(notified, 2);

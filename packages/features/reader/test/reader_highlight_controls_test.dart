@@ -128,6 +128,59 @@ void main() {
     );
   });
 
+  testWidgets(
+    'image palette override leaves default dark text swatches themed',
+    (
+      tester,
+    ) async {
+      await _pumpControls(
+        tester,
+        width: 360,
+        readerTheme: ReaderThemePreset.night.data,
+        onColor: (_) {},
+        onSave: () {},
+      );
+      for (final (index, swatch)
+          in tester
+              .widgetList<AppColorSwatchButton>(
+                find.byType(AppColorSwatchButton),
+              )
+              .indexed) {
+        expect(
+          swatch.color,
+          readerHighlightColor(
+            HighlightColor.values[index],
+            ReaderThemePreset.night.data,
+          ),
+        );
+      }
+      await _pumpControls(
+        tester,
+        width: 360,
+        readerTheme: ReaderThemePreset.night.data,
+        colorOf: readerImageHighlightColor,
+        onColor: (_) {},
+        onSave: () {},
+      );
+      for (final (index, swatch)
+          in tester
+              .widgetList<AppColorSwatchButton>(
+                find.byType(AppColorSwatchButton),
+              )
+              .indexed) {
+        expect(
+          swatch.color,
+          HSLColor.fromColor(
+            readerHighlightColor(
+              HighlightColor.values[index],
+              ReaderThemePreset.paper.data,
+            ),
+          ).withLightness(0.65).toColor(),
+        );
+      }
+    },
+  );
+
   testWidgets('saving disables palette and commands', (tester) async {
     final semantics = tester.ensureSemantics();
     try {
@@ -214,6 +267,8 @@ Future<void> _pumpControls(
   required VoidCallback onSave,
   bool busy = false,
   bool disableAnimations = false,
+  ReaderThemeData? readerTheme,
+  Color Function(HighlightColor)? colorOf,
 }) => tester.pumpWidget(
   MaterialApp(
     theme: AppTheme.light(),
@@ -233,7 +288,8 @@ Future<void> _pumpControls(
           child: ReaderHighlightControls(
             selectedColor: HighlightColor.yellow,
             busy: busy,
-            readerTheme: ReaderThemePreset.paper.data,
+            readerTheme: readerTheme ?? ReaderThemePreset.paper.data,
+            colorOf: colorOf,
             dividerColor: Colors.grey,
             onColorChanged: onColor,
             actions: [

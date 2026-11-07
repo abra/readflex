@@ -156,7 +156,8 @@ source quote and translated sentence for native screenshot inspection.
   `Duration.zero` when the platform reduces motion, so one call site serves both
   settings; explicit controllers check `context.reduceMotion` and jump instead.
 - **Swatch inks come from `AppColorsExt`** -- a check drawn over a highlight or
-  theme sample picks `onLightSwatch`/`onDarkSwatch` by the sample's luminance;
+  theme sample picks whichever of `onLightSwatch`/`onDarkSwatch` has the higher
+  contrast against the sample;
   raw `Colors.black`/`Colors.white` are not allowed in feature code.
 - **Content sits on the gutter; interactive surfaces extend into it.** A row,
   option tile or swatch keeps the inner inset its ink or selection pill needs
@@ -209,7 +210,7 @@ Reusable presentation-only widgets used across features:
 | `AppSheetActionRow`                 | Sheet text with a trailing utility action (Copy) centered on its first line; optional lead (caption, source) above; `minTextRoom` keeps gaps at any text size |
 | `AppSheetSection` / `AppSheetSectionTitle` | Outlined sheet section (hairline in the divider color, no fill) drawn behind full-width content, with an optional `labelLarge` header title |
 | `appFitLongestWord` / `appFitSelectableText` | Largest font size, down to a minimum, at which a heading's longest word fits; `appFitSelectableText` applies the sheet rule (box width less `appSelectableTextCaretMargin`, metadata-size floor) |
-| `AppColorSwatchButton`              | Round color sample in a 48dp circular-ink target; selected ring plus a check inked by swatch luminance |
+| `AppColorSwatchButton`              | Round color sample in a 48dp circular-ink target; selected ring plus a check using the higher-contrast swatch ink |
 | `AppStatusMessage`                  | Inline sheet status: start-aligned title/body, optional full-width filled action and progress |
 | `AppSettingsSection`                | Shared settings heading and label/control spacing |
 | `AppChoiceControl` / `AppChoiceOption` | Single-choice settings, with the same themed states for text, icons, painted `glyph`s and font previews; `reselectable` reports a tap on the selected option for nearest-match presets |

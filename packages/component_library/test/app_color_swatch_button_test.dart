@@ -3,8 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Widget host(Widget child, {bool reduceMotion = false}) => MaterialApp(
-    theme: AppTheme.light(),
+  Widget host(
+    Widget child, {
+    bool reduceMotion = false,
+    ThemeData? theme,
+  }) => MaterialApp(
+    theme: theme ?? AppTheme.light(),
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
       child: child!,
@@ -50,7 +54,7 @@ void main() {
     }
   });
 
-  testWidgets('selected draws the onSurface ring and a luminance-based check', (
+  testWidgets('selected draws the onSurface ring and a contrasting check', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -79,6 +83,43 @@ void main() {
     expect(check.color, context.appColors.onLightSwatch);
     expect(check.size, AppIconSize.xs);
   });
+
+  for (final dark in [false, true]) {
+    for (final (name, baseColor) in [
+      ('blue', ReaderThemePreset.paper.data.highlightBlue),
+      ('purple', ReaderThemePreset.paper.data.highlightPurple),
+    ]) {
+      testWidgets('medium $name check reaches 4.5:1 contrast, dark=$dark', (
+        tester,
+      ) async {
+        final sample = HSLColor.fromColor(
+          baseColor,
+        ).withLightness(.65).toColor();
+        await tester.pumpWidget(
+          host(
+            AppColorSwatchButton(
+              color: sample,
+              selected: true,
+              tooltip: name,
+              onPressed: _noop,
+            ),
+            theme: dark ? AppTheme.dark() : AppTheme.light(),
+          ),
+        );
+        final ink = tester.widget<Icon>(find.byIcon(AppIcons.check)).color!;
+        final inkLuminance = ink.computeLuminance();
+        final sampleLuminance = sample.computeLuminance();
+        final contrast = inkLuminance > sampleLuminance
+            ? (inkLuminance + .05) / (sampleLuminance + .05)
+            : (sampleLuminance + .05) / (inkLuminance + .05);
+        expect(
+          contrast,
+          greaterThanOrEqualTo(4.5),
+          reason: 'The selected glyph must stay legible on a midtone sample',
+        );
+      });
+    }
+  }
 
   testWidgets('dark swatch uses the dark-swatch ink; resting has no check', (
     tester,

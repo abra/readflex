@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
@@ -24,6 +26,7 @@ class ComicImageAreaLayer extends StatefulWidget {
     this.areas = const [],
     this.onDraftCommitted,
     this.onDraftCancelled,
+    this.onDraftAdjustmentChanged,
     this.onAreaPressed,
     this.enabled = true,
   });
@@ -48,6 +51,10 @@ class ComicImageAreaLayer extends StatefulWidget {
   /// A tap outside dismissed the draft.
   final VoidCallback? onDraftCancelled;
 
+  /// Whether the primary pointer is moving or resizing the draft. The final
+  /// rectangle is committed before this changes back to false.
+  final ValueChanged<bool>? onDraftAdjustmentChanged;
+
   /// A long press on a saved area, with where the area sits in the whole
   /// view (null outside a `FixedPagesView`).
   final ComicAreaPressed? onAreaPressed;
@@ -70,6 +77,9 @@ typedef ComicAreaPressed =
 class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
     with RepaintAfterBuild {
   _Edit? _edit;
+  bool _adjusting = false;
+  bool _longPressEditing = false;
+  final _pointers = <int>{};
 
   ComicImageAreaDraft get _draft => widget.draft;
 
@@ -84,6 +94,20 @@ class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
   @override
   void didUpdateWidget(ComicImageAreaLayer oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.draft != widget.draft ||
+        oldWidget.page != widget.page ||
+        (oldWidget.enabled && !widget.enabled)) {
+      _edit = null;
+      _longPressEditing = false;
+      if (_adjusting) {
+        _adjusting = false;
+        oldWidget.onDraftAdjustmentChanged?.call(false);
+      }
+      for (final pointer in _pointers) {
+        oldWidget.draft.untrackPointer(pointer);
+      }
+      _pointers.clear();
+    }
     if (oldWidget.draft != widget.draft) {
       oldWidget.draft.removeListener(_onDraftChanged);
       widget.draft.addListener(_onDraftChanged);
@@ -93,12 +117,33 @@ class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
   @override
   void dispose() {
     _draft.removeListener(_onDraftChanged);
+    _finishEdit(commit: false);
+    for (final pointer in _pointers) {
+      _draft.untrackPointer(pointer);
+    }
     super.dispose();
   }
 
   void _onDraftChanged() {
-    if (!_draft.isActive) _edit = null;
+    if (!_hasDraftHere) _finishEdit(commit: false);
     repaint();
+  }
+
+  void _onPointerDown(PointerEvent event) {
+    _pointers.add(event.pointer);
+    _draft.trackPointer(event.pointer);
+  }
+
+  void _onPointerEnd(PointerEvent event) {
+    if (_draft.isPrimaryPointer(event.pointer)) _finishEdit();
+    _pointers.remove(event.pointer);
+    _draft.untrackPointer(event.pointer);
+  }
+
+  void _setAdjusting(bool value) {
+    if (_adjusting == value) return;
+    _adjusting = value;
+    widget.onDraftAdjustmentChanged?.call(value);
   }
 
   // Coordinates.
@@ -120,10 +165,21 @@ class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
     rect.height * widget.imageRect.height,
   );
 
+  Rect? get _layerBounds {
+    final box = context.findRenderObject();
+    return box is RenderBox && box.hasSize ? Offset.zero & box.size : null;
+  }
+
   // Long press: a new draft, or a saved area.
 
   void _onLongPressStart(LongPressStartDetails details) {
-    if (_hasDraftHere) return;
+    if (_hasDraftHere) {
+      _longPressEditing = true;
+      _edit = _editAt(details.localPosition);
+      if (_edit != null) _setAdjusting(true);
+      return;
+    }
+    if (_draft.isActive) return;
     final point = _toImage(details.localPosition);
     if (point.dx < 0 || point.dx > 1 || point.dy < 0 || point.dy > 1) return;
     final area = ComicImageAreaGeometry.areaAt(point, [
@@ -135,6 +191,8 @@ class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
       return;
     }
     final rect = ComicImageAreaGeometry.draftAt(point);
+    _longPressEditing = true;
+    _setAdjusting(true);
     _draft.start(widget.page, rect);
     widget.controller.lockInput(true);
     _edit = _Edit(
@@ -150,35 +208,47 @@ class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
   }
 
   void _onLongPressEnd(LongPressEndDetails details) {
-    _endEdit();
+    _finishEdit();
+  }
+
+  void _onLongPressCancel() {
+    if (_longPressEditing) _finishEdit();
   }
 
   // After release: move from inside, resize from a corner, cancel outside.
 
   void _onPanDown(DragDownDetails details) {
     if (!_hasDraftHere) return;
+    _edit = _editAt(details.localPosition);
+  }
+
+  _Edit? _editAt(Offset point) {
     final drawn = _toLayer(_draft.rect!);
     final handle = ComicImageAreaGeometry.handleAt(
-      details.localPosition,
+      point,
       drawn,
       widget.controller.zoomScale,
+      bounds: _layerBounds,
     );
     if (handle != null) {
-      _edit = _Edit(
+      return _Edit(
         mode: _EditMode.resize,
         handle: handle,
-        start: details.localPosition,
+        start: point,
         startRect: _draft.rect!,
       );
-    } else if (drawn.contains(details.localPosition)) {
-      _edit = _Edit(
+    } else if (drawn.contains(point)) {
+      return _Edit(
         mode: _EditMode.move,
-        start: details.localPosition,
+        start: point,
         startRect: _draft.rect!,
       );
-    } else {
-      _edit = null;
     }
+    return null;
+  }
+
+  void _onPanStart(DragStartDetails details) {
+    if (_edit != null && _hasDraftHere) _setAdjusting(true);
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
@@ -186,16 +256,26 @@ class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
   }
 
   void _onPanEnd(DragEndDetails details) {
-    _endEdit();
+    _finishEdit();
   }
 
   void _onPanCancel() {
-    _edit = null;
+    if (!_longPressEditing) _finishEdit();
   }
 
   void _onTapUp(TapUpDetails details) {
-    if (!_hasDraftHere) return;
-    if (_toLayer(_draft.rect!).contains(details.localPosition)) return;
+    if (!_draft.isActive || _draft.hasMultiplePointers) return;
+    if (_hasDraftHere &&
+        (_toLayer(_draft.rect!).contains(details.localPosition) ||
+            ComicImageAreaGeometry.handleAt(
+                  details.localPosition,
+                  _toLayer(_draft.rect!),
+                  widget.controller.zoomScale,
+                  bounds: _layerBounds,
+                ) !=
+                null)) {
+      return;
+    }
     if (_draft.retained) return;
     _draft.clear();
     widget.controller.lockInput(false);
@@ -217,10 +297,12 @@ class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
     _draft.update(rect);
   }
 
-  void _endEdit() {
-    if (_edit == null || !_hasDraftHere) return;
+  void _finishEdit({bool commit = true}) {
+    final rect = commit && _adjusting && _hasDraftHere ? _draft.rect : null;
     _edit = null;
-    _commit(_draft.rect!);
+    _longPressEditing = false;
+    if (rect != null) _commit(rect);
+    _setAdjusting(false);
   }
 
   void _commit(Rect rect) {
@@ -236,6 +318,7 @@ class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
   @override
   Widget build(BuildContext context) {
     final zoomScale = widget.controller.zoomScale;
+    final gestureSettings = MediaQuery.maybeGestureSettingsOf(context);
     final painter = _ImageAreaPainter(
       imageRect: widget.imageRect,
       areas: [
@@ -243,48 +326,122 @@ class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
           if (area.page == widget.page) area,
       ],
       draft: _hasDraftHere ? _draft.rect : null,
+      hasDraft: _draft.isActive,
       draftColor: _draft.color,
       draftOpacity: _draft.opacity,
       zoomScale: zoomScale,
     );
     if (!widget.enabled) return CustomPaint(painter: painter);
-    final editing = _hasDraftHere;
     return RawGestureDetector(
       behavior: HitTestBehavior.translucent,
       gestures: <Type, GestureRecognizerFactory>{
-        LongPressGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
-              () => LongPressGestureRecognizer(
-                duration: ComicImageAreaGeometry.longPressDuration,
-              ),
-              (recognizer) => recognizer
-                ..onLongPressStart = _onLongPressStart
-                ..onLongPressMoveUpdate = _onLongPressMoveUpdate
-                ..onLongPressEnd = _onLongPressEnd,
+        _AreaLongPressGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<
+              _AreaLongPressGestureRecognizer
+            >(
+              _AreaLongPressGestureRecognizer.new,
+              (recognizer) {
+                recognizer.canTrackPointer = (pointer) =>
+                    _draft.isPrimaryPointer(pointer) &&
+                    (!_draft.isActive || _hasDraftHere);
+                recognizer.canStart = () =>
+                    _hasDraftHere || !_draft.hasMultiplePointers;
+                recognizer
+                  ..gestureSettings = gestureSettings
+                  ..onLongPressStart = _onLongPressStart
+                  ..onLongPressMoveUpdate = _onLongPressMoveUpdate
+                  ..onLongPressEnd = _onLongPressEnd
+                  ..onLongPressCancel = _onLongPressCancel;
+              },
             ),
-        // Drags and taps compete with page swipes only while a draft is
-        // being edited: then they belong to the draft.
-        if (editing)
-          PanGestureRecognizer:
-              GestureRecognizerFactoryWithHandlers<PanGestureRecognizer>(
-                PanGestureRecognizer.new,
-                (recognizer) => recognizer
+        // Keep instances stable when a long press creates/clears a draft.
+        // Before selection, the filters never enter the page-swipe arena.
+        _AreaPanGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<_AreaPanGestureRecognizer>(
+              _AreaPanGestureRecognizer.new,
+              (recognizer) {
+                recognizer.canTrackPointer = (pointer) =>
+                    _hasDraftHere && _draft.isPrimaryPointer(pointer);
+                recognizer
+                  ..gestureSettings = gestureSettings
                   ..onDown = _onPanDown
+                  ..onStart = _onPanStart
                   ..onUpdate = _onPanUpdate
                   ..onEnd = _onPanEnd
-                  ..onCancel = _onPanCancel,
-              ),
-        if (editing)
-          TapGestureRecognizer:
-              GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
-                TapGestureRecognizer.new,
-                (recognizer) => recognizer..onTapUp = _onTapUp,
-              ),
+                  ..onCancel = _onPanCancel;
+              },
+            ),
+        _AreaTapGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<_AreaTapGestureRecognizer>(
+              _AreaTapGestureRecognizer.new,
+              (recognizer) {
+                recognizer.canTrackPointer = (pointer) =>
+                    _draft.isActive && _draft.isPrimaryPointer(pointer);
+                recognizer
+                  ..gestureSettings = gestureSettings
+                  ..onTapUp = _onTapUp;
+              },
+            ),
       },
-      child: CustomPaint(painter: painter, child: const SizedBox.expand()),
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: _onPointerDown,
+        onPointerUp: _onPointerEnd,
+        onPointerCancel: _onPointerEnd,
+        onPointerPanZoomStart: _onPointerDown,
+        onPointerPanZoomEnd: _onPointerEnd,
+        child: CustomPaint(painter: painter, child: const SizedBox.expand()),
+      ),
     );
   }
 }
+
+/// Extra fingers never join or reject the primary pointer's gesture arena.
+mixin _AreaPointerFilter on OneSequenceGestureRecognizer {
+  late bool Function(int pointer) canTrackPointer;
+
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    if (canTrackPointer(event.pointer)) super.addAllowedPointer(event);
+  }
+
+  @override
+  void addAllowedPointerPanZoom(PointerPanZoomStartEvent event) {
+    if (canTrackPointer(event.pointer)) super.addAllowedPointerPanZoom(event);
+  }
+
+  @override
+  void handleNonAllowedPointer(PointerDownEvent event) {
+    // A second button/device must not reject the primary edit's arena.
+  }
+}
+
+class _AreaLongPressGestureRecognizer extends LongPressGestureRecognizer
+    with _AreaPointerFilter {
+  _AreaLongPressGestureRecognizer()
+    : super(duration: ComicImageAreaGeometry.longPressDuration);
+
+  late bool Function() canStart;
+
+  @override
+  void didExceedDeadline() {
+    if (!canStart()) {
+      resolve(GestureDisposition.rejected);
+      return;
+    }
+    super.didExceedDeadline();
+  }
+}
+
+class _AreaPanGestureRecognizer extends PanGestureRecognizer
+    with _AreaPointerFilter {
+  _AreaPanGestureRecognizer() {
+    dragStartBehavior = DragStartBehavior.down;
+  }
+}
+
+class _AreaTapGestureRecognizer extends TapGestureRecognizer
+    with _AreaPointerFilter {}
 
 enum _EditMode { move, resize }
 
@@ -307,6 +464,7 @@ class _ImageAreaPainter extends CustomPainter {
     required this.imageRect,
     required this.areas,
     required this.draft,
+    required this.hasDraft,
     required this.draftColor,
     required this.draftOpacity,
     required this.zoomScale,
@@ -315,6 +473,8 @@ class _ImageAreaPainter extends CustomPainter {
   final Rect imageRect;
   final List<ComicImageArea> areas;
   final Rect? draft;
+  // Other pages in a spread dim while the shared draft is active.
+  final bool hasDraft;
   final Color draftColor;
   final double draftOpacity;
   final double zoomScale;
@@ -333,63 +493,106 @@ class _ImageAreaPainter extends CustomPainter {
     for (final area in areas) {
       canvas.drawRect(
         _toLayer(area.rect),
-        Paint()..color = area.color.withValues(alpha: 0.35),
+        Paint()
+          ..color = area.color.withValues(alpha: 0.85)
+          ..blendMode = BlendMode.multiply,
       );
     }
     final draft = this.draft;
-    if (draft != null) {
-      final drawn = _toLayer(draft);
-      canvas.drawRect(
-        drawn,
-        Paint()..color = draftColor.withValues(alpha: draftOpacity),
-      );
-      final border = ComicImageAreaGeometry.borderWidth / zoomScale;
-      canvas.drawRect(
-        drawn.deflate(border / 2),
+    if (hasDraft) {
+      final outside = Path()
+        ..fillType = PathFillType.evenOdd
+        ..addRect(imageRect);
+      if (draft != null) outside.addRect(_toLayer(draft));
+      canvas.drawPath(
+        outside,
         Paint()
-          ..color = draftColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = border,
+          ..color = const Color(0xFF000000).withValues(
+            alpha: (draftOpacity * 2).clamp(0.0, .65),
+          ),
       );
-      _paintCornerMarks(canvas, drawn);
+    }
+    if (draft != null) {
+      _paintDraft(canvas, _toLayer(draft));
     }
     canvas.restore();
   }
 
-  /// L-shaped marks inside each corner, with a light halo so they read on
-  /// any art.
-  void _paintCornerMarks(Canvas canvas, Rect drawn) {
-    final length = ComicImageAreaGeometry.cornerMarkLength / zoomScale;
-    final stroke = ComicImageAreaGeometry.cornerMarkStroke / zoomScale;
-    final inset = ComicImageAreaGeometry.borderWidth / zoomScale;
-    final halo = Paint()
-      ..color = const Color(0xF2FFFFFF)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke + 3 / zoomScale
-      ..strokeCap = StrokeCap.square;
-    final ink = Paint()
-      ..color = draftColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.square;
+  void _paintDraft(Canvas canvas, Rect drawn) {
+    final leg = ComicImageAreaGeometry.gripLegLength(drawn.size, zoomScale);
+    final gripCenters = ComicImageAreaGeometry.gripCenters(drawn, zoomScale);
+    final markLength = math.min(20 / zoomScale, leg * .44);
+    final corners = Path();
+    final marks = Path();
     for (final (dx, dy) in const [(1, 1), (-1, 1), (1, -1), (-1, -1)]) {
       final corner = Offset(
-        dx > 0 ? drawn.left + inset : drawn.right - inset,
-        dy > 0 ? drawn.top + inset : drawn.bottom - inset,
+        dx > 0 ? drawn.left : drawn.right,
+        dy > 0 ? drawn.top : drawn.bottom,
       );
-      final path = Path()
-        ..moveTo(corner.dx + dx * length, corner.dy)
-        ..lineTo(corner.dx, corner.dy)
-        ..lineTo(corner.dx, corner.dy + dy * length);
-      canvas.drawPath(path, halo);
-      canvas.drawPath(path, ink);
+      corners
+        ..moveTo(corner.dx, corner.dy)
+        ..lineTo(corner.dx + dx * leg, corner.dy)
+        ..lineTo(corner.dx, corner.dy + dy * leg)
+        ..close();
+      final gripCenter = Offset(
+        dx > 0 ? gripCenters.left : gripCenters.right,
+        dy > 0 ? gripCenters.top : gripCenters.bottom,
+      );
+      final axis = Offset(dx.toDouble(), dy.toDouble()) / math.sqrt2;
+      final normal = Offset(-axis.dy, axis.dx);
+      var first = true;
+      for (final (x, y) in const [
+        (-.5, 0.0),
+        (-.28, -.22),
+        (-.28, -.06),
+        (.28, -.06),
+        (.28, -.22),
+        (.5, 0.0),
+        (.28, .22),
+        (.28, .06),
+        (-.28, .06),
+        (-.28, .22),
+      ]) {
+        final point =
+            gripCenter + axis * (x * markLength) + normal * (y * markLength);
+        if (first) {
+          marks.moveTo(point.dx, point.dy);
+          first = false;
+        } else {
+          marks.lineTo(point.dx, point.dy);
+        }
+      }
+      marks.close();
     }
+    // Resize controls keep their contrast over artwork; only the grips fade slightly.
+    final centre = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(drawn)
+      ..addPath(corners, Offset.zero);
+    canvas.drawPath(
+      centre,
+      Paint()..color = draftColor.withValues(alpha: draftOpacity),
+    );
+    final controlOpacity = (draftOpacity * 3).clamp(0.0, 1.0);
+    canvas.drawPath(
+      corners,
+      Paint()
+        ..color = const Color(
+          0xFF2563EB,
+        ).withValues(alpha: controlOpacity * .85),
+    );
+    canvas.drawPath(
+      marks,
+      Paint()
+        ..color = const Color(0xFFFFFFFF).withValues(alpha: controlOpacity),
+    );
   }
 
   @override
   bool shouldRepaint(_ImageAreaPainter oldDelegate) =>
       oldDelegate.imageRect != imageRect ||
       oldDelegate.draft != draft ||
+      oldDelegate.hasDraft != hasDraft ||
       oldDelegate.draftColor != draftColor ||
       oldDelegate.draftOpacity != draftOpacity ||
       oldDelegate.zoomScale != zoomScale ||

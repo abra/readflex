@@ -14,7 +14,8 @@ const _kTextSelectionPopupHeight =
 const _kHighlightPopupGap = AppSpacing.sm;
 // Flutter selection and continuation handles extend beyond the text rectangle.
 const _kTextSelectionPopupGap = AppSpacing.xl + AppSpacing.lg;
-const _kImageHighlightPopupGap = AppSpacing.xl;
+const _kImageHighlightPopupGap =
+    ComicImageAreaGeometry.handleOutset + AppSpacing.sm;
 const _kHighlightPopupHorizontalInset = AppSpacing.lg;
 
 String? _normalizedNoteText(String? note) {
@@ -107,6 +108,9 @@ class _ContextPanelDriver extends StatelessWidget {
     final selectionCubit = context.read<ReaderSelectionCubit>();
     final imageSelectionCubit = context.read<ReaderImageSelectionCubit>();
     final imageHighlightCubit = context.read<ReaderImageHighlightCubit>();
+    final imageSaveBusy = context.select<ReaderImageHighlightCubit, bool>(
+      (c) => c.state.status == ReaderImageHighlightStatus.saving,
+    );
     final highlightFocusCubit = context.read<ReaderHighlightFocusCubit>();
     final colors = context.colors;
     final appearance = context.select<ReaderAppearanceCubit, String>(
@@ -114,30 +118,37 @@ class _ContextPanelDriver extends StatelessWidget {
     );
     final readerTheme = ReaderThemePreset.fromId(appearance).data;
 
+    bool ownsImageSelection() =>
+        !imageSelectionCubit.isClosed &&
+        imageSelectionCubit.state.hasSelection &&
+        imageSelectionCubit.state.selectionId == imageSel.selectionId;
+
     void setImageHighlightDraftRetained(bool retained) {
-      if (retained) {
-        imageSelectionCubit.holdClearProtection();
-      } else {
-        imageSelectionCubit.releaseClearProtection();
-      }
+      if (!ownsImageSelection()) return;
       surface.setImageAreaSelectionPreviewRetained(retained);
     }
 
     void dismissImageSelection() {
+      if (!ownsImageSelection()) return;
       setImageHighlightDraftRetained(false);
       imageSelectionCubit.deselect();
       surface.clearImageAreaSelectionPreview();
     }
 
+    void clearImagePreview() {
+      if (ownsImageSelection()) surface.clearImageAreaSelectionPreview();
+    }
+
     void showImageHighlightPreview(HighlightColor color) {
+      if (!ownsImageSelection()) return;
       final pageIndex = imageSel.pageIndex;
       final rect = imageSel.rect;
       if (pageIndex == null || rect == null) return;
       surface.showImageAreaSelectionPreview(
         pageIndex: pageIndex,
         rect: rect,
-        color: readerHighlightColor(color, readerTheme),
-        opacity: readerHighlightOpacity(readerTheme),
+        color: readerImageHighlightColor(color),
+        opacity: readerImageSelectionPreviewOpacity,
       );
     }
 
@@ -147,6 +158,7 @@ class _ContextPanelDriver extends StatelessWidget {
           imageSel.rect != null) {
         return Positioned.fill(
           child: _ImageHighlightSelectionPopup(
+            key: ValueKey(imageSel.selectionId),
             sourceId: sourceId,
             sourceType: sourceType,
             pageIndex: imageSel.pageIndex!,
@@ -154,20 +166,25 @@ class _ContextPanelDriver extends StatelessWidget {
             progress: imageSel.progress,
             chapterTitle: imageSel.chapterTitle,
             selectionPosition: imageSel.position,
+            isAdjusting: imageSel.isAdjusting,
+            canSave: !imageSaveBusy,
             imageHighlightCubit: imageHighlightCubit,
             readerTheme: readerTheme,
             panelColor: colors.surface,
             foregroundColor: colors.onSurface,
             dividerColor: colors.outlineVariant,
-            onPopupInteractionStarted: imageSelectionCubit.protectNextClear,
+            onDismiss: dismissImageSelection,
             onDraftRetentionChanged: setImageHighlightDraftRetained,
             onPreviewColorChanged: showImageHighlightPreview,
-            onPreviewCleared: surface.clearImageAreaSelectionPreview,
-            onActionCompleted: () {
-              dismissImageSelection();
+            onPreviewCleared: clearImagePreview,
+            onSaved: () {
               if (!bloc.isClosed) {
                 bloc.add(const ReaderHighlightsRefreshed());
               }
+            },
+            onActionCompleted: () {
+              if (!context.mounted || !ownsImageSelection()) return;
+              dismissImageSelection();
               showToast(
                 context,
                 type: NotificationType.success,
@@ -176,6 +193,7 @@ class _ContextPanelDriver extends StatelessWidget {
             },
             onActionError: (error, stack) {
               if (!bloc.isClosed) bloc.reportError(error, stack);
+              if (!context.mounted || !ownsImageSelection()) return;
               showToast(
                 context,
                 type: NotificationType.error,
@@ -195,6 +213,9 @@ class _ContextPanelDriver extends StatelessWidget {
           position: highlightFocus.position,
           selectedColor: focusedHighlight.color,
           readerTheme: readerTheme,
+          colorOf: focusedHighlight.isImageArea
+              ? readerImageHighlightColor
+              : null,
           panelColor: colors.surface,
           foregroundColor: colors.onSurface,
           destructiveColor: context.colors.error,
@@ -475,15 +496,19 @@ class _ImageHighlightSelectionPopup extends StatefulWidget {
     required this.panelColor,
     required this.foregroundColor,
     required this.dividerColor,
-    required this.onPopupInteractionStarted,
+    required this.onDismiss,
     required this.onDraftRetentionChanged,
     required this.onPreviewColorChanged,
     required this.onPreviewCleared,
+    required this.onSaved,
     required this.onActionCompleted,
     required this.onActionError,
     this.progress,
     this.chapterTitle,
     this.selectionPosition,
+    this.isAdjusting = false,
+    this.canSave = true,
+    super.key,
   });
 
   final String sourceId;
@@ -498,10 +523,13 @@ class _ImageHighlightSelectionPopup extends StatefulWidget {
   final Color panelColor;
   final Color foregroundColor;
   final Color dividerColor;
-  final VoidCallback onPopupInteractionStarted;
+  final VoidCallback onDismiss;
+  final bool isAdjusting;
+  final bool canSave;
   final ValueChanged<bool> onDraftRetentionChanged;
   final ValueChanged<HighlightColor> onPreviewColorChanged;
   final VoidCallback onPreviewCleared;
+  final VoidCallback onSaved;
   final VoidCallback onActionCompleted;
   final void Function(Object error, StackTrace stack) onActionError;
 
@@ -510,10 +538,13 @@ class _ImageHighlightSelectionPopup extends StatefulWidget {
       _ImageHighlightSelectionPopupState();
 }
 
+enum _ImageHighlightSavePhase { idle, note, saving }
+
 class _ImageHighlightSelectionPopupState
     extends State<_ImageHighlightSelectionPopup> {
   HighlightColor _selectedColor = HighlightColor.yellow;
-  bool _saving = false;
+  _ImageHighlightSavePhase _savePhase = _ImageHighlightSavePhase.idle;
+  bool get _saving => _savePhase != _ImageHighlightSavePhase.idle;
   bool _keepPreviewOnDispose = false;
 
   @override
@@ -539,7 +570,7 @@ class _ImageHighlightSelectionPopupState
   }
 
   Future<void> _save() async {
-    if (_saving) return;
+    if (_saving || !widget.canSave) return;
     // The page can clear the draft selection while the modal sheet is open,
     // so the save operation must not depend on this popup staying mounted.
     final sourceId = widget.sourceId;
@@ -551,6 +582,7 @@ class _ImageHighlightSelectionPopupState
     final chapterTitle = widget.chapterTitle;
     final imageHighlightCubit = widget.imageHighlightCubit;
     final onActionCompleted = widget.onActionCompleted;
+    final onSaved = widget.onSaved;
     final onActionError = widget.onActionError;
     final onPreviewCleared = widget.onPreviewCleared;
     final onDraftRetentionChanged = widget.onDraftRetentionChanged;
@@ -562,8 +594,7 @@ class _ImageHighlightSelectionPopupState
       onDraftRetentionChanged(retained);
     }
 
-    widget.onPopupInteractionStarted();
-    setState(() => _saving = true);
+    setState(() => _savePhase = _ImageHighlightSavePhase.note);
     _keepPreviewOnDispose = true;
     setDraftRetained(true);
     late final ReaderHighlightNoteResult? result;
@@ -574,7 +605,7 @@ class _ImageHighlightSelectionPopupState
       _keepPreviewOnDispose = false;
       onActionError(error, stack);
       if (mounted) {
-        setState(() => _saving = false);
+        setState(() => _savePhase = _ImageHighlightSavePhase.idle);
       } else {
         onPreviewCleared();
       }
@@ -587,7 +618,7 @@ class _ImageHighlightSelectionPopupState
         onPreviewCleared();
         return;
       }
-      setState(() => _saving = false);
+      setState(() => _savePhase = _ImageHighlightSavePhase.idle);
       return;
     }
     try {
@@ -595,13 +626,16 @@ class _ImageHighlightSelectionPopupState
         setDraftRetained(false);
         _keepPreviewOnDispose = false;
         if (mounted) {
-          setState(() => _saving = false);
+          setState(() => _savePhase = _ImageHighlightSavePhase.idle);
         } else {
           onPreviewCleared();
         }
         return;
       }
-      await imageHighlightCubit.save(
+      if (mounted) {
+        setState(() => _savePhase = _ImageHighlightSavePhase.saving);
+      }
+      final saved = await imageHighlightCubit.save(
         sourceId: sourceId,
         sourceType: sourceType,
         pageIndex: pageIndex,
@@ -611,14 +645,23 @@ class _ImageHighlightSelectionPopupState
         progress: progress,
         chapterTitle: chapterTitle,
       );
+      if (!saved) {
+        setDraftRetained(false);
+        _keepPreviewOnDispose = false;
+        if (mounted) {
+          setState(() => _savePhase = _ImageHighlightSavePhase.idle);
+        }
+        return;
+      }
+      onSaved();
       setDraftRetained(false);
-      onActionCompleted();
+      if (mounted) onActionCompleted();
     } catch (error, stack) {
       setDraftRetained(false);
       _keepPreviewOnDispose = false;
       onActionError(error, stack);
       if (mounted) {
-        setState(() => _saving = false);
+        setState(() => _savePhase = _ImageHighlightSavePhase.idle);
       } else {
         onPreviewCleared();
       }
@@ -635,6 +678,7 @@ class _ImageHighlightSelectionPopupState
         final width = _highlightPopupWidth(
           safeWidth,
           horizontalInset,
+          actionCount: 2,
         );
         final left = _highlightPopupLeft(
           constraints: constraints,
@@ -643,11 +687,22 @@ class _ImageHighlightSelectionPopupState
           width: width,
           position: widget.selectionPosition,
         );
-        final top = _highlightPopupTop(
-          constraints: constraints,
-          mediaPadding: mediaPadding,
-          position: widget.selectionPosition,
-          gap: _kImageHighlightPopupGap,
+        final position = widget.selectionPosition;
+        final top = imageSelectionPopupTop(
+          viewportHeight: constraints.maxHeight,
+          safeTop: mediaPadding.top,
+          safeBottom: mediaPadding.bottom,
+          popupHeight: _kHighlightPopupHeight,
+          edgeInset: AppSpacing.sm,
+          cornerClearance: _kImageHighlightPopupGap,
+          selection: position == null
+              ? null
+              : Rect.fromLTRB(
+                  position.left * constraints.maxWidth,
+                  position.top * constraints.maxHeight,
+                  position.right * constraints.maxWidth,
+                  position.bottom * constraints.maxHeight,
+                ),
         );
         return Stack(
           children: [
@@ -656,27 +711,39 @@ class _ImageHighlightSelectionPopupState
               top: top,
               width: width,
               height: _kHighlightPopupHeight,
-              child: _HighlightPopupSurface(
-                selectedColor: _selectedColor,
-                busy: _saving,
-                readerTheme: widget.readerTheme,
-                panelColor: widget.panelColor,
-                dividerColor: widget.dividerColor,
-                onInteractionStarted: widget.onPopupInteractionStarted,
-                onColorChanged: (color) {
-                  if (_saving || _selectedColor == color) return;
-                  setState(() => _selectedColor = color);
-                  widget.onPreviewColorChanged(color);
-                },
-                actions: [
-                  ReaderHighlightAction(
-                    color: widget.foregroundColor,
-                    icon: AppIcons.highlight,
-                    tooltip: context.l10n.highlightAction,
-                    onPressed: _save,
-                    loading: _saving,
-                  ),
-                ],
+              child: Visibility(
+                visible:
+                    !widget.isAdjusting &&
+                    _savePhase != _ImageHighlightSavePhase.note,
+                maintainState: true,
+                child: _HighlightPopupSurface(
+                  selectedColor: _selectedColor,
+                  busy: _saving,
+                  readerTheme: widget.readerTheme,
+                  colorOf: readerImageHighlightColor,
+                  panelColor: widget.panelColor,
+                  dividerColor: widget.dividerColor,
+                  onColorChanged: (color) {
+                    if (_saving || _selectedColor == color) return;
+                    setState(() => _selectedColor = color);
+                    widget.onPreviewColorChanged(color);
+                  },
+                  actions: [
+                    ReaderHighlightAction(
+                      color: widget.foregroundColor,
+                      icon: AppIcons.close,
+                      tooltip: context.l10n.commonCancel,
+                      onPressed: widget.onDismiss,
+                    ),
+                    ReaderHighlightAction(
+                      color: widget.foregroundColor,
+                      icon: AppIcons.highlight,
+                      tooltip: context.l10n.highlightAction,
+                      onPressed: widget.canSave ? _save : null,
+                      loading: _saving,
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -703,6 +770,7 @@ class ReaderSavedHighlightPopup extends StatelessWidget {
     required this.onColorChanged,
     required this.onDelete,
     this.hasNote = false,
+    this.colorOf,
     this.onEditNote,
     this.position,
     super.key,
@@ -711,6 +779,7 @@ class ReaderSavedHighlightPopup extends StatelessWidget {
   final ReaderSelectionPosition? position;
   final HighlightColor selectedColor;
   final ReaderThemeData readerTheme;
+  final Color Function(HighlightColor)? colorOf;
   final Color panelColor;
   final Color foregroundColor;
   final Color destructiveColor;
@@ -767,6 +836,7 @@ class ReaderSavedHighlightPopup extends StatelessWidget {
                 selectedColor: selectedColor,
                 busy: false,
                 readerTheme: readerTheme,
+                colorOf: colorOf,
                 panelColor: panelColor,
                 dividerColor: dividerColor,
                 onColorChanged: onColorChanged,
@@ -1178,7 +1248,7 @@ class _HighlightPopupSurface extends StatelessWidget {
     required this.dividerColor,
     required this.onColorChanged,
     required this.actions,
-    this.onInteractionStarted,
+    this.colorOf,
   });
 
   final HighlightColor selectedColor;
@@ -1188,14 +1258,13 @@ class _HighlightPopupSurface extends StatelessWidget {
   final Color dividerColor;
   final ValueChanged<HighlightColor> onColorChanged;
   final List<ReaderHighlightAction> actions;
-  final VoidCallback? onInteractionStarted;
+  final Color Function(HighlightColor)? colorOf;
 
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(AppRadius.full);
     return Listener(
       behavior: HitTestBehavior.opaque,
-      onPointerDown: (_) => onInteractionStarted?.call(),
       child: DecoratedBox(
         decoration: _highlightPopupDecoration(
           context,
@@ -1215,6 +1284,7 @@ class _HighlightPopupSurface extends StatelessWidget {
               selectedColor: selectedColor,
               busy: busy,
               readerTheme: readerTheme,
+              colorOf: colorOf,
               dividerColor: dividerColor,
               onColorChanged: onColorChanged,
               actions: actions,

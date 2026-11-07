@@ -1,11 +1,7 @@
-import 'dart:async';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'reader_selection.dart';
-
-const _kClearProtectionDuration = Duration(milliseconds: 700);
 
 /// Current image-page area selection mirrored from the page.
 class ReaderImageSelectionState extends Equatable {
@@ -16,6 +12,8 @@ class ReaderImageSelectionState extends Equatable {
     this.progress,
     this.chapterTitle,
     this.hasSelection = false,
+    this.isAdjusting = false,
+    this.selectionId = 0,
   });
 
   final int? pageIndex;
@@ -25,6 +23,12 @@ class ReaderImageSelectionState extends Equatable {
   final String? chapterTitle;
   final bool hasSelection;
 
+  /// The engine is moving/resizing the draft; popup actions wait for commit.
+  final bool isAdjusting;
+
+  /// One draft's identity across commits; zero when there is no selection.
+  final int selectionId;
+
   @override
   List<Object?> get props => [
     pageIndex,
@@ -33,15 +37,15 @@ class ReaderImageSelectionState extends Equatable {
     progress,
     chapterTitle,
     hasSelection,
+    isAdjusting,
+    selectionId,
   ];
 }
 
 class ReaderImageSelectionCubit extends Cubit<ReaderImageSelectionState> {
   ReaderImageSelectionCubit() : super(const ReaderImageSelectionState());
 
-  Timer? _clearProtectionTimer;
-  bool _protectNextClear = false;
-  bool _holdClearProtection = false;
+  int _lastSelectionId = 0;
 
   void select({
     required int pageIndex,
@@ -50,6 +54,7 @@ class ReaderImageSelectionCubit extends Cubit<ReaderImageSelectionState> {
     double? progress,
     String? chapterTitle,
   }) {
+    if (isClosed) return;
     emit(
       ReaderImageSelectionState(
         pageIndex: pageIndex,
@@ -58,52 +63,33 @@ class ReaderImageSelectionCubit extends Cubit<ReaderImageSelectionState> {
         progress: progress,
         chapterTitle: chapterTitle,
         hasSelection: true,
+        isAdjusting: state.isAdjusting,
+        selectionId: state.hasSelection
+            ? state.selectionId
+            : ++_lastSelectionId,
       ),
     );
   }
 
-  void protectNextClear() {
-    if (_holdClearProtection) return;
-    _protectNextClear = true;
-    _clearProtectionTimer?.cancel();
-    _clearProtectionTimer = Timer(_kClearProtectionDuration, () {
-      _protectNextClear = false;
-      _clearProtectionTimer = null;
-    });
-  }
-
-  void holdClearProtection() {
-    _holdClearProtection = true;
-    _protectNextClear = false;
-    _clearProtectionTimer?.cancel();
-    _clearProtectionTimer = null;
-  }
-
-  void releaseClearProtection() {
-    _holdClearProtection = false;
-    _protectNextClear = false;
-    _clearProtectionTimer?.cancel();
-    _clearProtectionTimer = null;
-  }
-
-  bool consumeProtectedClear() {
-    if (_holdClearProtection) return true;
-    if (!_protectNextClear) return false;
-    _protectNextClear = false;
-    _clearProtectionTimer?.cancel();
-    _clearProtectionTimer = null;
-    return true;
+  /// Only gesture boundaries cross the engine/app boundary, not each pixel.
+  void setAdjustment(bool value) {
+    if (isClosed || state.isAdjusting == value) return;
+    emit(
+      ReaderImageSelectionState(
+        pageIndex: state.pageIndex,
+        rect: state.rect,
+        position: state.position,
+        progress: state.progress,
+        chapterTitle: state.chapterTitle,
+        hasSelection: state.hasSelection,
+        isAdjusting: value,
+        selectionId: state.selectionId,
+      ),
+    );
   }
 
   void deselect() {
-    releaseClearProtection();
+    if (isClosed) return;
     emit(const ReaderImageSelectionState());
-  }
-
-  @override
-  Future<void> close() {
-    _clearProtectionTimer?.cancel();
-    _holdClearProtection = false;
-    return super.close();
   }
 }

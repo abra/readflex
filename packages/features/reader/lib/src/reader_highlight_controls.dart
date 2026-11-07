@@ -17,7 +17,7 @@ class ReaderHighlightAction {
   final Color color;
   final IconData icon;
   final String tooltip;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool loading;
 }
 
@@ -31,6 +31,7 @@ class ReaderHighlightControls extends StatelessWidget {
     required this.dividerColor,
     required this.onColorChanged,
     required this.actions,
+    this.colorOf,
     super.key,
   });
 
@@ -40,6 +41,9 @@ class ReaderHighlightControls extends StatelessWidget {
   final Color dividerColor;
   final ValueChanged<HighlightColor> onColorChanged;
   final List<ReaderHighlightAction> actions;
+
+  /// Image tools supply a stable palette; text uses [readerTheme] by default.
+  final Color Function(HighlightColor)? colorOf;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +59,7 @@ class ReaderHighlightControls extends StatelessWidget {
                   ReaderHighlightColorButton(
                     color: color,
                     readerTheme: readerTheme,
+                    swatchColor: colorOf?.call(color),
                     selected: selectedColor == color,
                     enabled: !busy,
                     onPressed: () => onColorChanged(color),
@@ -101,12 +106,14 @@ class ReaderHighlightColorButton extends StatelessWidget {
     required this.selected,
     required this.enabled,
     required this.onPressed,
+    this.swatchColor,
     this.size = AppIconSize.md,
     super.key,
   });
 
   final HighlightColor color;
   final ReaderThemeData readerTheme;
+  final Color? swatchColor;
   final bool selected;
   final bool enabled;
   final VoidCallback onPressed;
@@ -116,7 +123,7 @@ class ReaderHighlightColorButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = _localizedHighlightColorName(context, color);
     return AppColorSwatchButton(
-      color: readerHighlightColor(color, readerTheme),
+      color: swatchColor ?? readerHighlightColor(color, readerTheme),
       selected: selected,
       tooltip: name,
       size: size,

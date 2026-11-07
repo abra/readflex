@@ -7,7 +7,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pagecraft/djvu.dart';
 import 'package:preferences_service/preferences_service.dart';
+import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
+import 'package:reader/src/reader_highlight_color.dart';
 import 'package:reader/src/reader_image_selection_cubit.dart';
 import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
@@ -165,6 +167,140 @@ void main() {
     await closeReader(tester);
   });
 
+  for (final initialTheme in [
+    ReaderThemePreset.paper,
+    ReaderThemePreset.night,
+  ]) {
+    testWidgets(
+      'DjVu image draft stays lightly tinted from ${initialTheme.id} through popup, palette and theme changes',
+      (tester) async {
+        await preferences.update(
+          (value) => value.copyWith(readerThemeId: initialTheme.id),
+        );
+        await highlights.addImageAreaHighlight(
+          sourceId: 'djvu-1',
+          sourceType: SourceType.book,
+          pageIndex: 2,
+          x: .05,
+          y: .05,
+          width: .1,
+          height: .1,
+          color: HighlightColor.pink,
+        );
+        await showReader(tester);
+        tester
+            .widget<FixedPagesView>(find.byType(FixedPagesView))
+            .controller
+            .goToPage(2);
+        await tester.pump();
+        await waitFor(
+          tester,
+          () =>
+              find.byType(ComicImageAreaLayer).evaluate().isNotEmpty &&
+              tester
+                  .widgetList<IgnorePointer>(
+                    find.ancestor(
+                      of: find.byKey(const ValueKey('readerLoadingProgress')),
+                      matching: find.byType(IgnorePointer),
+                    ),
+                  )
+                  .any((pointer) => pointer.ignoring),
+        );
+        await tester.pumpAndSettle();
+        final finder = find.byType(ComicImageAreaLayer);
+        final layer = tester.widget<ComicImageAreaLayer>(finder);
+        expect(
+          layer.areas.single.color,
+          readerImageHighlightColor(HighlightColor.pink),
+        );
+        expect(
+          layer.draft.opacity,
+          .45,
+          reason: 'initial scan-only engine style',
+        );
+        expect(
+          layer.draft.color,
+          readerImageHighlightColor(HighlightColor.yellow),
+        );
+        final point = tester
+            .renderObject<RenderBox>(finder)
+            .localToGlobal(layer.imageRect.center);
+        await tester.longPressAt(point);
+        await tester.pumpAndSettle();
+        expect(layer.draft.isActive, isTrue);
+        expect(
+          layer.draft.opacity,
+          .45,
+          reason: 'popup preview must not restore text opacity',
+        );
+        expect(
+          tester
+              .widgetList<AppColorSwatchButton>(
+                find.byType(AppColorSwatchButton),
+              )
+              .singleWhere((swatch) => swatch.selected)
+              .color,
+          layer.draft.color,
+        );
+        final context = tester.element(find.byType(FixedPagesView));
+        final strings = context.l10n;
+        await tester.tap(find.byTooltip(strings.highlightColorBlue));
+        await tester.pump();
+        expect(layer.draft.opacity, .45);
+        expect(
+          layer.draft.color,
+          readerImageHighlightColor(HighlightColor.blue),
+        );
+        expect(
+          tester
+              .widgetList<AppColorSwatchButton>(
+                find.byType(AppColorSwatchButton),
+              )
+              .singleWhere((swatch) => swatch.selected)
+              .color,
+          layer.draft.color,
+        );
+        final nextTheme = initialTheme == ReaderThemePreset.paper
+            ? ReaderThemePreset.night
+            : ReaderThemePreset.paper;
+        await context.read<ReaderAppearanceCubit>().setTheme(nextTheme.id);
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<ComicImageAreaLayer>(finder).areas.single.color,
+          readerImageHighlightColor(HighlightColor.pink),
+          reason: 'saved image areas keep their palette across themes',
+        );
+        expect(
+          layer.draft.opacity,
+          .45,
+          reason: 'theme update must keep image opacity',
+        );
+        expect(
+          layer.draft.color,
+          readerImageHighlightColor(HighlightColor.blue),
+          reason: 'theme update must keep the selected bright image colour',
+        );
+        expect(
+          tester
+              .widgetList<AppColorSwatchButton>(
+                find.byType(AppColorSwatchButton),
+              )
+              .singleWhere((swatch) => swatch.selected)
+              .color,
+          layer.draft.color,
+        );
+        await tester.tap(find.byTooltip(strings.highlightColorGreen));
+        await tester.pump();
+        expect(layer.draft.opacity, .45);
+        expect(
+          layer.draft.color,
+          readerImageHighlightColor(HighlightColor.green),
+        );
+        await closeReader(tester);
+      },
+    );
+  }
+
   testWidgets('scan-only page mounts image-area selection instead of text', (
     tester,
   ) async {
@@ -182,6 +318,7 @@ void main() {
     final layer = tester.widget<ComicImageAreaLayer>(
       find.byType(ComicImageAreaLayer),
     );
+    layer.onDraftAdjustmentChanged?.call(true);
     layer.onDraftCommitted?.call(
       const Rect.fromLTWH(0.1, 0.15, 0.4, 0.2),
       null,
@@ -191,6 +328,19 @@ void main() {
     expect(
       context.read<ReaderImageSelectionCubit>().state.hasSelection,
       isTrue,
+    );
+    expect(context.read<ReaderImageSelectionCubit>().state.isAdjusting, isTrue);
+    layer.onDraftAdjustmentChanged?.call(false);
+    await tester.pump();
+    expect(
+      context.read<ReaderImageSelectionCubit>().state.isAdjusting,
+      isFalse,
+    );
+    layer.onDraftCancelled?.call();
+    await tester.pump();
+    expect(
+      context.read<ReaderImageSelectionCubit>().state,
+      const ReaderImageSelectionState(),
     );
     expect(context.read<ReaderSelectionCubit>().state.hasSelection, isFalse);
     await closeReader(tester);

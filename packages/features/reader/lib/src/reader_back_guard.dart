@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'reader_back_navigation.dart';
 import 'reader_highlight_focus_cubit.dart';
+import 'reader_image_selection_cubit.dart';
 import 'reader_search_cubit.dart';
 import 'reader_ui_cubit.dart';
 
@@ -13,6 +14,7 @@ class ReaderBackGuard extends StatelessWidget {
     required this.onCloseSearchPanel,
     required this.onCloseTocDrawer,
     required this.onDismissHighlightPopup,
+    required this.onDismissImageSelection,
     required this.onEndSearch,
     required this.child,
     super.key,
@@ -21,6 +23,7 @@ class ReaderBackGuard extends StatelessWidget {
   final VoidCallback onCloseSearchPanel;
   final VoidCallback onCloseTocDrawer;
   final VoidCallback onDismissHighlightPopup;
+  final VoidCallback onDismissImageSelection;
   final VoidCallback onEndSearch;
   final Widget child;
 
@@ -31,6 +34,10 @@ class ReaderBackGuard extends StatelessWidget {
     );
     final highlightPopupVisible = context
         .select<ReaderHighlightFocusCubit, bool>((c) => c.state.hasHighlight);
+    final imageSelectionVisible = context
+        .select<ReaderImageSelectionCubit, bool>(
+          (c) => c.state.hasSelection || c.state.isAdjusting,
+        );
     final searchNavigating = context.select<ReaderSearchCubit, bool>(
       (c) => c.state.isNavigating,
     );
@@ -38,6 +45,7 @@ class ReaderBackGuard extends StatelessWidget {
       overlay: overlay,
       highlightPopupVisible: highlightPopupVisible,
       searchNavigating: searchNavigating,
+      imageSelectionVisible: imageSelectionVisible,
     );
 
     return PopScope(
@@ -51,6 +59,8 @@ class ReaderBackGuard extends StatelessWidget {
             onCloseTocDrawer();
           case ReaderBackTarget.highlightPopup:
             onDismissHighlightPopup();
+          case ReaderBackTarget.imageSelection:
+            onDismissImageSelection();
           case ReaderBackTarget.searchNavigation:
             onEndSearch();
           case ReaderBackTarget.route:

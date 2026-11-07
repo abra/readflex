@@ -174,24 +174,12 @@ void main() {
     );
     expect(contextPanelSource, contains('final sourceId = widget.sourceId;'));
     expect(contextPanelSource, contains('if (imageHighlightCubit.isClosed)'));
-    expect(
-      contextPanelSource,
-      isNot(contains('onDismiss: dismissImageSelection')),
-    );
     expect(contextPanelSource, contains('widget.onPreviewColorChanged(color)'));
     expect(contextPanelSource, contains('AppIcons.edit'));
     expect(
       contextPanelSource,
-      contains(
-        'onPopupInteractionStarted: imageSelectionCubit.protectNextClear',
-      ),
-    );
-    expect(
-      contextPanelSource,
       contains('onDraftRetentionChanged: setImageHighlightDraftRetained'),
     );
-    expect(contextPanelSource, contains('holdClearProtection()'));
-    expect(contextPanelSource, contains('releaseClearProtection()'));
     expect(
       contextPanelSource,
       contains('setImageAreaSelectionPreviewRetained(retained)'),

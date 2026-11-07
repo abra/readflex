@@ -39,7 +39,6 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
   int? _reportedBookmarkedPage;
 
   List<Highlight>? _lastHighlightsRef;
-  ReaderThemeData? _lastAreasTheme;
   List<ComicImageArea>? _cachedAreas;
 
   @override
@@ -61,7 +60,6 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
   @override
   void didUpdateWidget(covariant _ReaderComicBody oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.readerTheme != widget.readerTheme) _applyDraftStyle();
     if (oldWidget.document.id != widget.document.id ||
         oldWidget.document.filePath != widget.document.filePath) {
       _ready = false;
@@ -80,8 +78,8 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
 
   void _applyDraftStyle() {
     _draft.setStyle(
-      color: readerHighlightColor(HighlightColor.yellow, widget.readerTheme),
-      opacity: readerHighlightOpacity(widget.readerTheme),
+      color: readerImageHighlightColor(HighlightColor.yellow),
+      opacity: readerImageSelectionPreviewOpacity,
     );
   }
 
@@ -285,13 +283,10 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
 
   List<ComicImageArea> _areasFor(List<Highlight> highlights) {
     final cached = _cachedAreas;
-    if (cached != null &&
-        identical(highlights, _lastHighlightsRef) &&
-        _lastAreasTheme == widget.readerTheme) {
+    if (cached != null && identical(highlights, _lastHighlightsRef)) {
       return cached;
     }
     _lastHighlightsRef = highlights;
-    _lastAreasTheme = widget.readerTheme;
     // Oldest first: the newest area is drawn on top and answers presses.
     final ordered = [
       for (final highlight in highlights)
@@ -308,7 +303,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
             highlight.imageArea!.width,
             highlight.imageArea!.height,
           ),
-          color: readerHighlightColor(highlight.color, widget.readerTheme),
+          color: readerImageHighlightColor(highlight.color),
         ),
     ];
   }
@@ -352,7 +347,6 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
 
   void _onDraftCancelled() {
     final imageSelectionCubit = context.read<ReaderImageSelectionCubit>();
-    if (imageSelectionCubit.consumeProtectedClear()) return;
     context.read<ReaderSelectionCubit>().deselect();
     imageSelectionCubit.deselect();
   }
@@ -419,6 +413,9 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
         onDraftCommitted: (rect, viewport) =>
             _onDraftCommitted(page, rect, viewport),
         onDraftCancelled: _onDraftCancelled,
+        onDraftAdjustmentChanged: context
+            .read<ReaderImageSelectionCubit>()
+            .setAdjustment,
         onAreaPressed: _onAreaPressed,
       ),
     );

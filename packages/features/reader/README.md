@@ -263,7 +263,33 @@ image-area highlights are drawn by `ComicImageAreaLayer`, and a bookmark
 toggle emits `ReaderBookmarkChanged` with the page as CFI, page anchor and
 `Page N / M` content, the rows the WebView reader wrote too. Readiness is
 the first visible page image (`onPageShown`), which releases the loading
-scrim. `ReaderComicSurface` implements the commands over the controller
+scrim. Area gesture boundaries set `ReaderImageSelectionState.isAdjusting`;
+the popup hides while moving/resizing and returns only after final geometry
+is committed. Per-pixel edits stay inside Pagecraft. An explicit engine cancel
+always clears the app mirror. Note sheets keep the draft and selected colour
+in the engine while the popup is hidden; cancelling the sheet restores them.
+Scan-only DjVu uses the same
+callbacks and state contract.
+Four blue triangular corner controls have larger touch targets around them.
+A solid white diagonal double-ended arrow marks each draggable corner. The
+corner controls use 85% opacity to remain distinct over artwork. Image drafts
+have no border or separator lines; their fill uses the selected palette colour
+at 45% opacity, independent of text-highlight opacity. The page outside the
+draft is dimmed to focus the selection. Saved image annotations use an 85%
+multiply tint to remain visible without lightening dark ink in the artwork.
+Image areas and their popup swatches keep the existing paper palette's hues
+and saturation with stronger tones at 0.65 HSL lightness: the underlying
+artwork is not recoloured by the reader theme.
+Text annotations keep their theme-specific palette.
+The area popup has explicit Cancel and Highlight actions. Its placement leaves
+the outward corner targets clear; a crop spanning the viewport uses interior
+space when the popup cannot fit above or below. System Back cancels the draft
+before leaving Reader. Colour changes do not delay an intentional outside tap.
+Each draft has a selection ID. A late save refreshes annotations without
+dismissing a newer draft or addressing a closed Reader. While a write is in
+progress, another draft can still be cancelled or recoloured; its Highlight
+action waits for the outstanding write.
+`ReaderComicSurface` implements the commands over the controller
 and the draft; comics have no text, so search and text-selection commands
 are inert, and previews are `ComicPageImage` providers. A document that
 fails to open reports `ReaderSurfaceFailed`. The chrome, drawers and

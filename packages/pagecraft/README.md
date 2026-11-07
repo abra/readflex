@@ -1362,11 +1362,38 @@ space the app's selection chrome positions itself in.
 areas in fractions of the image, and a draft held in a
 `ComicImageAreaDraft` (`ChangeNotifier`) the app owns. A long press
 (280 ms) starts a draft of the WebView reader's default size centred on
-the finger; while it exists the view's input is locked, drags inside move
-it, drags from the corner zones (64 screen px, capped at 40 % of the
-rectangle) resize it down to 1.5 %, a tap outside cancels it unless the
-app retains it under a sheet. A long press on a saved area reports the
-topmost one. Sizes meant in screen pixels are divided by the zoom.
+the finger; while it exists the view's paging, pan and zoom input is locked.
+Drags inside move it; quick or held corner drags resize it down to 1.5 %.
+Corner targets retain 64 screen pixels, with 48 pixels outside the crop and
+16 inside, shifting into the page frame at its edges. Overlaps choose the
+nearest corner in a stable order; the centre remains a move region.
+The center uses the selected annotation color at 45% opacity. Four blue
+triangular corner controls (`#2563EB`) contain white diagonal resize arrows,
+centered halfway along each corner bisector. There are no borders or separator
+strokes. Control opacity is three times the
+draft opacity, capped at 100%. Blue grips use 85% of that opacity, while arrows
+use the full value: by default, the grips are 85% opaque and arrows are fully
+opaque. Zero draft opacity hides both. This does not change the annotation fill.
+While a draft exists, a black scrim dims the rest of the image, including the
+other page of a spread.
+The scrim uses twice the draft opacity, capped at 65% (65% by default).
+Clearing the draft restores the original page appearance.
+Saved image areas use an 85% multiply tint, coloring the paper while preserving
+dark ink instead of washing it out. Triangle
+legs are 48 screen pixels, capped at 45% of the crop's short side; each
+whole triangle resizes its corner. Tiny crops retain the same 64-pixel touch
+targets and normalized minimum size, without overlapping corner decorations.
+Sizes meant in screen pixels are divided by the zoom.
+
+Visible page layers share primary-pointer ownership through the draft, so an
+extra finger cannot replace or jump an edit, including across a spread. A tap
+outside (also on the other page) cancels unless the app retains the draft
+under a sheet; taps on outside corner targets keep it. A long press on a saved
+area reports the topmost one. `onDraftAdjustmentChanged` reports only gesture
+start/end, allowing the host to hide editing actions while the finger moves.
+The final retained rectangle is committed before adjustment ends, including
+pointer cancellation; clearing or disposing the draft balances the phase
+without publishing obsolete geometry.
 
 ## Tests
 

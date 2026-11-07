@@ -536,6 +536,10 @@ class _ReadyContentState extends State<_ReadyContent> {
       onCloseSearchPanel: _closeSearchDrawer,
       onCloseTocDrawer: _closeTocDrawer,
       onDismissHighlightPopup: context.read<ReaderHighlightFocusCubit>().clear,
+      onDismissImageSelection: () {
+        _surface.clearImageAreaSelectionPreview();
+        context.read<ReaderImageSelectionCubit>().deselect();
+      },
       onEndSearch: _endSearch,
       child: _ReaderSystemUiOverlayDriver(
         readerTheme: readerTheme,

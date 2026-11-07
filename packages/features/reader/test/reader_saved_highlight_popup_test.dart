@@ -3,12 +3,13 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_highlight_controls.dart';
+import 'package:reader/src/reader_highlight_color.dart';
 import 'package:reader/src/reader_screen.dart';
 import 'package:reader/src/reader_selection.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 void main() {
-  testWidgets('tapping the page dismisses the popup without reaching it', (
+  testWidgets('saved image swatches stay bright and page dismiss is consumed', (
     tester,
   ) async {
     var pageTaps = 0;
@@ -39,7 +40,8 @@ void main() {
                     bottom: 320,
                   ),
                   selectedColor: HighlightColor.yellow,
-                  readerTheme: ReaderThemePreset.paper.data,
+                  readerTheme: ReaderThemePreset.night.data,
+                  colorOf: readerImageHighlightColor,
                   panelColor: Colors.white,
                   foregroundColor: Colors.black,
                   destructiveColor: Colors.red,
@@ -55,6 +57,13 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(
+      tester
+          .widgetList<AppColorSwatchButton>(find.byType(AppColorSwatchButton))
+          .first
+          .color,
+      readerImageHighlightColor(HighlightColor.yellow),
+    );
     final l10n = tester.element(find.byType(Scaffold)).l10n;
     final popup = tester.getRect(find.byType(ReaderHighlightControls));
     // A page spot well away from the popup surface.

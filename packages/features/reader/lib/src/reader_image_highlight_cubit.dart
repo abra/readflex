@@ -27,7 +27,8 @@ class ReaderImageHighlightCubit extends Cubit<ReaderImageHighlightState> {
 
   final HighlightRepository _highlightRepository;
 
-  Future<void> save({
+  /// Returns false when no write is accepted; true confirms repository success.
+  Future<bool> save({
     required String sourceId,
     required SourceType sourceType,
     required int pageIndex,
@@ -37,7 +38,10 @@ class ReaderImageHighlightCubit extends Cubit<ReaderImageHighlightState> {
     double? progress,
     String? chapterTitle,
   }) async {
-    if (state.status == ReaderImageHighlightStatus.saving) return;
+    // A closed/busy cubit must not report an unperformed save as successful.
+    if (isClosed || state.status == ReaderImageHighlightStatus.saving) {
+      return false;
+    }
     emit(
       const ReaderImageHighlightState(
         status: ReaderImageHighlightStatus.saving,
@@ -57,8 +61,8 @@ class ReaderImageHighlightCubit extends Cubit<ReaderImageHighlightState> {
         color: color,
         note: _normalizedNote(note),
       );
-      if (isClosed) return;
-      emit(const ReaderImageHighlightState());
+      if (!isClosed) emit(const ReaderImageHighlightState());
+      return true;
     } catch (error, stackTrace) {
       if (!isClosed) emit(const ReaderImageHighlightState());
       Error.throwWithStackTrace(error, stackTrace);

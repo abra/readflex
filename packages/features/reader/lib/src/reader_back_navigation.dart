@@ -7,6 +7,7 @@ import 'reader_ui_cubit.dart';
 enum ReaderBackTarget {
   searchPanel,
   tocDrawer,
+  imageSelection,
   highlightPopup,
   searchNavigation,
 
@@ -18,9 +19,11 @@ ReaderBackTarget readerBackTargetFor({
   required ReaderOverlay overlay,
   required bool highlightPopupVisible,
   required bool searchNavigating,
+  bool imageSelectionVisible = false,
 }) {
   if (overlay == ReaderOverlay.search) return ReaderBackTarget.searchPanel;
   if (overlay == ReaderOverlay.toc) return ReaderBackTarget.tocDrawer;
+  if (imageSelectionVisible) return ReaderBackTarget.imageSelection;
   if (highlightPopupVisible) return ReaderBackTarget.highlightPopup;
   if (searchNavigating) return ReaderBackTarget.searchNavigation;
   return ReaderBackTarget.route;
