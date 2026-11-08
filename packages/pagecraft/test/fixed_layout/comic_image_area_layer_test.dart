@@ -833,8 +833,8 @@ void main() {
       final saved = before.at(115, 145);
       expect(
         saved.b,
-        closeTo(38 / 255, .01),
-        reason: 'saved paper takes an 85% tint',
+        closeTo(26 / 255, .01),
+        reason: 'saved paper takes a 90% tint',
       );
       expect(before.at(95, 145), const Color(0xFF000000));
       expect(before.at(80, 350), const Color(0xFF204080));
@@ -870,7 +870,14 @@ void main() {
         reason: 'the edge has no extra border',
       );
       expect(pixels.at(80, 350).b, closeTo(45 / 255, .01));
-      expect(pixels.at(115, 145).b, lessThan(saved.b - .08));
+      final dimmedSaved = Color.alphaBlend(
+        const Color(0xFF000000).withValues(alpha: .65),
+        saved,
+      );
+      final actualSaved = pixels.at(115, 145);
+      expect(actualSaved.r, closeTo(dimmedSaved.r, .01));
+      expect(actualSaved.g, closeTo(dimmedSaved.g, .01));
+      expect(actualSaved.b, closeTo(dimmedSaved.b, .01));
       draft.clear();
       await tester.pump();
       final restored = await _paintLayer(tester, savedTextSample: true);
@@ -926,7 +933,7 @@ void main() {
         final saved = await _paintLayer(tester, savedTextSample: true);
         final paper = saved.at(115, 145);
         final expectedPaper = Color.alphaBlend(
-          selected.withValues(alpha: .85),
+          selected.withValues(alpha: .90),
           const Color(0xFFFFFFFF),
         );
         expect(paper.r, closeTo(expectedPaper.r, .01));

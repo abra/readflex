@@ -1378,7 +1378,7 @@ While a draft exists, a black scrim dims the rest of the image, including the
 other page of a spread.
 The scrim uses twice the draft opacity, capped at 65% (65% by default).
 Clearing the draft restores the original page appearance.
-Saved image areas use an 85% multiply tint, coloring the paper while preserving
+Saved image areas use a 90% multiply tint, coloring the paper while preserving
 dark ink instead of washing it out. Triangle
 legs are 48 screen pixels, capped at 45% of the crop's short side; each
 whole triangle resizes its corner. Tiny crops retain the same 64-pixel touch

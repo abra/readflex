@@ -275,7 +275,7 @@ A solid white diagonal double-ended arrow marks each draggable corner. The
 corner controls use 85% opacity to remain distinct over artwork. Image drafts
 have no border or separator lines; their fill uses the selected palette colour
 at 45% opacity, independent of text-highlight opacity. The page outside the
-draft is dimmed to focus the selection. Saved image annotations use an 85%
+draft is dimmed to focus the selection. Saved image annotations use a 90%
 multiply tint to remain visible without lightening dark ink in the artwork.
 Image areas and their popup swatches keep the existing paper palette's hues
 and saturation with stronger tones at 0.65 HSL lightness: the underlying

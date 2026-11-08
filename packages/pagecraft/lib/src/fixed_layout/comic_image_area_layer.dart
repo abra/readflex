@@ -494,7 +494,7 @@ class _ImageAreaPainter extends CustomPainter {
       canvas.drawRect(
         _toLayer(area.rect),
         Paint()
-          ..color = area.color.withValues(alpha: 0.85)
+          ..color = area.color.withValues(alpha: 0.90)
           ..blendMode = BlendMode.multiply,
       );
     }
