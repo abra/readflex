@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/widgets.dart';
 
 import 'preferences.dart';
@@ -47,8 +46,8 @@ class PreferencesScope extends StatelessWidget {
     return scope.preferences;
   }
 
-  /// Returns [ThemeMode] and rebuilds only when the app theme preference changes.
-  static ThemeMode themeModeOf(BuildContext context) {
+  /// Returns [AppThemeMode] and rebuilds only when the app theme preference changes.
+  static AppThemeMode themeModeOf(BuildContext context) {
     final scope = InheritedModel.inheritFrom<_PreferencesInherited>(
       context,
       aspect: _PreferencesAspect.themeMode,

@@ -19,7 +19,7 @@ import 'package:library_feature/src/library_language_sheet.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
 import 'package:library_feature/src/library_list_sliver.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -125,6 +125,19 @@ void main() {
   late FakeCollectionRepository collectionRepository;
   late PreferencesService preferencesService;
 
+  setUpAll(() async {
+    // Load before render objects subscribe to system-font change notifications.
+    for (final (family, asset) in const [
+      ('SearchViewportGeist', 'Geist-Variable.ttf'),
+      ('SearchViewportLiterata', 'Literata-Variable.ttf'),
+    ]) {
+      await (FontLoader(family)..addFont(
+            rootBundle.load('packages/component_library/fonts/$asset'),
+          ))
+          .load();
+    }
+  });
+
   setUp(() async {
     bookRepository = FakeBookRepository();
     collectionRepository = FakeCollectionRepository();
@@ -152,7 +165,7 @@ void main() {
         navigatorKey: navigatorKey,
         locale: PreferencesScope.localeOf(context),
         supportedLocales: ReadflexSupportedLocales.locales,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         theme: theme ?? AppTheme.light(),
         // As in the app: a new sheet clears toasts that would cover it.
         navigatorObservers: [ToastNavigatorObserver()],
@@ -164,9 +177,11 @@ void main() {
           preferencesService: preferencesService,
           isOffline: isOffline,
           openImportOnStart: openImportOnStart,
-          onSourcePressed:
-              (source, {onSourceOpened, onReadingPositionSaved}) async =>
-                  onSourcePressed?.call(source),
+          onSourcePressed: (
+            source, {
+            onSourceOpened,
+            onReadingPositionSaved,
+          }) async => onSourcePressed?.call(source),
           onAddPressed:
               onAddPressed ??
               ({required onImported, entry = LibraryImportEntry.menu}) async {},
@@ -544,7 +559,7 @@ void main() {
     await tester.tap(find.text('Dark'));
     await tester.pumpAndSettle();
 
-    expect(preferencesService.current.themeMode, ThemeMode.dark);
+    expect(preferencesService.current.themeMode, AppThemeMode.dark);
     expect(find.text('Display'), findsOneWidget);
   });
 
@@ -1027,15 +1042,6 @@ void main() {
 
   testWidgets('short German keyboard viewport keeps no-results text above '
       'the capsule and recovers through its Clear action', (tester) async {
-    for (final (family, asset) in const [
-      ('SearchViewportGeist', 'Geist-Variable.ttf'),
-      ('SearchViewportLiterata', 'Literata-Variable.ttf'),
-    ]) {
-      await (FontLoader(family)..addFont(
-            rootBundle.load('packages/component_library/fonts/$asset'),
-          ))
-          .load();
-    }
     tester.view
       ..physicalSize = const Size(320, 568)
       ..devicePixelRatio = 1;
@@ -1337,8 +1343,10 @@ void main() {
               ),
             );
           },
-          onAddPressed:
-              ({required onImported, entry = LibraryImportEntry.menu}) async {},
+          onAddPressed: ({
+            required onImported,
+            entry = LibraryImportEntry.menu,
+          }) async {},
         ),
       ),
     );
@@ -2161,8 +2169,11 @@ void main() {
           bookRepository: bookRepository,
           collectionRepository: collectionRepository,
           preferencesService: preferencesService,
-          onSourcePressed:
-              (_, {onSourceOpened, onReadingPositionSaved}) async {},
+          onSourcePressed: (
+            _, {
+            onSourceOpened,
+            onReadingPositionSaved,
+          }) async {},
           onAddPressed:
               ({required onImported, entry = LibraryImportEntry.menu}) async {
                 invocations++;
@@ -2314,8 +2325,10 @@ void main() {
                   second,
                 ]);
               },
-          onAddPressed:
-              ({required onImported, entry = LibraryImportEntry.menu}) async {},
+          onAddPressed: ({
+            required onImported,
+            entry = LibraryImportEntry.menu,
+          }) async {},
         ),
       ),
     );
@@ -2398,8 +2411,10 @@ void main() {
                 notifySourceOpened = onSourceOpened;
                 await routeCompleter.future;
               },
-          onAddPressed:
-              ({required onImported, entry = LibraryImportEntry.menu}) async {},
+          onAddPressed: ({
+            required onImported,
+            entry = LibraryImportEntry.menu,
+          }) async {},
         ),
       ),
     );
@@ -2493,8 +2508,10 @@ void main() {
                 notifyPositionSaved = onReadingPositionSaved;
                 await routeCompleter.future;
               },
-          onAddPressed:
-              ({required onImported, entry = LibraryImportEntry.menu}) async {},
+          onAddPressed: ({
+            required onImported,
+            entry = LibraryImportEntry.menu,
+          }) async {},
         ),
       ),
     );

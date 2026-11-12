@@ -1137,26 +1137,29 @@ void main() {
   });
 
   group('ComputedStyles', () {
-    test('text nodes take the parent style and identical styles are shared', () {
-      final doc = ContentDocument.parseXml(
-        '<html xmlns="http://www.w3.org/1999/xhtml"><body><p>one</p><p>two</p><p class="x">three</p></body></html>',
-      );
-      final styles = StyleResolver([
-        ua,
-        CssSheetSource(
-          CssStyleSheet.parse('.x { color: red }'),
-          CssOrigin.author,
-        ),
-      ]).resolve(doc);
-      final body = doc.firstChildOf(0);
-      final p1 = doc.childAt(body, 0);
-      final p2 = doc.childAt(body, 1);
-      final p3 = doc.childAt(body, 2);
-      expect(styles[doc.firstChildOf(p1)], same(styles[p1]));
-      expect(styles[p1], same(styles[p2]));
-      expect(styles[p3], isNot(same(styles[p1])));
-      expect(styles.distinctStyleCount, 4, reason: 'html, body, p, p.x');
-      expect(styles.rootFontSize, 16);
-    });
+    test(
+      'text nodes take the parent style and identical styles are shared',
+      () {
+        final doc = ContentDocument.parseXml(
+          '<html xmlns="http://www.w3.org/1999/xhtml"><body><p>one</p><p>two</p><p class="x">three</p></body></html>',
+        );
+        final styles = StyleResolver([
+          ua,
+          CssSheetSource(
+            CssStyleSheet.parse('.x { color: red }'),
+            CssOrigin.author,
+          ),
+        ]).resolve(doc);
+        final body = doc.firstChildOf(0);
+        final p1 = doc.childAt(body, 0);
+        final p2 = doc.childAt(body, 1);
+        final p3 = doc.childAt(body, 2);
+        expect(styles[doc.firstChildOf(p1)], same(styles[p1]));
+        expect(styles[p1], same(styles[p2]));
+        expect(styles[p3], isNot(same(styles[p1])));
+        expect(styles.distinctStyleCount, 4, reason: 'html, body, p, p.x');
+        expect(styles.rootFontSize, 16);
+      },
+    );
   });
 }

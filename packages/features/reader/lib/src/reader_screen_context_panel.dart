@@ -24,11 +24,10 @@ String? _normalizedNoteText(String? note) {
   return normalized;
 }
 
-typedef _ExecuteTextAction =
-    Future<void> Function(
-      TextAction action,
-      TextSelectionContext selection,
-    );
+typedef _ExecuteTextAction = Future<void> Function(
+  TextAction action,
+  TextSelectionContext selection,
+);
 
 TextSelectionContext _withLiveReaderSelection(
   TextSelectionContext current,

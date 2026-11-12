@@ -11,12 +11,10 @@ import 'practice_source_index.dart';
 /// content is dropped.
 class PracticeItemLoader {
   const PracticeItemLoader({
-    required DictionaryRepository dictionaryRepository,
-    required HighlightRepository highlightRepository,
-    required FsrsRepository fsrsRepository,
-  }) : _dictionaryRepository = dictionaryRepository,
-       _highlightRepository = highlightRepository,
-       _fsrsRepository = fsrsRepository;
+    required this._dictionaryRepository,
+    required this._highlightRepository,
+    required this._fsrsRepository,
+  });
 
   final DictionaryRepository _dictionaryRepository;
   final HighlightRepository _highlightRepository;

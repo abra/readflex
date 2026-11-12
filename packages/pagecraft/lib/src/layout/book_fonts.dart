@@ -4,6 +4,7 @@
 library;
 
 import 'package:meta/meta.dart';
+
 import '../fonts/font_ink.dart';
 
 @immutable

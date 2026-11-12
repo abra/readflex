@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -7,6 +7,8 @@ import '../support/reading_fixture.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
+
+import 'package:preferences_service/preferences_service.dart';
 
 void main() {
   setUpAll(loadUiFonts);
@@ -34,8 +36,8 @@ void main() {
         (p) => p.copyWith(
           locale: profile.locale,
           themeMode: profile.brightness == Brightness.light
-              ? ThemeMode.light
-              : ThemeMode.dark,
+              ? AppThemeMode.light
+              : AppThemeMode.dark,
         ),
       );
       await tester.pumpWidget(
@@ -195,8 +197,10 @@ void main() {
       addTearDown(tester.view.reset);
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await app.preferencesService.update(
-        (p) =>
-            p.copyWith(locale: const Locale('ar'), themeMode: ThemeMode.dark),
+        (p) => p.copyWith(
+          locale: const Locale('ar'),
+          themeMode: AppThemeMode.dark,
+        ),
       );
       await tester.pumpWidget(
         RepaintBoundary(key: goldenBoundary, child: app.widget),

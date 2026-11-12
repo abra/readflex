@@ -110,7 +110,7 @@ URL или HTML статьи — extraction backend; запрос определ
 
 ### Версии и зависимости
 
-Flutter закреплён в `.fvmrc` — `3.44.9`. Используйте `fvm flutter` и `fvm dart`:
+Flutter закреплён в `.fvmrc` — `3.50.0` (Dart `3.14`). Используйте `fvm flutter` и `fvm dart`:
 системная версия SDK может иначе анализировать код и рисовать golden images.
 Диапазон Dart в pubspec не заменяет закреплённый Flutter SDK.
 
@@ -119,10 +119,18 @@ Rust закреплён в `packages/pagecraft/rust/rust-toolchain.toml` — `1.
 `flutter_rust_bridge_codegen` должна быть `2.13.0`, если регенерируется мост.
 Обычная сборка использует уже сохранённые bindings.
 
-Android использует AGP `8.13.2`, wrapper Gradle `8.14`, Java source compatibility
+Android использует AGP `9.3.1`, wrapper Gradle `9.5.0`, Kotlin `2.4.20`, Java source compatibility
 17. Gradle запускайте JDK, настроенным для Flutter; Java 21 поддерживается.
 Случайный системный JDK более новой версии может не поддерживаться wrapper
 или плагинами. Для iOS нужны Xcode, соответствующие SDK и CocoaPods.
+
+UI использует отдельные `material_ui` и `cupertino_ui`, сохраняя одну дизайн-систему
+в `component_library`. Core layout и нативный selection bridge используют Flutter
+core APIs. Настройки хранят собственный `AppThemeMode`, а приложение преобразует
+его в UI `ThemeMode`; сохранённые имена тем не изменены. Локализацию подключают
+через `readflexLocalizationsDelegates`, а не legacy-список генератора SDK.
+Android пока сохраняет `android.builtInKotlin=false` и `android.newDsl=false`:
+это поддерживаемый AGP 9 путь совместимости для существующих плагинов.
 
 Node.js не нужен для стандартной сборки, тестов или benchmark-оркестрации.
 Он остаётся optional maintenance tool для регенерации committed данных:
@@ -989,7 +997,8 @@ make test-tablet-layout DEVICE=<tablet-id> ROTATION=1
 
 ### Goldens
 
-Baselines создавались на macOS arm64 с Flutter 3.44.9. Exact equality зависит
+Baselines проверены на macOS arm64 с Flutter 3.50.0: при миграции сопоставлены
+568 полноэкранных снимков со старой версией. Exact equality зависит
 от engine и rasterizer; смена SDK/host требует осмысленного baseline review.
 `make test-goldens` сравнивает, `make update-goldens` намеренно обновляет.
 Нельзя регенерировать картинки, чтобы скрыть непонятный failure.

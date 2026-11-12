@@ -4,7 +4,7 @@ import 'package:collection_repository/collection_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:component_library/src/app_sheet_drag_handle.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -665,7 +665,7 @@ Future<_SheetHarness> _open(
       theme: AppTheme.light(),
       locale: locale,
       supportedLocales: ReadflexSupportedLocales.locales,
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      localizationsDelegates: readflexLocalizationsDelegates,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: TextScaler.linear(scale),
@@ -770,7 +770,7 @@ Future<_ModalHarness> _openModal(
   await tester.pumpWidget(
     MaterialApp(
       theme: AppTheme.light(),
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      localizationsDelegates: readflexLocalizationsDelegates,
       supportedLocales: ReadflexSupportedLocales.locales,
       home: Scaffold(
         body: Builder(

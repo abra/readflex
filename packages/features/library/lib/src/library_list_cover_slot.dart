@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'library_layout.dart';
 import 'library_selection_tint.dart';

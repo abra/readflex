@@ -2,7 +2,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:component_library/component_library.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -392,7 +392,7 @@ extension on WidgetTester {
       MaterialApp(
         theme: dark ? AppTheme.dark() : AppTheme.light(),
         locale: locale,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(

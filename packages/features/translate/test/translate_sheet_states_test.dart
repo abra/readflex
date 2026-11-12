@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -201,7 +201,7 @@ Future<void> _pumpSheet(
     MaterialApp(
       locale: locale,
       supportedLocales: ReadflexSupportedLocales.locales,
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      localizationsDelegates: readflexLocalizationsDelegates,
       theme: AppTheme.light(),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),

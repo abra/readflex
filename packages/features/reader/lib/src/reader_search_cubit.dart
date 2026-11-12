@@ -111,9 +111,8 @@ class ReaderSearchState extends Equatable {
 class ReaderSearchCubit extends Cubit<ReaderSearchState> {
   ReaderSearchCubit({
     List<String> initialRecentQueries = const [],
-    ValueChanged<List<String>>? onRecentQueriesChanged,
-  }) : _onRecentQueriesChanged = onRecentQueriesChanged,
-       super(ReaderSearchState(recentQueries: initialRecentQueries));
+    this._onRecentQueriesChanged,
+  }) : super(ReaderSearchState(recentQueries: initialRecentQueries));
 
   static const minQueryLength = 2;
   static const historyLimit = 10;

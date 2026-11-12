@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_icon_size.dart';

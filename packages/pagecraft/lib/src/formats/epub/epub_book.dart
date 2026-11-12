@@ -99,8 +99,8 @@ class EpubBook {
     required this.rendition,
     required this.media,
     required this.dir,
-    required EpubEncryption encryption,
-  }) : _encryption = encryption;
+    required this._encryption,
+  });
 
   /// Opens the container at [path].
   static Future<EpubBook> open(String path) async {

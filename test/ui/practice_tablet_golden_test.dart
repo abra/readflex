@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:practice/practice.dart';
 import 'package:readflex/app/routing.dart';
@@ -11,6 +11,8 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
+
+import 'package:preferences_service/preferences_service.dart';
 
 /// Tablet Practice uses the production router and repositories throughout:
 /// start a session, reveal and rate both items, then return to the refreshed hub.
@@ -52,8 +54,8 @@ void main() {
           (preferences) => preferences.copyWith(
             locale: profile.locale,
             themeMode: profile.brightness == Brightness.dark
-                ? ThemeMode.dark
-                : ThemeMode.light,
+                ? AppThemeMode.dark
+                : AppThemeMode.light,
           ),
         );
         await _seedPractice(app);

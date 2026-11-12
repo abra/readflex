@@ -99,7 +99,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   device_screen_brightness: 6696426852c120e21d5de19b317de9b63dd02930
-  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
   google_mlkit_commons: 75b2579ccf522fe01d42e689babda04c4510ba2f
   google_mlkit_translation: ff8aebb952f811e7773fa7258a64a5c342885241
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
@@ -116,6 +116,6 @@ SPEC CHECKSUMS:
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   SSZipArchive: 8a6ee5677c8e304bebc109e39cf0da91ccef22ea
 
-PODFILE CHECKSUM: 9432c8d6a6f51a181af6a1cbccaecfd341e9d89a
+PODFILE CHECKSUM: c154546b0c6a3f68ad76e40fd53c76c93a8093de
 
 COCOAPODS: 1.16.2

@@ -150,12 +150,13 @@ List<ArchitectureViolation> checkArchitecture(Directory root) {
           byName[name];
       declared.add(target?.name ?? name);
       if (target != null) connect(source, target, source.pubspec, line);
-      if (source.name == 'domain_models' && name == 'flutter') {
+      if (source.name == 'domain_models' &&
+          const {'flutter', 'material_ui', 'cupertino_ui'}.contains(name)) {
         report(
           source.pubspec,
           line,
           'domain-purity',
-          'domain_models must not depend on Flutter.',
+          'domain_models must not depend on Flutter or its UI libraries.',
         );
       }
     }
@@ -189,15 +190,29 @@ List<ArchitectureViolation> checkArchitecture(Directory root) {
                     .toList()
               : const <String>[];
           final line = parsed.lineInfo.getLocation(literal.offset).lineNumber;
+          if (value == 'package:flutter/material.dart' ||
+              value == 'package:flutter/cupertino.dart') {
+            report(
+              file.path,
+              line,
+              'legacy-design-import',
+              'Use standalone design libraries, or Flutter core imports for '
+                  'presentation-neutral code.',
+            );
+          }
           if (source.name == 'domain_models' &&
               (value == 'dart:ui' ||
                   (uri.scheme == 'package' &&
-                      packageSegments.firstOrNull == 'flutter'))) {
+                      const {
+                        'flutter',
+                        'material_ui',
+                        'cupertino_ui',
+                      }.contains(packageSegments.firstOrNull)))) {
             report(
               file.path,
               line,
               'domain-purity',
-              'domain_models must not import Flutter or dart:ui.',
+              'domain_models must not import Flutter, UI libraries or dart:ui.',
             );
           }
           _Package? target;

@@ -13,9 +13,9 @@ import 'package:xml/xml.dart';
 /// `fb2_fixtures.mjs` before the WebView reader's removal).
 void main() {
   const root = 'test/fixtures/fb2';
-  final expected =
-      jsonDecode(File('$root/expected.json').readAsStringSync())
-          as Map<String, dynamic>;
+  final expected = jsonDecode(
+    File('$root/expected.json').readAsStringSync(),
+  ) as Map<String, dynamic>;
 
   /// A tree with element names, the attributes that matter and text, for
   /// comparing the browser's serialization with ours regardless of

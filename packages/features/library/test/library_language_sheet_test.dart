@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_language_sheet.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -21,7 +21,7 @@ void main() {
     theme: AppTheme.light(),
     locale: const Locale('en'),
     supportedLocales: ReadflexSupportedLocales.locales,
-    localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+    localizationsDelegates: readflexLocalizationsDelegates,
     home: Scaffold(
       body: Align(
         alignment: Alignment.bottomCenter,
@@ -132,7 +132,7 @@ void main() {
           theme: AppTheme.light(),
           locale: locale,
           supportedLocales: ReadflexSupportedLocales.locales,
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           home: Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,

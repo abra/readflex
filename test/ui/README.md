@@ -69,6 +69,16 @@ complete accessibility, visual correctness or performance on all devices.
 
 Run from the repository root with the FVM-pinned Flutter SDK:
 
+The current pin is Flutter 3.50.0. Review engine/design-package rasterization
+changes against captures from the previous SDK before updating goldens.
+Native release builds and other root Flutter commands must run serially:
+Flutter's release plugin graph excludes development plugins, and a concurrent
+test/pub invocation can overwrite the Android plugin registrant. Use separate
+checkouts for native comparisons between SDKs; keep the same device and data.
+After switching between release and debug/profile, use the normal pub-enabled
+build to regenerate the registrant for that mode. Reserve `--no-pub` for an
+already prepared dependency graph; it can retain the previous mode's registrant.
+
 ```sh
 make get
 make test-tools
@@ -96,6 +106,8 @@ changed image as a baseline or suppress a failed comparison.
   These tests also run in the existing full suite, without a second invocation.
 - `test-ui`: production-root flows and golden comparisons, no device needed.
 - `test-goldens`: only visual comparisons, without modifying baselines.
+  Golden cases must declare `tags: ['golden']`; a `*_golden_test.dart` filename
+  alone does not include them. `test-ui` also runs untagged UI cases.
 - `test-tools`: Dart coverage/benchmark tool tests in `test/tooling/`, also
   included in `make test`; these run without the app UI suites or Node.js.
 - `verify`: formatting, analysis, all active package tests (pagecraft's
@@ -125,9 +137,19 @@ and signing prerequisites still apply to physical iOS devices. No API keys,
 credentials to this deterministic test suite.
 
 Native tests unmount their root widget during cleanup to dispose subscriptions
-and routes. Do not use `--keep-app-running` for normal verification: it leaves
-the test process showing an empty surface, not the production Library. Relaunch
-the regular app with `run.sh` after device testing.
+and routes. Use a dedicated simulator/emulator or disposable test installation:
+`flutter drive` normally uninstalls its test app during cleanup. To retain an
+installation, use `--keep-app-running`, then terminate the test process and
+reinstall/relaunch the regular app with `run.sh`. The retained test process shows
+an empty surface, not the production Library.
+For a comparison on an existing personal installation, verify matching APK
+signers and compatible version codes, back up its APKs, then manage compatible
+updates explicitly with `adb install -r`. Launch the profile harness and connect
+the driver with `--use-existing-app=<forwarded-vm-service-uri>` and
+`--keep-app-running` so the SDK cannot fall back to reinstalling it. Use isolated
+fixture storage, restore the original APKs afterward, and restore any temporary
+keep-awake setting. APK backups contain code; preserving user data also requires
+avoiding uninstall, data clearing and production database migrations.
 On iOS Simulator, disable I/O > Keyboard > Connect Hardware Keyboard for the
 native keyboard scenario. Check both the global preference and the selected
 device's override; a per-device value can keep the hardware keyboard connected
@@ -150,7 +172,7 @@ make test-tablet-layout DEVICE=<tablet-id>
 make test-tablet-layout DEVICE=<tablet-id> ROTATION=1
 ```
 
-`test-tablet` runs the 20-case native regression batch: tablet viewport, Library
+`test-tablet` runs the 21-case native regression batch: tablet viewport, Library
 controls/collections, text-book and article actions, EPUB/FB2/MOBI import, CBZ
 zoom, PDF, the native MOBI backend, notes and toasts. `test-tablet-layout` runs
 four tests covering Library grid/list and RTL selection, book columns and reading
@@ -171,7 +193,7 @@ full screen" prompt. Such a window can take focus, intercept taps and prevent a
 clipboard read even while Flutter still finds the underlying widget. Inspect the
 native screenshot and focused window before treating this as an app regression.
 
-`test-phone` runs the corresponding native phone batch with 22 cases, including
+`test-phone` runs the corresponding native phone batch with 23 cases, including
 the same reader/Library actions plus Arabic reading and a full Practice session.
 It requires an actual window below 600dp on its shortest side; the tablet batch
 requires at least 600dp. Neither substitutes a synthetic tester viewport.
@@ -227,7 +249,8 @@ same as for `test-device` above.
 | Native persistence | Explicit highlight writes text/CFI to real repository, renders nonzero geometry after reopen, and opens by tapping its Highlights row without copy/arrow controls | `integration_test/reader_flows_test.dart` |
 | Native book import | EPUB, FB2 and MOBI built in the test import through `pagecraft` on the device: title and author from the book, the cover decoded by the platform codecs and scaled to 480×720, each import under 5 s, all three shown in the Library | `integration_test/native_import_test.dart` |
 | Native DjVu | Original three-page fixture imports through the production helper with document metadata and a first-page cover; native DjVu pages render, hidden-text search opens its result, Pages requests previews, a page bookmark persists, and reopening restores the saved page | `integration_test/djvu_reader_test.dart`; reader `reader_djvu_surface_test.dart`, `reader_screen_djvu_test.dart` |
-| PDF selection | Both adaptive 48dp handles adjust exact insertion boundaries after a held grip and short drag, at page fit and zoom; the loupe follows the active boundary and actions hide while adjusting. Dark and original pages retain readable ink; crossings, Unicode boundaries and cancellation have focused coverage | `integration_test/pdf_reader_test.dart`; pagecraft `pdf_selection_drag_test.dart`, `pdf_selection_geometry_test.dart`; reader `reader_screen_pdf_test.dart` |
+| PDF fallback selection | With native controls explicitly unavailable for each test, both Flutter 48dp handles adjust exact insertion boundaries after a held grip and short drag, at page fit and zoom; the loupe follows the active boundary and actions hide while adjusting. The capability mock is removed before other tests. Dark and original pages retain readable ink; crossings, Unicode boundaries and cancellation have focused coverage | `integration_test/pdf_reader_test.dart`; pagecraft `pdf_selection_drag_test.dart`, `pdf_selection_geometry_test.dart`; reader `reader_screen_pdf_test.dart` |
+| Native selection | Real plugin activation, Flutter fallback removal, custom Reader menu and exact PDF source ranges; callback-driven integration assertions do not simulate OS handle dragging. The separate UIKit XCTest harness drags actual native handles, including crossings, atomic words and phone RTL | `integration_test/native_selection_controls_test.dart`; `packages/native_text_selection/test_support/ios/HarnessUITests.swift` |
 | PDF font metrics | An original Cyrillic scan/text fixture reproduces collapsed glyph bounds; native font cells cover the visible text and preserve anchors. Tests include crop origin, rotation, concurrent page loads and safe close | `integration_test/pdf_reader_test.dart`; pagecraft `pdf_text_metrics_test.dart`, `pdf_native_task_test.dart` |
 | Initial position persistence | A reopened book opens on its saved page and closing it keeps the saved position | reader `reader_screen_text_test.dart` |
 | Active chapter contrast | Actual selected TOC tile uses paired foreground/background colors, including alpha compositing; light/dark, large text and phone RTL snapshots | `reader_contents_golden_test.dart` |
@@ -302,9 +325,10 @@ progress animation.
 
 Pixel equality is exact, not a permissive percentage threshold. Use the same
 Flutter/engine and host platform for comparisons; changes of engine or host
-rasterizer can require a reviewed baseline migration. Initial baselines were
-created on macOS arm64 with Flutter 3.44.9. Keep that environment for automated
-comparisons until another host has been explicitly validated.
+rasterizer can require a reviewed baseline migration. The current baselines
+were reviewed on macOS arm64 with Flutter 3.50.0 against 568 matched captures
+from 3.44.9. Keep the pinned SDK and host for automated comparisons until another
+environment has been explicitly validated.
 
 When the design intentionally changes:
 

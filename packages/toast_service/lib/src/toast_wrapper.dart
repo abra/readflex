@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:toastification/toastification.dart';
 
 import 'toast_lift.dart';

@@ -7,7 +7,7 @@ import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 import 'package:local_storage/local_storage.dart';
@@ -111,7 +111,7 @@ final class UiTestApp {
           onboardingCompleted: onboardingCompleted,
           readerSelectionTipDismissed: readerSelectionTipDismissed,
           locale: const Locale('en'),
-          themeMode: ThemeMode.light,
+          themeMode: AppThemeMode.light,
           translationTargetLanguageCode: 'de',
         ),
       );

@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -14,7 +14,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           supportedLocales: ReadflexLocalizations.supportedLocales,
           home: BlocProvider.value(
             value: cubit,

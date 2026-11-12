@@ -201,30 +201,35 @@ void main() {
   });
 
   group('images', () {
-    test('block images fit the column and the page, centred by auto margins', () {
-      final c = column(
-        '<img src="wide.png" style="display: block; margin: 0 auto"/>'
-        '<img src="small.png" style="display: block; margin: 0 auto"/>'
-        '<img src="right.png" style="float: right"/>'
-        '<div><svg viewBox="0 0 50 100"><image width="50" height="100" xlink:href="cover.jpg"/></svg></div>',
-        pageHeight: 80,
-        images: const {
-          'wide.png': Size(400, 100),
-          'small.png': Size(20, 20),
-          'right.png': Size(30, 10),
-        },
-      );
-      final rects = [for (final i in c.items.whereType<ColumnImage>()) i.rect];
-      expect(rects[0], const Rect.fromLTWH(0, 0, 100, 25));
-      expect(rects[1], const Rect.fromLTWH(40, 25, 20, 20));
-      expect(rects[2], const Rect.fromLTWH(70, 45, 30, 10));
-      expect(
-        rects[3],
-        const Rect.fromLTWH(30, 55, 40, 80),
-        reason: 'a cover fits the page',
-      );
-      expect(c.items.whereType<ColumnImage>().last.src, 'cover.jpg');
-    });
+    test(
+      'block images fit the column and the page, centred by auto margins',
+      () {
+        final c = column(
+          '<img src="wide.png" style="display: block; margin: 0 auto"/>'
+          '<img src="small.png" style="display: block; margin: 0 auto"/>'
+          '<img src="right.png" style="float: right"/>'
+          '<div><svg viewBox="0 0 50 100"><image width="50" height="100" xlink:href="cover.jpg"/></svg></div>',
+          pageHeight: 80,
+          images: const {
+            'wide.png': Size(400, 100),
+            'small.png': Size(20, 20),
+            'right.png': Size(30, 10),
+          },
+        );
+        final rects = [
+          for (final i in c.items.whereType<ColumnImage>()) i.rect,
+        ];
+        expect(rects[0], const Rect.fromLTWH(0, 0, 100, 25));
+        expect(rects[1], const Rect.fromLTWH(40, 25, 20, 20));
+        expect(rects[2], const Rect.fromLTWH(70, 45, 30, 10));
+        expect(
+          rects[3],
+          const Rect.fromLTWH(30, 55, 40, 80),
+          reason: 'a cover fits the page',
+        );
+        expect(c.items.whereType<ColumnImage>().last.src, 'cover.jpg');
+      },
+    );
   });
 
   group('floats', () {
@@ -900,14 +905,17 @@ void main() {
       expect(pages, const [ColumnPage(0, 70), ColumnPage(100, 120)]);
     });
 
-    test('a forced break ends the page; nothing forces an empty first page', () {
-      final c = column(
-        '<p style="page-break-before: always">a</p><p style="page-break-before: always">b</p>',
-      );
-      final pages = paginateColumn(c, pageHeight: 500);
-      expect(pages, hasLength(2));
-      expect(pages[1].top, c.paragraphs.last.rect.top);
-    });
+    test(
+      'a forced break ends the page; nothing forces an empty first page',
+      () {
+        final c = column(
+          '<p style="page-break-before: always">a</p><p style="page-break-before: always">b</p>',
+        );
+        final pages = paginateColumn(c, pageHeight: 500);
+        expect(pages, hasLength(2));
+        expect(pages[1].top, c.paragraphs.last.rect.top);
+      },
+    );
 
     test('a heading does not end a page when a later break fits', () {
       final c = column(

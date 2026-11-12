@@ -122,26 +122,17 @@ class _TextColumnPageLeaf extends LeafRenderObjectWidget {
 
 class RenderTextColumnPage extends RenderBox {
   RenderTextColumnPage({
-    required ColumnLayout column,
-    required ColumnPage page,
-    required BookImageCache images,
-    required ImageKeyOf imageKey,
-    required EdgeInsets padding,
-    required double devicePixelRatio,
-    SelectionRegistrar? registrar,
-    Color? selectionColor,
-    ContentDocument? document,
-    List<TextHighlight> highlights = const [],
-  }) : _column = column,
-       _page = page,
-       _images = images,
-       _imageKey = imageKey,
-       _padding = padding,
-       _devicePixelRatio = devicePixelRatio,
-       _registrar = registrar,
-       _selectionColor = selectionColor,
-       _document = document,
-       _highlights = highlights;
+    required this._column,
+    required this._page,
+    required this._images,
+    required this._imageKey,
+    required this._padding,
+    required this._devicePixelRatio,
+    this._registrar,
+    this._selectionColor,
+    this._document,
+    this._highlights = const [],
+  });
 
   ColumnLayout _column;
   set column(ColumnLayout value) {

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,179 +24,346 @@ void main() {
     messenger.setMockMethodCallHandler(SystemChannels.platform_views, null);
   });
 
-  testWidgets(
-    'an unregistered host keeps the original selectable child',
-    (tester) async {
-      messenger.setMockMethodCallHandler(
-        _capabilities,
-        (_) async => throw MissingPluginException(),
-      );
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: NativeSelectionSurface(
-            snapshot: _snapshot(),
-            onSelectionChanged: (_) => fail('No native callbacks expected'),
-            child: const Text('Hello'),
-          ),
+  testWidgets('an unregistered host keeps the original selectable child', (
+    tester,
+  ) async {
+    messenger.setMockMethodCallHandler(
+      _capabilities,
+      (_) async => throw MissingPluginException(),
+    );
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: NativeSelectionSurface(
+          snapshot: _snapshot(),
+          onSelectionChanged: (_) => fail('No native callbacks expected'),
+          child: const Text('Hello'),
         ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Hello'), findsOneWidget);
-      expect(find.byType(UiKitView), findsNothing);
-      expect(await NativeSelectionPlatform.isAvailable, isFalse);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Hello'), findsOneWidget);
+    expect(find.byType(UiKitView), findsNothing);
+    expect(await NativeSelectionPlatform.isAvailable, isFalse);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets(
-    'range updates reuse geometry and stale events are ignored',
-    (tester) async {
-      final calls = <MethodCall>[];
-      final ranges = <TextSelection?>[];
-      final active = <bool>[];
-      final adjusting = <bool>[];
-      final actions = <String>[];
-      var backgroundTaps = 0;
-      var viewId = -1;
-      Completer<bool>? delayedUpdate;
-      messenger.setMockMethodCallHandler(_capabilities, (_) async => true);
-      messenger.setMockMethodCallHandler(SystemChannels.platform_views, (
-        call,
-      ) async {
-        if (call.method == 'create') {
-          viewId = (call.arguments as Map)['id'] as int;
-          final channel = MethodChannel('$_viewType/$viewId');
-          messenger.setMockMethodCallHandler(channel, (call) async {
-            calls.add(call);
-            if (call.method == 'update' &&
-                (call.arguments as Map)['revision'] == 3 &&
-                delayedUpdate != null) {
-              return delayedUpdate.future;
-            }
-            return call.method == 'update' ? true : null;
-          });
-          addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
-        }
-        return null;
-      });
-
-      Future<void> show(NativeSelectionSnapshot? snapshot) async {
+  for (final (cancel, waitForReady) in [
+    (false, true),
+    (true, true),
+    (false, false),
+  ]) {
+    testWidgets(
+      'a fallback ${waitForReady ? 'drag' : 'tap'} survives native readiness until ${cancel ? 'cancel' : 'release'}',
+      (tester) async {
+        final calls = <MethodCall>[];
+        final active = <bool>[];
+        var viewId = -1;
+        var nativeActive = false;
+        var downs = 0;
+        var moves = 0;
+        var ends = 0;
+        var cancels = 0;
+        var extent = 2;
+        messenger.setMockMethodCallHandler(_capabilities, (_) async => true);
+        messenger.setMockMethodCallHandler(SystemChannels.platform_views, (
+          call,
+        ) async {
+          if (call.method == 'create') {
+            viewId = (call.arguments as Map)['id'] as int;
+            final channel = MethodChannel('$_viewType/$viewId');
+            messenger.setMockMethodCallHandler(channel, (call) async {
+              calls.add(call);
+              return call.method == 'update' ? true : null;
+            });
+            addTearDown(
+              () => messenger.setMockMethodCallHandler(channel, null),
+            );
+          }
+          return null;
+        });
         await tester.pumpWidget(
           Directionality(
             textDirection: TextDirection.ltr,
-            child: NativeSelectionSurface(
-              snapshot: snapshot,
-              onSelectionChanged: ranges.add,
-              onAdjusting: adjusting.add,
-              onActiveChanged: active.add,
-              onAction: actions.add,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => backgroundTaps++,
-                child: const SizedBox.expand(child: Text('Hello')),
+            child: StatefulBuilder(
+              builder: (context, setParentState) => NativeSelectionSurface(
+                snapshot: _snapshot(extent: extent),
+                onSelectionChanged: (_) => fail('No native drag expected'),
+                onActiveChanged: (value) {
+                  active.add(value);
+                  setParentState(() => nativeActive = value);
+                },
+                child: nativeActive
+                    ? const SizedBox.expand()
+                    : RawGestureDetector(
+                        key: const ValueKey('fallback-handle'),
+                        behavior: HitTestBehavior.opaque,
+                        gestures: {
+                          PanGestureRecognizer:
+                              GestureRecognizerFactoryWithHandlers<
+                                PanGestureRecognizer
+                              >(
+                                PanGestureRecognizer.new,
+                                (recognizer) => recognizer
+                                  ..gestureSettings =
+                                      const DeviceGestureSettings(touchSlop: 3)
+                                  ..dragStartBehavior = DragStartBehavior.down
+                                  ..onDown = (_) {
+                                    downs++;
+                                  }
+                                  ..onUpdate = (_) {
+                                    moves++;
+                                  }
+                                  ..onEnd = (_) {
+                                    ends++;
+                                    setParentState(() => extent = 3);
+                                  }
+                                  ..onCancel = () {
+                                    cancels++;
+                                  },
+                              ),
+                        },
+                        child: const SizedBox.expand(),
+                      ),
               ),
             ),
           ),
         );
         await tester.pumpAndSettle();
-      }
+        expect(viewId, greaterThanOrEqualTo(0));
+        final preparingView = viewId;
+        final gesture = await tester.startGesture(const Offset(30, 35));
+        var released = false;
+        try {
+          expect(
+            downs,
+            1,
+            reason: 'Pending native controls must not take DOWN',
+          );
+          if (waitForReady) {
+            await tester.pump(const Duration(milliseconds: 400));
+            expect(find.byType(UiKitView), findsNothing);
+            await messenger.handlePlatformMessage(
+              '$_viewType/$preparingView',
+              const StandardMethodCodec().encodeMethodCall(
+                const MethodCall('ready', {'revision': 1}),
+              ),
+              (_) {},
+            );
+            await tester.pumpAndSettle();
+            expect(
+              active,
+              isEmpty,
+              reason: 'The fallback still owns this pointer',
+            );
+            expect(
+              find.byKey(const ValueKey('fallback-handle')),
+              findsOneWidget,
+            );
+          }
+          if (cancel) {
+            await gesture.cancel();
+          } else {
+            if (waitForReady) {
+              await gesture.moveBy(const Offset(8, 0));
+              await tester.pump();
+              await gesture.moveBy(const Offset(20, 0));
+              await tester.pump();
+              expect(moves, greaterThan(0));
+            }
+            await gesture.up();
+          }
+          released = true;
+          await tester.pumpAndSettle();
+          expect(viewId, isNot(preparingView));
+          expect(
+            active,
+            isEmpty,
+            reason: 'The replacement needs its own ready',
+          );
+          expect(ends + cancels, 1);
+          if (!cancel) expect(ends, 1);
+          expect(calls.last.method, 'update');
+          expect((calls.last.arguments as Map)['selection'], {
+            'base': 0,
+            'extent': extent,
+          });
+          await messenger.handlePlatformMessage(
+            '$_viewType/$preparingView',
+            const StandardMethodCodec().encodeMethodCall(
+              const MethodCall('ready', {'revision': 1}),
+            ),
+            (_) {},
+          );
+          await tester.pumpAndSettle();
+          expect(
+            active,
+            isEmpty,
+            reason: 'A disposed view cannot take ownership',
+          );
+          await messenger.handlePlatformMessage(
+            '$_viewType/$viewId',
+            const StandardMethodCodec().encodeMethodCall(
+              const MethodCall('ready', {'revision': 1}),
+            ),
+            (_) {},
+          );
+          await tester.pumpAndSettle();
+          expect(active, [true]);
+          expect(find.byKey(const ValueKey('fallback-handle')), findsNothing);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          expect(tester.takeException(), isNull);
+        } finally {
+          if (!released) await gesture.cancel();
+        }
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.iOS),
+    );
+  }
 
-      Future<void> event(String method, Map<String, Object> values) async {
-        await messenger.handlePlatformMessage(
-          '$_viewType/$viewId',
-          const StandardMethodCodec().encodeMethodCall(
-            MethodCall(method, values),
+  testWidgets('range updates reuse geometry and stale events are ignored', (
+    tester,
+  ) async {
+    final calls = <MethodCall>[];
+    final ranges = <TextSelection?>[];
+    final active = <bool>[];
+    final adjusting = <bool>[];
+    final actions = <String>[];
+    var backgroundTaps = 0;
+    var viewId = -1;
+    Completer<bool>? delayedUpdate;
+    messenger.setMockMethodCallHandler(_capabilities, (_) async => true);
+    messenger.setMockMethodCallHandler(SystemChannels.platform_views, (
+      call,
+    ) async {
+      if (call.method == 'create') {
+        viewId = (call.arguments as Map)['id'] as int;
+        final channel = MethodChannel('$_viewType/$viewId');
+        messenger.setMockMethodCallHandler(channel, (call) async {
+          calls.add(call);
+          if (call.method == 'update' &&
+              (call.arguments as Map)['revision'] == 3 &&
+              delayedUpdate != null) {
+            return delayedUpdate.future;
+          }
+          return call.method == 'update' ? true : null;
+        });
+        addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+      }
+      return null;
+    });
+
+    Future<void> show(NativeSelectionSnapshot? snapshot) async {
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: NativeSelectionSurface(
+            snapshot: snapshot,
+            onSelectionChanged: ranges.add,
+            onAdjusting: adjusting.add,
+            onActiveChanged: active.add,
+            onAction: actions.add,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => backgroundTaps++,
+              child: const SizedBox.expand(child: Text('Hello')),
+            ),
           ),
-          (_) {},
-        );
-        await tester.pumpAndSettle();
-      }
-
-      await show(_snapshot());
-      expect(viewId, greaterThanOrEqualTo(0));
-      expect(calls.where((call) => call.method == 'update'), hasLength(1));
-      expect(active, isEmpty, reason: 'Accepted data does not prove native UI');
-      await event('ready', {'revision': 1});
-      expect(active, [true]);
-      await tester.tapAt(
-        tester.getBottomRight(find.byType(NativeSelectionSurface)) -
-            const Offset(15, 15),
+        ),
       );
-      expect(
-        backgroundTaps,
-        1,
-        reason: 'Page taps pass behind native controls',
-      );
-      await tester.tapAt(const Offset(11, 35));
-      expect(backgroundTaps, 1, reason: 'Native handles own their gestures');
-
-      await show(_snapshot(base: 0, extent: 4));
-      expect(calls.where((call) => call.method == 'update'), hasLength(1));
-      expect(calls.last.method, 'select');
-      expect(calls.last.arguments, {'base': 0, 'extent': 4});
-
-      await event('selectionChanged', {'revision': 0, 'base': 0, 'extent': 3});
-      expect(ranges, isEmpty);
-      await event('selectionChanged', {'revision': 1, 'base': 0, 'extent': 50});
-      expect(
-        ranges,
-        isEmpty,
-        reason: 'Reject ranges outside original UTF-16 text',
-      );
-      await event('adjusting', {'revision': 1, 'value': true});
-      await event('selectionChanged', {'revision': 1, 'base': 0, 'extent': 3});
-      await event('adjusting', {'revision': 1, 'value': false});
-      expect(ranges, [const TextSelection(baseOffset: 0, extentOffset: 3)]);
-      expect(adjusting, [true, false]);
-      final beforeEcho = calls.length;
-      await show(_snapshot(base: 0, extent: 3));
-      expect(
-        calls,
-        hasLength(beforeEcho),
-        reason: 'Native ranges are not echoed',
-      );
-      await event('selectionChanged', {'revision': 1, 'base': 3, 'extent': 0});
-      await show(_snapshot(base: 0, extent: 3));
-      expect(
-        calls,
-        hasLength(beforeEcho),
-        reason: 'Normalizing native handle order must not reset the drag',
-      );
-      await event('action', {'revision': 1, 'action': 'copy'});
-      expect(actions, ['copy']);
-
-      await event('unsupportedGeometry', {'revision': 1, 'reason': 'columns'});
-      expect(find.byType(UiKitView), findsNothing);
-      expect(find.text('Hello'), findsOneWidget);
-      expect(active, [true, false]);
-      await show(_snapshot(revision: 2));
-      expect(find.byType(UiKitView), findsOneWidget);
-      expect(calls.where((call) => call.method == 'update'), hasLength(2));
-      final staleReply = Completer<bool>();
-      delayedUpdate = staleReply;
-      await show(_snapshot(revision: 3));
-      await show(_snapshot(revision: 4));
-      staleReply.complete(false);
       await tester.pumpAndSettle();
-      expect(
-        find.byType(UiKitView),
-        findsOneWidget,
-        reason: 'A stale failure must not reject newer geometry',
+    }
+
+    Future<void> event(String method, Map<String, Object> values) async {
+      await messenger.handlePlatformMessage(
+        '$_viewType/$viewId',
+        const StandardMethodCodec().encodeMethodCall(
+          MethodCall(method, values),
+        ),
+        (_) {},
       );
-      await show(_snapshot(revision: 5, text: 'Hello\n', extent: 6));
-      await tester.tapAt(const Offset(61, 45));
-      expect(
-        backgroundTaps,
-        1,
-        reason: 'The end handle remains interactive after an unboxed newline',
-      );
-      await show(null);
-      expect(find.byType(UiKitView), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+      await tester.pumpAndSettle();
+    }
+
+    await show(_snapshot());
+    expect(viewId, greaterThanOrEqualTo(0));
+    expect(calls.where((call) => call.method == 'update'), hasLength(1));
+    expect(active, isEmpty, reason: 'Accepted data does not prove native UI');
+    await event('ready', {'revision': 1});
+    expect(active, [true]);
+    await tester.tapAt(
+      tester.getBottomRight(find.byType(NativeSelectionSurface)) -
+          const Offset(15, 15),
+    );
+    expect(backgroundTaps, 1, reason: 'Page taps pass behind native controls');
+    await tester.tapAt(const Offset(11, 35));
+    expect(backgroundTaps, 1, reason: 'Native handles own their gestures');
+
+    await show(_snapshot(base: 0, extent: 4));
+    expect(calls.where((call) => call.method == 'update'), hasLength(1));
+    expect(calls.last.method, 'select');
+    expect(calls.last.arguments, {'base': 0, 'extent': 4});
+
+    await event('selectionChanged', {'revision': 0, 'base': 0, 'extent': 3});
+    expect(ranges, isEmpty);
+    await event('selectionChanged', {'revision': 1, 'base': 0, 'extent': 50});
+    expect(
+      ranges,
+      isEmpty,
+      reason: 'Reject ranges outside original UTF-16 text',
+    );
+    await event('adjusting', {'revision': 1, 'value': true});
+    await event('selectionChanged', {'revision': 1, 'base': 0, 'extent': 3});
+    await event('adjusting', {'revision': 1, 'value': false});
+    expect(ranges, [const TextSelection(baseOffset: 0, extentOffset: 3)]);
+    expect(adjusting, [true, false]);
+    final beforeEcho = calls.length;
+    await show(_snapshot(base: 0, extent: 3));
+    expect(
+      calls,
+      hasLength(beforeEcho),
+      reason: 'Native ranges are not echoed',
+    );
+    await event('selectionChanged', {'revision': 1, 'base': 3, 'extent': 0});
+    await show(_snapshot(base: 0, extent: 3));
+    expect(
+      calls,
+      hasLength(beforeEcho),
+      reason: 'Normalizing native handle order must not reset the drag',
+    );
+    await event('action', {'revision': 1, 'action': 'copy'});
+    expect(actions, ['copy']);
+
+    await event('unsupportedGeometry', {'revision': 1, 'reason': 'columns'});
+    expect(find.byType(UiKitView), findsNothing);
+    expect(find.text('Hello'), findsOneWidget);
+    expect(active, [true, false]);
+    await show(_snapshot(revision: 2));
+    expect(find.byType(UiKitView), findsOneWidget);
+    expect(calls.where((call) => call.method == 'update'), hasLength(2));
+    final staleReply = Completer<bool>();
+    delayedUpdate = staleReply;
+    await show(_snapshot(revision: 3));
+    await show(_snapshot(revision: 4));
+    staleReply.complete(false);
+    await tester.pumpAndSettle();
+    expect(
+      find.byType(UiKitView),
+      findsOneWidget,
+      reason: 'A stale failure must not reject newer geometry',
+    );
+    await show(_snapshot(revision: 5, text: 'Hello\n', extent: 6));
+    await event('ready', {'revision': 5});
+    await tester.tapAt(const Offset(61, 45));
+    expect(
+      backgroundTaps,
+      1,
+      reason: 'The end handle remains interactive after an unboxed newline',
+    );
+    await show(null);
+    expect(find.byType(UiKitView), findsNothing);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   test(
     'geometry preserves source offsets, direction and native menu policy',

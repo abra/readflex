@@ -1,5 +1,5 @@
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_content_scroll_view.dart';
@@ -79,7 +79,7 @@ void main() {
 
   Widget buildSubject({bool reduceMotion = false}) => MaterialApp(
     supportedLocales: ReadflexSupportedLocales.locales,
-    localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+    localizationsDelegates: readflexLocalizationsDelegates,
     theme: AppTheme.light(),
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(disableAnimations: reduceMotion),
@@ -91,8 +91,10 @@ void main() {
       fsrsRepository: fsrsRepository,
       preferencesService: preferencesService,
       onSourcePressed: (_, {onSourceOpened, onReadingPositionSaved}) async {},
-      onAddPressed:
-          ({required onImported, entry = LibraryImportEntry.menu}) async {},
+      onAddPressed: ({
+        required onImported,
+        entry = LibraryImportEntry.menu,
+      }) async {},
       onPracticePressed: () async {},
     ),
   );

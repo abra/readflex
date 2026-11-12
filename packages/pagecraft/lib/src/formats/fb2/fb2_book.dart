@@ -98,13 +98,13 @@ class Fb2Cover {
 class Fb2Section {
   Fb2Section._({
     required this.index,
-    required XmlElement element,
+    required this._element,
     required this.ids,
     required this.title,
     required this.titles,
     required this.size,
     required this.isLinear,
-  }) : _element = element;
+  });
 
   final int index;
   final XmlElement _element;
@@ -177,12 +177,10 @@ class Fb2Book {
     required this.metadata,
     required this.sections,
     required this.toc,
-    required Map<String, XmlElement> binaries,
-    required XmlElement? coverImage,
-    required Map<String, int> idMap,
-  }) : _binaries = binaries,
-       _coverImage = coverImage,
-       _idMap = idMap;
+    required this._binaries,
+    required this._coverImage,
+    required this._idMap,
+  });
 
   /// Opens [path]: a `.fb2` file, or a ZIP (`.fb2.zip`, `.fbz`) whose
   /// first `.fb2` entry is the book, as the WebView reader opened them.

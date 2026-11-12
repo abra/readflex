@@ -2,7 +2,7 @@ import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:intl/intl.dart' show Bidi;
@@ -16,8 +16,10 @@ import 'practice_words_cubit.dart';
 import 'review_due_label.dart';
 
 /// Opens [sourceId] in the reader, at [cfiRange] when known.
-typedef PracticeOpenInSource =
-    Future<void> Function(String sourceId, String? cfiRange);
+typedef PracticeOpenInSource = Future<void> Function(
+  String sourceId,
+  String? cfiRange,
+);
 
 /// Every saved word: search, All / Learning / Mastered, and a sheet with the
 /// saved meaning, the sentence and Open in book.

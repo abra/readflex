@@ -1,7 +1,9 @@
 import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart' show listEquals, mapEquals;
-import 'package:flutter/material.dart' show ThemeMode;
+
+/// Stored names preserve the existing theme preference across UI libraries.
+enum AppThemeMode { system, light, dark }
 
 const _unset = Object();
 
@@ -573,7 +575,7 @@ class ReaderAppearanceOverride {
 /// surfaced to widgets through [PreferencesScope].
 class Preferences {
   const Preferences({
-    this.themeMode = ThemeMode.system,
+    this.themeMode = AppThemeMode.system,
     this.locale = const Locale('en'),
     this.libraryLayoutMode = 'grid',
     this.readerThemeId = 'paper',
@@ -614,7 +616,7 @@ class Preferences {
   static const minPracticeDesiredRetention = 0.7;
   static const maxPracticeDesiredRetention = 0.97;
 
-  final ThemeMode themeMode;
+  final AppThemeMode themeMode;
   final Locale locale;
   final String libraryLayoutMode;
   final String readerThemeId;
@@ -702,7 +704,7 @@ class Preferences {
   }
 
   Preferences copyWith({
-    ThemeMode? themeMode,
+    AppThemeMode? themeMode,
     Locale? locale,
     String? libraryLayoutMode,
     String? readerThemeId,

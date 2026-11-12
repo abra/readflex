@@ -21,9 +21,8 @@ class ReaderImageHighlightState extends Equatable {
 /// Saves image-page highlights while ReaderBloc owns highlight list refreshes.
 class ReaderImageHighlightCubit extends Cubit<ReaderImageHighlightState> {
   ReaderImageHighlightCubit({
-    required HighlightRepository highlightRepository,
-  }) : _highlightRepository = highlightRepository,
-       super(const ReaderImageHighlightState());
+    required this._highlightRepository,
+  }) : super(const ReaderImageHighlightState());
 
   final HighlightRepository _highlightRepository;
 

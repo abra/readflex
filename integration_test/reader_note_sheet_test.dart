@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -21,7 +21,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.dark(),
         locale: const Locale('en'),
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         home: Scaffold(
           body: Builder(

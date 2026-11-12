@@ -23,11 +23,6 @@ def flutter_root
 end
 
 require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
-require File.expand_path(
-  '.symlinks/plugins/google_mlkit_commons/ios/scripts/apple_silicon_simulator',
-  __dir__,
-)
-
 flutter_ios_podfile_setup
 
 target 'Runner' do
@@ -37,6 +32,11 @@ target 'Runner' do
 end
 
 post_install do |installer|
+  require File.expand_path(
+    '.symlinks/plugins/google_mlkit_commons/ios/scripts/apple_silicon_simulator',
+    __dir__,
+  )
+
   installer.pods_project.build_configurations.each do |config|
     config.build_settings["EXCLUDED_ARCHS[sdk=*]"] = "armv7"
     config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'

@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_display_sheet.dart';
@@ -51,8 +51,7 @@ void main() {
           builder: (context) => MaterialApp(
             theme: AppTheme.light(),
             locale: PreferencesScope.localeOf(context),
-            localizationsDelegates:
-                ReadflexLocalizations.localizationsDelegates,
+            localizationsDelegates: readflexLocalizationsDelegates,
             supportedLocales: ReadflexSupportedLocales.locales,
             home: Builder(
               builder: (context) => Scaffold(

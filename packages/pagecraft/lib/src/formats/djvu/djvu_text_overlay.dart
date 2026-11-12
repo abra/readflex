@@ -94,11 +94,15 @@ class DjvuTextOverlay extends StatefulWidget {
   State<DjvuTextOverlay> createState() => _DjvuTextOverlayState();
 }
 
-typedef DjvuSelectionChanged =
-    void Function(DjvuTextRange range, Rect? viewportRect);
+typedef DjvuSelectionChanged = void Function(
+  DjvuTextRange range,
+  Rect? viewportRect,
+);
 
-typedef DjvuHighlightPressed =
-    void Function(DjvuTextHighlight highlight, Rect? viewportRect);
+typedef DjvuHighlightPressed = void Function(
+  DjvuTextHighlight highlight,
+  Rect? viewportRect,
+);
 
 enum _Drag { selecting, startHandle, endHandle }
 

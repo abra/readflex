@@ -1,5 +1,5 @@
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -633,9 +633,9 @@ void main() {
       expect(gone.dx, lessThan(padding.left));
       expect(page.scrollerAt(gone), isNull);
       final image = await tester.runAsync(() async {
-        final boundary =
-            tester.renderObject(find.byKey(const ValueKey('page0')))
-                as RenderRepaintBoundary;
+        final boundary = tester.renderObject(
+          find.byKey(const ValueKey('page0')),
+        ) as RenderRepaintBoundary;
         final image = await boundary.toImage();
         final bytes = await image.toByteData();
         final width = image.width;

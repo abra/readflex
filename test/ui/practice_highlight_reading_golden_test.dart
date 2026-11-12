@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex/app/routing.dart';
@@ -8,6 +8,8 @@ import 'package:readflex/app/routing.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
+
+import 'package:preferences_service/preferences_service.dart';
 
 /// The complete reading card stays visible while its passage and note scroll.
 /// Real app routes and repositories keep the source, frame and actions covered.
@@ -53,8 +55,8 @@ void main() {
           (preferences) => preferences.copyWith(
             locale: profile.locale,
             themeMode: profile.brightness == Brightness.dark
-                ? ThemeMode.dark
-                : ThemeMode.light,
+                ? AppThemeMode.dark
+                : AppThemeMode.light,
           ),
         );
         await app.highlightRepository.addHighlight(

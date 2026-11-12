@@ -71,20 +71,14 @@ class RenderSearchFieldHint extends RenderBox {
   RenderSearchFieldHint({
     required String text,
     required String compactText,
-    required TextStyle style,
-    required TextDirection textDirection,
-    required TextScaler textScaler,
-    Locale? locale,
-    TextHeightBehavior? textHeightBehavior,
-    TextWidthBasis textWidthBasis = TextWidthBasis.parent,
+    required this._style,
+    required this._textDirection,
+    required this._textScaler,
+    this._locale,
+    this._textHeightBehavior,
+    this._textWidthBasis = TextWidthBasis.parent,
   }) : _text = text,
-       _compactText = compactText,
-       _style = style,
-       _textDirection = textDirection,
-       _textScaler = textScaler,
-       _locale = locale,
-       _textHeightBehavior = textHeightBehavior,
-       _textWidthBasis = textWidthBasis {
+       _compactText = compactText {
     _full = _painterFor(text);
     _compact = _painterFor(compactText);
   }

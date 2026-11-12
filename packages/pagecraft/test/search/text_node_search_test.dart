@@ -10,9 +10,9 @@ import 'package:pagecraft/all_formats.dart';
 /// `normalizeSearchText` does.
 void main() {
   test('every code point folds as in the JS', () {
-    final fixture =
-        jsonDecode(File('test/fixtures/search_fold.json').readAsStringSync())
-            as Map<String, Object?>;
+    final fixture = jsonDecode(
+      File('test/fixtures/search_fold.json').readAsStringSync(),
+    ) as Map<String, Object?>;
     final changed = (fixture['changed']! as Map<String, Object?>).map(
       (k, v) => MapEntry(int.parse(k), v! as String),
     );
@@ -37,12 +37,9 @@ void main() {
   });
 
   test('matches, offsets and excerpts are the JS ones', () {
-    final cases =
-        (jsonDecode(
-                  File('test/fixtures/foliate_search.json').readAsStringSync(),
-                )
-                as List)
-            .cast<Map<String, Object?>>();
+    final cases = (jsonDecode(
+      File('test/fixtures/foliate_search.json').readAsStringSync(),
+    ) as List).cast<Map<String, Object?>>();
     for (final c in cases) {
       final strings = (c['strs']! as List).cast<String>();
       final query = c['query']! as String;

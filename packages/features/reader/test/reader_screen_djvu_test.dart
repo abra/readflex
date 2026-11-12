@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pagecraft/djvu.dart';
@@ -75,7 +75,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexLocalizations.supportedLocales,
         home: ReaderScreen(
           sourceId: 'djvu-1',
@@ -244,7 +244,13 @@ void main() {
         );
         final context = tester.element(find.byType(FixedPagesView));
         final strings = context.l10n;
-        await tester.tap(find.byTooltip(strings.highlightColorBlue));
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is AppColorSwatchButton &&
+                widget.tooltip == strings.highlightColorBlue,
+          ),
+        );
         await tester.pump();
         expect(layer.draft.opacity, .45);
         expect(
@@ -289,7 +295,13 @@ void main() {
               .color,
           layer.draft.color,
         );
-        await tester.tap(find.byTooltip(strings.highlightColorGreen));
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is AppColorSwatchButton &&
+                widget.tooltip == strings.highlightColorGreen,
+          ),
+        );
         await tester.pump();
         expect(layer.draft.opacity, .45);
         expect(

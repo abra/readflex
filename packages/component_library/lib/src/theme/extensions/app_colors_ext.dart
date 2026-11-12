@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Semantic color tokens that extend [ThemeData] beyond [ColorScheme].
 ///

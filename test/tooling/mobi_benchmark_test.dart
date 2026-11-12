@@ -300,11 +300,9 @@ void main() {
           await File(p.join(frozen, 'bundle', 'lib', 'asset')).readAsString(),
           'original bundled asset',
         );
-        final data =
-            jsonDecode(
-                  await File(p.join(frozen, 'dataset.json')).readAsString(),
-                )
-                as JsonObject;
+        final data = jsonDecode(
+          await File(p.join(frozen, 'dataset.json')).readAsString(),
+        ) as JsonObject;
         expect((data['cases'] as List).single['id'], 'case');
         expect(report['artifacts'], hasLength(3));
         expect(report['status'], 'complete');

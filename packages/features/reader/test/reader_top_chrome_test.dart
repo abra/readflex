@@ -3,7 +3,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -141,7 +141,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         locale: locale,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
@@ -302,13 +302,11 @@ void main() {
   testWidgets('article progress opens directly at its saved fraction', (
     tester,
   ) async {
-    final bloc =
-        await tester.runAsync(
-              () => loadBloc(
-                savedArticle: article.copyWith(readingProgress: 0.65),
-              ),
-            )
-            as ReaderBloc;
+    final bloc = await tester.runAsync(
+      () => loadBloc(
+        savedArticle: article.copyWith(readingProgress: 0.65),
+      ),
+    ) as ReaderBloc;
     await pump(tester, bloc: bloc, settleAnimations: false);
     expect(
       tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
@@ -463,9 +461,9 @@ void main() {
     tester,
   ) async {
     final semantics = tester.ensureSemantics();
-    final bloc =
-        await tester.runAsync(() => loadBloc(chapterTitle: 'Intro'))
-            as ReaderBloc;
+    final bloc = await tester.runAsync(
+      () => loadBloc(chapterTitle: 'Intro'),
+    ) as ReaderBloc;
     await pump(tester, bloc: bloc, onArticleTitlePressed: (_, _) {});
     final l10n = tester.element(find.byType(Scaffold)).l10n;
     expect(find.text('Intro · Saved Article'), findsOneWidget);
@@ -485,11 +483,9 @@ void main() {
   testWidgets('books show "chapter · title" once the chapter is known', (
     tester,
   ) async {
-    final bloc =
-        await tester.runAsync(
-              () => loadBloc(source: book, chapterTitle: 'Book One'),
-            )
-            as ReaderBloc;
+    final bloc = await tester.runAsync(
+      () => loadBloc(source: book, chapterTitle: 'Book One'),
+    ) as ReaderBloc;
     await pump(tester, bloc: bloc);
     expect(find.text('Book One · Dune'), findsOneWidget);
   });
@@ -503,11 +499,9 @@ void main() {
   });
 
   testWidgets('comic file names never reach the top line', (tester) async {
-    final bloc =
-        await tester.runAsync(
-              () => loadBloc(source: comic, chapterTitle: 'IMG_0004.jpg'),
-            )
-            as ReaderBloc;
+    final bloc = await tester.runAsync(
+      () => loadBloc(source: comic, chapterTitle: 'IMG_0004.jpg'),
+    ) as ReaderBloc;
     await pump(tester, bloc: bloc);
     expect(find.text('Comic'), findsOneWidget);
     expect(find.textContaining('IMG_0004'), findsNothing);
@@ -603,11 +597,9 @@ void main() {
     testWidgets('line contrast is at least 4.5:1 on ${preset.id}', (
       tester,
     ) async {
-      final bloc =
-          await tester.runAsync(
-                () => loadBloc(source: book, chapterTitle: 'One'),
-              )
-              as ReaderBloc;
+      final bloc = await tester.runAsync(
+        () => loadBloc(source: book, chapterTitle: 'One'),
+      ) as ReaderBloc;
       await pump(tester, bloc: bloc, theme: preset);
       final line = tester.widget<Text>(find.byKey(_lineKey));
       expect(
@@ -659,11 +651,9 @@ void main() {
         format: BookFormat.epub,
         addedAt: DateTime(2024),
       );
-      final bloc =
-          await tester.runAsync(
-                () => loadBloc(source: long, chapterTitle: 'Chapter One'),
-              )
-              as ReaderBloc;
+      final bloc = await tester.runAsync(
+        () => loadBloc(source: long, chapterTitle: 'Chapter One'),
+      ) as ReaderBloc;
       await pump(tester, bloc: bloc, rtl: rtl, size: const Size(320, 640));
       expect(tester.takeException(), isNull);
       final rect = tester.getRect(find.byKey(_lineKey));
@@ -677,11 +667,9 @@ void main() {
   }
 
   testWidgets('2x text keeps a single line without overflow', (tester) async {
-    final bloc =
-        await tester.runAsync(
-              () => loadBloc(source: book, chapterTitle: 'Book One'),
-            )
-            as ReaderBloc;
+    final bloc = await tester.runAsync(
+      () => loadBloc(source: book, chapterTitle: 'Book One'),
+    ) as ReaderBloc;
     await pump(tester, bloc: bloc, textScale: 2, size: const Size(320, 640));
     expect(tester.takeException(), isNull);
     final line = tester.widget<Text>(find.byKey(_lineKey));

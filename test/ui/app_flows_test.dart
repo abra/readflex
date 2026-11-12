@@ -1,6 +1,6 @@
 import 'package:connectivity_service/connectivity_service.dart';
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_list_sliver.dart';
 import 'package:toast_service/toast_service.dart';

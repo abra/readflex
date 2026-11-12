@@ -5,6 +5,12 @@ document parser, repository, domain model or state-management dependency.
 Pagecraft supplies exact UTF-16 ranges and visual cells; ordinary read-only
 `SelectableText` uses `NativeEditableSelectionHost`.
 
+The Dart adapter uses Flutter's core widgets API without depending on Material
+or Cupertino. Read-only hosts take their selection colour from the existing
+`EditableText` or `DefaultSelectionStyle`; `handleColor` optionally supplies the
+native control accent, falling back to the text's cursor colour. The app's
+`AppTextSelectionHost` injects its themed handle colour at the UI boundary.
+
 ## Boundary
 
 - Dart owns the text, document anchors, layout and initial long-press selection.
@@ -43,6 +49,9 @@ revision sends `update`; subsequent boundary changes send `select` with two
 offsets. Native callbacks carry the revision, so obsolete pages cannot update
 the current document. Native `ready` means the platform has activated selection
 display; accepting an `update` alone does not suppress Flutter controls.
+Pending native views do not take pointer input. A fallback pointer sequence
+removes a preparing native view until release or cancellation; handoff then
+uses its final range. Already active native gestures keep their controls.
 
 Removing the range disposes the platform view, gesture observers and native
 selection state. A rejected geometry retains the existing Flutter controls and

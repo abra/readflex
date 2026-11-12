@@ -5,8 +5,7 @@ void main() {
   final files = <String, String>{
     'OEBPS/css/main.css':
         '@import "base.css"; @import url(print.css) print; p { color: red }',
-    'OEBPS/css/base.css':
-        '@charset "utf-8"; @import url("../fonts/fonts.css"); body { margin: 0 }',
+    'OEBPS/css/base.css': '@charset "utf-8"; @import url("../fonts/fonts.css"); body { margin: 0 }',
     'OEBPS/fonts/fonts.css':
         '@font-face { font-family: "Book"; src: local("Book"), url(Book.otf) format("opentype"); font-weight: bold; font-style: italic }'
         '@media screen { @font-face { font-family: Other; src: url("Other.ttf") } }',

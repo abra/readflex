@@ -141,15 +141,12 @@ class _TitleBarLayout
 class RenderBottomSheetTitleBar extends RenderBox
     with SlottedContainerRenderObjectMixin<BottomSheetTitleBarSlot, RenderBox> {
   RenderBottomSheetTitleBar({
-    required TextDirection textDirection,
-    required double spacing,
-    required double overflowSpacing,
-    required double minTitleScale,
+    required this._textDirection,
+    required this._spacing,
+    required this._overflowSpacing,
+    required this._minTitleScale,
     this.onCompactShownChanged,
-  }) : _textDirection = textDirection,
-       _spacing = spacing,
-       _overflowSpacing = overflowSpacing,
-       _minTitleScale = minTitleScale;
+  });
 
   TextDirection get textDirection => _textDirection;
   TextDirection _textDirection;

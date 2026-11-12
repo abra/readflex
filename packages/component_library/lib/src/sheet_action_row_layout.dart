@@ -70,16 +70,12 @@ class _SheetActionRowLayout
 class _RenderSheetActionRow extends RenderBox
     with SlottedContainerRenderObjectMixin<_SheetActionRowSlot, RenderBox> {
   _RenderSheetActionRow({
-    required TextDirection textDirection,
-    required double firstLineHeight,
-    required double leadSpacing,
-    required double leadEndInset,
-    required double minTextRoom,
-  }) : _textDirection = textDirection,
-       _firstLineHeight = firstLineHeight,
-       _leadSpacing = leadSpacing,
-       _leadEndInset = leadEndInset,
-       _minTextRoom = minTextRoom;
+    required this._textDirection,
+    required this._firstLineHeight,
+    required this._leadSpacing,
+    required this._leadEndInset,
+    required this._minTextRoom,
+  });
 
   TextDirection get textDirection => _textDirection;
   TextDirection _textDirection;

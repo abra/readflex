@@ -158,7 +158,7 @@ abstract class ResourceView extends StatelessWidget {
     'allows payloads, UI contracts, composition and renderer hosts',
     () async {
       final dependencies = await _check('''
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:dictionary_service/dictionary_service.dart';

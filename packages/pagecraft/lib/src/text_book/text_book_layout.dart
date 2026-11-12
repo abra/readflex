@@ -107,16 +107,13 @@ class TextSectionLayout {
 class TextBookLayout {
   TextBookLayout({
     required this.source,
-    required BookStyle style,
-    required BookFonts fonts,
+    required this._style,
+    required this._fonts,
     required this.images,
-    TextScaler textScaler = TextScaler.noScaling,
+    this._textScaler = TextScaler.noScaling,
     BookFontLoader? fontLoader,
     this.preparedLimit = 6,
-  }) : _style = style,
-       _fonts = fonts,
-       _textScaler = textScaler,
-       _preparer = SectionPreparer(source),
+  }) : _preparer = SectionPreparer(source),
        _fontLoader = fontLoader ?? BookFontLoader(source);
 
   final TextBookSource source;

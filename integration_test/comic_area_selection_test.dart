@@ -1,7 +1,8 @@
 import 'dart:io';
 
+import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -93,7 +94,13 @@ void main() {
     expect(_draftBounds(tester, layer).height, greaterThan(before.height + 30));
     await capture(tester, 'comic-area-resized');
 
-    await tester.tap(find.byTooltip(l10n.highlightColorBlue));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is AppColorSwatchButton &&
+            widget.tooltip == l10n.highlightColorBlue,
+      ),
+    );
     await tester.pump();
     await tester.tapAt(image.topLeft + const Offset(20, 40));
     await tester.pump();
@@ -174,7 +181,14 @@ void main() {
     expect(controls, findsOneWidget);
     await capture(tester, 'comic-area-edge-resized');
     final exact = _draft(tester, layer).rect!;
-    await tapUi(tester, find.byTooltip(l10n.highlightColorBlue));
+    await tapUi(
+      tester,
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is AppColorSwatchButton &&
+            widget.tooltip == l10n.highlightColorBlue,
+      ),
+    );
     await tapUi(tester, find.byTooltip(l10n.highlightAction));
     await tapUi(tester, find.text(l10n.readerSkip));
     await waitForUi(

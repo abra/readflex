@@ -108,9 +108,9 @@ Future<void> collectNativeCoverage(Directory directory) async {
   if (serviceUrl == null) {
     throw StateError('Native coverage needs VM_SERVICE_URL');
   }
-  final snapshot =
-      jsonDecode(await File('${directory.path}/sources.json').readAsString())
-          as Map<String, dynamic>;
+  final snapshot = jsonDecode(
+    await File('${directory.path}/sources.json').readAsString(),
+  ) as Map<String, dynamic>;
   final packages = (snapshot['packages'] as List).cast<String>();
   // Collect after the actions, not while measuring UI responsiveness. Device
   // runs provide line coverage; branch instrumentation stays in host tests.

@@ -2,6 +2,12 @@
 
 Shared presentation package: design system, theme, and reusable UI widgets.
 
+Uses Flutter 3.50 and the standalone `material_ui` / `cupertino_ui` libraries.
+They supply platform controls and transitions within one Readflex design
+system. Layout-only components and painting tokens use Flutter core imports;
+features may use design-library widgets directly without adding wrappers for
+ordinary framework widgets.
+
 ## Design System
 
 Five-layer architecture following the token-to-theme pipeline:
@@ -153,8 +159,8 @@ source quote and translated sentence for native screenshot inspection.
   functions.
 - **Motion goes through `context.motion(AppMotion.x)`** -- never pass a literal
   `Duration` to an implicit animation or transition in UI code. The helper returns
-  `Duration.zero` when the platform reduces motion, so one call site serves both
-  settings; explicit controllers check `context.reduceMotion` and jump instead.
+  `Duration.zero` for Android's Remove animations or iOS's separate Reduce Motion
+  flag; explicit controllers check `context.reduceMotion` and jump instead.
 - **Swatch inks come from `AppColorsExt`** -- a check drawn over a highlight or
   theme sample picks whichever of `onLightSwatch`/`onDarkSwatch` has the higher
   contrast against the sample;
@@ -463,6 +469,9 @@ state (a `TabBar` stays mounted when it switches to scrolling).
 ### Bottom Sheet Contract
 
 - `showAppBottomSheet` owns the 20dp handle area, keyboard lift and safe areas.
+  Its opening and closing transitions settle in one frame for either Android's
+  Remove animations or iOS's Reduce Motion flag. Results, dismiss guards and the
+  single `onFullyHidden` callback keep the same lifecycle.
   A guarded form keeps the same top space without displaying a draggable handle.
   Bottom protection belongs to the route, including every nested step; callers
   cannot disable it. Child layouts add their visual bottom padding, not another

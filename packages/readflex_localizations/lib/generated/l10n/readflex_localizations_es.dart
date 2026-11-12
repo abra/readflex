@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'readflex_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -501,8 +502,7 @@ class ReadflexLocalizationsEs extends ReadflexLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other:
-          'Se eliminarán los elementos de la biblioteca, los resaltados y los marcadores.',
+      other: 'Se eliminarán los elementos de la biblioteca, los resaltados y los marcadores.',
     );
     return '$_temp0';
   }

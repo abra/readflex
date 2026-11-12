@@ -8,7 +8,7 @@ import 'package:library_feature/src/library_list_tile.dart';
 import 'package:library_feature/src/library_selection_cubit.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -710,7 +710,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.light(),
           locale: locale,
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: Scaffold(
             body: Column(

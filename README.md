@@ -50,21 +50,34 @@ checkout. The service packages here contain client contracts and adapters.
 
 ## Development
 
-Use the Flutter SDK pinned in `.fvmrc` through FVM. Install dependencies:
+Use Flutter 3.50.0 / Dart 3.14, pinned in `.fvmrc`, through FVM. Install dependencies:
 
 ```sh
 fvm install
 make get
 ```
 
+Owned UI uses the standalone `material_ui` and `cupertino_ui` libraries while
+`component_library` remains the single Readflex design system. Core layout,
+preferences and the native selection bridge use Flutter core APIs where
+possible. See [architecture](ARCHITECTURE.md#platform-ui-libraries) for boundaries.
+
 The test harness, coverage reports and benchmark orchestration use the pinned
 Dart SDK. Node.js is optional maintenance tooling for regenerating committed
 ICU sentence references, Unicode search-fold data and hyphenation patterns in
 Pagecraft. Normal builds, tests and benchmarks use the committed generated data;
 see [Pagecraft's README](packages/pagecraft/README.md) for the generators.
-Android builds use AGP 8.13.2 and the Gradle 8.14 wrapper, with Java 17 source
-compatibility. Run Gradle with the JDK configured for Flutter (Java 21 is
-supported), including when reproducing a build directly with `gradlew`.
+Android builds use AGP 9.3.1, Gradle 9.5.0 and Kotlin 2.4.20, with Java 17 source
+compatibility. Current plugins still apply the standalone Kotlin plugin, so
+`android.builtInKotlin=false` and `android.newDsl=false` retain AGP 9's supported
+[compatibility path](https://developer.android.com/build/migrate-to-built-in-kotlin#opt-out-of-built-in-kotlin).
+The root Gradle configuration also applies Kotlin to `file_picker` 11 while
+built-in Kotlin is disabled, working around its
+[upstream AGP 9 bug](https://github.com/vicajilau/flutter_file_picker/issues/2200).
+The app's ProGuard rules preserve ML Kit registrar constructors used through
+reflection under AGP 9's stricter shrinking; other code remains optimized.
+Run Gradle with the JDK configured for Flutter (Java 21 is supported), including
+when reproducing a build directly with `gradlew`.
 iOS builds need Xcode and CocoaPods.
 MOBI text processing uses Rust through FRB. Install rustup; the compiler and
 targets are pinned in `packages/pagecraft/rust/rust-toolchain.toml`.

@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_language_sheet.dart';
@@ -97,10 +97,15 @@ void main() {
           articleRepository: app.articleRepository,
           collectionRepository: app.collectionRepository,
           preferencesService: app.preferencesService,
-          onSourcePressed:
-              (_, {onSourceOpened, onReadingPositionSaved}) async {},
-          onAddPressed:
-              ({required onImported, entry = LibraryImportEntry.menu}) async {},
+          onSourcePressed: (
+            _, {
+            onSourceOpened,
+            onReadingPositionSaved,
+          }) async {},
+          onAddPressed: ({
+            required onImported,
+            entry = LibraryImportEntry.menu,
+          }) async {},
         ),
       );
       await waitForUi(
@@ -133,8 +138,8 @@ void main() {
         (p) => p.copyWith(
           locale: profile.locale,
           themeMode: profile.brightness == Brightness.light
-              ? ThemeMode.light
-              : ThemeMode.dark,
+              ? AppThemeMode.light
+              : AppThemeMode.dark,
         ),
       );
       await tester.pumpWidget(
@@ -357,8 +362,10 @@ void main() {
         collectionRepository: app.collectionRepository,
         preferencesService: app.preferencesService,
         onSourcePressed: (_, {onSourceOpened, onReadingPositionSaved}) async {},
-        onAddPressed:
-            ({required onImported, entry = LibraryImportEntry.menu}) async {},
+        onAddPressed: ({
+          required onImported,
+          entry = LibraryImportEntry.menu,
+        }) async {},
       ),
       locale: const Locale('ar'),
     );

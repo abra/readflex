@@ -1,10 +1,53 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:toast_service/toast_service.dart';
 import 'package:toastification/toastification.dart';
 
 void main() {
   setUp(() => toastification.managers.clear());
+
+  for (final preference in [
+    (
+      name: 'Android Remove animations',
+      data: const MediaQueryData(disableAnimations: true),
+    ),
+    (name: 'iOS Reduce Motion', data: const MediaQueryData(reduceMotion: true)),
+  ]) {
+    testWidgets('toast opens at rest for ${preference.name}', (tester) async {
+      late BuildContext context;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: preference.data,
+            child: ToastWrapper(
+              child: Builder(
+                builder: (value) {
+                  context = value;
+                  return const Scaffold(body: SizedBox.shrink());
+                },
+              ),
+            ),
+          ),
+        ),
+      );
+      showToast(context, type: NotificationType.success, message: 'Saved');
+      await tester.pump();
+      await tester.pump();
+      final message = find.text('Saved');
+      expect(message.hitTestable(), findsOneWidget);
+      for (final transition in tester.widgetList<SlideTransition>(
+        find.ancestor(of: message, matching: find.byType(SlideTransition)),
+      )) {
+        expect(transition.position.value, Offset.zero);
+      }
+      final bounds = tester.getRect(message);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.getRect(message), bounds);
+      await tester.tap(find.byTooltip('Close'));
+      await tester.pumpAndSettle();
+      expect(message, findsNothing);
+    });
+  }
 
   testWidgets('accessible error remains until explicitly dismissed', (
     tester,

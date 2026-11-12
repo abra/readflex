@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Smallest share of the heading role the onboarding heading may shrink to.
 const double kOnboardingHeadingMinFontScale = 0.6;

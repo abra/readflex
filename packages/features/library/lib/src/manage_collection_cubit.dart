@@ -5,9 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 part 'manage_collection_state.dart';
 
 class ManageCollectionCubit extends Cubit<ManageCollectionState> {
-  ManageCollectionCubit({required CollectionRepository collectionRepository})
-    : _collectionRepository = collectionRepository,
-      super(const ManageCollectionState());
+  ManageCollectionCubit({required this._collectionRepository})
+    : super(const ManageCollectionState());
 
   final CollectionRepository _collectionRepository;
 

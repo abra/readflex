@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_control_styles.dart';

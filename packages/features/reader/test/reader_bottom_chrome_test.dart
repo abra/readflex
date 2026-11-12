@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -178,7 +178,7 @@ void main() {
       MaterialApp(
         theme: dark ? AppTheme.dark() : AppTheme.light(),
         locale: locale,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(

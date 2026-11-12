@@ -6,7 +6,7 @@ typedef ResourceDisposeCallback = FutureOr<void> Function();
 
 /// Owns application resources and releases them in reverse creation order.
 class ResourceDisposer {
-  ResourceDisposer({required Logger logger}) : _logger = logger;
+  ResourceDisposer({required this._logger});
 
   final Logger _logger;
   final List<_ResourceDisposal> _resources = [];

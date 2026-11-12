@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'library_bloc.dart';
@@ -66,13 +66,12 @@ Future<LibraryCollectionScopeSheetResult?> showLibraryCollectionScopeSheet({
   );
 }
 
-typedef LibraryCollectionManagerBuilder =
-    Widget Function(
-      BuildContext context,
-      LibraryCollectionScope scope,
-      VoidCallback onBack,
-      VoidCallback onClose,
-    );
+typedef LibraryCollectionManagerBuilder = Widget Function(
+  BuildContext context,
+  LibraryCollectionScope scope,
+  VoidCallback onBack,
+  VoidCallback onClose,
+);
 
 /// Searchable collection selector sheet.
 class _CollectionScopeSheet extends StatefulWidget {

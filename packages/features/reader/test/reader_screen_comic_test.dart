@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
@@ -86,7 +86,7 @@ void main() {
       MaterialApp(
         theme: AppTheme.light(),
         navigatorObservers: [ToastNavigatorObserver()],
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexLocalizations.supportedLocales,
         home: ReaderScreen(
           sourceId: comic.id,
@@ -349,7 +349,12 @@ void main() {
           (HighlightColor.green, strings.highlightColorGreen),
           (HighlightColor.blue, strings.highlightColorBlue),
         ]) {
-          await tester.tap(find.byTooltip(label));
+          await tester.tap(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is AppColorSwatchButton && widget.tooltip == label,
+            ),
+          );
           await tester.pump();
           expect(layer.draft.opacity, .45);
           expect(
@@ -404,7 +409,13 @@ void main() {
               .color,
           layer.draft.color,
         );
-        await tester.tap(find.byTooltip(strings.highlightColorGreen));
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is AppColorSwatchButton &&
+                widget.tooltip == strings.highlightColorGreen,
+          ),
+        );
         await tester.pump();
         expect(layer.draft.opacity, .45);
         expect(
@@ -488,7 +499,13 @@ void main() {
           (widget) => widget is ComicImageAreaLayer && widget.page == 0,
         ),
       );
-      await tester.tap(find.byTooltip(l10n(tester).highlightColorBlue));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is AppColorSwatchButton &&
+              widget.tooltip == l10n(tester).highlightColorBlue,
+        ),
+      );
       await tester.pump();
       expect(layer.draft.isActive, isTrue);
       await tester.tapAt(const Offset(30, 700));
@@ -570,7 +587,13 @@ void main() {
           (widget) => widget is ComicImageAreaLayer && widget.page == 0,
         ),
       );
-      await tester.tap(find.byTooltip(strings.highlightColorGreen));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is AppColorSwatchButton &&
+              widget.tooltip == strings.highlightColorGreen,
+        ),
+      );
       await tester.pump();
       await tester.tap(find.byTooltip(strings.highlightAction));
       await tester.pumpAndSettle();
@@ -621,7 +644,13 @@ void main() {
             (widget) => widget is ComicImageAreaLayer && widget.page == 0,
           ),
         );
-        await tester.tap(find.byTooltip(strings.highlightColorGreen));
+        await tester.tap(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is AppColorSwatchButton &&
+                widget.tooltip == strings.highlightColorGreen,
+          ),
+        );
         await tester.pump();
         await tester.tap(find.byTooltip(strings.highlightAction));
         await tester.pumpAndSettle();
@@ -716,7 +745,13 @@ void main() {
       final second = cubit.state;
       expect(second.selectionId, isNot(first.selectionId));
       expect(second.rect, first.rect);
-      await tester.tap(find.byTooltip(strings.highlightColorBlue));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is AppColorSwatchButton &&
+              widget.tooltip == strings.highlightColorBlue,
+        ),
+      );
       await tester.pump();
       final controls = tester.widget<ReaderHighlightControls>(
         find.byType(ReaderHighlightControls),

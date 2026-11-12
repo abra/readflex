@@ -1,7 +1,7 @@
 import 'dart:ui' show Tristate;
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -335,13 +335,12 @@ Future<void> _pumpDirection(
   await tester.pumpWidget(
     MaterialApp(
       locale: locale,
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      localizationsDelegates: readflexLocalizationsDelegates,
       supportedLocales: ReadflexSupportedLocales.locales,
       theme: brightness == Brightness.dark ? AppTheme.dark() : AppTheme.light(),
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(scale)),
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(scale)),
         child: child!,
       ),
       home: Scaffold(

@@ -65,10 +65,9 @@ List<int> _painterLineStarts(TextPainter painter) {
 
 /// Which of a paragraph's soft hyphens (U+00AD: a book's `&shy;`, or
 /// what `hyphens: auto` put there) break its lines, decided line by line
-/// as a browser does. Flutter breaks at a soft hyphen but draws nothing,
-/// so one at a line end is shown as a hyphen (`-`, which every font
-/// has), and the text keeps its length, so offsets stay the
-/// paragraph's.
+/// as a browser does. The painter's automatic soft-hyphen glyph is hidden:
+/// this resolver shows one at a permitted line end as a hyphen (`-`, which
+/// every font has), keeping the text length and its paragraph offsets.
 ///
 /// The lines are decided on a layout with natural line widths (start
 /// aligned: justification stretches them): a soft hyphen at a line end
@@ -532,6 +531,7 @@ class _Band {
       }
       final painter = TextPainter(
         text: TextSpan(children: spans),
+        hyphens: Hyphens.hidden,
         textAlign: natural ? TextAlign.start : align,
         textDirection: InlineStyler.direction(block),
         strutStyle: styler.strut(block, prose: prose),

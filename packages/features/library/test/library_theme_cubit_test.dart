@@ -1,5 +1,4 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_theme_cubit.dart';
 import 'package:preferences_service/preferences_service.dart';
@@ -20,49 +19,49 @@ void main() {
   });
 
   group('LibraryThemeCubit', () {
-    blocTest<LibraryThemeCubit, ThemeMode>(
+    blocTest<LibraryThemeCubit, AppThemeMode>(
       'initial state defaults to system',
       build: () => LibraryThemeCubit(preferencesService: preferencesService),
       verify: (cubit) {
-        expect(cubit.state, ThemeMode.system);
+        expect(cubit.state, AppThemeMode.system);
       },
     );
 
-    blocTest<LibraryThemeCubit, ThemeMode>(
+    blocTest<LibraryThemeCubit, AppThemeMode>(
       'setThemeMode emits selected mode',
       build: () => LibraryThemeCubit(preferencesService: preferencesService),
-      act: (cubit) => cubit.setThemeMode(ThemeMode.dark),
-      expect: () => [ThemeMode.dark],
+      act: (cubit) => cubit.setThemeMode(AppThemeMode.dark),
+      expect: () => [AppThemeMode.dark],
     );
 
-    blocTest<LibraryThemeCubit, ThemeMode>(
+    blocTest<LibraryThemeCubit, AppThemeMode>(
       'setThemeMode persists to preferences',
       build: () => LibraryThemeCubit(preferencesService: preferencesService),
-      act: (cubit) => cubit.setThemeMode(ThemeMode.light),
+      act: (cubit) => cubit.setThemeMode(AppThemeMode.light),
       verify: (_) {
-        expect(preferencesService.current.themeMode, ThemeMode.light);
+        expect(preferencesService.current.themeMode, AppThemeMode.light);
       },
     );
 
-    blocTest<LibraryThemeCubit, ThemeMode>(
+    blocTest<LibraryThemeCubit, AppThemeMode>(
       'setThemeMode does not emit when mode is same',
       build: () => LibraryThemeCubit(preferencesService: preferencesService),
-      act: (cubit) => cubit.setThemeMode(ThemeMode.system),
-      expect: () => <ThemeMode>[],
+      act: (cubit) => cubit.setThemeMode(AppThemeMode.system),
+      expect: () => <AppThemeMode>[],
     );
   });
 
   group('LibraryThemeCubit reads persisted mode', () {
-    blocTest<LibraryThemeCubit, ThemeMode>(
+    blocTest<LibraryThemeCubit, AppThemeMode>(
       'starts with persisted dark mode',
       setUp: () async {
         await preferencesService.update(
-          (prefs) => prefs.copyWith(themeMode: ThemeMode.dark),
+          (prefs) => prefs.copyWith(themeMode: AppThemeMode.dark),
         );
       },
       build: () => LibraryThemeCubit(preferencesService: preferencesService),
       verify: (cubit) {
-        expect(cubit.state, ThemeMode.dark);
+        expect(cubit.state, AppThemeMode.dark);
       },
     );
   });

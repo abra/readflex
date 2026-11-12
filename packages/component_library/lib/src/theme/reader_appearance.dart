@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 
 import 'app_typography.dart';
 import 'tokens/primitive_colors.dart';

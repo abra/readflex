@@ -91,9 +91,9 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
           favorPrecision: false,
           favorRecall: true,
         );
-        return _decodeArticleResponse(retryResponse, article);
+        return await _decodeArticleResponse(retryResponse, article);
       }
-      return _decodeArticleResponse(response, article);
+      return await _decodeArticleResponse(response, article);
     } on TimeoutException {
       throw const ArticleExtractionException(
         'Article cleaner request timed out',
@@ -132,9 +132,9 @@ class TrafilaturaArticleExtractionService implements ArticleExtractionService {
           favorPrecision: false,
           favorRecall: true,
         );
-        return _decodeArticleResponse(retryResponse, article);
+        return await _decodeArticleResponse(retryResponse, article);
       }
-      return _decodeArticleResponse(response, article);
+      return await _decodeArticleResponse(response, article);
     } on TimeoutException {
       throw const ArticleExtractionException(
         'Article cleaner request timed out',

@@ -1,5 +1,5 @@
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:practice/src/review_due_label.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -16,7 +16,7 @@ void main() {
       MaterialApp(
         locale: locale,
         supportedLocales: ReadflexSupportedLocales.locales,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
             alwaysUse24HourFormat: use24HourFormat,

@@ -1,7 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
@@ -10,8 +10,10 @@ import 'translate_sheet.dart';
 import 'translate_sheet_outcome.dart';
 
 /// Opens another action for the same selection, such as a definition.
-typedef TranslateFollowUpAction =
-    Future<void> Function(BuildContext context, TextSelectionContext selection);
+typedef TranslateFollowUpAction = Future<void> Function(
+  BuildContext context,
+  TextSelectionContext selection,
+);
 
 /// Reader plug-in for contextual translation of the current text selection.
 class TranslateAction extends TextAction {

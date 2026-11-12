@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:native_text_selection/native_text_selection.dart';
@@ -9,10 +9,15 @@ const _capabilities = MethodChannel(
 );
 
 class _HostFixture extends StatelessWidget {
-  const _HostFixture({required this.child, this.hosted = true});
+  const _HostFixture({
+    required this.child,
+    this.hosted = true,
+    this.handleColor,
+  });
 
   final Widget child;
   final bool hosted;
+  final Color? handleColor;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -21,7 +26,12 @@ class _HostFixture extends StatelessWidget {
         alignment: Alignment.topLeft,
         child: SizedBox(
           width: 280,
-          child: hosted ? NativeEditableSelectionHost(child: child) : child,
+          child: hosted
+              ? NativeEditableSelectionHost(
+                  handleColor: handleColor,
+                  child: child,
+                )
+              : child,
         ),
       ),
     ),
@@ -85,245 +95,292 @@ void main() {
     );
   }
 
-  testWidgets(
-    'native range preserves original widget, state and callbacks',
-    (tester) async {
-      final changes = <TextSelection>[];
+  for (final injectHandle in [false, true]) {
+    testWidgets('native styling preserves text colours and updates an '
+        '${injectHandle ? 'injected' : 'inherited'} handle accent', (
+      tester,
+    ) async {
+      const firstHandle = Color(0xFF1A4C7A);
+      const nextHandle = Color(0xFF7A1F2B);
+      const firstSelection = Color(0x44348697);
+      const nextSelection = Color(0x557A1F2B);
       await tester.pumpWidget(
         _HostFixture(
-          child: SelectableText(
+          handleColor: injectHandle ? firstHandle : null,
+          child: const SelectableText(
             'Alpha beta gamma',
-            key: const ValueKey('originalText'),
-            onSelectionChanged: (selection, cause) => changes.add(selection),
+            cursorColor: Colors.green,
+            selectionColor: firstSelection,
           ),
         ),
       );
       await tester.pumpAndSettle();
       final state = tester.state<EditableTextState>(find.byType(EditableText));
-      final controller = state.widget.controller;
       state.widget.focusNode.requestFocus();
       await tester.pumpAndSettle();
       state.userUpdateTextEditingValue(
-        controller.value.copyWith(
-          selection: const TextSelection(baseOffset: 6, extentOffset: 10),
+        state.widget.controller.value.copyWith(
+          selection: const TextSelection(baseOffset: 0, extentOffset: 5),
         ),
         SelectionChangedCause.longPress,
       );
       await tester.pumpAndSettle();
-      expect(updates, isNotEmpty);
-      expect(updates.last['text'], 'Alpha beta gamma');
-      final revision = updates.last['revision']! as int;
-      await nativeCall('ready', {'revision': revision});
-      await tester.pumpAndSettle();
-      expect(state.renderEditable.selectionColor, Colors.transparent);
-      expect(find.text('Copy'), findsOneWidget);
-      await nativeCall('adjusting', {'revision': revision, 'value': true});
-      await tester.pumpAndSettle();
-      expect(find.text('Copy'), findsNothing);
-      await nativeCall('selectionChanged', {
-        'revision': revision,
-        'base': 0,
-        'extent': 5,
-      });
-      await tester.pumpAndSettle();
       expect(
-        controller.selection,
+        updates.last['accent'],
+        (injectHandle ? firstHandle : Colors.green).toARGB32(),
+      );
+      expect(updates.last['selectionColor'], firstSelection.toARGB32());
+      final revision = updates.last['revision']! as int;
+      await tester.pumpWidget(
+        _HostFixture(
+          handleColor: injectHandle ? nextHandle : null,
+          child: const SelectableText(
+            'Alpha beta gamma',
+            cursorColor: Colors.purple,
+            selectionColor: nextSelection,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.state(find.byType(EditableText)), same(state));
+      expect(
+        updates.last['accent'],
+        (injectHandle ? nextHandle : Colors.purple).toARGB32(),
+      );
+      expect(updates.last['selectionColor'], nextSelection.toARGB32());
+      expect(updates.last['revision'], greaterThan(revision));
+      expect(
+        state.widget.controller.selection,
         const TextSelection(baseOffset: 0, extentOffset: 5),
       );
-      expect(changes.last, controller.selection);
-      expect(tester.state(find.byType(EditableText)), same(state));
-      expect(find.byKey(const ValueKey('originalText')), findsOneWidget);
-      expect(find.text('Copy'), findsNothing);
-      await nativeCall('adjusting', {'revision': revision, 'value': false});
-      await tester.pumpAndSettle();
-      expect(find.text('Copy'), findsOneWidget);
-      // Selection-only messages reuse the cached native glyph document.
-      expect(updates, hasLength(1));
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+  }
 
-  testWidgets(
-    'editable text retains its keyboard and Flutter selection',
-    (tester) async {
-      final controller = TextEditingController(text: 'Editable text');
-      addTearDown(controller.dispose);
-      await tester.pumpWidget(
-        _HostFixture(child: TextField(controller: controller)),
-      );
-      await tester.pumpAndSettle();
-      await tester.showKeyboard(find.byType(TextField));
-      controller.selection = const TextSelection(
-        baseOffset: 0,
-        extentOffset: 8,
-      );
-      await tester.pumpAndSettle();
-      expect(tester.testTextInput.isVisible, isTrue);
-      expect(viewChannels, isEmpty);
-      expect(updates, isEmpty);
-      expect(controller.selection.extentOffset, 8);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+  testWidgets('native range preserves original widget, state and callbacks', (
+    tester,
+  ) async {
+    final changes = <TextSelection>[];
+    await tester.pumpWidget(
+      _HostFixture(
+        child: SelectableText(
+          'Alpha beta gamma',
+          key: const ValueKey('originalText'),
+          onSelectionChanged: (selection, cause) => changes.add(selection),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final state = tester.state<EditableTextState>(find.byType(EditableText));
+    final controller = state.widget.controller;
+    state.widget.focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    state.userUpdateTextEditingValue(
+      controller.value.copyWith(
+        selection: const TextSelection(baseOffset: 6, extentOffset: 10),
+      ),
+      SelectionChangedCause.longPress,
+    );
+    await tester.pumpAndSettle();
+    expect(updates, isNotEmpty);
+    expect(updates.last['text'], 'Alpha beta gamma');
+    final revision = updates.last['revision']! as int;
+    await nativeCall('ready', {'revision': revision});
+    await tester.pumpAndSettle();
+    expect(state.renderEditable.selectionColor, Colors.transparent);
+    expect(find.text('Copy'), findsOneWidget);
+    await nativeCall('adjusting', {'revision': revision, 'value': true});
+    await tester.pumpAndSettle();
+    expect(find.text('Copy'), findsNothing);
+    await nativeCall('selectionChanged', {
+      'revision': revision,
+      'base': 0,
+      'extent': 5,
+    });
+    await tester.pumpAndSettle();
+    expect(
+      controller.selection,
+      const TextSelection(baseOffset: 0, extentOffset: 5),
+    );
+    expect(changes.last, controller.selection);
+    expect(tester.state(find.byType(EditableText)), same(state));
+    expect(find.byKey(const ValueKey('originalText')), findsOneWidget);
+    expect(find.text('Copy'), findsNothing);
+    await nativeCall('adjusting', {'revision': revision, 'value': false});
+    await tester.pumpAndSettle();
+    expect(find.text('Copy'), findsOneWidget);
+    // Selection-only messages reuse the cached native glyph document.
+    expect(updates, hasLength(1));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets(
-    'missing native registration preserves Flutter selection',
-    (tester) async {
-      available = false;
-      await tester.pumpWidget(
-        const _HostFixture(child: SelectableText('Fallback text')),
-      );
-      await tester.pumpAndSettle();
-      final state = tester.state<EditableTextState>(find.byType(EditableText));
-      state.widget.controller.selection = const TextSelection(
-        baseOffset: 0,
-        extentOffset: 8,
-      );
-      await tester.pumpAndSettle();
-      expect(viewChannels, isEmpty);
-      expect(state.widget.controller.selection.extentOffset, 8);
-      expect(state.renderEditable.selectionColor, isNot(Colors.transparent));
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+  testWidgets('editable text retains its keyboard and Flutter selection', (
+    tester,
+  ) async {
+    final controller = TextEditingController(text: 'Editable text');
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _HostFixture(child: TextField(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+    await tester.showKeyboard(find.byType(TextField));
+    controller.selection = const TextSelection(baseOffset: 0, extentOffset: 8);
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(viewChannels, isEmpty);
+    expect(updates, isEmpty);
+    expect(controller.selection.extentOffset, 8);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets(
-    'native handles outside a short text box use the full overlay',
-    (tester) async {
-      var backgroundTaps = 0;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => backgroundTaps++,
-              child: const Center(
-                child: SizedBox(
-                  width: 280,
-                  child: NativeEditableSelectionHost(
-                    child: SelectableText('Alpha beta gamma'),
-                  ),
+  testWidgets('missing native registration preserves Flutter selection', (
+    tester,
+  ) async {
+    available = false;
+    await tester.pumpWidget(
+      const _HostFixture(child: SelectableText('Fallback text')),
+    );
+    await tester.pumpAndSettle();
+    final state = tester.state<EditableTextState>(find.byType(EditableText));
+    state.widget.controller.selection = const TextSelection(
+      baseOffset: 0,
+      extentOffset: 8,
+    );
+    await tester.pumpAndSettle();
+    expect(viewChannels, isEmpty);
+    expect(state.widget.controller.selection.extentOffset, 8);
+    expect(state.renderEditable.selectionColor, isNot(Colors.transparent));
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+  testWidgets('native handles outside a short text box use the full overlay', (
+    tester,
+  ) async {
+    var backgroundTaps = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => backgroundTaps++,
+            child: const Center(
+              child: SizedBox(
+                width: 280,
+                child: NativeEditableSelectionHost(
+                  child: SelectableText('Alpha beta gamma'),
                 ),
               ),
             ),
           ),
         ),
-      );
-      await tester.pumpAndSettle();
-      final editable = tester.state<EditableTextState>(
-        find.byType(EditableText),
-      );
-      final original = tester.getRect(find.byType(SelectableText));
-      editable.widget.focusNode.requestFocus();
-      await tester.pumpAndSettle();
-      editable.widget.controller.selection = const TextSelection(
-        baseOffset: 0,
-        extentOffset: 5,
-      );
-      await tester.pumpAndSettle();
-      final overlay = Overlay.of(editable.context, rootOverlay: true);
-      final overlayBox = overlay.context.findRenderObject()! as RenderBox;
-      expect(
-        tester.getRect(find.byType(UiKitView)),
-        overlayBox.localToGlobal(Offset.zero) & overlayBox.size,
-      );
-      expect(tester.getRect(find.byType(SelectableText)), original);
-      final surface = tester.widget<NativeSelectionSurface>(
-        find.byType(NativeSelectionSurface),
-      );
-      final snapshot = surface.snapshot!;
-      await nativeCall('ready', {'revision': snapshot.revision});
-      await tester.pumpAndSettle();
-      final end = snapshot.boxes.firstWhere((box) => box.end == 5);
-      final grip = overlayBox.localToGlobal(
-        Offset(end.rect.right, end.rect.bottom + 10),
-      );
-      expect(original.contains(grip), isFalse);
-      await tester.tapAt(grip);
-      await tester.pumpAndSettle();
-      expect(
-        platformCalls.where((call) => call.method == 'acceptGesture'),
-        isNotEmpty,
-        reason: 'A native knob outside text bounds must receive its pointer',
-      );
-      expect(backgroundTaps, 0);
-      await tester.tapAt(const Offset(700, 550));
-      await tester.pumpAndSettle();
-      expect(
-        backgroundTaps,
-        1,
-        reason: 'Other page taps pass through the overlay',
-      );
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+      ),
+    );
+    await tester.pumpAndSettle();
+    final editable = tester.state<EditableTextState>(find.byType(EditableText));
+    final original = tester.getRect(find.byType(SelectableText));
+    editable.widget.focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    editable.widget.controller.selection = const TextSelection(
+      baseOffset: 0,
+      extentOffset: 5,
+    );
+    await tester.pumpAndSettle();
+    final overlay = Overlay.of(editable.context, rootOverlay: true);
+    final overlayBox = overlay.context.findRenderObject()! as RenderBox;
+    expect(
+      tester.getRect(find.byType(UiKitView)),
+      overlayBox.localToGlobal(Offset.zero) & overlayBox.size,
+    );
+    expect(tester.getRect(find.byType(SelectableText)), original);
+    final surface = tester.widget<NativeSelectionSurface>(
+      find.byType(NativeSelectionSurface),
+    );
+    final snapshot = surface.snapshot!;
+    await nativeCall('ready', {'revision': snapshot.revision});
+    await tester.pumpAndSettle();
+    final end = snapshot.boxes.firstWhere((box) => box.end == 5);
+    final grip = overlayBox.localToGlobal(
+      Offset(end.rect.right, end.rect.bottom + 10),
+    );
+    expect(original.contains(grip), isFalse);
+    await tester.tapAt(grip);
+    await tester.pumpAndSettle();
+    expect(
+      platformCalls.where((call) => call.method == 'acceptGesture'),
+      isNotEmpty,
+      reason: 'A native knob outside text bounds must receive its pointer',
+    );
+    expect(backgroundTaps, 0);
+    await tester.tapAt(const Offset(700, 550));
+    await tester.pumpAndSettle();
+    expect(
+      backgroundTaps,
+      1,
+      reason: 'Other page taps pass through the overlay',
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
-  testWidgets(
-    'split font runs become one complete grapheme cell',
-    (tester) async {
-      const span = TextSpan(
-        children: [
-          TextSpan(text: 'A '),
-          TextSpan(text: '👩', style: TextStyle(fontSize: 20)),
-          TextSpan(text: '\u200D', style: TextStyle(fontSize: 21)),
-          TextSpan(text: '🔬', style: TextStyle(fontSize: 24)),
-          TextSpan(text: ' result'),
-        ],
-      );
-      await tester.pumpWidget(
-        const _HostFixture(child: SelectableText.rich(span)),
-      );
-      await tester.pumpAndSettle();
-      final editable = tester.state<EditableTextState>(
-        find.byType(EditableText),
-      );
-      editable.widget.focusNode.requestFocus();
-      await tester.pumpAndSettle();
-      editable.widget.controller.selection = const TextSelection(
-        baseOffset: 0,
-        extentOffset: 1,
-      );
-      await tester.pumpAndSettle();
-      const start = 2;
-      const end = start + '👩‍🔬'.length;
-      final parts = editable.renderEditable
-          .getBoxesForSelection(
-            const TextSelection(baseOffset: start, extentOffset: end),
-          )
-          .where((box) => !box.toRect().isEmpty)
-          .toList();
-      expect(
-        parts.length,
-        greaterThan(1),
-        reason: 'Fixture forces separate font runs',
-      );
-      final snapshot = tester
-          .widget<NativeSelectionSurface>(find.byType(NativeSelectionSurface))
-          .snapshot!;
-      final cells = snapshot.boxes.where((box) => box.start == start).toList();
-      expect(cells, hasLength(1));
-      expect(cells.single.end, end);
-      expect(snapshot.text.substring(start, end), '👩‍🔬');
-      final overlay = Overlay.of(editable.context, rootOverlay: true);
-      final transform = editable.renderEditable.getTransformTo(
-        overlay.context.findRenderObject(),
-      );
-      final union = parts
-          .map((box) => box.toRect())
-          .reduce((first, next) => first.expandToInclude(next));
-      expect(cells.single.rect, MatrixUtils.transformRect(transform, union));
-      expect(cells.single.direction, parts.first.direction);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pumpAndSettle();
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+  testWidgets('split font runs become one complete grapheme cell', (
+    tester,
+  ) async {
+    const span = TextSpan(
+      children: [
+        TextSpan(text: 'A '),
+        TextSpan(text: '👩', style: TextStyle(fontSize: 20)),
+        TextSpan(text: '\u200D', style: TextStyle(fontSize: 21)),
+        TextSpan(text: '🔬', style: TextStyle(fontSize: 24)),
+        TextSpan(text: ' result'),
+      ],
+    );
+    await tester.pumpWidget(
+      const _HostFixture(child: SelectableText.rich(span)),
+    );
+    await tester.pumpAndSettle();
+    final editable = tester.state<EditableTextState>(find.byType(EditableText));
+    editable.widget.focusNode.requestFocus();
+    await tester.pumpAndSettle();
+    editable.widget.controller.selection = const TextSelection(
+      baseOffset: 0,
+      extentOffset: 1,
+    );
+    await tester.pumpAndSettle();
+    const start = 2;
+    const end = start + '👩‍🔬'.length;
+    final parts = editable.renderEditable
+        .getBoxesForSelection(
+          const TextSelection(baseOffset: start, extentOffset: end),
+        )
+        .where((box) => !box.toRect().isEmpty)
+        .toList();
+    expect(
+      parts.length,
+      greaterThan(1),
+      reason: 'Fixture forces separate font runs',
+    );
+    final snapshot = tester
+        .widget<NativeSelectionSurface>(find.byType(NativeSelectionSurface))
+        .snapshot!;
+    final cells = snapshot.boxes.where((box) => box.start == start).toList();
+    expect(cells, hasLength(1));
+    expect(cells.single.end, end);
+    expect(snapshot.text.substring(start, end), '👩‍🔬');
+    final overlay = Overlay.of(editable.context, rootOverlay: true);
+    final transform = editable.renderEditable.getTransformTo(
+      overlay.context.findRenderObject(),
+    );
+    final union = parts
+        .map((box) => box.toRect())
+        .reduce((first, next) => first.expandToInclude(next));
+    expect(cells.single.rect, MatrixUtils.transformRect(transform, union));
+    expect(cells.single.direction, parts.first.direction);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets(
     'native overlay closes when another Flutter control gains focus',
@@ -487,35 +544,31 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
 
-  testWidgets(
-    'host preserves text bounds and baseline',
-    (tester) async {
-      const text = SelectableText('Native text', key: ValueKey('baselineText'));
-      await tester.pumpWidget(const _HostFixture(hosted: false, child: text));
-      await tester.pumpAndSettle();
-      final original = tester.getRect(find.byType(EditableText));
-      final originalRender = tester.renderObject<RenderBox>(
-        find.byType(EditableText),
-      );
-      final baseline = originalRender.getDryBaseline(
-        originalRender.constraints,
+  testWidgets('host preserves text bounds and baseline', (tester) async {
+    const text = SelectableText('Native text', key: ValueKey('baselineText'));
+    await tester.pumpWidget(const _HostFixture(hosted: false, child: text));
+    await tester.pumpAndSettle();
+    final original = tester.getRect(find.byType(EditableText));
+    final originalRender = tester.renderObject<RenderBox>(
+      find.byType(EditableText),
+    );
+    final baseline = originalRender.getDryBaseline(
+      originalRender.constraints,
+      TextBaseline.alphabetic,
+    );
+    await tester.pumpWidget(const _HostFixture(child: text));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byType(EditableText)), original);
+    final hostedRender = tester.renderObject<RenderBox>(
+      find.byType(NativeEditableSelectionHost),
+    );
+    expect(
+      hostedRender.getDryBaseline(
+        hostedRender.constraints,
         TextBaseline.alphabetic,
-      );
-      await tester.pumpWidget(const _HostFixture(child: text));
-      await tester.pumpAndSettle();
-      expect(tester.getRect(find.byType(EditableText)), original);
-      final hostedRender = tester.renderObject<RenderBox>(
-        find.byType(NativeEditableSelectionHost),
-      );
-      expect(
-        hostedRender.getDryBaseline(
-          hostedRender.constraints,
-          TextBaseline.alphabetic,
-        ),
-        baseline,
-      );
-      expect(find.byKey(const ValueKey('baselineText')), findsOneWidget);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.iOS),
-  );
+      ),
+      baseline,
+    );
+    expect(find.byKey(const ValueKey('baselineText')), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 }

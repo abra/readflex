@@ -2,12 +2,14 @@ import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
+import 'package:native_text_selection/native_text_selection.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_page_grid.dart';
@@ -24,11 +26,13 @@ import '../test/support/ui_test_driver.dart';
 
 /// PDF pages on pagecraft (pdfium) in the real app: denser than the screen
 /// when trimmed, double-tap zoom that ends sharp, theme colors with margin
-/// crops, search, precise selection handles, a saved highlight and page previews.
+/// crops, search, Flutter fallback handles, a saved highlight and page previews.
+/// Native activation is covered separately by native_selection_controls_test.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('PDF pages zoom sharp and follow the theme', (tester) async {
+    _useFlutterSelectionFallback(tester);
     final app = await UiTestApp.create(withBook: false);
     addTearDown(app.dispose);
     final book = await addPdfFixture(app);
@@ -342,6 +346,7 @@ void main() {
   testWidgets('Cyrillic OCR selection covers the visible raster text', (
     tester,
   ) async {
+    _useFlutterSelectionFallback(tester);
     final app = await UiTestApp.create(withBook: false);
     addTearDown(app.dispose);
     await app.preferencesService.update(
@@ -482,6 +487,21 @@ void main() {
   });
 }
 
+void _useFlutterSelectionFallback(WidgetTester tester) {
+  const channel = MethodChannel(
+    'io.github.abra.native_text_selection/capabilities',
+  );
+  // These tests drag Flutter's 48dp grips and assert its magnifier. A ready
+  // native view owns different controls; it has its own integration coverage.
+  final messenger = tester.binding.defaultBinaryMessenger;
+  NativeSelectionPlatform.resetAvailability();
+  messenger.setMockMethodCallHandler(channel, (_) async => false);
+  addTearDown(() {
+    messenger.setMockMethodCallHandler(channel, null);
+    NativeSelectionPlatform.resetAvailability();
+  });
+}
+
 ({Offset point, PdfTextOverlay overlay, PdfTextRange range})? _visibleWord(
   WidgetTester tester,
   Finder pages, {
@@ -594,12 +614,10 @@ Future<PdfTextRange> _moveSelectionBoundary(
     await tester.pump();
     await gesture.moveTo(start + delta);
     await tester.pump(const Duration(milliseconds: 150));
-    final drags =
-        (binding.reportData ??= {}).putIfAbsent(
-              'pdfSelectionDrags',
-              () => <Map<String, Object?>>[],
-            )
-            as List<Map<String, Object?>>;
+    final drags = (binding.reportData ??= {}).putIfAbsent(
+      'pdfSelectionDrags',
+      () => <Map<String, Object?>>[],
+    ) as List<Map<String, Object?>>;
     drags.add({
       'screenshot': screenshot,
       'zoom': overlay.controller.zoomScale,

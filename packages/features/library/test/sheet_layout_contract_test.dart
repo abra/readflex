@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_bloc.dart';
@@ -116,8 +116,7 @@ void main() {
                 theme: AppTheme.light(),
                 locale: Locale(locale),
                 supportedLocales: ReadflexSupportedLocales.locales,
-                localizationsDelegates:
-                    ReadflexLocalizations.localizationsDelegates,
+                localizationsDelegates: readflexLocalizationsDelegates,
                 home: BlocProvider.value(
                   value: cubit,
                   child: Scaffold(
@@ -197,7 +196,7 @@ Widget _app(Widget child, {String locale = 'en'}) => MaterialApp(
   theme: AppTheme.light(),
   locale: Locale(locale),
   supportedLocales: ReadflexSupportedLocales.locales,
-  localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+  localizationsDelegates: readflexLocalizationsDelegates,
   home: Scaffold(body: child),
 );
 

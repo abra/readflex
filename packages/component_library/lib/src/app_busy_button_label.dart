@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'app_button_label.dart';
 import 'button_loading_indicator.dart';

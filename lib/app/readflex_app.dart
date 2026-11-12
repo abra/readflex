@@ -4,7 +4,7 @@
 // properly, avoiding recreation on every settings change (theme/locale).
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:preferences_service/preferences_service.dart';
@@ -56,8 +56,12 @@ class _ReadflexAppState extends State<ReadflexApp> {
           debugShowCheckedModeBanner: false,
           locale: locale,
           supportedLocales: ReadflexSupportedLocales.locales,
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
-          themeMode: themeMode,
+          localizationsDelegates: readflexLocalizationsDelegates,
+          themeMode: switch (themeMode) {
+            AppThemeMode.system => ThemeMode.system,
+            AppThemeMode.light => ThemeMode.light,
+            AppThemeMode.dark => ThemeMode.dark,
+          },
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           routerConfig: _router,
@@ -65,12 +69,16 @@ class _ReadflexAppState extends State<ReadflexApp> {
             final theme = Theme.of(context);
             return KeyedSubtree(
               key: _globalKey,
-              child: AnnotatedRegion<SystemUiOverlayStyle>(
-                value: appSystemUiOverlayStyle(
-                  brightness: theme.brightness,
-                  backgroundColor: theme.scaffoldBackgroundColor,
+              // toastification still resolves legacy UI theme/localizations.
+              // ignore: deprecated_member_use
+              child: MaterialUiCompatibilityBridge(
+                child: AnnotatedRegion<SystemUiOverlayStyle>(
+                  value: appSystemUiOverlayStyle(
+                    brightness: theme.brightness,
+                    backgroundColor: theme.scaffoldBackgroundColor,
+                  ),
+                  child: _AppTextScaling(child: child!),
                 ),
-                child: _AppTextScaling(child: child!),
               ),
             );
           },

@@ -72,14 +72,11 @@ class TextScrollController extends ChangeNotifier {
     required BookStyle style,
     required BookFonts fonts,
     required this.images,
-    TextPageSettings settings = const TextPageSettings(),
+    this._settings = const TextPageSettings(),
     TextScaler textScaler = TextScaler.noScaling,
-    TextPoint? Function(ContentDocument document)? initialPoint,
-    double? initialFraction,
-  }) : _settings = settings,
-       _initialPoint = initialPoint,
-       _initialFraction = initialFraction,
-       _layout = TextBookLayout(
+    this._initialPoint,
+    this._initialFraction,
+  }) : _layout = TextBookLayout(
          source: source,
          style: style,
          fonts: fonts,

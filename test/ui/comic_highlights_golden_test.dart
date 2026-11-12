@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -145,7 +145,14 @@ void main() {
           expect(ui.state.tocDrawerVisible, isTrue);
           await tester.ensureVisible(find.text(l10n.readerCollapseHighlight));
           await tapUi(tester, find.text(l10n.readerCollapseHighlight));
-          await tapUi(tester, find.byTooltip(l10n.highlightColorYellow));
+          await tapUi(
+            tester,
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is AppColorSwatchButton &&
+                  widget.tooltip == l10n.highlightColorYellow,
+            ),
+          );
           expect(find.byType(ReaderHighlightListTile), findsNWidgets(2));
           await tapUi(tester, find.text(l10n.readerBookmarks));
           await tapUi(tester, find.text(l10n.readerHighlights));

@@ -1,6 +1,6 @@
 import 'package:domain_models/domain_models.dart';
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
@@ -23,8 +23,10 @@ void main() {
     collectionRepository: app.collectionRepository,
     preferencesService: app.preferencesService,
     onSourcePressed: (_, {onSourceOpened, onReadingPositionSaved}) async {},
-    onAddPressed:
-        ({required onImported, entry = LibraryImportEntry.menu}) async {},
+    onAddPressed: ({
+      required onImported,
+      entry = LibraryImportEntry.menu,
+    }) async {},
   );
 
   for (final profile in VisualProfile.values) {

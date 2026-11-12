@@ -122,14 +122,13 @@ class TextPagesController extends ChangeNotifier {
     required BookStyle style,
     required BookFonts fonts,
     required this.images,
-    TextPageSettings settings = const TextPageSettings(),
+    this._settings = const TextPageSettings(),
     TextScaler textScaler = TextScaler.noScaling,
     bool? rtl,
-    String? initialCfi,
-    double? initialFraction,
+    this._initialCfi,
+    this._initialFraction,
   }) : _rtlOverride = rtl,
        _rtl = rtl ?? source.rtl,
-       _settings = settings,
        _layout = TextBookLayout(
          source: source,
          style: style,
@@ -137,8 +136,6 @@ class TextPagesController extends ChangeNotifier {
          images: images,
          textScaler: textScaler,
        ),
-       _initialCfi = initialCfi,
-       _initialFraction = initialFraction,
        _progress = SectionProgress(
          [for (var i = 0; i < source.sectionCount; i++) source.sectionSize(i)],
          linear: [

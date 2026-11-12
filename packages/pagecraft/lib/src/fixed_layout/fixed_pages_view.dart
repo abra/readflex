@@ -19,8 +19,11 @@ import 'zoom_tiles.dart';
 /// [imageRect] is where the whole page is drawn inside the page frame, so
 /// overlays can map page-normalized coordinates; with a margin crop it
 /// extends past the frame, which clips it.
-typedef PageOverlayBuilder =
-    Widget Function(BuildContext context, int page, Rect imageRect);
+typedef PageOverlayBuilder = Widget Function(
+  BuildContext context,
+  int page,
+  Rect imageRect,
+);
 
 /// The part of a page to show, as fractions of the page, or null for the
 /// whole page: a margin crop.
@@ -155,6 +158,14 @@ class _FixedPagesViewState extends State<FixedPagesView> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_reducedMotion && _animating && _pageController.hasClients) {
+      _pageController.jumpToPage(_controller.unit);
+    }
+  }
+
+  @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
     _cancelPendingTap();
@@ -195,8 +206,12 @@ class _FixedPagesViewState extends State<FixedPagesView> {
     WidgetsBinding.instance.addPostFrameCallback((_) => previous.dispose());
   }
 
+  bool get _reducedMotion =>
+      (MediaQuery.maybeDisableAnimationsOf(context) ?? false) ||
+      (MediaQuery.maybeReduceMotionOf(context) ?? false);
+
   Future<void> _showUnit(int unit) async {
-    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+    if (_reducedMotion) {
       _pageController.jumpToPage(unit);
       return;
     }

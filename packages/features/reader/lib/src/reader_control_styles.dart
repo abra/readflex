@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Reader controls use the larger existing label role in tablet windows.
 TextStyle readerControlCaptionStyle(BuildContext context) =>

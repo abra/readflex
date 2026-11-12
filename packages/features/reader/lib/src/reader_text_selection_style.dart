@@ -1,5 +1,5 @@
-import 'package:flutter/cupertino.dart' show CupertinoTheme;
-import 'package:flutter/material.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoTheme;
+import 'package:material_ui/material_ui.dart';
 
 /// Shared selection colours for Flutter text and fixed-layout text overlays.
 ({Color fill, Color handle}) readerTextSelectionColorsOf(BuildContext context) {

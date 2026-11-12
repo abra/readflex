@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/widgets.dart';
 
 import 'native_selection_snapshot.dart';
 import 'native_selection_surface.dart';
@@ -10,9 +10,16 @@ import 'native_selection_surface.dart';
 /// The original widget still owns text, layout, semantics and callbacks.
 /// Editable fields retain Flutter's IME connection and selection controls.
 class NativeEditableSelectionHost extends StatefulWidget {
-  const NativeEditableSelectionHost({super.key, required this.child});
+  const NativeEditableSelectionHost({
+    super.key,
+    required this.child,
+    this.handleColor,
+  });
 
   final Widget child;
+
+  /// Optional control accent; defaults to the hosted text's cursor color.
+  final Color? handleColor;
 
   @override
   State<NativeEditableSelectionHost> createState() =>
@@ -219,11 +226,9 @@ class _NativeEditableSelectionHostState
     }
     final selectionColor =
         editable.widget.selectionColor ??
-        Theme.of(context).textSelectionTheme.selectionColor ??
+        DefaultSelectionStyle.of(context).selectionColor ??
         DefaultSelectionStyle.defaultColor;
-    final accent =
-        Theme.of(context).textSelectionTheme.selectionHandleColor ??
-        editable.widget.cursorColor;
+    final accent = widget.handleColor ?? editable.widget.cursorColor;
     final previous = _snapshot;
     if (previous != null &&
         previous.revision == _revision &&
@@ -247,7 +252,7 @@ class _NativeEditableSelectionHostState
       });
     }
     if (_active) {
-      renderer.selectionColor = Colors.transparent;
+      renderer.selectionColor = const Color(0x00000000);
     }
     if (!_overlayController.isShowing) _overlayController.show();
   }

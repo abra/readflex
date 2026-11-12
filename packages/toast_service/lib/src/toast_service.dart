@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show FlutterView;
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:toastification/toastification.dart';
 
 import 'toast_avoid_area.dart';
@@ -32,7 +32,7 @@ void showToast(
   required String message,
   String? messageSuffix,
 }) {
-  final reduceMotion = MediaQuery.disableAnimationsOf(context);
+  final reduceMotion = context.reduceMotion;
   toastLift.value = _liftAboveBottomControls(View.of(context));
   toastification.showCustom(
     context: context,
@@ -44,7 +44,7 @@ void showToast(
     alignment: Alignment.bottomCenter,
     animationDuration: reduceMotion ? Duration.zero : null,
     animationBuilder: (context, animation, alignment, child) {
-      if (MediaQuery.disableAnimationsOf(context)) return child;
+      if (context.reduceMotion) return child;
       return SlideTransition(
         position: Tween<Offset>(
           begin: const Offset(0, 1),

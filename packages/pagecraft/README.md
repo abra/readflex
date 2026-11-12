@@ -7,6 +7,12 @@ reports positions, selections and taps back. The app embeds
 its views (`TextPagesView`, `TextScrollView`, `FixedPagesView`); `pagecraft`
 knows nothing about the app's domain models, repositories or blocs.
 
+Requires Flutter 3.50 / Dart 3.14. Parsing, layout and controllers keep core
+Flutter/Dart boundaries; only selection presentation uses standalone
+`material_ui` / `cupertino_ui`. The package does not depend on Readflex's
+`component_library`. Position and highlight CFIs captured on Flutter 3.44.9
+remain covered by immutable cross-version restore fixtures.
+
 foliate-js stays reference code, not a standard: the fork the app used is in
 the repository's history (the last revision with it is `fb4b4e5c`, under
 `packages/reader_webview/assets/foliate-js/src`). The fixture recordings

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_page_grid.dart';
@@ -26,8 +26,7 @@ void main() {
             theme: AppTheme.light(),
             locale: locale,
             supportedLocales: ReadflexSupportedLocales.locales,
-            localizationsDelegates:
-                ReadflexLocalizations.localizationsDelegates,
+            localizationsDelegates: readflexLocalizationsDelegates,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(
                 context,
@@ -84,7 +83,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: Scaffold(
             body: ReaderPageGrid(
@@ -139,7 +138,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         home: Scaffold(
           body: ValueListenableBuilder<int>(
             valueListenable: pageCount,

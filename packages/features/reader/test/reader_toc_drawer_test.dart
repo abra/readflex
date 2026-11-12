@@ -3,7 +3,7 @@ import 'dart:ui' show FontFeature, Tristate;
 import 'package:component_library/component_library.dart';
 import 'package:component_library/src/search_field_hint.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -85,7 +85,7 @@ void main() {
       MaterialApp(
         theme: dark ? AppTheme.dark() : AppTheme.light(),
         locale: locale,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
@@ -233,7 +233,13 @@ void main() {
     );
     expect(tester.getSize(chip).height, AppSizes.chipTapTarget);
 
-    await tester.tap(find.byTooltip(l10n.highlightColorYellow));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is AppColorSwatchButton &&
+            widget.tooltip == l10n.highlightColorYellow,
+      ),
+    );
     await tester.pumpAndSettle();
     expect(tester.widget<AppFilterChip>(chip).selected, isFalse);
     expect(find.byType(EmptyState), findsOneWidget);
@@ -270,7 +276,11 @@ void main() {
           ),
         );
         expect(list.top - chip.bottom, AppSpacing.sm);
-        final yellow = find.byTooltip(l10n.highlightColorYellow);
+        final yellow = find.byWidgetPredicate(
+          (widget) =>
+              widget is AppColorSwatchButton &&
+              widget.tooltip == l10n.highlightColorYellow,
+        );
         expect(
           tester.getSize(yellow),
           const Size.square(AppSizes.buttonHeight),
@@ -948,7 +958,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(disableAnimations: true),

@@ -3,7 +3,7 @@ import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
@@ -21,8 +21,10 @@ part 'practice_hub_sections.dart';
 
 /// Starts a review session. [sourceId] narrows it to one source; [ahead]
 /// reviews cards before they are due. Completes when the session closes.
-typedef PracticeStartReview =
-    Future<void> Function({String? sourceId, bool ahead});
+typedef PracticeStartReview = Future<void> Function({
+  String? sourceId,
+  bool ahead,
+});
 
 /// The Practice section, pushed above the Library: its name and the back
 /// chevron in the app bar, then what is due today, the Vocabulary and Highlights

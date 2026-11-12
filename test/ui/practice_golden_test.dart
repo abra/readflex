@@ -1,5 +1,5 @@
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:library_feature/library_feature.dart';
@@ -9,6 +9,8 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
+
+import 'package:preferences_service/preferences_service.dart';
 
 /// The Library with its Practice entry, the Practice section and a review
 /// session, in every visual profile.
@@ -54,8 +56,8 @@ void main() {
         (p) => p.copyWith(
           locale: locale,
           themeMode: profile.brightness == Brightness.dark
-              ? ThemeMode.dark
-              : ThemeMode.light,
+              ? AppThemeMode.dark
+              : AppThemeMode.light,
         ),
       );
       return app;
@@ -135,10 +137,15 @@ void main() {
           collectionRepository: app.collectionRepository,
           preferencesService: app.preferencesService,
           fsrsRepository: _LargeCountFsrsRepository(),
-          onSourcePressed:
-              (_, {onSourceOpened, onReadingPositionSaved}) async {},
-          onAddPressed:
-              ({required onImported, entry = LibraryImportEntry.menu}) async {},
+          onSourcePressed: (
+            _, {
+            onSourceOpened,
+            onReadingPositionSaved,
+          }) async {},
+          onAddPressed: ({
+            required onImported,
+            entry = LibraryImportEntry.menu,
+          }) async {},
           onPracticePressed: () async {},
         ),
         surfaceSize: size,

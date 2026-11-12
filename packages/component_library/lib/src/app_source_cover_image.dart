@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 
 /// Resolves an optional local cover path into an image provider.
 ///

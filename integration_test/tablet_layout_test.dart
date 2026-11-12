@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -19,6 +19,8 @@ import '../test/support/ui_test_app.dart';
 import '../test/support/ui_test_driver.dart';
 import 'tablet_extra_flows_test.dart' as extra;
 
+import 'package:preferences_service/preferences_service.dart';
+
 const _physicalRotation = bool.fromEnvironment('READFLEX_TEST_TABLET_ROTATION');
 
 /// Uses the native window. With READFLEX_TEST_TABLET_ROTATION, rotate the device
@@ -34,9 +36,10 @@ void main() {
     final size = window(tester);
     expect(size.shortestSide, greaterThanOrEqualTo(600));
     binding.reportData ??= {};
-    final snapshots =
-        binding.reportData!.putIfAbsent('tabletSnapshots', () => <Object>[])
-            as List;
+    final snapshots = binding.reportData!.putIfAbsent(
+      'tabletSnapshots',
+      () => <Object>[],
+    ) as List;
     snapshots.add({
       'name': name,
       'width': size.width,
@@ -102,7 +105,10 @@ void main() {
     expect(title.bottom, lessThanOrEqualTo(cover.bottom + .5));
     await capture(tester, 'tablet-library-grid');
 
-    await tapUi(tester, find.byTooltip('Display options'));
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('libraryHeaderDisplayButton')),
+    );
     await tapUi(tester, find.text('List'));
     await tapUi(tester, find.byTooltip('Close').hitTestable().last);
     final rows = find.byType(BookLibraryListTile).hitTestable();
@@ -123,8 +129,10 @@ void main() {
     await capture(tester, 'tablet-library-list');
 
     await app.preferencesService.update(
-      (prefs) =>
-          prefs.copyWith(locale: const Locale('ar'), themeMode: ThemeMode.dark),
+      (prefs) => prefs.copyWith(
+        locale: const Locale('ar'),
+        themeMode: AppThemeMode.dark,
+      ),
     );
     await waitForUi(
       tester,
@@ -235,8 +243,7 @@ void main() {
         expect(
           original.position!.cfi,
           before.cfi,
-          reason:
-              'rotation keeps the reading anchor while page fractions can change',
+          reason: 'rotation keeps the reading anchor while page fractions can change',
         );
         expect(original.layout.style.fontScale, closeTo(fontScale, .001));
         expect(original.columns, orientation == 'landscape' ? 2 : 1);

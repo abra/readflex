@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_theme_swatches.dart';
@@ -33,7 +33,7 @@ void main() {
       MaterialApp(
         locale: locale,
         supportedLocales: ReadflexSupportedLocales.locales,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         theme: AppTheme.light(),
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(

@@ -44,11 +44,9 @@ class ReaderBrightnessState extends Equatable {
 class ReaderBrightnessCubit extends Cubit<ReaderBrightnessState> {
   ReaderBrightnessCubit({
     required PreferencesService preferencesService,
-    required ScreenControlService screenControlService,
-    required String sourceId,
+    required this._screenControlService,
+    required this._sourceId,
   }) : _preferencesService = preferencesService,
-       _screenControlService = screenControlService,
-       _sourceId = sourceId,
        super(
          ReaderBrightnessState(
            brightnessOverride: _storedBrightness(

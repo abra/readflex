@@ -3,23 +3,20 @@ import 'package:readflex/app/composition.dart';
 import 'package:readflex/app/config/application_config.dart';
 import 'package:readflex/app/dependency_container.dart';
 
-typedef DependenciesFactory =
-    Future<DependenciesContainer> Function({
-      required ApplicationConfig config,
-      required Logger logger,
-      required ErrorReportingService errorReporter,
-    });
+typedef DependenciesFactory = Future<DependenciesContainer> Function({
+  required ApplicationConfig config,
+  required Logger logger,
+  required ErrorReportingService errorReporter,
+});
 
 /// Coordinates startup attempts while retaining monitoring across retries.
 class AppBootstrap {
   AppBootstrap({
     required this.config,
     required this.logger,
-    Future<ErrorReportingService> Function(ApplicationConfig) reporterFactory =
-        createErrorReporter,
-    DependenciesFactory dependenciesFactory = composeDependencies,
-  }) : _reporterFactory = reporterFactory,
-       _dependenciesFactory = dependenciesFactory;
+    this._reporterFactory = createErrorReporter,
+    this._dependenciesFactory = composeDependencies,
+  });
 
   final ApplicationConfig config;
   final Logger logger;

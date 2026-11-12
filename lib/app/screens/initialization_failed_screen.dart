@@ -4,7 +4,7 @@
 
 import 'package:component_library/component_library.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 /// Screen shown when app initialization fails, with an optional retry button.
@@ -65,7 +65,7 @@ class _InitializationFailedScreenState
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       supportedLocales: ReadflexSupportedLocales.locales,
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      localizationsDelegates: readflexLocalizationsDelegates,
       home: Scaffold(
         body: Builder(
           builder: (context) {

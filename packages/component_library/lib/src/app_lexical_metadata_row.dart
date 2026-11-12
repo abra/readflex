@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'theme/app_typography.dart';
 import 'theme/extensions/build_context_ext.dart';

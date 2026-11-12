@@ -347,6 +347,41 @@ export 'local.dart' if (dart.library.io) 'package:b/b.dart';
     );
   });
 
+  test('rejects legacy design imports but allows core and standalone UI', () {
+    repository.write(
+      'lib/main.dart',
+      "import 'package:flutter/material.dart';\n"
+          "export 'package:flutter/cupertino.dart';\n"
+          "import 'package:flutter/widgets.dart';\n"
+          "import 'package:material_ui/material_ui.dart';\n"
+          "import 'package:cupertino_ui/cupertino_ui.dart';\n"
+          "// import 'package:flutter/material.dart';",
+    );
+    final violations = repository.check();
+    expect(violations.map((item) => item.rule), [
+      'legacy-design-import',
+      'legacy-design-import',
+    ]);
+    expect(violations.map((item) => item.line), [1, 2]);
+  });
+
+  test('domain models cannot depend on standalone UI libraries', () {
+    repository.package(
+      'packages/model',
+      'domain_models',
+      dependencies: {'material_ui': 'any', 'cupertino_ui': 'any'},
+    );
+    repository.write(
+      'packages/model/lib/model.dart',
+      "import 'package:material_ui/material_ui.dart';\n"
+          "export 'package:cupertino_ui/cupertino_ui.dart';",
+    );
+    expect(
+      repository.check().where((item) => item.rule == 'domain-purity'),
+      hasLength(4),
+    );
+  });
+
   test('domain models remain independent of owned packages and Flutter', () {
     repository.package(
       'packages/model',

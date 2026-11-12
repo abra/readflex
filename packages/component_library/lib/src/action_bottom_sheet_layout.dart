@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'bottom_sheet_header.dart';
 import 'scroll_edge_fade_stack.dart';

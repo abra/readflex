@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show Tristate;
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -2061,7 +2061,7 @@ extension on WidgetTester {
         ),
         locale: locale,
         supportedLocales: ReadflexSupportedLocales.locales,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         theme: AppTheme.light(),
         home: MultiBlocProvider(
           providers: [

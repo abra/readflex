@@ -29,11 +29,10 @@ typedef AcceptBookImportTerms = Future<void> Function();
 /// during the byte-copy phase. The first non-null progress value also
 /// signals to the cubit that the parsing phase is over and the bar can
 /// switch from indeterminate to determinate.
-typedef ImportBookFile =
-    Future<Book?> Function(
-      File sourceFile, {
-      void Function(double progress)? onProgress,
-    });
+typedef ImportBookFile = Future<Book?> Function(
+  File sourceFile, {
+  void Function(double progress)? onProgress,
+});
 
 /// Current phase of saving a web article.
 enum ImportFlowArticleStage {
@@ -42,11 +41,10 @@ enum ImportFlowArticleStage {
 }
 
 /// Extracts, cleans, and persists a web article by URL.
-typedef ImportArticleUrl =
-    Future<Article?> Function(
-      String url, {
-      void Function(ImportFlowArticleStage stage)? onStage,
-    });
+typedef ImportArticleUrl = Future<Article?> Function(
+  String url, {
+  void Function(ImportFlowArticleStage stage)? onStage,
+});
 
 /// User-facing failure raised by the app layer when article extraction has
 /// a meaningful backend reason (unsupported URL, extraction failed, etc.).
@@ -65,15 +63,12 @@ class ArticleImportException implements Exception {
 /// type without nullable-everywhere ceremony.
 class ImportFlowCubit extends Cubit<ImportFlowState> {
   ImportFlowCubit({
-    required PickBookFile onPickBookFile,
-    required ImportBookFile onImportBook,
-    required ImportArticleUrl onImportArticle,
+    required this._onPickBookFile,
+    required this._onImportBook,
+    required this._onImportArticle,
     IsBookImportTermsAccepted? isBookImportTermsAccepted,
     AcceptBookImportTerms? acceptBookImportTerms,
-  }) : _onPickBookFile = onPickBookFile,
-       _onImportBook = onImportBook,
-       _onImportArticle = onImportArticle,
-       _isBookImportTermsAccepted = isBookImportTermsAccepted ?? (() => true),
+  }) : _isBookImportTermsAccepted = isBookImportTermsAccepted ?? (() => true),
        _acceptBookImportTerms = acceptBookImportTerms ?? (() async {}),
        super(const ImportFlowMenu());
 

@@ -4,7 +4,7 @@ import 'dart:ui' show SemanticsRole;
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
@@ -377,7 +377,7 @@ class _ReaderHarness extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     theme: AppTheme.light(),
     locale: locale,
-    localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+    localizationsDelegates: readflexLocalizationsDelegates,
     supportedLocales: ReadflexLocalizations.supportedLocales,
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(

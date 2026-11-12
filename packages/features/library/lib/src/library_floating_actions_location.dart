@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// [FloatingActionButtonLocation.endFloat] whose bottom safe inset holds
 /// while the keyboard moves.

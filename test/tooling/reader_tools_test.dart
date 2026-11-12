@@ -368,13 +368,11 @@ void main() {
           ).readAsBytes();
           expect(_hash(frozenBytes), entry.value);
         }
-        final progress =
-            jsonDecode(
-                  await File(
-                    p.join(result.file.parent.path, 'progress.json'),
-                  ).readAsString(),
-                )
-                as Map;
+        final progress = jsonDecode(
+          await File(
+            p.join(result.file.parent.path, 'progress.json'),
+          ).readAsString(),
+        ) as Map;
         expect(progress['runs'], report['runs']);
         expect(progress['failures'], isEmpty);
         expect(output.toString().trim().split('\n').last, result.file.path);

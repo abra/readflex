@@ -5,12 +5,15 @@
 
 import 'api.dart';
 import 'archive.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
+
 import 'file.dart';
 import 'frb_generated.dart';
 import 'markup.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 
 abstract class ReaderRustLibApiImplPlatform
@@ -1259,10 +1262,14 @@ class ReaderRustLibWire implements BaseWire {
 
 typedef DartPort = ffi.Int64;
 typedef DartDartPort = int;
-typedef DartPostCObjectFnTypeFunction =
-    ffi.Bool Function(DartPort port_id, ffi.Pointer<ffi.Void> message);
-typedef DartDartPostCObjectFnTypeFunction =
-    bool Function(DartDartPort port_id, ffi.Pointer<ffi.Void> message);
+typedef DartPostCObjectFnTypeFunction = ffi.Bool Function(
+  DartPort port_id,
+  ffi.Pointer<ffi.Void> message,
+);
+typedef DartDartPostCObjectFnTypeFunction = bool Function(
+  DartDartPort port_id,
+  ffi.Pointer<ffi.Void> message,
+);
 typedef DartPostCObjectFnType =
     ffi.Pointer<ffi.NativeFunction<DartPostCObjectFnTypeFunction>>;
 

@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_highlight_color.dart';
@@ -47,7 +47,7 @@ void main() {
         theme: dark ? AppTheme.dark() : AppTheme.light(),
         locale: locale,
         supportedLocales: ReadflexSupportedLocales.locales,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(
             context,
@@ -486,7 +486,7 @@ void main() {
         MaterialApp(
           theme: dark ? AppTheme.dark() : AppTheme.light(),
           supportedLocales: ReadflexSupportedLocales.locales,
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           home: Scaffold(
             body: ReaderHighlightListTile(
               highlight: highlight(text: 'Gone passage'),
@@ -624,7 +624,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.light(),
           supportedLocales: ReadflexSupportedLocales.locales,
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           home: Scaffold(
             body: SingleChildScrollView(
               child: ReaderHighlightListTile(

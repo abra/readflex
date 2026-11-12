@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pagecraft/all_formats.dart';
@@ -82,6 +82,8 @@ void main() {
     ValueNotifier<PageTurnAnimation>? animation,
     bool rtl = false,
     bool reduceMotion = false,
+    bool disableAnimations = false,
+    ValueNotifier<MediaQueryData>? accessibility,
     BookStyle pageStyle = style,
     TextPageSettings settings = const TextPageSettings(
       sideMarginPercent: 0,
@@ -117,28 +119,41 @@ void main() {
     addTearDown(controller.dispose);
     final selectedAnimation = animation ?? ValueNotifier(pageTurnAnimation);
     if (animation == null) addTearDown(selectedAnimation.dispose);
+    final mediaQuery =
+        accessibility ??
+        ValueNotifier(
+          MediaQueryData(
+            size: size,
+            disableAnimations: disableAnimations,
+            reduceMotion: reduceMotion,
+          ),
+        );
+    if (accessibility == null) addTearDown(mediaQuery.dispose);
     await tester.pumpWidget(
       MaterialApp(
-        home: MediaQuery(
-          data: MediaQueryData(size: size, disableAnimations: reduceMotion),
-          child: ValueListenableBuilder<PageTurnAnimation>(
-            valueListenable: selectedAnimation,
-            builder: (context, value, _) => TextPagesView(
-              controller: controller,
-              axis: axis,
-              pageTurnAnimation: value,
-              backgroundColor: Color(pageStyle.backgroundColor),
-              onTap: onTap,
-              onLinkTap: onLinkTap,
-              onHighlightTap: onHighlightTap,
-              highlightsOf: highlightsOf,
-              trackedHighlight: trackedHighlight,
-              onHighlightRects: onHighlightRects,
-              onSelectionChanged: onSelectionChanged,
-              selectionControls: selectionControls,
-              onSelectionTap: onSelectionTap,
-              onSelectionAdjusting: onSelectionAdjusting,
-              contextMenuBuilder: contextMenuBuilder,
+        home: ValueListenableBuilder<MediaQueryData>(
+          valueListenable: mediaQuery,
+          builder: (context, data, _) => MediaQuery(
+            data: data,
+            child: ValueListenableBuilder<PageTurnAnimation>(
+              valueListenable: selectedAnimation,
+              builder: (context, value, _) => TextPagesView(
+                controller: controller,
+                axis: axis,
+                pageTurnAnimation: value,
+                backgroundColor: Color(pageStyle.backgroundColor),
+                onTap: onTap,
+                onLinkTap: onLinkTap,
+                onHighlightTap: onHighlightTap,
+                highlightsOf: highlightsOf,
+                trackedHighlight: trackedHighlight,
+                onHighlightRects: onHighlightRects,
+                onSelectionChanged: onSelectionChanged,
+                selectionControls: selectionControls,
+                onSelectionTap: onSelectionTap,
+                onSelectionAdjusting: onSelectionAdjusting,
+                contextMenuBuilder: contextMenuBuilder,
+              ),
             ),
           ),
         ),
@@ -606,8 +621,100 @@ void main() {
     await tester.pump();
     expect(lefts(tester), {topOf(0): 0});
     expect(controller.position!.spread, 0);
+    // Native pointer handoff schedules a layout rebuild after this frame.
+    // Flush it without advancing time: a motion ticker would keep running.
+    await tester.pump();
+    expect(lefts(tester), {topOf(0): 0});
     expect(tester.hasRunningAnimations, isFalse);
   });
+
+  for (final animation in PageTurnAnimation.values) {
+    testWidgets('disableAnimations skips $animation turns', (tester) async {
+      await show(
+        tester,
+        disableAnimations: true,
+        pageTurnAnimation: animation,
+      );
+      await tester.runAsync(controller.next);
+      await tester.pump();
+      expect(lefts(tester), {topOf(1): 0});
+      expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    for (final disableAnimations in [false, true]) {
+      final setting = disableAnimations ? 'disableAnimations' : 'reduceMotion';
+      testWidgets('$setting finishes an active $animation turn', (
+        tester,
+      ) async {
+        final accessibility = ValueNotifier(
+          const MediaQueryData(size: Size(200, 160)),
+        );
+        addTearDown(accessibility.dispose);
+        await show(
+          tester,
+          accessibility: accessibility,
+          pageTurnAnimation: animation,
+        );
+        await tester.runAsync(controller.next);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(tester.hasRunningAnimations, isTrue);
+        accessibility.value = accessibility.value.copyWith(
+          disableAnimations: disableAnimations,
+          reduceMotion: !disableAnimations,
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(lefts(tester), {topOf(1): 0});
+        expect(tester.hasRunningAnimations, isFalse);
+        await tester.runAsync(controller.next);
+        await tester.pump();
+        expect(lefts(tester), {topOf(2): 0});
+        expect(tester.hasRunningAnimations, isFalse);
+      });
+
+      testWidgets('$setting finishes a committing $animation swipe', (
+        tester,
+      ) async {
+        final accessibility = ValueNotifier(
+          const MediaQueryData(size: Size(200, 160)),
+        );
+        addTearDown(accessibility.dispose);
+        await show(
+          tester,
+          accessibility: accessibility,
+          pageTurnAnimation: animation,
+        );
+        final gesture = await tester.startGesture(const Offset(100, 80));
+        await gesture.moveBy(
+          const Offset(-20, 0),
+          timeStamp: const Duration(milliseconds: 100),
+        );
+        await tester.pump();
+        await gesture.moveBy(
+          const Offset(-80, 0),
+          timeStamp: const Duration(milliseconds: 200),
+        );
+        await tester.pump();
+        await gesture.up(timeStamp: const Duration(milliseconds: 400));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 20));
+        expect(tester.hasRunningAnimations, isTrue);
+        accessibility.value = accessibility.value.copyWith(
+          disableAnimations: disableAnimations,
+          reduceMotion: !disableAnimations,
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(tester.hasRunningAnimations, isFalse);
+        await settle(tester, () => controller.position!.spread == 1);
+        await tester.pump();
+        expect(lefts(tester), {topOf(1): 0});
+        expect(tester.hasRunningAnimations, isFalse);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
 
   testWidgets('taps: links first, then highlights, then the zones', (
     tester,

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,13 +71,15 @@ void main() {
             articleRepository: app.articleRepository,
             collectionRepository: app.collectionRepository,
             preferencesService: app.preferencesService,
-            onSourcePressed:
-                (_, {onSourceOpened, onReadingPositionSaved}) async {},
-            onAddPressed:
-                ({
-                  required onImported,
-                  entry = LibraryImportEntry.menu,
-                }) async {},
+            onSourcePressed: (
+              _, {
+              onSourceOpened,
+              onReadingPositionSaved,
+            }) async {},
+            onAddPressed: ({
+              required onImported,
+              entry = LibraryImportEntry.menu,
+            }) async {},
           );
         },
         surfaceSize: size,

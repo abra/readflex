@@ -4,7 +4,9 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart'
     show AnyhowException;
 
 import 'native_library.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart' as frb;
+
 import 'rust/api.dart' as rust;
 
 /// A decoding or file error reported by the native MOBI reader.

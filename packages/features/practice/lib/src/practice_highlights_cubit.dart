@@ -83,15 +83,11 @@ const _absent = Object();
 /// The highlights list: load, search, filter by colour.
 class PracticeHighlightsCubit extends Cubit<PracticeHighlightsState> {
   PracticeHighlightsCubit({
-    required HighlightRepository highlightRepository,
-    required FsrsRepository fsrsRepository,
-    required BookRepository bookRepository,
-    ArticleRepository? articleRepository,
-  }) : _highlightRepository = highlightRepository,
-       _fsrsRepository = fsrsRepository,
-       _bookRepository = bookRepository,
-       _articleRepository = articleRepository,
-       super(const PracticeHighlightsState());
+    required this._highlightRepository,
+    required this._fsrsRepository,
+    required this._bookRepository,
+    this._articleRepository,
+  }) : super(const PracticeHighlightsState());
 
   final HighlightRepository _highlightRepository;
   final FsrsRepository _fsrsRepository;

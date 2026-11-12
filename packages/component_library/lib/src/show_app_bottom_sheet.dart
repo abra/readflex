@@ -1,11 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'app_bottom_safe_area.dart';
 import 'app_sheet_dismiss_guard.dart';
 import 'app_sheet_drag_handle.dart';
+import 'theme/extensions/build_context_ext.dart';
 
 /// Shows a modal bottom sheet using the app's standard configuration.
 ///
@@ -43,6 +44,9 @@ Future<T?> showAppBottomSheet<T>(
   final navigator = Navigator.of(context, rootNavigator: true);
   final controller = BottomSheet.createAnimationController(
     navigator.overlay!,
+    sheetAnimationStyle: context.reduceMotion
+        ? AnimationStyle.noAnimation
+        : null,
   );
   var wasVisible = false;
   final dismissedCompleter = Completer<void>();

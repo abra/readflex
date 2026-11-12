@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:component_library/src/search_field_hint.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A [SearchField] hint shortens instead of being cut, and stays the same

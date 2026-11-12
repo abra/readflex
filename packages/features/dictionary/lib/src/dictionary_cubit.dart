@@ -67,11 +67,9 @@ class DictionarySheetState extends Equatable {
 
 class DictionaryCubit extends Cubit<DictionarySheetState> {
   DictionaryCubit({
-    required DictionaryLookupService dictionaryService,
-    DictionaryRepository? dictionaryRepository,
-  }) : _dictionaryService = dictionaryService,
-       _dictionaryRepository = dictionaryRepository,
-       super(const DictionarySheetState());
+    required this._dictionaryService,
+    this._dictionaryRepository,
+  }) : super(const DictionarySheetState());
 
   final DictionaryLookupService _dictionaryService;
   final DictionaryRepository? _dictionaryRepository;

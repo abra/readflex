@@ -1,5 +1,5 @@
 import 'package:drift/drift.dart' show Value;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
@@ -65,8 +65,10 @@ void main() {
     collectionRepository: app.collectionRepository,
     preferencesService: app.preferencesService,
     onSourcePressed: (_, {onSourceOpened, onReadingPositionSaved}) async {},
-    onAddPressed:
-        ({required onImported, entry = LibraryImportEntry.menu}) async {},
+    onAddPressed: ({
+      required onImported,
+      entry = LibraryImportEntry.menu,
+    }) async {},
   );
 
   Future<void> waitForBooks(WidgetTester tester) async {
@@ -98,7 +100,7 @@ void main() {
       await waitForBooks(tester);
       await expectUiGolden(tester, profile, 'tablet-library-list-$name');
       await unmountUi(tester);
-    });
+    }, tags: ['golden']);
   }
 
   for (final (window, name) in [
@@ -121,7 +123,7 @@ void main() {
         'tablet-library-grid-$name',
       );
       await unmountUi(tester);
-    });
+    }, tags: ['golden']);
   }
 
   for (final (profile, window, name) in [
@@ -147,7 +149,7 @@ void main() {
       expect(find.byType(LibrarySelectionBar), findsOneWidget);
       await expectUiGolden(tester, profile, 'tablet-library-selection-$name');
       await unmountUi(tester);
-    });
+    }, tags: ['golden']);
   }
 
   testWidgets('empty library keeps the onboarding column', (tester) async {
@@ -172,7 +174,7 @@ void main() {
     await tester.pumpAndSettle();
     await expectUiGolden(tester, VisualProfile.phone, 'tablet-library-empty');
     await unmountUi(tester);
-  });
+  }, tags: ['golden']);
 
   for (final profile in [VisualProfile.phone, VisualProfile.dark]) {
     testWidgets('appearance columns row ${profile.name}', (tester) async {
@@ -210,6 +212,6 @@ void main() {
       await expectUiGolden(tester, profile, 'tablet-reader-appearance-columns');
       Navigator.of(sheetContext).pop();
       await tester.pumpAndSettle();
-    });
+    }, tags: ['golden']);
   }
 }

@@ -12,9 +12,9 @@ import 'package:xml/xml.dart';
 /// every section's parsed document, sizes, navigation and resolutions.
 void main() {
   const dir = 'test/fixtures/mobi';
-  final expected =
-      jsonDecode(File('$dir/expected.json').readAsStringSync())
-          as Map<String, dynamic>;
+  final expected = jsonDecode(
+    File('$dir/expected.json').readAsStringSync(),
+  ) as Map<String, dynamic>;
 
   Object? describe(dom.Node node) {
     if (node is dom.Text) return node.data;

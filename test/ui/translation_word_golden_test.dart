@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:domain_models/domain_models.dart';

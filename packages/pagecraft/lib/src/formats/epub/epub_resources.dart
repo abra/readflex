@@ -97,9 +97,8 @@ class EpubResources {
     required this.guide,
     required this.cover,
     required this.spineCfis,
-    required XmlCfiDocument cfiDocument,
-  }) : _cfiDocument = cfiDocument,
-       _byId = {for (final item in manifest) item.id: item};
+    required this._cfiDocument,
+  }) : _byId = {for (final item in manifest) item.id: item};
 
   /// Reads [opf], resolving hrefs with [resolveHref] (relative to the
   /// package document's path in the container).

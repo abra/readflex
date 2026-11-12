@@ -37,14 +37,13 @@ const readerPartsSourceFiles = [
   '.fvmrc',
 ];
 
-typedef ReaderCommandRunner =
-    Future<ProcessResult> Function(
-      List<String> command, {
-      String? workingDirectory,
-      Map<String, String>? environment,
-      Duration? timeout,
-      int? maxOutputBytes,
-    });
+typedef ReaderCommandRunner = Future<ProcessResult> Function(
+  List<String> command, {
+  String? workingDirectory,
+  Map<String, String>? environment,
+  Duration? timeout,
+  int? maxOutputBytes,
+});
 
 class ReaderPartsResult {
   const ReaderPartsResult({required this.file, required this.report});

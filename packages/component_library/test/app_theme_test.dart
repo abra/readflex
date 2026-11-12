@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:component_library/src/theme/tokens/primitive_colors.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -120,12 +120,10 @@ void main() {
       final copied = light.copyWith() as AppColorsExt;
       expect(copied.successContainer, light.successContainer);
       expect(copied.onSuccessContainer, light.onSuccessContainer);
-      final overridden =
-          light.copyWith(
-                successContainer: dark.successContainer,
-                onSuccessContainer: dark.onSuccessContainer,
-              )
-              as AppColorsExt;
+      final overridden = light.copyWith(
+        successContainer: dark.successContainer,
+        onSuccessContainer: dark.onSuccessContainer,
+      ) as AppColorsExt;
       expect(overridden.successContainer, dark.successContainer);
       expect(overridden.onSuccessContainer, dark.onSuccessContainer);
       final interpolated = light.lerp(dark, .5) as AppColorsExt;

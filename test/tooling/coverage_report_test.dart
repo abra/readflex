@@ -385,13 +385,11 @@ void main() {
     final fixture = await _Fixture.create();
     final result = await _runCli(fixture, ['--snapshot', fixture.output.path]);
     expect(result.exitCode, 0, reason: '${result.stderr}');
-    final data =
-        jsonDecode(
-              await File(
-                path.join(fixture.output.path, 'sources.json'),
-              ).readAsString(),
-            )
-            as Map<String, dynamic>;
+    final data = jsonDecode(
+      await File(
+        path.join(fixture.output.path, 'sources.json'),
+      ).readAsString(),
+    ) as Map<String, dynamic>;
     expect(data['packages'], ['demo']);
     expect(
       (data['files'] as Map)[path.join('lib', 'main.dart')],
@@ -414,13 +412,11 @@ void main() {
         fixture.native.path,
       ]);
       expect(result.exitCode, 0, reason: '${result.stderr}');
-      final data =
-          jsonDecode(
-                await File(
-                  path.join(fixture.output.path, 'report.json'),
-                ).readAsString(),
-              )
-              as Map<String, dynamic>;
+      final data = jsonDecode(
+        await File(
+          path.join(fixture.output.path, 'report.json'),
+        ).readAsString(),
+      ) as Map<String, dynamic>;
       expect(data['successful'], isTrue);
       expect((data['packages'] as List).single['linesHit'], 1);
       expect((data['suites'] as List).length, 2);

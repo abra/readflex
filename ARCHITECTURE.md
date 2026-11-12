@@ -145,6 +145,32 @@ Rules:
 This keeps feature UI testable and prevents accidental coupling between
 features.
 
+## Platform UI Libraries
+
+Flutter 3.50 separates the Material and Cupertino design libraries from the
+framework. Owned UI imports `material_ui` and, where needed, `cupertino_ui`.
+Use Flutter core `widgets`, `painting` and `rendering` imports for code that
+does not need design-library widgets or themes. Do not re-export the SDK or
+wrap every framework widget in `component_library`.
+
+Readflex keeps one design system in `component_library`. Platform-specific
+selection styling and controls stay inside the UI component that owns them;
+screens keep the same routing → Screen/Sheet → Bloc/Cubit → View boundaries.
+Pagecraft depends directly on the design libraries only for selection
+presentation and stays independent of Readflex's components and preferences.
+The native selection bridge takes colors from its host and uses core APIs.
+
+`preferences_service` owns `AppThemeMode`. The app maps it to UI `ThemeMode`;
+the stored `system`, `light` and `dark` names remain unchanged. The app root
+temporarily uses `MaterialUiCompatibilityBridge` for legacy third-party UI
+such as toastification. It bridges inherited theme/localization context, not
+public type signatures. `go_router` uses the standalone libraries too.
+
+App-owned motion resolves both `MediaQuery.reduceMotion` and `disableAnimations`;
+direct manipulation remains responsive. Shared UI uses
+`context.reduceMotion`/`context.motion`; Pagecraft owns the equivalent policy
+without depending on `component_library`.
+
 ## Accessibility
 
 Accessibility is a UI contract in this codebase. Prefer built-in Flutter and
@@ -259,9 +285,12 @@ not implemented.
 
 `readflex_localizations` is the single source of truth for supported locales,
 generated Flutter localization delegates, and user-facing UI copy. The root app
-wires `ReadflexLocalizations.localizationsDelegates`,
+wires `readflexLocalizationsDelegates`,
 `ReadflexSupportedLocales.locales`, and the current locale from
 `PreferencesScope.localeOf(context)` into `MaterialApp`.
+The hand-maintained delegate list combines generated app strings with
+standalone UI delegates. Do not edit generated files to replace the legacy
+delegates that the SDK localization generator still emits.
 The user-selected locale is persisted in `preferences_service`; the Library
 display sheet owns the current language picker through a feature cubit.
 

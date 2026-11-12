@@ -27,14 +27,13 @@ import 'paragraph_layout.dart';
 class PageParagraphSelectable
     with Selectable, ChangeNotifier, SelectionRegistrant {
   PageParagraphSelectable({
-    required RenderBox page,
+    required this._page,
     required this.item,
     required this.order,
-    required Offset origin,
+    required this._origin,
     required this.start,
     required this.end,
-  }) : _page = page,
-       _origin = origin;
+  });
 
   /// The fragments of [column]'s page [page], placed at [inset] in the
   /// page's render box.

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_bloc.dart';
@@ -72,7 +72,7 @@ class _TestApp extends StatelessWidget {
     theme: AppTheme.light(),
     locale: locale,
     supportedLocales: ReadflexSupportedLocales.locales,
-    localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+    localizationsDelegates: readflexLocalizationsDelegates,
     builder: (context, child) => ValueListenableBuilder<bool>(
       valueListenable: harness.reducedMotion,
       builder: (context, reduced, _) => MediaQuery(

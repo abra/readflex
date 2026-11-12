@@ -71,8 +71,10 @@ class ComicImageAreaLayer extends StatefulWidget {
 typedef ComicDraftCommitted = void Function(Rect rect, Rect? viewportRect);
 
 /// A pressed saved area and where it sits in the whole view.
-typedef ComicAreaPressed =
-    void Function(ComicImageArea area, Rect? viewportRect);
+typedef ComicAreaPressed = void Function(
+  ComicImageArea area,
+  Rect? viewportRect,
+);
 
 class _ComicImageAreaLayerState extends State<ComicImageAreaLayer>
     with RepaintAfterBuild {

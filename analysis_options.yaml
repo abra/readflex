@@ -14,3 +14,6 @@ analyzer:
     - "tool/**"
     - "benchmarks/mobi_rust/**"
     - "benchmarks/reader_native/**"
+    - build/**
+    - android/**
+    - ios/**

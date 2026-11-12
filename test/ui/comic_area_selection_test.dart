@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:component_library/component_library.dart'
+    show AppColorSwatchButton;
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -113,7 +115,14 @@ void main() {
       expect(controls, findsOneWidget);
       await _capture(tester, name, '02-released');
 
-      await tapUi(tester, find.byTooltip(l10n.highlightColorBlue));
+      await tapUi(
+        tester,
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is AppColorSwatchButton &&
+              widget.tooltip == l10n.highlightColorBlue,
+        ),
+      );
       final controlsElement = tester.element(controls);
       final blue = _draft(tester, layer).color;
       expect(
@@ -220,7 +229,13 @@ void main() {
       // No delayed clear-protection window after changing a colour.
       await tester.longPressAt(image.center);
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip(l10n.highlightColorBlue));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is AppColorSwatchButton &&
+              widget.tooltip == l10n.highlightColorBlue,
+        ),
+      );
       await tester.pump();
       await tester.tapAt(image.topLeft + const Offset(20, 40));
       await tester.pump();

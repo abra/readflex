@@ -7,9 +7,8 @@ import 'package:screen_control_service/screen_control_service.dart';
 /// background lifecycle states, and disposal.
 class ReaderKeepAwakeCubit extends Cubit<bool> {
   ReaderKeepAwakeCubit({
-    required ScreenControlService screenControlService,
-  }) : _screenControlService = screenControlService,
-       super(false);
+    required this._screenControlService,
+  }) : super(false);
 
   final ScreenControlService _screenControlService;
   bool _foreground = true;

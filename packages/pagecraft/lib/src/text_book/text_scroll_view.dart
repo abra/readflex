@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
     show ScrollCacheExtent, SelectedContent, SelectionHandler;
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart'
+    show AdaptiveTextSelectionToolbar, SelectionArea, SelectionAreaState;
 import 'package:native_text_selection/native_text_selection.dart';
 
 import '../document/text_point.dart';
@@ -451,7 +453,7 @@ class _TextScrollViewState extends State<TextScrollView>
         );
         child = DefaultSelectionStyle(
           selectionColor: nativeActive
-              ? Colors.transparent
+              ? const Color(0x00000000)
               : DefaultSelectionStyle.of(context).selectionColor,
           child: child,
         );

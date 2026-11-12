@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pagecraft/all_formats.dart';
@@ -39,6 +39,8 @@ void main() {
     bool rtl = false,
     int initialPage = 0,
     bool reduceMotion = false,
+    bool disableAnimations = false,
+    ValueNotifier<MediaQueryData>? accessibility,
     Axis axis = Axis.horizontal,
     PageTurnAnimation pageTurnAnimation = PageTurnAnimation.cover,
     ValueNotifier<PageTurnAnimation>? animation,
@@ -58,18 +60,31 @@ void main() {
     }
     final selectedAnimation = animation ?? ValueNotifier(pageTurnAnimation);
     if (animation == null) addTearDown(selectedAnimation.dispose);
-    final view = MediaQuery(
-      data: MediaQueryData(size: size, disableAnimations: reduceMotion),
-      child: Directionality(
-        textDirection: TextDirection.ltr,
-        child: ValueListenableBuilder<PageTurnAnimation>(
-          valueListenable: selectedAnimation,
-          builder: (context, value, _) => FixedPagesView(
-            pages: ComicPages(source),
-            controller: controller,
-            onTap: taps.add,
-            axis: axis,
-            pageTurnAnimation: value,
+    final mediaQuery =
+        accessibility ??
+        ValueNotifier(
+          MediaQueryData(
+            size: size,
+            disableAnimations: disableAnimations,
+            reduceMotion: reduceMotion,
+          ),
+        );
+    if (accessibility == null) addTearDown(mediaQuery.dispose);
+    final view = ValueListenableBuilder<MediaQueryData>(
+      valueListenable: mediaQuery,
+      builder: (context, data, _) => MediaQuery(
+        data: data,
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: ValueListenableBuilder<PageTurnAnimation>(
+            valueListenable: selectedAnimation,
+            builder: (context, value, _) => FixedPagesView(
+              pages: ComicPages(source),
+              controller: controller,
+              onTap: taps.add,
+              axis: axis,
+              pageTurnAnimation: value,
+            ),
           ),
         ),
       ),
@@ -383,6 +398,57 @@ void main() {
       expect(pageLabel(4), findsOneWidget);
       expect(tester.hasRunningAnimations, isFalse);
     });
+
+    for (final animation in PageTurnAnimation.values) {
+      testWidgets('disableAnimations skips $animation turns', (tester) async {
+        await pumpView(
+          tester,
+          disableAnimations: true,
+          pageTurnAnimation: animation,
+        );
+        controller.goToPage(3);
+        await tester.pump();
+        await tester.pump();
+        expect(pageLabel(4), findsOneWidget);
+        expect(tester.hasRunningAnimations, isFalse);
+      });
+
+      for (final disableAnimations in [false, true]) {
+        final setting = disableAnimations
+            ? 'disableAnimations'
+            : 'reduceMotion';
+        testWidgets('$setting finishes an active $animation turn', (
+          tester,
+        ) async {
+          final accessibility = ValueNotifier(
+            const MediaQueryData(size: portrait),
+          );
+          addTearDown(accessibility.dispose);
+          await pumpView(
+            tester,
+            accessibility: accessibility,
+            pageTurnAnimation: animation,
+          );
+          controller.goToPage(3);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 50));
+          expect(tester.hasRunningAnimations, isTrue);
+          accessibility.value = accessibility.value.copyWith(
+            disableAnimations: disableAnimations,
+            reduceMotion: !disableAnimations,
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(pageLabel(4), findsOneWidget);
+          expect(tester.hasRunningAnimations, isFalse);
+          controller.next();
+          await tester.pump();
+          expect(pageLabel(5), findsOneWidget);
+          expect(tester.hasRunningAnimations, isFalse);
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
 
     for (final axis in Axis.values) {
       for (final rtl in [false, true]) {

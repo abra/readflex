@@ -9,11 +9,9 @@ import 'package:pagecraft/all_formats.dart';
 /// every sentence-break class; `test/fixtures/icu_sentence_breaks.mjs`
 /// regenerates them.
 void main() {
-  final fixture =
-      jsonDecode(
-            File('test/fixtures/icu_sentence_breaks.json').readAsStringSync(),
-          )
-          as Map<String, Object?>;
+  final fixture = jsonDecode(
+    File('test/fixtures/icu_sentence_breaks.json').readAsStringSync(),
+  ) as Map<String, Object?>;
   final cases = (fixture['cases']! as List).cast<Map<String, Object?>>();
 
   test('breaks match ICU for every case', () {

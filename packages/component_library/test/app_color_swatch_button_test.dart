@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -46,7 +46,12 @@ void main() {
       expect(find.byType(Material), findsWidgets);
       await tester.tapAt(tester.getTopLeft(target) + const Offset(4, 4));
       expect(calls, 1);
-      expect(find.byTooltip('Yellow'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is Tooltip && widget.message == 'Yellow',
+        ),
+        findsOneWidget,
+      );
       expect(tester, meetsGuideline(androidTapTargetGuideline));
       expect(tester, meetsGuideline(labeledTapTargetGuideline));
     } finally {

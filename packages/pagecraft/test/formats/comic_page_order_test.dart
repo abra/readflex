@@ -8,11 +8,9 @@ void main() {
   // Snapshot of `Intl.Collator('en', {numeric: true, sensitivity:
   // 'variant'})` from Node: the sorted list uses the WebView reader's
   // code-unit tie-break, the pairs are the bare collator sign.
-  final fixture =
-      jsonDecode(
-            File('test/fixtures/icu_natural_order.json').readAsStringSync(),
-          )
-          as Map<String, dynamic>;
+  final fixture = jsonDecode(
+    File('test/fixtures/icu_natural_order.json').readAsStringSync(),
+  ) as Map<String, dynamic>;
   final sorted = (fixture['sorted'] as List).cast<String>();
   final pairs = (fixture['pairs'] as List)
       .map((p) => (p as List).cast<Object>())

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:import_flow/import_flow.dart';
 import 'package:integration_test/integration_test.dart';

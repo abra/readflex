@@ -13,12 +13,11 @@ import 'text_anchor.dart';
 /// Rewrites a book's CSS text before it is parsed, for a window
 /// [windowWidth] × [windowHeight] CSS px. Runs in the section's isolate,
 /// so it is a top-level function.
-typedef BookCssRewrite =
-    String Function(
-      String css, {
-      required double windowWidth,
-      required double windowHeight,
-    });
+typedef BookCssRewrite = String Function(
+  String css, {
+  required double windowWidth,
+  required double windowHeight,
+});
 
 /// One section's markup.
 class TextSection {

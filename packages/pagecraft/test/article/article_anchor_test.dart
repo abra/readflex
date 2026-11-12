@@ -11,12 +11,9 @@ import 'package:pagecraft/all_formats.dart';
 /// pagecraft writes the same anchors and restores the same text.
 void main() {
   final html = File('test/fixtures/article/article.html').readAsStringSync();
-  final fixtures =
-      (jsonDecode(
-                File('test/fixtures/article/anchors.json').readAsStringSync(),
-              )
-              as List)
-          .cast<Map<String, Object?>>();
+  final fixtures = (jsonDecode(
+    File('test/fixtures/article/anchors.json').readAsStringSync(),
+  ) as List).cast<Map<String, Object?>>();
   // As the shell holds it: the article in its <main>.
   final doc = ContentDocument.parseHtml(
     '<!doctype html><html><head></head><body>'

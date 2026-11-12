@@ -1,10 +1,17 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/cupertino.dart' show CupertinoTheme;
-import 'package:flutter/cupertino.dart' show cupertinoTextSelectionControls;
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoTheme, cupertinoTextSelectionControls;
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart'
+    show
+        Theme,
+        TextMagnifier,
+        TextSelectionTheme,
+        TextSelectionThemeData,
+        materialTextSelectionControls;
 import 'package:native_text_selection/native_text_selection.dart';
 
 import 'pdf_text_layer.dart';
@@ -100,11 +107,15 @@ class PdfTextOverlay extends StatefulWidget {
   State<PdfTextOverlay> createState() => _PdfTextOverlayState();
 }
 
-typedef PdfSelectionChanged =
-    void Function(PdfTextRange range, Rect? viewportRect);
+typedef PdfSelectionChanged = void Function(
+  PdfTextRange range,
+  Rect? viewportRect,
+);
 
-typedef PdfHighlightPressed =
-    void Function(PdfTextHighlight highlight, Rect? viewportRect);
+typedef PdfHighlightPressed = void Function(
+  PdfTextHighlight highlight,
+  Rect? viewportRect,
+);
 
 enum _Drag { selecting, startHandle, endHandle }
 

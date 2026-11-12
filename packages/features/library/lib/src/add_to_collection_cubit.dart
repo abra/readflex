@@ -6,9 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 part 'add_to_collection_state.dart';
 
 class AddToCollectionCubit extends Cubit<AddToCollectionState> {
-  AddToCollectionCubit({required CollectionRepository collectionRepository})
-    : _collectionRepository = collectionRepository,
-      super(const AddToCollectionState());
+  AddToCollectionCubit({required this._collectionRepository})
+    : super(const AddToCollectionState());
 
   final CollectionRepository _collectionRepository;
   Set<String> _sourceIds = const {};

@@ -4,9 +4,11 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: ^3.11.1
+  sdk: ^3.14.0
+  flutter: ">=3.50.0"
 
 dependencies:
+  material_ui: ^1.11.0
   flutter:
     sdk: flutter
   toastification: ^3.0.3

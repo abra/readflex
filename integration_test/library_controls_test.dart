@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:connectivity_service/connectivity_service.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -308,7 +308,10 @@ void main() {
       find.byKey(const ValueKey('libraryAddButton')),
       findsOneWidget,
     );
-    await tapUi(tester, find.byTooltip('Display options'));
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('libraryHeaderDisplayButton')),
+    );
     await capture(tester, 'library-display');
     final displayRect = tester.getRect(find.byType(BottomSheet));
     expect(

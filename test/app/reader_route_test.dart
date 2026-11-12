@@ -1,5 +1,5 @@
 import 'package:dictionary/dictionary.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:reader/reader.dart';
@@ -64,9 +64,10 @@ void main() {
         await tester.pumpWidget(
           Builder(
             builder: (context) {
-              page =
-                  route.pageBuilder!(context, state)
-                      as CustomTransitionPage<void>;
+              page = route.pageBuilder!(
+                context,
+                state,
+              ) as CustomTransitionPage<void>;
               // Inspect route wiring without mounting a native WebView in a widget test.
               final content = page.child;
               expect(content, isA<ReaderSystemNavigationBarMode>());

@@ -5,7 +5,7 @@ import 'package:book_repository/book_repository.dart';
 import 'package:collection_repository/collection_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:preferences_service/preferences_service.dart';
@@ -39,11 +39,10 @@ const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
 /// commits, including when the user dismissed the sheet during an import.
 /// `entry` names the step to open; implementations default it to
 /// [LibraryImportEntry.menu], and the Library always passes it.
-typedef LibraryImportLauncher =
-    Future<void> Function({
-      required VoidCallback onImported,
-      LibraryImportEntry entry,
-    });
+typedef LibraryImportLauncher = Future<void> Function({
+  required VoidCallback onImported,
+  LibraryImportEntry entry,
+});
 
 /// Entry point for the Library screen.
 ///

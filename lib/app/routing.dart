@@ -7,7 +7,7 @@ import 'package:connectivity_service/connectivity_service.dart'
 import 'package:library_feature/library_feature.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:dictionary/dictionary.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:highlight/highlight.dart';
 import 'package:import_flow/import_flow.dart';

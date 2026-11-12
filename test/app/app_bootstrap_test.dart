@@ -20,12 +20,11 @@ void main() {
           logger: Logger(),
           reporterFactory: (_) async =>
               throw TestFailure('Monitoring must not start'),
-          dependenciesFactory:
-              ({
-                required config,
-                required logger,
-                required errorReporter,
-              }) async => throw TestFailure('Dependencies must not be created'),
+          dependenciesFactory: ({
+            required config,
+            required logger,
+            required errorReporter,
+          }) async => throw TestFailure('Dependencies must not be created'),
         );
 
         await bootstrap.run(
@@ -53,12 +52,11 @@ void main() {
           if (++attempts == 1) throw StateError('Reporter unavailable');
           return reporter;
         },
-        dependenciesFactory:
-            ({
-              required config,
-              required logger,
-              required errorReporter,
-            }) async => dependencies,
+        dependenciesFactory: ({
+          required config,
+          required logger,
+          required errorReporter,
+        }) async => dependencies,
       );
       await bootstrap.run(
         onReady: (_) => fail('First attempt must fail'),
@@ -186,9 +184,11 @@ void main() {
       config: const _Config(),
       logger: logger,
       reporterFactory: (_) async => reporter,
-      dependenciesFactory:
-          ({required config, required logger, required errorReporter}) async =>
-              dependencies,
+      dependenciesFactory: ({
+        required config,
+        required logger,
+        required errorReporter,
+      }) async => dependencies,
     );
     final errors = <Object>[];
     await bootstrap.run(

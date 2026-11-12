@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../app_text_theme.dart';
 import 'app_colors_ext.dart';
@@ -29,7 +29,8 @@ extension BuildContextThemeX on BuildContext {
       : colors.primary;
 
   /// True when the platform asks to reduce motion.
-  bool get reduceMotion => MediaQuery.disableAnimationsOf(this);
+  bool get reduceMotion =>
+      MediaQuery.disableAnimationsOf(this) || MediaQuery.reduceMotionOf(this);
 
   /// Resolves an [AppMotion] token for an implicit animation: the token as
   /// given, or [Duration.zero] under reduced motion so the widget settles in

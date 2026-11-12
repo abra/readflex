@@ -9,11 +9,9 @@ import 'package:pagecraft/all_formats.dart';
 /// (`test/fixtures/readflex_selection.json`, recorded before that reader's
 /// removal; historical sources are identified in the package README).
 void main() {
-  final fixture =
-      jsonDecode(
-            File('test/fixtures/readflex_selection.json').readAsStringSync(),
-          )
-          as Map<String, Object?>;
+  final fixture = jsonDecode(
+    File('test/fixtures/readflex_selection.json').readAsStringSync(),
+  ) as Map<String, Object?>;
 
   test('ranges grow to whole words as in the JS', () {
     final rows = (fixture['ranges']! as List).cast<List<Object?>>();

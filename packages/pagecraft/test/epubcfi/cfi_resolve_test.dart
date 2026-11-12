@@ -11,9 +11,9 @@ import 'package:pagecraft/all_formats.dart';
 /// resolve to the same nodes.
 void main() {
   const fixtures = 'test/fixtures/cfi';
-  final expected =
-      jsonDecode(File('$fixtures/expected.json').readAsStringSync())
-          as Map<String, dynamic>;
+  final expected = jsonDecode(
+    File('$fixtures/expected.json').readAsStringSync(),
+  ) as Map<String, dynamic>;
 
   /// The browser's filter for `skipped.xhtml`.
   CfiNodeFilterResult skipFilter(CfiNode node) {

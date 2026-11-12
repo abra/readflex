@@ -38,11 +38,9 @@ void main() {
   }
 
   test('sentence context matches the JS for the same sides', () {
-    final fixture =
-        jsonDecode(
-              File('test/fixtures/readflex_selection.json').readAsStringSync(),
-            )
-            as Map<String, Object?>;
+    final fixture = jsonDecode(
+      File('test/fixtures/readflex_selection.json').readAsStringSync(),
+    ) as Map<String, Object?>;
     for (final row in (fixture['contexts']! as List).cast<List<Object?>>()) {
       final [
         before as String,

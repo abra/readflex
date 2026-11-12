@@ -7,7 +7,7 @@ import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
@@ -131,7 +131,7 @@ class PracticeHarness {
     theme: AppTheme.light(),
     locale: locale,
     supportedLocales: ReadflexSupportedLocales.locales,
-    localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+    localizationsDelegates: readflexLocalizationsDelegates,
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: textScaler),
       child: child!,

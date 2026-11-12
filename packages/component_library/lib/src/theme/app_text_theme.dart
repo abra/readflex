@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Non-null view over [TextTheme] for styles that the app guarantees are
 /// always defined by `AppTypography.textTheme`.

@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_highlight_controls.dart';
 import 'package:reader/src/reader_highlight_color.dart';
@@ -18,7 +18,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         home: Scaffold(
           body: Stack(
@@ -92,7 +92,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(

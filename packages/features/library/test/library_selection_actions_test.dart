@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,7 +57,7 @@ Future<LibrarySelectionCubit> _pumpActions(
       theme: AppTheme.light(),
       locale: locale,
       supportedLocales: ReadflexSupportedLocales.locales,
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      localizationsDelegates: readflexLocalizationsDelegates,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(
           textScaler: TextScaler.linear(textScale),
@@ -298,7 +298,7 @@ void main() {
           theme: AppTheme.light(),
           locale: const Locale('de'),
           supportedLocales: ReadflexSupportedLocales.locales,
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context).copyWith(
               textScaler: const TextScaler.linear(2),

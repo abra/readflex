@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:library_feature/library_feature.dart';
@@ -8,6 +8,8 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
+
+import 'package:preferences_service/preferences_service.dart';
 
 void main() {
   testWidgets(
@@ -29,7 +31,7 @@ void main() {
       await tester.runAsync(
         () => app.preferencesService.update(
           (prefs) => prefs.copyWith(
-            themeMode: ThemeMode.dark,
+            themeMode: AppThemeMode.dark,
             locale: const Locale('de'),
           ),
         ),

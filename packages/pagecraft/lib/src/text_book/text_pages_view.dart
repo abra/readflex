@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'
     show SelectionEdgeUpdateEvent, SelectionHandler;
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart'
+    show AdaptiveTextSelectionToolbar, SelectionArea, SelectionAreaState;
 import 'package:native_text_selection/native_text_selection.dart';
 
 import '../document/text_point.dart';
@@ -24,12 +26,16 @@ import 'text_pages_controller.dart';
 import 'text_selection_details.dart';
 
 /// A tap on a link: the section it is in and its `<a>` element.
-typedef TextLinkTapCallback =
-    void Function(TextSectionLayout section, int link);
+typedef TextLinkTapCallback = void Function(
+  TextSectionLayout section,
+  int link,
+);
 
 /// A tap on a highlight, with where it is drawn in the view.
-typedef TextHighlightTapCallback =
-    void Function(TextHighlight highlight, Rect rect);
+typedef TextHighlightTapCallback = void Function(
+  TextHighlight highlight,
+  Rect rect,
+);
 
 /// The highlights to draw on section [section]'s pages.
 typedef TextHighlightsOf = List<TextHighlight> Function(int section);
@@ -168,6 +174,7 @@ class _TextPagesViewState extends State<TextPagesView>
   /// Where the shown spread sits along the axis, as a share of the view:
   /// 0 at rest, -1 turned forward out of view.
   double _offset = 0;
+  double _turnTarget = 0;
   PageTurnAnimation? _activeAnimation;
   double _entrySide = 1;
   bool _dragging = false;
@@ -246,6 +253,13 @@ class _TextPagesViewState extends State<TextPagesView>
       widget.controller.addListener(_onController);
       _shown = null;
     }
+    if (_reducedMotion) _finishTurn();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_reducedMotion) _finishTurn();
   }
 
   /// Where [TextPagesView.trackedHighlight] was last reported.
@@ -297,7 +311,20 @@ class _TextPagesViewState extends State<TextPagesView>
 
   bool get _reducedMotion =>
       !widget.animateTurns ||
-      (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
+      (MediaQuery.maybeDisableAnimationsOf(context) ?? false) ||
+      (MediaQuery.maybeReduceMotionOf(context) ?? false);
+
+  TickerFuture _animateTurnTo(double target, {required Duration duration}) {
+    _turnTarget = target;
+    return _turn.animateTo(target, duration: duration, curve: Curves.easeOut);
+  }
+
+  void _finishTurn() {
+    if (!_turn.isAnimating) return;
+    // Complete the existing future so a released swipe still commits.
+    _turn.stop(canceled: false);
+    _turn.animateTo(_turnTarget, duration: Duration.zero);
+  }
 
   /// The axis direction "forward" moves the spread: left (or right for a
   /// right-to-left book), or up.
@@ -368,10 +395,9 @@ class _TextPagesViewState extends State<TextPagesView>
         _turn.value = _entrySide;
         _offset = _turn.value;
         unawaited(
-          _turn.animateTo(
+          _animateTurnTo(
             0,
             duration: widget.turnDuration,
-            curve: Curves.easeOut,
           ),
         );
       }
@@ -847,12 +873,11 @@ class _TextPagesViewState extends State<TextPagesView>
     if (direction != 0 && _controller.spreadAt(direction) != null) {
       _committing = true;
       _turn.value = _offset;
-      await _turn.animateTo(
+      await _animateTurnTo(
         _forwardSign * direction,
         duration: _reducedMotion
             ? Duration.zero
             : widget.turnDuration * (1 - travelled.abs()).clamp(0.2, 1.0),
-        curve: Curves.easeOut,
       );
       final bool turned;
       try {
@@ -878,10 +903,9 @@ class _TextPagesViewState extends State<TextPagesView>
       return;
     }
     _turn.value = _offset;
-    await _turn.animateTo(
+    await _animateTurnTo(
       0,
       duration: _reducedMotion ? Duration.zero : widget.turnDuration,
-      curve: Curves.easeOut,
     );
     if (!mounted) return;
     if (dropped && !_carryPending) {
@@ -1088,7 +1112,7 @@ class _TextPagesViewState extends State<TextPagesView>
         );
         pages = DefaultSelectionStyle(
           selectionColor: nativeActive
-              ? Colors.transparent
+              ? const Color(0x00000000)
               : DefaultSelectionStyle.of(context).selectionColor,
           child: pages,
         );

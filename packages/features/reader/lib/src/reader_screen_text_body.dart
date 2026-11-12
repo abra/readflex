@@ -919,7 +919,7 @@ CssMediaEnvironment _pagecraftMedia(BuildContext context) {
     devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
     darkColorScheme:
         MediaQuery.platformBrightnessOf(context) == Brightness.dark,
-    reducedMotion: MediaQuery.disableAnimationsOf(context),
+    reducedMotion: context.reduceMotion,
   );
 }
 

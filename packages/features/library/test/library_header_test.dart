@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -56,7 +56,7 @@ void main() {
       MaterialApp(
         theme: theme ?? AppTheme.light(),
         locale: locale,
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         home: Scaffold(
           body: Column(
@@ -213,7 +213,15 @@ void main() {
     ) async {
       final strings = await pumpHeader(tester, width: 1032);
       expect(find.text(strings.libraryDisplayOptions), findsOneWidget);
-      expect(find.byTooltip(strings.libraryDisplayOptions), findsOneWidget);
+      final tooltip = find.ancestor(
+        of: _displayButton,
+        matching: find.byType(Tooltip),
+      );
+      expect(tooltip, findsOneWidget);
+      expect(
+        tester.widget<Tooltip>(tooltip).message,
+        strings.libraryDisplayOptions,
+      );
       final target = tester.getRect(_displayButton);
       expect(target.width, greaterThan(AppSizes.buttonHeight));
       expect(target.height, greaterThanOrEqualTo(AppSizes.buttonHeight));

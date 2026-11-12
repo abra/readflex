@@ -106,12 +106,10 @@ class TranslateSheetState extends Equatable {
 
 class TranslateCubit extends Cubit<TranslateSheetState> {
   TranslateCubit({
-    required ContextualTranslationService translationService,
+    required this._translationService,
     required PreferencesService preferencesService,
-    DictionaryRepository? dictionaryRepository,
-  }) : _translationService = translationService,
-       _preferencesService = preferencesService,
-       _dictionaryRepository = dictionaryRepository,
+    this._dictionaryRepository,
+  }) : _preferencesService = preferencesService,
        super(
          TranslateSheetState(
            sourceLanguageCode: autoSourceLanguageCode,

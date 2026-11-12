@@ -1,6 +1,6 @@
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 /// Confirmation bottom sheet shown before deleting a library item.

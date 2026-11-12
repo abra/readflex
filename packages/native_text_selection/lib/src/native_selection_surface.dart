@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -74,8 +74,13 @@ class _NativeSelectionSurfaceState extends State<NativeSelectionSurface> {
   MethodChannel? _channel;
   bool _available = false;
   bool _active = false;
+  bool _activeInTree = false;
   bool _adjusting = false;
   bool _scheduled = false;
+  bool _activationScheduled = false;
+  bool _suspended = false;
+  int _pointers = 0;
+  int? _readyRevision;
   int? _sentRevision;
   TextSelection? _sentSelection;
   int _generation = 0;
@@ -86,6 +91,7 @@ class _NativeSelectionSurfaceState extends State<NativeSelectionSurface> {
     final selection = snapshot?.selection;
     return _available &&
         widget.enabled &&
+        !_suspended &&
         snapshot != null &&
         _unsupportedRange != (snapshot.revision, snapshot.selection) &&
         snapshot.boxes.isNotEmpty &&
@@ -125,6 +131,46 @@ class _NativeSelectionSurfaceState extends State<NativeSelectionSurface> {
       _scheduled = false;
       if (mounted && _showsSurface) unawaited(_sync());
     });
+  }
+
+  void _scheduleActivation() {
+    if (_activationScheduled || _active) return;
+    _activationScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _activationScheduled = false;
+      if (!mounted ||
+          _active ||
+          _pointers != 0 ||
+          !_showsSurface ||
+          _readyRevision != widget.snapshot?.revision) {
+        return;
+      }
+      setState(() => _active = true);
+      widget.onActiveChanged?.call(true);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    _pointers++;
+    if (!_activeInTree) {
+      // A preparing native editor can show grips before its ready callback.
+      _disconnect();
+      setState(() => _suspended = true);
+    }
+  }
+
+  void _onPointerEnd(PointerEvent event) {
+    if (_pointers > 0) _pointers--;
+    if (_pointers == 0 && _suspended) {
+      // Recreate after the child publishes its final range on end/cancel.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pointers == 0 && _suspended) {
+          setState(() => _suspended = false);
+        }
+      });
+      WidgetsBinding.instance.ensureVisualUpdate();
+    }
   }
 
   Future<void> _onCreated(int id) async {
@@ -198,8 +244,8 @@ class _NativeSelectionSurfaceState extends State<NativeSelectionSurface> {
     switch (call.method) {
       case 'ready':
         if (!_active && _showsSurface) {
-          _active = true;
-          widget.onActiveChanged?.call(true);
+          _readyRevision = snapshot.revision;
+          _scheduleActivation();
         }
       case 'selectionChanged':
         final base = message['base'];
@@ -261,6 +307,7 @@ class _NativeSelectionSurfaceState extends State<NativeSelectionSurface> {
     _channel = null;
     _sentRevision = null;
     _sentSelection = null;
+    _readyRevision = null;
     if (_adjusting) {
       _adjusting = false;
       if (notify) _notify(widget.onAdjusting, false);
@@ -278,28 +325,39 @@ class _NativeSelectionSurfaceState extends State<NativeSelectionSurface> {
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.passthrough,
-    children: [
-      widget.child,
-      if (_showsSurface)
-        Positioned.fill(
-          child: _NativePlatformSelectionView(
-            snapshot: widget.snapshot!,
-            onCreated: _onCreated,
-          ),
-        ),
-    ],
-  );
+  Widget build(BuildContext context) {
+    _activeInTree = _active && _showsSurface;
+    return Listener(
+      onPointerDown: _onPointerDown,
+      onPointerUp: _onPointerEnd,
+      onPointerCancel: _onPointerEnd,
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          widget.child,
+          if (_showsSurface)
+            Positioned.fill(
+              child: _NativePlatformSelectionView(
+                snapshot: widget.snapshot!,
+                active: _activeInTree,
+                onCreated: _onCreated,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class _NativePlatformSelectionView extends StatefulWidget {
   const _NativePlatformSelectionView({
     required this.snapshot,
+    required this.active,
     required this.onCreated,
   });
 
   final NativeSelectionSnapshot snapshot;
+  final bool active;
   final PlatformViewCreatedCallback onCreated;
 
   @override
@@ -316,6 +374,7 @@ class _NativePlatformSelectionViewState
   };
 
   bool _isHandlePointer(Offset global) {
+    if (!widget.active) return false;
     final render = context.findRenderObject();
     final snapshot = widget.snapshot;
     final selection = snapshot.selection;

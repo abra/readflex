@@ -9,7 +9,7 @@ import '../../scripts/check_widget_helpers.dart' show findWidgetHelpers;
 // Resolved inside the app package, so Flutter types are real; the overlay
 // never touches the disk.
 const _fixture = '''
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef StepBuilder = Widget Function(BuildContext context);
 

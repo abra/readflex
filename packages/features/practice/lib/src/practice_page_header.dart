@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Bounds Practice navigation within the shared page measure.
 class PracticePageHeader extends StatelessWidget {

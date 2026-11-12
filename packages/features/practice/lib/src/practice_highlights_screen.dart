@@ -2,7 +2,7 @@ import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';

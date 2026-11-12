@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -185,23 +185,23 @@ class _DisplaySettings extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           AppSettingsSection(
             title: l10n.libraryDisplayAppearance,
-            child: BlocBuilder<LibraryThemeCubit, ThemeMode>(
+            child: BlocBuilder<LibraryThemeCubit, AppThemeMode>(
               builder: (context, mode) => AppChoiceControl(
                 selected: mode,
                 onChanged: context.read<LibraryThemeCubit>().setThemeMode,
                 options: [
                   AppChoiceOption(
-                    value: ThemeMode.system,
+                    value: AppThemeMode.system,
                     label: l10n.libraryThemeSystem,
                     icon: AppIcons.deviceMode,
                   ),
                   AppChoiceOption(
-                    value: ThemeMode.light,
+                    value: AppThemeMode.light,
                     label: l10n.libraryThemeLight,
                     icon: AppIcons.lightMode,
                   ),
                   AppChoiceOption(
-                    value: ThemeMode.dark,
+                    value: AppThemeMode.dark,
                     label: l10n.libraryThemeDark,
                     icon: AppIcons.darkMode,
                   ),

@@ -65,15 +65,11 @@ class PracticeWordsState extends Equatable {
 /// The saved words list: load, search, filter, remove.
 class PracticeWordsCubit extends Cubit<PracticeWordsState> {
   PracticeWordsCubit({
-    required DictionaryRepository dictionaryRepository,
-    required FsrsRepository fsrsRepository,
-    required BookRepository bookRepository,
-    ArticleRepository? articleRepository,
-  }) : _dictionaryRepository = dictionaryRepository,
-       _fsrsRepository = fsrsRepository,
-       _bookRepository = bookRepository,
-       _articleRepository = articleRepository,
-       super(const PracticeWordsState());
+    required this._dictionaryRepository,
+    required this._fsrsRepository,
+    required this._bookRepository,
+    this._articleRepository,
+  }) : super(const PracticeWordsState());
 
   final DictionaryRepository _dictionaryRepository;
   final FsrsRepository _fsrsRepository;

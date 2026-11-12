@@ -2,6 +2,11 @@
 
 Generated Flutter localizations and supported locale metadata for Readflex.
 
+Use `readflexLocalizationsDelegates` in app and test hosts. It combines the
+generated app delegate with standalone Material, Cupertino and Widgets
+delegates. The SDK generator still emits a legacy design-library list on
+`ReadflexLocalizations`; leave that generated output untouched.
+
 `ReadflexSupportedLocales` defines the supported locales in this order:
 
 ```text

@@ -13,9 +13,9 @@ import 'package:pagecraft/all_formats.dart';
 /// resolutions here.
 void main() {
   const root = 'test/fixtures/epub';
-  final expected =
-      jsonDecode(File('$root/expected.json').readAsStringSync())
-          as Map<String, dynamic>;
+  final expected = jsonDecode(
+    File('$root/expected.json').readAsStringSync(),
+  ) as Map<String, dynamic>;
 
   Map<String, List<int>> filesOf(String name) {
     final dir = Directory('$root/$name');
@@ -286,29 +286,30 @@ void main() {
     );
   });
 
-  test('a manifest href escaping a reserved character finds its file', () async {
-    // Calibre writes `%26` for a file named with `&`; decodeURI keeps the
-    // escape, so the href stays as written and the lookup decodes it.
-    final book = await EpubBook.load(
-      MemoryEpubFiles.text({
-        'META-INF/container.xml':
-            '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
-        'OEBPS/content.opf':
-            '<package xmlns="http://www.idpf.org/2007/opf" version="2.0"><metadata/>'
-            '<manifest><item id="c" href="Text/Brian%20%26%20Kevin.html" media-type="application/xhtml+xml"/></manifest>'
-            '<spine><itemref idref="c"/></spine></package>',
-        'OEBPS/Text/Brian & Kevin.html':
-            '<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Paul</p></body></html>',
-      }),
-    );
-    expect(book.sections.single.href, 'OEBPS/Text/Brian %26 Kevin.html');
-    expect(book.sections.single.size, greaterThan(0));
-    expect(await book.readSectionText(0), contains('Paul'));
-    expect(fullyDecodedPath('a%26b'), 'a&b');
-    expect(fullyDecodedPath('plain'), isNull);
-    expect(fullyDecodedPath('bad%zz'), isNull);
-    expect(fullyDecodedPath('bad%ff'), isNull, reason: 'not UTF-8');
-  });
+  test(
+    'a manifest href escaping a reserved character finds its file',
+    () async {
+      // Calibre writes `%26` for a file named with `&`; decodeURI keeps the
+      // escape, so the href stays as written and the lookup decodes it.
+      final book = await EpubBook.load(
+        MemoryEpubFiles.text({
+          'META-INF/container.xml': '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+          'OEBPS/content.opf':
+              '<package xmlns="http://www.idpf.org/2007/opf" version="2.0"><metadata/>'
+              '<manifest><item id="c" href="Text/Brian%20%26%20Kevin.html" media-type="application/xhtml+xml"/></manifest>'
+              '<spine><itemref idref="c"/></spine></package>',
+          'OEBPS/Text/Brian & Kevin.html': '<html xmlns="http://www.w3.org/1999/xhtml"><body><p>Paul</p></body></html>',
+        }),
+      );
+      expect(book.sections.single.href, 'OEBPS/Text/Brian %26 Kevin.html');
+      expect(book.sections.single.size, greaterThan(0));
+      expect(await book.readSectionText(0), contains('Paul'));
+      expect(fullyDecodedPath('a%26b'), 'a&b');
+      expect(fullyDecodedPath('plain'), isNull);
+      expect(fullyDecodedPath('bad%zz'), isNull);
+      expect(fullyDecodedPath('bad%ff'), isNull, reason: 'not UTF-8');
+    },
+  );
 
   group('errors', () {
     test('a container without a package document fails', () async {
@@ -319,8 +320,7 @@ void main() {
       await expectLater(
         EpubBook.load(
           MemoryEpubFiles.text({
-            'META-INF/container.xml':
-                '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles/></container>',
+            'META-INF/container.xml': '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles/></container>',
           }),
         ),
         throwsA(isA<PagecraftException>()),
@@ -328,8 +328,7 @@ void main() {
       await expectLater(
         EpubBook.load(
           MemoryEpubFiles.text({
-            'META-INF/container.xml':
-                '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="x.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+            'META-INF/container.xml': '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="x.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
           }),
         ),
         throwsA(isA<PagecraftException>()),
@@ -353,8 +352,7 @@ void main() {
         final book = await EpubBook.load(
           MemoryEpubFiles.text({
             'META-INF/container.xml': container,
-            'x.opf':
-                '<package xmlns="http://www.idpf.org/2007/opf"><metadata/><manifest><item id="n" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/><item id="a" href="a.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="a"/></spine></package>',
+            'x.opf': '<package xmlns="http://www.idpf.org/2007/opf"><metadata/><manifest><item id="n" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/><item id="a" href="a.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="a"/></spine></package>',
             'nav.xhtml': '<html><body><nav',
             'a.xhtml': '<html/>',
           }),
@@ -369,10 +367,8 @@ void main() {
     test('a missing section file fails when read, not when opened', () async {
       final book = await EpubBook.load(
         MemoryEpubFiles.text({
-          'META-INF/container.xml':
-              '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="x.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
-          'x.opf':
-              '<package xmlns="http://www.idpf.org/2007/opf"><metadata/><manifest><item id="a" href="a.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="a"/></spine></package>',
+          'META-INF/container.xml': '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="x.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+          'x.opf': '<package xmlns="http://www.idpf.org/2007/opf"><metadata/><manifest><item id="a" href="a.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="a"/></spine></package>',
         }),
       );
       addTearDown(book.close);

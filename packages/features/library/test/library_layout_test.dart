@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_content_scroll_view.dart';
@@ -12,7 +12,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 void main() {
   Widget host(Widget child, {double width = 390}) => MaterialApp(
     theme: AppTheme.light(),
-    localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+    localizationsDelegates: readflexLocalizationsDelegates,
     supportedLocales: ReadflexSupportedLocales.locales,
     home: Scaffold(
       body: Align(
@@ -222,9 +222,9 @@ void main() {
       final grid = tester.renderObject<RenderSliverGrid>(
         find.byType(SliverGrid),
       );
-      final layout =
-          grid.gridDelegate.getLayout(grid.constraints)
-              as SliverGridRegularTileLayout;
+      final layout = grid.gridDelegate.getLayout(
+        grid.constraints,
+      ) as SliverGridRegularTileLayout;
       return layout.crossAxisCount;
     }
 

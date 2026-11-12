@@ -236,7 +236,7 @@ class _DeclarationVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitMethodDeclaration(MethodDeclaration node) {
     final isOverride = node.metadata.any((a) => a.name.name == 'override');
-    if (checkHelpers && !node.isSetter && !node.isAbstract && !isOverride) {
+    if (checkHelpers && !node.isSetter && node.isComplete && !isOverride) {
       _check(node.name, node.declaredFragment?.element.returnType);
     }
     super.visitMethodDeclaration(node);

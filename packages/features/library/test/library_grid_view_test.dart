@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_continue_reading_card.dart';
 import 'package:library_feature/src/library_grid_tile.dart';
@@ -88,7 +88,7 @@ void main() {
 
   Widget app(Widget body) => MaterialApp(
     theme: AppTheme.light(),
-    localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+    localizationsDelegates: readflexLocalizationsDelegates,
     supportedLocales: ReadflexSupportedLocales.locales,
     home: Scaffold(body: body),
   );

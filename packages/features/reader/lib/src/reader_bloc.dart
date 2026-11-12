@@ -63,16 +63,12 @@ String? _normalizedHighlightNote(String? note) {
 /// `ReaderUiCubit`, `ReaderSearchCubit` and `ReaderSelectionCubit`.
 class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ReaderBloc({
-    required BookRepository bookRepository,
-    required HighlightRepository highlightRepository,
-    ArticleRepository? articleRepository,
+    required this._bookRepository,
+    required this._highlightRepository,
+    this._articleRepository,
     Book? initialSource,
-    ValueChanged<double>? onReadingPositionSaved,
-  }) : _bookRepository = bookRepository,
-       _articleRepository = articleRepository,
-       _highlightRepository = highlightRepository,
-       _onReadingPositionSaved = onReadingPositionSaved,
-       super(
+    this._onReadingPositionSaved,
+  }) : super(
          initialSource == null
              ? const ReaderState()
              : ReaderState(

@@ -41,8 +41,8 @@ class DependenciesContainer {
     required this.dictionaryLookupService,
     required this.screenControlService,
     required this.database,
-    required ResourceDisposer resourceDisposer,
-  }) : _resourceDisposer = resourceDisposer;
+    required this._resourceDisposer,
+  });
 
   final Logger logger;
   final ApplicationConfig config;

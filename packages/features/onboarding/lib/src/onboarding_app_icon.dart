@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The app icon shown at the top of onboarding, bundled with this package.
 /// Its 2.0x and 3.0x variants are resolved by device pixel ratio.

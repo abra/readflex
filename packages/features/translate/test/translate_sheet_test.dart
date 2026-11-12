@@ -1,7 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -59,9 +59,8 @@ void main() {
       expect(tester.widget<SelectableText>(generalMeaning).data, 'сила');
       expect(
         tester.widget<SelectableText>(generalMeaning).style,
-        Theme.of(
-          tester.element(generalMeaning),
-        ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
+        Theme.of(tester.element(generalMeaning)).textTheme.bodyLarge!
+            .copyWith(letterSpacing: 0),
       );
       expect(
         tester.getTopLeft(generalMeaning).dy,
@@ -205,8 +204,7 @@ void main() {
       wordAnswer: 'выключен',
     ),
     (
-      name:
-          'missing base does not relabel a contextual fallback as a word meaning',
+      name: 'missing base does not relabel a contextual fallback as a word meaning',
       translation: const ContextualTranslationText(
         contextualTranslation: 'отключён',
       ),
@@ -341,9 +339,8 @@ void main() {
           );
           expect(
             text.style,
-            Theme.of(
-              tester.element(result),
-            ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
+            Theme.of(tester.element(result)).textTheme.bodyLarge!
+                .copyWith(letterSpacing: 0),
           );
           final copy = find.byKey(ValueKey('translation-$id-copy'));
           await tester.ensureVisible(copy);
@@ -708,9 +705,8 @@ void main() {
         preview.textSpan?.toPlainText(),
         'This power bank provides emergency power.',
       );
-      final selectedSpan = _previewSpans(
-        tester,
-      ).singleWhere((span) => span.text == 'power');
+      final selectedSpan = _previewSpans(tester)
+          .singleWhere((span) => span.text == 'power');
       final colors = Theme.of(tester.element(previewFinder)).colorScheme;
       expect(selectedSpan.style?.fontWeight, FontWeight.w600);
       expect(preview.textSpan?.style?.color, colors.onSurfaceVariant);
@@ -724,9 +720,8 @@ void main() {
       expect(translationWidget.data, 'сила');
       expect(
         translationWidget.style,
-        Theme.of(
-          tester.element(translation),
-        ).textTheme.headlineSmall!.copyWith(letterSpacing: 0),
+        Theme.of(tester.element(translation)).textTheme.headlineSmall!
+            .copyWith(letterSpacing: 0),
       );
       semantics.dispose();
     },
@@ -755,9 +750,9 @@ void main() {
       }
 
       expect(contrast(baseStyle.color!, background), greaterThanOrEqualTo(4.5));
-      final selectedStyle = _previewSpans(
-        tester,
-      ).singleWhere((span) => span.text == 'power').style!;
+      final selectedStyle = _previewSpans(tester)
+          .singleWhere((span) => span.text == 'power')
+          .style!;
       expect(selectedStyle.backgroundColor, isNull);
       expect(selectedStyle.background, isNull);
       expect(
@@ -865,9 +860,8 @@ void main() {
     );
     expect(
       translationWidget.style,
-      Theme.of(
-        tester.element(translation),
-      ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
+      Theme.of(tester.element(translation)).textTheme.bodyLarge!
+          .copyWith(letterSpacing: 0),
     );
   });
 
@@ -882,9 +876,8 @@ void main() {
     final translationWidget = tester.widget<SelectableText>(translation);
     expect(
       translationWidget.style,
-      Theme.of(
-        tester.element(translation),
-      ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
+      Theme.of(tester.element(translation)).textTheme.bodyLarge!
+          .copyWith(letterSpacing: 0),
     );
   });
 
@@ -901,9 +894,8 @@ void main() {
     final result = find.byKey(const ValueKey('translation-primary-result'));
     expect(
       tester.widget<SelectableText>(result).style,
-      Theme.of(
-        tester.element(result),
-      ).textTheme.bodyLarge!.copyWith(letterSpacing: 0),
+      Theme.of(tester.element(result)).textTheme.bodyLarge!
+          .copyWith(letterSpacing: 0),
     );
   });
 

@@ -1,6 +1,5 @@
 import 'dart:ui' show Locale;
 
-import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 
@@ -26,7 +25,7 @@ void main() {
   group('Preferences', () {
     test('defaults', () {
       const prefs = Preferences();
-      expect(prefs.themeMode, ThemeMode.system);
+      expect(prefs.themeMode, AppThemeMode.system);
       expect(prefs.locale, const Locale('en'));
       expect(prefs.libraryLayoutMode, 'grid');
       expect(prefs.readerThemeId, 'paper');
@@ -54,7 +53,7 @@ void main() {
     test('copyWith updates selected fields', () {
       const prefs = Preferences();
       final updated = prefs.copyWith(
-        themeMode: ThemeMode.dark,
+        themeMode: AppThemeMode.dark,
         locale: const Locale('ru'),
         libraryLayoutMode: 'list',
         readerPageTurnStyle: ReaderPageTurnStyle.vertical,
@@ -73,7 +72,7 @@ void main() {
         readerSelectionTipDismissed: true,
       );
 
-      expect(updated.themeMode, ThemeMode.dark);
+      expect(updated.themeMode, AppThemeMode.dark);
       expect(updated.locale, const Locale('ru'));
       expect(updated.libraryLayoutMode, 'list');
       expect(updated.readerPageTurnStyle, ReaderPageTurnStyle.vertical);
@@ -142,7 +141,7 @@ void main() {
 
     test('different fields are not equal', () {
       const a = Preferences();
-      final b = a.copyWith(themeMode: ThemeMode.dark);
+      final b = a.copyWith(themeMode: AppThemeMode.dark);
       expect(a, isNot(equals(b)));
       expect(a, isNot(equals(a.copyWith(readerBrightness: 0.55))));
       expect(

@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 SystemUiOverlayStyle appSystemUiOverlayStyle({
@@ -11,12 +10,12 @@ SystemUiOverlayStyle appSystemUiOverlayStyle({
       : Brightness.dark;
 
   return SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
+    statusBarColor: const Color(0x00000000),
     statusBarIconBrightness: iconBrightness,
     statusBarBrightness: brightness,
     systemNavigationBarColor: navigationBarColor ?? backgroundColor,
     systemNavigationBarIconBrightness: iconBrightness,
-    systemNavigationBarDividerColor: Colors.transparent,
+    systemNavigationBarDividerColor: const Color(0x00000000),
     systemStatusBarContrastEnforced: false,
     systemNavigationBarContrastEnforced: false,
   );

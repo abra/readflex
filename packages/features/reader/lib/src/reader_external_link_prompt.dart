@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:toast_service/toast_service.dart';

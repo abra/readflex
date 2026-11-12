@@ -1,7 +1,6 @@
 import 'dart:convert' show jsonDecode, jsonEncode;
 import 'dart:ui' show Locale;
 
-import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -17,6 +16,26 @@ void main() {
   });
 
   group('PreferencesRepository', () {
+    for (final mode in AppThemeMode.values) {
+      test(
+        'preserves the stored ${mode.name} theme across UI migration',
+        () async {
+          final storage = _CountingStorage();
+          await storage.setString(
+            _key,
+            jsonEncode({'_schemaVersion': 15, 'themeMode': mode.name}),
+          );
+          final repository = PreferencesRepository(storage);
+          final preferences = await repository.load(_supportedCodes);
+
+          expect(preferences.themeMode, mode);
+          await repository.save(preferences);
+          final persisted = jsonDecode((await storage.getString(_key))!) as Map;
+          expect(persisted['themeMode'], mode.name);
+        },
+      );
+    }
+
     group('writes', () {
       test('a save of what was loaded writes nothing', () async {
         final storage = _CountingStorage();
@@ -34,7 +53,7 @@ void main() {
         final repo = PreferencesRepository(storage);
         final loaded = await repo.load(_supportedCodes);
         await repo.save(loaded);
-        final changed = loaded.copyWith(themeMode: ThemeMode.dark);
+        final changed = loaded.copyWith(themeMode: AppThemeMode.dark);
 
         await repo.save(changed);
         await repo.save(changed);
@@ -44,7 +63,7 @@ void main() {
           (await PreferencesRepository(
             storage,
           ).load(_supportedCodes)).themeMode,
-          ThemeMode.dark,
+          AppThemeMode.dark,
         );
       });
 
@@ -65,7 +84,7 @@ void main() {
         final repo = PreferencesRepository(storage);
         final changed = (await repo.load(
           _supportedCodes,
-        )).copyWith(themeMode: ThemeMode.dark);
+        )).copyWith(themeMode: AppThemeMode.dark);
 
         storage.failNext = true;
         await expectLater(repo.save(changed), throwsA(isA<StateError>()));
@@ -80,7 +99,7 @@ void main() {
       final repo = PreferencesRepository(PreferencesStorage());
       final prefs = await repo.load(_supportedCodes);
 
-      expect(prefs.themeMode, ThemeMode.system);
+      expect(prefs.themeMode, AppThemeMode.system);
       expect(prefs.libraryLayoutMode, 'grid');
       expect(prefs.readerThemeId, 'paper');
       expect(prefs.readerFontId, 'serif');
@@ -121,7 +140,7 @@ void main() {
     test('save() then load() round-trips all fields', () async {
       final repo = PreferencesRepository(PreferencesStorage());
       const source = Preferences(
-        themeMode: ThemeMode.dark,
+        themeMode: AppThemeMode.dark,
         locale: Locale('ru'),
         libraryLayoutMode: 'list',
         readerThemeId: 'night',
@@ -287,7 +306,7 @@ void main() {
         final repo = PreferencesRepository(storage);
         final prefs = await repo.load(_supportedCodes);
 
-        expect(prefs.themeMode, ThemeMode.dark);
+        expect(prefs.themeMode, AppThemeMode.dark);
         expect(prefs.readerLayoutId, 'standard');
         expect(prefs.readerSideMargin, 8.0);
         expect(prefs.readerTextAlignment, ReaderTextAlignment.start);

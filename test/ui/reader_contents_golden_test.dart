@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -195,7 +195,11 @@ void main() {
       await tester.ensureVisible(find.text(l10n.readerCollapseHighlight));
       await tapUi(tester, find.text(l10n.readerCollapseHighlight));
       await tester.ensureVisible(find.byType(SearchField).hitTestable());
-      final blue = find.byTooltip(l10n.highlightColorBlue);
+      final blue = find.byWidgetPredicate(
+        (widget) =>
+            widget is AppColorSwatchButton &&
+            widget.tooltip == l10n.highlightColorBlue,
+      );
       await tester.ensureVisible(blue);
       await tapUi(tester, blue);
       expect(find.text(quote), findsNothing);

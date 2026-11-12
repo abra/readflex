@@ -101,12 +101,12 @@ class StyleResolverOptions {
 class StyleResolver {
   /// Builds the rule index for [sheets], in the order given within each
   /// origin. `@media` blocks are included when their query matches
-  /// [media], `@supports` blocks when pagecraft supports their condition;
+  /// [_media], `@supports` blocks when pagecraft supports their condition;
   /// other at-rules are ignored here (`@import` is the loader's job).
   StyleResolver(
     List<CssSheetSource> sheets, {
-    CssMediaEnvironment media = const CssMediaEnvironment(),
-  }) : _media = media {
+    this._media = const CssMediaEnvironment(),
+  }) {
     var order = 0;
     for (final source in sheets) {
       order = _index(

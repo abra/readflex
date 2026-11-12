@@ -1,7 +1,7 @@
 import 'package:component_library/component_library.dart';
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:dictionary_service/dictionary_service.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' show Bidi;

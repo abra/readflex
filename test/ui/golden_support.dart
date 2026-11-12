@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -81,7 +81,7 @@ Future<void> pumpGoldenSurface(
           : AppTheme.dark(),
       locale: locale ?? profile.locale,
       supportedLocales: ReadflexSupportedLocales.locales,
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      localizationsDelegates: readflexLocalizationsDelegates,
       builder: (context, child) => RepaintBoundary(
         key: goldenBoundary,
         child: MediaQuery(

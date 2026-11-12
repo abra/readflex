@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
@@ -115,7 +115,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexLocalizations.supportedLocales,
         home: ReaderScreen(
           sourceId: article.id,
@@ -478,7 +478,13 @@ void main() {
     await tester.longPressAt(at(tester, 'The quick brown', quick + 1));
     await tester.pumpAndSettle();
     final strings = tester.element(view).l10n;
-    await tester.tap(find.byTooltip(strings.highlightColorYellow));
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is AppColorSwatchButton &&
+            widget.tooltip == strings.highlightColorYellow,
+      ),
+    );
     await tester.pumpAndSettle();
     TextHighlight preview() => tester
         .widget<TextScrollView>(view)

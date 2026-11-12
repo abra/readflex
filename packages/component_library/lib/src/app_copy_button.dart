@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import 'app_icons.dart';
 import 'app_plain_icon_button.dart';

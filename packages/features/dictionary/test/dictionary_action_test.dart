@@ -2,7 +2,7 @@ import 'package:component_library/component_library.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:dictionary_service/dictionary_service.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
@@ -168,7 +168,7 @@ class _ActionHost extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       supportedLocales: ReadflexSupportedLocales.locales,
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      localizationsDelegates: readflexLocalizationsDelegates,
       theme: AppTheme.light(),
       home: Scaffold(
         body: Builder(

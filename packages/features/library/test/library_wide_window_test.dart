@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart' show SemanticsNode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -100,7 +100,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: Scaffold(
             body: LibraryContentScrollView(
@@ -152,7 +152,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: Directionality(
             textDirection: textDirection,
@@ -330,7 +330,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: Scaffold(body: LibraryEmptyState(onImportPressed: (_) {})),
         ),
@@ -400,7 +400,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.light(),
           locale: Locale(locale),
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: BlocProvider.value(
             value: cubit,

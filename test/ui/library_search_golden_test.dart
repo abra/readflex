@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
@@ -7,6 +7,8 @@ import '../support/reading_fixture.dart';
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';
 import 'golden_support.dart';
+
+import 'package:preferences_service/preferences_service.dart';
 
 void main() {
   setUpAll(loadUiFonts);
@@ -53,8 +55,8 @@ void main() {
           (p) => p.copyWith(
             locale: locale,
             themeMode: profile.brightness == Brightness.light
-                ? ThemeMode.light
-                : ThemeMode.dark,
+                ? AppThemeMode.light
+                : AppThemeMode.dark,
           ),
         ),
       );

@@ -10,14 +10,11 @@ import 'package:pagecraft/all_formats.dart';
 /// WebView reader's removal).
 void main() {
   test('column layouts match readflex_page_columns.js', () {
-    final cases =
-        (jsonDecode(
-                  File(
-                    'test/fixtures/readflex_page_columns.json',
-                  ).readAsStringSync(),
-                )
-                as List)
-            .cast<List<Object?>>();
+    final cases = (jsonDecode(
+      File(
+        'test/fixtures/readflex_page_columns.json',
+      ).readAsStringSync(),
+    ) as List).cast<List<Object?>>();
     expect(cases, hasLength(120));
     for (final [input as Map<String, Object?>, expected as Map<String, Object?>]
         in cases) {

@@ -3,8 +3,6 @@ import 'dart:developer' as developer;
 import 'dart:math' as math;
 import 'dart:ui' show Locale, PlatformDispatcher;
 
-import 'package:flutter/material.dart' show ThemeMode;
-
 import 'preferences.dart';
 import 'preferences_storage.dart';
 
@@ -84,7 +82,7 @@ class PreferencesRepository {
             );
       final locale = _resolveLocale(map['locale'] as String?, supportedCodes);
       final preferences = Preferences(
-        themeMode: ThemeMode.values.byName(
+        themeMode: AppThemeMode.values.byName(
           map['themeMode'] as String? ?? 'system',
         ),
         locale: locale,

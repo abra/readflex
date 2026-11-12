@@ -1,5 +1,5 @@
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_display_sheet.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
@@ -52,11 +52,14 @@ void main() {
           builder: (context) => MaterialApp(
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
-            themeMode: PreferencesScope.themeModeOf(context),
+            themeMode: switch (PreferencesScope.themeModeOf(context)) {
+              AppThemeMode.system => ThemeMode.system,
+              AppThemeMode.light => ThemeMode.light,
+              AppThemeMode.dark => ThemeMode.dark,
+            },
             locale: PreferencesScope.localeOf(context),
             supportedLocales: ReadflexSupportedLocales.locales,
-            localizationsDelegates:
-                ReadflexLocalizations.localizationsDelegates,
+            localizationsDelegates: readflexLocalizationsDelegates,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
                 textScaler: TextScaler.linear(scale),

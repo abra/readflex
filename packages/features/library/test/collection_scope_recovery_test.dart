@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_bloc.dart';
 import 'package:library_feature/src/select_collection_scope_sheet.dart';
@@ -31,8 +31,7 @@ void main() {
               MaterialApp(
                 theme: AppTheme.light(),
                 locale: locale,
-                localizationsDelegates:
-                    ReadflexLocalizations.localizationsDelegates,
+                localizationsDelegates: readflexLocalizationsDelegates,
                 supportedLocales: ReadflexSupportedLocales.locales,
                 home: Builder(
                   builder: (context) => Scaffold(

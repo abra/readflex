@@ -4,7 +4,7 @@ import 'package:component_library/component_library.dart';
 import 'package:dictionary/dictionary.dart';
 import 'package:dictionary_service/dictionary_service.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:shared/shared.dart';
@@ -335,7 +335,7 @@ Future<void> _pumpSheet(
     MaterialApp(
       theme: AppTheme.light(),
       locale: locale,
-      localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+      localizationsDelegates: readflexLocalizationsDelegates,
       supportedLocales: ReadflexSupportedLocales.locales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: textScaler),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -67,7 +67,9 @@ void main() {
     expect(themeBuilds, 1);
     expect(readerBuilds, 2);
 
-    await service.update((prefs) => prefs.copyWith(themeMode: ThemeMode.dark));
+    await service.update(
+      (prefs) => prefs.copyWith(themeMode: AppThemeMode.dark),
+    );
     await tester.pumpAndSettle();
 
     expect(themeBuilds, 2);

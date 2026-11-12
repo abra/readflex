@@ -1,6 +1,6 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/library_feature.dart';
 import 'package:library_feature/src/library_layout_cubit.dart';
@@ -49,19 +49,21 @@ void main() {
       ToastWrapper(
         child: MaterialApp(
           theme: AppTheme.light(),
-          localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+          localizationsDelegates: readflexLocalizationsDelegates,
           supportedLocales: ReadflexSupportedLocales.locales,
           home: LibraryScreen(
             bookRepository: bookRepository,
             collectionRepository: FakeCollectionRepository(),
             preferencesService: preferences,
-            onSourcePressed:
-                (_, {onSourceOpened, onReadingPositionSaved}) async {},
-            onAddPressed:
-                ({
-                  required onImported,
-                  entry = LibraryImportEntry.menu,
-                }) async => addPresses++,
+            onSourcePressed: (
+              _, {
+              onSourceOpened,
+              onReadingPositionSaved,
+            }) async {},
+            onAddPressed: ({
+              required onImported,
+              entry = LibraryImportEntry.menu,
+            }) async => addPresses++,
           ),
         ),
       ),

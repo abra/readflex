@@ -34,7 +34,7 @@ repository loading resolves the device locale to a supported language.
 
 | Field                      | Type        | Default     |
 |----------------------------|-------------|-------------|
-| `themeMode`                | `ThemeMode` | `system`    |
+| `themeMode`                | `AppThemeMode` | `system`    |
 | `locale`                   | `Locale`    | platform    |
 | `libraryLayoutMode`        | `String`    | `'grid'`    |
 | `readerThemeId`            | `String`    | `'paper'`   |
@@ -114,7 +114,7 @@ final appearance = PreferencesScope.readerAppearanceOf(context);
 final prefs = PreferencesScope.of(context); // rebuild on any change
 
 // Update
-await service.update((p) => p.copyWith(themeMode: ThemeMode.dark));
+await service.update((p) => p.copyWith(themeMode: AppThemeMode.dark));
 
 // Reader-specific override for one source/book.
 await service.setReaderAppearanceOverride(
@@ -135,5 +135,7 @@ updates and drains pending writes before closing the stream.
 Registered on `DependenciesContainer.preferencesService` in
 `lib/app/composition.dart` and exposed via `PreferencesScope` in
 `AppScopes`. `ReadflexApp` reads `themeModeOf(context)` to drive
-`MaterialApp.themeMode`; the reader applies per-source overrides through
+`MaterialApp.themeMode` through an app-layer mapping. The package has no
+Material/Cupertino dependency; stored enum names remain `system`, `light` and
+`dark`. The reader applies per-source overrides through
 `ReaderAppearanceCubit`.

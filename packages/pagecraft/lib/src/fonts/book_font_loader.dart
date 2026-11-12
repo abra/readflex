@@ -9,8 +9,10 @@ import 'font_data.dart';
 import 'font_ink.dart';
 
 /// Registers font [fonts] with the engine as family [family].
-typedef FontRegistrar =
-    Future<void> Function(String family, List<Uint8List> fonts);
+typedef FontRegistrar = Future<void> Function(
+  String family,
+  List<Uint8List> fonts,
+);
 
 /// The engine's font families, which stay registered until the process
 /// ends (Flutter cannot remove one): each family is registered once, so

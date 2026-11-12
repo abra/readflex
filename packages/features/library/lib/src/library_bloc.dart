@@ -16,20 +16,14 @@ part 'library_state.dart';
 
 class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   LibraryBloc({
-    required BookRepository bookRepository,
-    ArticleRepository? articleRepository,
-    CollectionRepository? collectionRepository,
-    FsrsRepository? fsrsRepository,
-    PreferencesService? preferencesService,
+    required this._bookRepository,
+    this._articleRepository,
+    this._collectionRepository,
+    this._fsrsRepository,
+    this._preferencesService,
     DateTime Function()? clock,
-    bool isForeground = true,
-  }) : _bookRepository = bookRepository,
-       _articleRepository = articleRepository,
-       _collectionRepository = collectionRepository,
-       _fsrsRepository = fsrsRepository,
-       _preferencesService = preferencesService,
-       _clock = clock ?? DateTime.now,
-       _isForeground = isForeground,
+    this._isForeground = true,
+  }) : _clock = clock ?? DateTime.now,
        super(LibraryState()) {
     on<LibraryLoadRequested>(_onLoadRequested);
     on<LibrarySourceDeleted>(_onSourceDeleted);

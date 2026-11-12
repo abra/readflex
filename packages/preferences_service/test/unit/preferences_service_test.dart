@@ -1,6 +1,5 @@
 import 'dart:ui' show Locale;
 
-import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -33,12 +32,12 @@ void main() {
 
       await service.update(
         (s) => s.copyWith(
-          themeMode: ThemeMode.dark,
+          themeMode: AppThemeMode.dark,
           libraryLayoutMode: 'list',
         ),
       );
 
-      expect(service.current.themeMode, ThemeMode.dark);
+      expect(service.current.themeMode, AppThemeMode.dark);
       expect(service.current.libraryLayoutMode, 'list');
     });
 
@@ -255,12 +254,12 @@ void main() {
           isA<Preferences>().having(
             (s) => s.themeMode,
             'themeMode',
-            ThemeMode.dark,
+            AppThemeMode.dark,
           ),
         ),
       );
 
-      await service.update((s) => s.copyWith(themeMode: ThemeMode.dark));
+      await service.update((s) => s.copyWith(themeMode: AppThemeMode.dark));
     });
 
     test(
@@ -273,27 +272,27 @@ void main() {
         final emitted = service.stream.take(2).toList();
 
         final first = service.update(
-          (s) => s.copyWith(themeMode: ThemeMode.dark),
+          (s) => s.copyWith(themeMode: AppThemeMode.dark),
         );
         final second = service.update(
           (s) => s.copyWith(locale: const Locale('ru')),
         );
 
-        expect(service.current.themeMode, ThemeMode.dark);
+        expect(service.current.themeMode, AppThemeMode.dark);
         expect(service.current.locale, const Locale('ru'));
 
         await Future.wait([first, second]);
         final snapshots = await emitted;
 
-        expect(snapshots[0].themeMode, ThemeMode.dark);
+        expect(snapshots[0].themeMode, AppThemeMode.dark);
         expect(snapshots[0].locale, initialLocale);
-        expect(snapshots[1].themeMode, ThemeMode.dark);
+        expect(snapshots[1].themeMode, AppThemeMode.dark);
         expect(snapshots[1].locale, const Locale('ru'));
 
         final restored = await PreferencesService.create(
           supportedCodes: _supportedCodes,
         );
-        expect(restored.current.themeMode, ThemeMode.dark);
+        expect(restored.current.themeMode, AppThemeMode.dark);
         expect(restored.current.locale, const Locale('ru'));
       },
     );
@@ -304,7 +303,7 @@ void main() {
       );
       await service.update(
         (s) => s.copyWith(
-          themeMode: ThemeMode.dark,
+          themeMode: AppThemeMode.dark,
           libraryLayoutMode: 'list',
           readerThemeId: 'mist',
           readerFontId: 'sans',
@@ -317,7 +316,7 @@ void main() {
         supportedCodes: _supportedCodes,
       );
 
-      expect(service2.current.themeMode, ThemeMode.dark);
+      expect(service2.current.themeMode, AppThemeMode.dark);
       expect(service2.current.libraryLayoutMode, 'list');
       expect(service2.current.readerThemeId, 'mist');
       expect(service2.current.readerFontId, 'sans');

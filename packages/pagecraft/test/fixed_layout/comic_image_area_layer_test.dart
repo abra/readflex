@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pagecraft/all_formats.dart';
 
@@ -1009,8 +1009,7 @@ void main() {
             expect(
               actual.r,
               closeTo(corner.r, .01),
-              reason:
-                  'blue grips retain 85% opacity regardless of the selected color',
+              reason: 'blue grips retain 85% opacity regardless of the selected color',
             );
             expect(actual.g, closeTo(corner.g, .01));
             expect(actual.b, closeTo(corner.b, .01));

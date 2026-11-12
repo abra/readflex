@@ -2,7 +2,7 @@ import 'dart:ui' show Tristate;
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:reader/src/reader_highlight_controls.dart';
@@ -33,7 +33,9 @@ void main() {
         isTrue,
       );
       expect(find.byIcon(AppIcons.check), findsOneWidget);
-      final green = find.byTooltip('Green');
+      final green = find.byWidgetPredicate(
+        (widget) => widget is AppColorSwatchButton && widget.tooltip == 'Green',
+      );
       expect(tester.getSize(green), const Size(48, 48));
       await tester.tapAt(tester.getTopLeft(green) + const Offset(1, 1));
       expect(picked, HighlightColor.green);
@@ -96,7 +98,12 @@ void main() {
         const Offset(-180, 0),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Purple'));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is AppColorSwatchButton && widget.tooltip == 'Purple',
+        ),
+      );
       expect(picked, HighlightColor.purple);
       expect(tester.getRect(save), saveRect);
       await tester.tap(save);
@@ -192,7 +199,12 @@ void main() {
         onColor: (_) => actions++,
         onSave: () => actions++,
       );
-      await tester.tap(find.byTooltip('Green'));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is AppColorSwatchButton && widget.tooltip == 'Green',
+        ),
+      );
       await tester.tap(find.byTooltip('Highlight'));
       expect(actions, 0);
       expect(find.byType(ButtonLoadingIndicator), findsOneWidget);
@@ -226,14 +238,22 @@ void _swatchSizeTests() {
         const Size.square(AppIconSize.md),
       );
     }
-    expect(tester.getSize(find.byTooltip('Green')), const Size.square(48));
+    expect(
+      tester.getSize(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is AppColorSwatchButton && widget.tooltip == 'Green',
+        ),
+      ),
+      const Size.square(48),
+    );
   });
 
   testWidgets('size widens only the painted circle', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
-        localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+        localizationsDelegates: readflexLocalizationsDelegates,
         supportedLocales: ReadflexSupportedLocales.locales,
         home: Scaffold(
           body: Center(
@@ -272,7 +292,7 @@ Future<void> _pumpControls(
 }) => tester.pumpWidget(
   MaterialApp(
     theme: AppTheme.light(),
-    localizationsDelegates: ReadflexLocalizations.localizationsDelegates,
+    localizationsDelegates: readflexLocalizationsDelegates,
     supportedLocales: ReadflexSupportedLocales.locales,
     builder: (context, child) => MediaQuery(
       data: MediaQuery.of(
