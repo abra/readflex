@@ -192,7 +192,7 @@ GoRoute _buildPracticeRoute(DependenciesContainer deps) => GoRoute(
           onOpenInSource: (sourceId, cfiRange) =>
               _openAtCfi(context, sourceId: sourceId, cfiRange: cfiRange),
         );
-        final platform = Theme.of(context).platform;
+        final platform = context.appTheme.platform;
         if (platform == TargetPlatform.iOS ||
             platform == TargetPlatform.macOS) {
           final duration = context.motion(AppMotion.short);

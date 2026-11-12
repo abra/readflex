@@ -807,6 +807,42 @@ void main() {
       );
     });
 
+    testWidgets('a previous seek timeout cannot reset an active drag', (
+      tester,
+    ) async {
+      final seeks = await pump(tester);
+      final rect = tester.getRect(find.byType(Slider));
+      final first = await tester.startGesture(
+        Offset(rect.left + rect.width * .25, rect.center.dy),
+      );
+      await first.moveTo(
+        Offset(rect.left + rect.width * .55, rect.center.dy),
+      );
+      await tester.pump();
+      await first.up();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(seeks, hasLength(1));
+
+      final second = await tester.startGesture(
+        Offset(rect.left + rect.width * .6, rect.center.dy),
+      );
+      await second.moveTo(
+        Offset(rect.left + rect.width * .8, rect.center.dy),
+      );
+      await tester.pump();
+      final preview = tester.widget<Text>(find.byKey(_pageLabelKey)).data;
+      expect(preview, isNot(contains('·')));
+      // Cross the old seek's 600ms deadline while the next drag is held.
+      await tester.pump(const Duration(milliseconds: 650));
+      expect(tester.widget<Text>(find.byKey(_pageLabelKey)).data, preview);
+      expect(seeks, hasLength(1), reason: 'holding a drag must not seek');
+      await second.up();
+      await tester.pump();
+      expect(seeks, hasLength(2));
+      expect(seeks.last, greaterThan(seeks.first));
+      await tester.pump(const Duration(seconds: 1));
+    });
+
     testWidgets('dragging rebuilds only the progress row', (tester) async {
       await pump(tester);
       final capsule = tester.element(find.byKey(_capsuleKey));

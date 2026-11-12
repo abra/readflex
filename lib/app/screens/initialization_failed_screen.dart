@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import '../readflex_platform_app.dart';
+
 /// Screen shown when app initialization fails, with an optional retry button.
 class InitializationFailedScreen extends StatefulWidget {
   const InitializationFailedScreen({
@@ -60,13 +62,8 @@ class _InitializationFailedScreenState
   Widget build(BuildContext context) {
     debugLogScreenBuild('InitializationFailedScreen');
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      supportedLocales: ReadflexSupportedLocales.locales,
-      localizationsDelegates: readflexLocalizationsDelegates,
-      home: Scaffold(
+    return ReadflexPlatformApp(
+      home: AppScaffold(
         body: Builder(
           builder: (context) {
             final text = context.text;
@@ -109,16 +106,14 @@ class _InitializationFailedScreenState
                         if (kDebugMode)
                           Padding(
                             padding: const EdgeInsets.all(AppSpacing.lg),
-                            child: ExpansionTile(
-                              title: Text(l10n.appTechnicalDetails),
-                              children: [
-                                AppTextSelectionHost(
-                                  child: SelectableText(
-                                    '${widget.error}\n${widget.stackTrace}',
-                                    style: text.bodySmall,
-                                  ),
+                            child: _TechnicalDetails(
+                              title: l10n.appTechnicalDetails,
+                              child: AppTextSelectionHost(
+                                child: SelectableText(
+                                  '${widget.error}\n${widget.stackTrace}',
+                                  style: text.bodySmall,
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                       ],
@@ -130,6 +125,45 @@ class _InitializationFailedScreenState
           },
         ),
       ),
+    );
+  }
+}
+
+class _TechnicalDetails extends StatefulWidget {
+  const _TechnicalDetails({required this.title, required this.child});
+  final String title;
+  final Widget child;
+
+  @override
+  State<_TechnicalDetails> createState() => _TechnicalDetailsState();
+}
+
+class _TechnicalDetailsState extends State<_TechnicalDetails> {
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!context.isCupertino) {
+      return ExpansionTile(title: Text(widget.title), children: [widget.child]);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          expanded: _expanded,
+          child: AppButton.text(
+            foregroundColor: context.colors.onSurface,
+            onPressed: () => setState(() => _expanded = !_expanded),
+            child: Row(
+              children: [
+                Expanded(child: Text(widget.title)),
+                Icon(_expanded ? AppIcons.chevronDown : AppIcons.chevronRight),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded) widget.child,
+      ],
     );
   }
 }

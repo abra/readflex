@@ -208,7 +208,7 @@ void main() {
     expect(actionButtonSource, contains('Semantics('));
     expect(actionButtonSource, contains('button: true'));
     expect(actionButtonSource, contains('enabled: enabled'));
-    expect(actionButtonSource, contains('InkWell('));
+    expect(actionButtonSource, contains('AppTappable('));
     expect(actionButtonSource, contains('minHeight: AppSizes.buttonHeight'));
     expect(actionButtonSource, isNot(contains('GestureDetector(')));
     expect(contextPanelSource, isNot(contains('if (action.loading)')));

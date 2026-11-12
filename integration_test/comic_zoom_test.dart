@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoPopupSurface;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,7 +20,10 @@ import '../test/support/ui_test_driver.dart';
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  Future<void> screenshot(String name) async {
+  Future<void> screenshot(WidgetTester tester, String name) async {
+    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 32));
     if (Platform.isAndroid) {
       await captureAndroidScreenshot(name);
     } else {
@@ -98,7 +102,7 @@ void main() {
     );
     expect(controller().page, 0);
     expect(controller().zoomScale, greaterThan(2));
-    await screenshot('comic-zoomed');
+    await screenshot(tester, 'comic-zoomed');
     await doubleTap();
     await waitForUi(
       tester,
@@ -117,11 +121,17 @@ void main() {
     await turn(forward: true);
     await turn(forward: false);
     await tester.pump(const Duration(milliseconds: 250));
-    await screenshot('comic-after-edge-turns');
+    await screenshot(tester, 'comic-after-edge-turns');
     expect(tester.takeException(), isNull);
 
-    uiCubit.showChrome();
-    await tester.pump(const Duration(milliseconds: 350));
+    await tapComic();
+    await waitForUi(
+      tester,
+      () => uiCubit.state.chromeVisible,
+      description: 'single centre tap reveals comic controls',
+    );
+    await tester.pumpAndSettle();
+    expect(uiCubit.state.chromeVisible, isTrue);
     await tapUi(tester, find.byIcon(AppIcons.toc));
     await waitForUi(
       tester,
@@ -142,7 +152,47 @@ void main() {
           2,
       description: 'page previews',
     );
-    await screenshot('comic-pages');
+    await tester.pumpAndSettle();
+    if (Platform.isIOS &&
+        !AppWindowSize.isWide(tester.element(find.byType(ReaderPageGrid)))) {
+      final surface = find.byType(CupertinoPopupSurface).hitTestable();
+      final header = find.byType(BottomSheetHeader).hitTestable();
+      expect(surface, findsOneWidget);
+      expect(header, findsOneWidget);
+      final bounds = tester.getRect(surface);
+      final size = tester.view.physicalSize / tester.view.devicePixelRatio;
+      final title = find.descendant(
+        of: header,
+        matching: find.text('Contents'),
+      );
+      expect(tester.getCenter(title).dx, closeTo(bounds.center.dx, .01));
+      expect(bounds.width, lessThanOrEqualTo(540));
+      expect(bounds.left, greaterThanOrEqualTo(8));
+      expect(size.width - bounds.right, greaterThanOrEqualTo(8));
+      expect(
+        size.height - bounds.bottom,
+        greaterThanOrEqualTo(
+          tester.view.padding.bottom / tester.view.devicePixelRatio,
+        ),
+      );
+      expect(tester.widget<CupertinoPopupSurface>(surface).blurSigma, 0);
+      final close = find.descendant(
+        of: header,
+        matching: find.byType(AppPlainIconButton),
+      );
+      expect(tester.getSize(close), const Size(48, 48));
+      final closeGlyph = find.byIcon(AppIcons.close).hitTestable();
+      expect(tester.getSize(closeGlyph), const Size(28, 28));
+      expect(tester.widget<Icon>(closeGlyph).size, 18);
+    }
+    await screenshot(tester, 'comic-pages');
+    final retainedController = controller();
+    final retainedPage = controller().page;
+    for (final tab in ['Bookmarks', 'Highlights', 'Pages']) {
+      await tapUi(tester, find.text(tab).hitTestable());
+      expect(controller(), same(retainedController));
+      expect(controller().page, retainedPage);
+    }
     await tester.ensureVisible(find.text('Page 3'));
     await tester.pump(const Duration(milliseconds: 350));
     await tapUi(tester, find.text('Page 3'));

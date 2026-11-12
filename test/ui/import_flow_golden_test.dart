@@ -213,7 +213,9 @@ void main() {
           reason: 'the normal-sized URL form fits without scrolling',
         );
         // Include the reserved validation area: hints must not touch the error.
-        final fieldBottom = tester.getRect(find.byType(TextField).last).bottom;
+        final fieldBottom = tester
+            .getRect(find.byType(AppTextField).last)
+            .bottom;
         final above =
             tester.getRect(find.text(l10n.importArticleHintClean)).top -
             fieldBottom;
@@ -230,7 +232,7 @@ void main() {
         find.byKey(const ValueKey('articleUrlPasteButton')),
       );
       List<Rect> formGeometry() => [
-        tester.getRect(find.byType(TextField).last),
+        tester.getRect(find.byType(AppTextField).last),
         tester.getRect(find.text(l10n.importArticleHintClean)),
         tester.getRect(find.text(l10n.importArticleHintLibrary)),
         tester.getRect(find.widgetWithText(FilledButton, l10n.commonSave)),
@@ -239,8 +241,8 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('articleUrlPasteButton')));
       await tester.pumpAndSettle();
       expect(
-        tester.widget<TextField>(find.byType(TextField).last).decoration!.error,
-        isNotNull,
+        tester.widget<AppTextField>(find.byType(AppTextField).last).hasError,
+        isTrue,
       );
       expect(find.text(l10n.importInvalidArticleUrl), findsOneWidget);
       expect(formGeometry(), beforeError);
@@ -250,18 +252,18 @@ void main() {
         greaterThanOrEqualTo(8),
       );
       await snapshot('invalid-paste');
-      await tester.enterText(find.byType(TextField).last, _url);
+      await tester.enterText(find.byType(AppTextField).last, _url);
       await tester.pump();
       await tapLabel(l10n.commonSave);
       _expectReadableActions(tester);
       await snapshot('article-failure');
       await tapLabel(l10n.importEditLink);
-      final field = tester.widget<TextField>(find.byType(TextField).last);
+      final field = tester.widget<AppTextField>(find.byType(AppTextField).last);
       expect(field.controller!.text, _url);
-      expect(field.decoration!.error, isNull);
+      expect(field.hasError, isFalse);
       expect(urls, [_url]);
       expect(
-        Directionality.of(tester.element(find.byType(TextField).last)),
+        Directionality.of(tester.element(find.byType(AppTextField).last)),
         locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
       );
       await snapshot('article-edit');

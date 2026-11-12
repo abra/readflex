@@ -1,6 +1,12 @@
 import 'package:article_repository/article_repository.dart';
 import 'package:book_repository/book_repository.dart';
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show
+        CupertinoScrollbar,
+        CupertinoActionSheet,
+        CupertinoActionSheetAction,
+        showCupertinoModalPopup;
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:material_ui/material_ui.dart';
@@ -83,7 +89,7 @@ class _ReviewSessionView extends StatelessWidget {
       builder: (context, state) {
         final bloc = context.read<ReviewSessionBloc>();
         final current = state.current;
-        return Scaffold(
+        return AppScaffold(
           body: SafeArea(
             child: AppContentFrame(
               maxWidth: _reviewWorkspaceMaxWidth,
@@ -101,7 +107,7 @@ class _ReviewSessionView extends StatelessWidget {
                   icon: AppIcons.practice,
                   message: l10n.practiceCaughtUp,
                   subtitle: l10n.practiceCaughtUpBody,
-                  action: FilledButton.tonal(
+                  action: AppButton.tonal(
                     onPressed: () => Navigator.of(context).pop(),
                     child: AppButtonLabel(l10n.commonDone),
                   ),

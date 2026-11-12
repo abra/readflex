@@ -36,7 +36,7 @@ class LibrarySearchControls extends StatelessWidget {
           onPressed: onClose,
         ),
         Expanded(
-          child: TextField(
+          child: AppTextField(
             key: const ValueKey('librarySearchField'),
             controller: controller,
             focusNode: focusNode,
@@ -47,19 +47,16 @@ class LibrarySearchControls extends StatelessWidget {
             onSubmitted: (_) => focusNode.unfocus(),
             textInputAction: TextInputAction.search,
             textAlignVertical: TextAlignVertical.center,
-            decoration: InputDecoration(
-              hint: SearchFieldHint(
-                text: l10n.librarySearchHint,
-                compactText: l10n.commonSearch,
-                style: style.copyWith(color: context.colors.onSurfaceVariant),
-              ),
-              contentPadding: EdgeInsets.zero,
-              isDense: true,
-              filled: false,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
+            hintText: l10n.librarySearchHint,
+            hint: SearchFieldHint(
+              text: l10n.librarySearchHint,
+              compactText: l10n.commonSearch,
+              style: style.copyWith(color: context.colors.onSurfaceVariant),
             ),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            filled: false,
+            borderless: true,
           ),
         ),
         ValueListenableBuilder<TextEditingValue>(

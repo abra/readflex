@@ -23,7 +23,7 @@ class LibraryEmptyState extends StatelessWidget {
       title: l10n.libraryEmptyTitle,
       subtitle: l10n.libraryEmptySubtitle,
       actions: [
-        FilledButton.icon(
+        AppButton.icon(
           key: const ValueKey('libraryEmptyUploadFile'),
           onPressed: onImportPressed == null
               ? null
@@ -31,7 +31,8 @@ class LibraryEmptyState extends StatelessWidget {
           icon: const Icon(AppIcons.uploadFile, size: AppIconSize.sm),
           label: AppButtonLabel(l10n.libraryUploadFile),
         ),
-        OutlinedButton.icon(
+        AppButton.icon(
+          variant: AppButtonVariant.outlined,
           key: const ValueKey('libraryEmptySaveArticle'),
           onPressed: onImportPressed == null
               ? null

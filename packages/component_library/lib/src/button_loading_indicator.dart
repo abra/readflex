@@ -1,4 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+
+import 'app_progress_indicator.dart';
 
 /// Compact loading indicator sized for use inside buttons.
 ///
@@ -8,20 +10,22 @@ import 'package:material_ui/material_ui.dart';
 /// when no button sets an icon colour, which keeps standalone use unchanged.
 class ButtonLoadingIndicator extends StatelessWidget {
   const ButtonLoadingIndicator({
-    this.size = 20,
+    this.size = defaultSize,
     this.strokeWidth = 2,
     super.key,
   });
 
   final double size;
   final double strokeWidth;
+  static const double defaultSize = 20;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: size,
       width: size,
-      child: CircularProgressIndicator(
+      child: AppProgressIndicator(
+        size: size,
         strokeWidth: strokeWidth,
         color: IconTheme.of(context).color,
       ),

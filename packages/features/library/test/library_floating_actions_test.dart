@@ -83,8 +83,8 @@ class _TestApp extends StatelessWidget {
         child: child!,
       ),
     ),
-    home: Scaffold(
-      floatingActionButtonAnimator: FloatingActionButtonAnimator.noAnimation,
+    home: AppScaffold(
+      floatingActionButtonAnimator: AppFloatingActionButtonAnimator.none,
       floatingActionButtonLocation: const LibraryFloatingActionsLocation(
         bottomViewPadding: 0,
       ),
@@ -266,7 +266,7 @@ void main() {
         'A long search query that should scroll horizontally to its final words';
     await tester.enterText(_field, query);
     await tester.pumpAndSettle();
-    final offset = tester.widget<TextField>(_field).scrollController!.offset;
+    final offset = tester.widget<AppTextField>(_field).scrollController!.offset;
     expect(offset, greaterThan(0));
     harness.close();
     await tester.pump();

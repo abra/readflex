@@ -113,7 +113,7 @@ class _ReaderHighlightNoteSheetState extends State<ReaderHighlightNoteSheet> {
                 onSecondary: () => Navigator.of(context).pop(_discardResult),
               )
             : widget.existingHighlight
-            ? FilledButton(
+            ? AppButton(
                 onPressed: onSave,
                 child: AppButtonLabel(l10n.commonSave),
               )
@@ -128,16 +128,14 @@ class _ReaderHighlightNoteSheetState extends State<ReaderHighlightNoteSheet> {
               ),
         child: SingleChildScrollView(
           // Retain the draft and the form height while confirming dismissal.
-          child: TextField(
+          child: AppTextField(
             controller: _controller,
             enabled: !_confirmDiscard,
             minLines: 3,
             maxLines: 4,
             textCapitalization: TextCapitalization.sentences,
-            decoration: InputDecoration(
-              hintText: l10n.readerCommentHint,
-              isDense: true,
-            ),
+
+            hintText: l10n.readerCommentHint,
           ),
         ),
       ),

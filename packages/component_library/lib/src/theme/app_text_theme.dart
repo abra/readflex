@@ -1,51 +1,40 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/painting.dart';
 
-/// Non-null view over [TextTheme] for styles that the app guarantees are
-/// always defined by `AppTypography.textTheme`.
-///
-/// Flutter's [TextTheme] fields are nullable because a user can override any
-/// slot with null. This app always ships the full set of styles, so call
-/// sites that use `context.text.bodyMedium` should never need the `!`
-/// operator. [AppTextTheme] encodes that contract by exposing every role
-/// as a non-null [TextStyle].
-///
-/// Constructed once per theme build in `build_context_ext.dart` and cached
-/// inside the [TextTheme] instance via an [Expando]-free pattern: a zero-cost
-/// wrapper whose fields are resolved lazily from the underlying [TextTheme].
+/// Non-null semantic text roles shared by Material and Cupertino surfaces.
 class AppTextTheme {
-  const AppTextTheme(this._source);
+  const AppTextTheme({
+    required this.displayLarge,
+    required this.displayMedium,
+    required this.displaySmall,
+    required this.headlineLarge,
+    required this.headlineMedium,
+    required this.headlineSmall,
+    required this.titleLarge,
+    required this.titleMedium,
+    required this.titleSmall,
+    required this.bodyLarge,
+    required this.bodyMedium,
+    required this.bodySmall,
+    required this.labelLarge,
+    required this.labelMedium,
+    required this.labelSmall,
+  });
 
-  final TextTheme _source;
-
-  TextStyle get displayLarge => _source.displayLarge!;
-
-  TextStyle get displayMedium => _source.displayMedium!;
-
-  TextStyle get displaySmall => _source.displaySmall!;
-
-  TextStyle get headlineLarge => _source.headlineLarge!;
-
-  TextStyle get headlineMedium => _source.headlineMedium!;
-
-  TextStyle get headlineSmall => _source.headlineSmall!;
-
-  TextStyle get titleLarge => _source.titleLarge!;
-
-  TextStyle get titleMedium => _source.titleMedium!;
-
-  TextStyle get titleSmall => _source.titleSmall!;
-
-  TextStyle get bodyLarge => _source.bodyLarge!;
-
-  TextStyle get bodyMedium => _source.bodyMedium!;
-
-  TextStyle get bodySmall => _source.bodySmall!;
-
-  TextStyle get labelLarge => _source.labelLarge!;
-
-  TextStyle get labelMedium => _source.labelMedium!;
-
-  TextStyle get labelSmall => _source.labelSmall!;
+  final TextStyle displayLarge;
+  final TextStyle displayMedium;
+  final TextStyle displaySmall;
+  final TextStyle headlineLarge;
+  final TextStyle headlineMedium;
+  final TextStyle headlineSmall;
+  final TextStyle titleLarge;
+  final TextStyle titleMedium;
+  final TextStyle titleSmall;
+  final TextStyle bodyLarge;
+  final TextStyle bodyMedium;
+  final TextStyle bodySmall;
+  final TextStyle labelLarge;
+  final TextStyle labelMedium;
+  final TextStyle labelSmall;
 
   /// Compact count in screen headers, e.g. "12 items" next to Library.
   TextStyle get screenCounter => labelSmall.copyWith(

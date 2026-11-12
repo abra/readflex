@@ -209,7 +209,7 @@ class _SwipeDeleteBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.colors;
     return Container(
       key: const ValueKey('librarySwipeDeleteBackground'),
       alignment: AlignmentDirectional.centerEnd,

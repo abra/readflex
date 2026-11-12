@@ -31,9 +31,7 @@ class LibraryCollectionsButton extends StatelessWidget {
     LibraryCollectionScope? scope, {
     required TextScaler textScaler,
   }) {
-    var style =
-        Theme.of(context).textButtonTheme.style?.textStyle?.resolve({}) ??
-        context.text.labelLarge;
+    var style = AppButton.textStyleOf(context, variant: AppButtonVariant.text);
     style = DefaultTextStyle.of(context).style.merge(style);
     if (MediaQuery.boldTextOf(context)) {
       style = style.copyWith(fontWeight: FontWeight.bold);
@@ -81,19 +79,17 @@ class LibraryCollectionsButton extends StatelessWidget {
       child: Semantics(
         label: l10n.libraryChooseCollection,
         value: title,
-        child: TextButton(
+        child: AppButton.text(
           key: const ValueKey('libraryCollectionsButton'),
           onPressed: onPressed,
-          style: TextButton.styleFrom(
-            foregroundColor: foreground,
-            backgroundColor: scoped ? colors.selectedControlBackground : null,
-            shape: const StadiumBorder(),
-            // The leading glyph sits centred in the stadium's round end,
-            // level with the "+" glyph in its circle.
-            padding: EdgeInsetsDirectional.only(
-              start: AppPlainIconButton.defaultIconOutsetOf(context),
-              end: AppSpacing.md,
-            ),
+          foregroundColor: foreground,
+          backgroundColor: scoped ? colors.selectedControlBackground : null,
+          shape: const StadiumBorder(),
+          // The leading glyph sits centred in the stadium's round end,
+          // level with the "+" glyph in its circle.
+          padding: EdgeInsetsDirectional.only(
+            start: AppPlainIconButton.defaultIconOutsetOf(context),
+            end: AppSpacing.md,
           ),
           child: ExcludeSemantics(
             child: Row(

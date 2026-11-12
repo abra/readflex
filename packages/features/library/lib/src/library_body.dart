@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoSliverRefreshControl;
 import 'package:domain_models/domain_models.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,8 +32,7 @@ import 'library_selection_cubit.dart';
 /// the content in both layouts, the card in place of its source's row or
 /// tile, also while selecting.
 ///
-/// Wrapping [RefreshIndicator] is always present (even for the empty
-/// states) so pull-to-refresh stays available.
+/// Pull-to-refresh stays available in empty states and both library layouts.
 class LibraryBody extends StatelessWidget {
   const LibraryBody({
     required this.state,
@@ -101,36 +102,42 @@ class LibraryBody extends StatelessWidget {
               searchActive &&
               state.searchQuery.trim().isNotEmpty &&
               contentHeight < AppSizes.buttonHeight * 4;
-          return RefreshIndicator(
+          return _LibraryRefreshPresentation(
             onRefresh: onRefresh,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(
-                parent: BouncingScrollPhysics(),
+            child: CustomScrollView(
+              physics: AlwaysScrollableScrollPhysics(
+                parent: context.isCupertino
+                    ? const BouncingScrollPhysics()
+                    : const ClampingScrollPhysics(),
               ),
-              padding: state.isEmpty
-                  ? null
-                  : EdgeInsets.only(bottom: bottomPadding),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: contentHeight,
+              slivers: [
+                if (context.isCupertino)
+                  CupertinoSliverRefreshControl(onRefresh: onRefresh),
+                SliverPadding(
+                  padding: EdgeInsets.only(bottom: bottomPadding),
+                  sliver: SliverToBoxAdapter(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: contentHeight),
+                      child: state.isEmpty
+                          ? LibraryEmptyState(onImportPressed: onImportPressed)
+                          : _LibraryNoMatches(
+                              searching: state.searchQuery.trim().isNotEmpty,
+                              compact: compactSearch,
+                              scope: state.selectedCollectionScope,
+                              onClearSearch: onClearSearch,
+                              onShowWholeLibrary: onShowWholeLibrary,
+                            ),
+                    ),
+                  ),
                 ),
-                child: state.isEmpty
-                    ? LibraryEmptyState(onImportPressed: onImportPressed)
-                    : _LibraryNoMatches(
-                        searching: state.searchQuery.trim().isNotEmpty,
-                        compact: compactSearch,
-                        scope: state.selectedCollectionScope,
-                        onClearSearch: onClearSearch,
-                        onShowWholeLibrary: onShowWholeLibrary,
-                      ),
-              ),
+              ],
             ),
           );
         },
       );
     }
 
-    return RefreshIndicator(
+    return _LibraryRefreshPresentation(
       onRefresh: onRefresh,
       child: BlocBuilder<LibraryLayoutCubit, LibraryLayoutMode>(
         builder: (context, layoutMode) {
@@ -167,6 +174,7 @@ class LibraryBody extends StatelessWidget {
                 selection: selection,
                 selectionActionsHeight: selectionActionsHeight,
                 scrollController: scrollController,
+                onRefresh: onRefresh,
                 onSourcePressed: onSourcePressed,
                 onSourceLongPressed: onSourceLongPressed,
                 onConfirmSwipeDelete: onConfirmSwipeDelete,
@@ -177,6 +185,21 @@ class LibraryBody extends StatelessWidget {
       ),
     );
   }
+}
+
+class _LibraryRefreshPresentation extends StatelessWidget {
+  const _LibraryRefreshPresentation({
+    required this.onRefresh,
+    required this.child,
+  });
+
+  final Future<void> Function() onRefresh;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => context.isCupertino
+      ? child
+      : RefreshIndicator(onRefresh: onRefresh, child: child);
 }
 
 /// Why a non-empty library lists nothing, with the one way out: a search
@@ -215,7 +238,7 @@ class _LibraryNoMatches extends StatelessWidget {
         icon: AppIcons.searchOff,
         message: l10n.libraryNoResultsTitle,
         subtitle: l10n.libraryNoResultsSubtitle,
-        action: TextButton(
+        action: AppButton.text(
           key: const ValueKey('libraryClearSearchButton'),
           onPressed: onClearSearch,
           child: AppButtonLabel(l10n.commonClearSearch),
@@ -225,7 +248,7 @@ class _LibraryNoMatches extends StatelessWidget {
     return EmptyState(
       icon: libraryCollectionScopeIcon(scope.type),
       message: l10n.libraryEmptyCollectionTitle,
-      action: TextButton(
+      action: AppButton.text(
         key: const ValueKey('libraryShowWholeLibraryButton'),
         onPressed: onShowWholeLibrary,
         child: AppButtonLabel(l10n.libraryShowWholeLibrary),

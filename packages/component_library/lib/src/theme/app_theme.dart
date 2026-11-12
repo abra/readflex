@@ -1,8 +1,11 @@
 import 'package:cupertino_ui/cupertino_ui.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:material_ui/material_ui.dart';
 
 import 'app_system_ui_overlay.dart';
 import 'app_typography.dart';
+import 'app_text_theme.dart';
+import 'app_theme_data.dart';
 import 'components/app_button_themes.dart';
 import 'components/app_card_theme.dart';
 import 'components/app_input_theme.dart';
@@ -44,12 +47,205 @@ class AppTheme {
   static final ThemeData _lightCached = _buildLight();
   static final ThemeData _darkCached = _buildDark();
 
-  static ThemeData light() => _lightCached;
+  static final _platformThemes = <(TargetPlatform, Brightness), ThemeData>{};
+  static final _semanticThemes = Expando<Map<TargetPlatform, AppThemeData>>();
 
-  static ThemeData dark() => _darkCached;
+  /// Platform adapters share the existing palettes and reading-content fonts.
+  static ThemeData forPlatform(
+    TargetPlatform platform,
+    Brightness brightness,
+  ) => _platformThemes.putIfAbsent((platform, brightness), () {
+    final base = brightness == Brightness.dark ? _darkCached : _lightCached;
+    final cupertino =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
+    if (cupertino) {
+      final background = _cupertinoColor(
+        CupertinoColors.systemGroupedBackground,
+        brightness,
+      );
+      final surface = _cupertinoColor(
+        CupertinoColors.secondarySystemGroupedBackground,
+        brightness,
+      );
+      final label = _cupertinoColor(CupertinoColors.label, brightness);
+      // Keep the native hue with enough opacity for small app captions.
+      final secondaryLabel = _cupertinoColor(
+        CupertinoColors.secondaryLabel,
+        brightness,
+      ).withValues(alpha: .8);
+      final separator = _cupertinoColor(CupertinoColors.separator, brightness);
+      final fill = _cupertinoColor(
+        CupertinoColors.tertiarySystemFill,
+        brightness,
+      );
+      final colors = base.colorScheme.copyWith(
+        primary: brightness == Brightness.dark
+            ? base.colorScheme.primaryFixedDim
+            : base.colorScheme.primary,
+        onPrimary: brightness == Brightness.dark
+            ? base.colorScheme.onPrimaryFixed
+            : base.colorScheme.onPrimary,
+        surface: background,
+        onSurface: label,
+        onSurfaceVariant: secondaryLabel,
+        surfaceContainerLowest: surface,
+        surfaceContainerLow: surface,
+        surfaceContainer: surface,
+        surfaceContainerHigh: fill,
+        surfaceContainerHighest: fill,
+        outline: _cupertinoColor(CupertinoColors.opaqueSeparator, brightness),
+        outlineVariant: separator,
+      );
+      return base.copyWith(
+        platform: platform,
+        colorScheme: colors,
+        scaffoldBackgroundColor: background,
+        cardColor: surface,
+        dividerColor: separator,
+        disabledColor: _cupertinoColor(
+          CupertinoColors.tertiaryLabel,
+          brightness,
+        ),
+        textTheme: _cupertinoTextTheme(base.textTheme)
+            .apply(bodyColor: label, displayColor: label),
+        bottomSheetTheme: base.bottomSheetTheme.copyWith(
+          backgroundColor: surface,
+        ),
+      );
+    }
+    return base.copyWith(
+      platform: platform,
+      textTheme: base.textTheme,
+    );
+  });
+
+  static CupertinoThemeData cupertino(ThemeData adapter) {
+    final data = dataFor(adapter);
+    final text = data.text;
+    return CupertinoThemeData(
+      brightness: data.colors.brightness,
+      primaryColor: data.colors.selectionMarkerBackground,
+      primaryContrastingColor: data.colors.selectionMarkerForeground,
+      scaffoldBackgroundColor: data.backgroundColor,
+      barBackgroundColor: data.backgroundColor,
+      selectionHandleColor: data.selectionHandleColor,
+      textTheme: CupertinoTextThemeData(
+        primaryColor: data.colors.selectionMarkerBackground,
+        textStyle: text.bodyLarge,
+        actionTextStyle: text.labelLarge.copyWith(
+          color: data.colors.selectionMarkerBackground,
+        ),
+        navTitleTextStyle: text.titleMedium.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        navLargeTitleTextStyle: text.headlineLarge,
+        navActionTextStyle: text.bodyLarge.copyWith(
+          color: data.colors.selectionMarkerBackground,
+        ),
+        tabLabelTextStyle: text.labelSmall,
+      ),
+    );
+  }
+
+  /// Cache by theme identity and platform; tests may override the host platform.
+  static AppThemeData dataFor(ThemeData adapter) {
+    final byPlatform = _semanticThemes[adapter] ??= {};
+    return byPlatform.putIfAbsent(adapter.platform, () {
+      final c = adapter.colorScheme;
+      final t = adapter.textTheme;
+      return AppThemeData(
+        platform: adapter.platform,
+        colors: AppThemeColors(
+          brightness: c.brightness,
+          primary: c.primary,
+          onPrimary: c.onPrimary,
+          primaryFixedDim: c.primaryFixedDim,
+          onPrimaryFixed: c.onPrimaryFixed,
+          surface: c.surface,
+          onSurface: c.onSurface,
+          onSurfaceVariant: c.onSurfaceVariant,
+          surfaceContainerLowest: c.surfaceContainerLowest,
+          surfaceContainerLow: c.surfaceContainerLow,
+          surfaceContainer: c.surfaceContainer,
+          surfaceContainerHigh: c.surfaceContainerHigh,
+          surfaceContainerHighest: c.surfaceContainerHighest,
+          secondaryContainer: c.secondaryContainer,
+          onSecondaryContainer: c.onSecondaryContainer,
+          outline: c.outline,
+          outlineVariant: c.outlineVariant,
+          inverseSurface: c.inverseSurface,
+          onInverseSurface: c.onInverseSurface,
+          inversePrimary: c.inversePrimary,
+          scrim: c.scrim,
+          error: c.error,
+          onError: c.onError,
+          errorContainer: c.errorContainer,
+          onErrorContainer: c.onErrorContainer,
+        ),
+        text: AppTextTheme(
+          displayLarge: t.displayLarge!,
+          displayMedium: t.displayMedium!,
+          displaySmall: t.displaySmall!,
+          headlineLarge: t.headlineLarge!,
+          headlineMedium: t.headlineMedium!,
+          headlineSmall: t.headlineSmall!,
+          titleLarge: t.titleLarge!,
+          titleMedium: t.titleMedium!,
+          titleSmall: t.titleSmall!,
+          bodyLarge: t.bodyLarge!,
+          bodyMedium: t.bodyMedium!,
+          bodySmall: t.bodySmall!,
+          labelLarge: t.labelLarge!,
+          labelMedium: t.labelMedium!,
+          labelSmall: t.labelSmall!,
+        ),
+        appColors:
+            adapter.extension<AppColorsExt>() ??
+            (adapter.brightness == Brightness.dark
+                ? _darkColorsExt
+                : _lightColorsExt),
+        backgroundColor: adapter.scaffoldBackgroundColor,
+        sheetColor: adapter.bottomSheetTheme.backgroundColor ?? c.surface,
+        selectionHandleColor:
+            adapter.textSelectionTheme.selectionHandleColor ?? c.primary,
+        disabledColor: adapter.disabledColor,
+      );
+    });
+  }
+
+  static ThemeData light() =>
+      forPlatform(defaultTargetPlatform, Brightness.light);
+
+  static ThemeData dark() =>
+      forPlatform(defaultTargetPlatform, Brightness.dark);
 }
 
 // ─── Light theme ──────────────────────────────────────────────
+
+TextTheme _cupertinoTextTheme(TextTheme source) {
+  final family = const CupertinoTextThemeData().textStyle.fontFamily;
+  final text = source.apply(fontFamily: family);
+  return text.copyWith(
+    headlineLarge: text.headlineLarge!.copyWith(
+      fontSize: 34,
+      height: 1.18,
+      fontWeight: FontWeight.w700,
+      letterSpacing: .37,
+    ),
+    titleLarge: text.titleLarge!.copyWith(fontSize: 22, height: 1.25),
+    titleMedium: text.titleMedium!.copyWith(fontSize: 17, height: 1.3),
+    bodyLarge: text.bodyLarge!.copyWith(fontSize: 17, height: 1.35),
+    bodyMedium: text.bodyMedium!.copyWith(fontSize: 15, height: 1.35),
+    labelLarge: text.labelLarge!.copyWith(
+      fontSize: 17,
+      height: 1.25,
+      fontWeight: FontWeight.w500,
+    ),
+  );
+}
+
+Color _cupertinoColor(CupertinoDynamicColor color, Brightness brightness) =>
+    brightness == Brightness.dark ? color.darkColor : color.color;
 
 const _lightColorsExt = AppColorsExt(
   highlightYellow: PrimitiveColors.highlightYellowLight,

@@ -976,12 +976,11 @@ void main() {
           buttonRect.top - tester.getRect(find.byType(TextField)).bottom,
           closeTo(AppSpacing.lg, .01),
         );
-        final style = tester.widget<TextButton>(deleteButton).style!;
         expect(
-          style.foregroundColor!.resolve({}),
+          tester.widget<AppButton>(deleteButton).foregroundColor,
           tester.element(deleteButton).colors.error,
         );
-        expect(tester.widget<TextButton>(deleteButton).onPressed, isNotNull);
+        expect(tester.widget<AppButton>(deleteButton).onPressed, isNotNull);
         expect(
           find.byKey(const ValueKey('libraryDeleteCollectionDivider')),
           findsNothing,
@@ -1174,7 +1173,7 @@ void main() {
         expect(end(labelRect), closeTo(AppSpacing.xl, .01));
         expect(end(buttonRect), closeTo(AppSpacing.xl - AppSpacing.lg, .01));
         expect(buttonRect.height, greaterThanOrEqualTo(AppSizes.buttonHeight));
-        expect(tester.widget<TextButton>(deleteButton).onPressed, isNotNull);
+        expect(tester.widget<AppButton>(deleteButton).onPressed, isNotNull);
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
         await tester.tap(deleteButton);
         await tester.pumpAndSettle();
@@ -1266,7 +1265,7 @@ void main() {
     );
     expect(
       tester
-          .widget<TextButton>(
+          .widget<AppButton>(
             find.byKey(const ValueKey('libraryDeleteCollectionButton')),
           )
           .onPressed,

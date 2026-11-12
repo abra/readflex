@@ -106,13 +106,8 @@ class _ToastContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final appColors =
-        theme.extension<AppColorsExt>() ??
-        (theme.brightness == Brightness.dark
-            ? AppTheme.dark().ext
-            : AppTheme.light().ext);
+    final colors = context.colors;
+    final appColors = context.appColors;
     // A neutral plate in both types: only the glyph carries the status, so a
     // confirmation does not flash a saturated banner over the page.
     final background = colors.inverseSurface;
@@ -148,7 +143,7 @@ class _ToastContent extends StatelessWidget {
                   label: '$message${suffix ?? ''}',
                   excludeSemantics: true,
                   child: DefaultTextStyle(
-                    style: theme.textTheme.bodyMedium!.copyWith(
+                    style: context.text.bodyMedium.copyWith(
                       color: foreground,
                     ),
                     child: suffix == null

@@ -21,6 +21,60 @@ class _TranslationDetailsState extends State<_TranslationDetails> {
   @override
   Widget build(BuildContext context) {
     final duration = context.motion(AppMotion.short);
+    final content = _TranslationDetailsContent(
+      explanation: widget.explanation,
+      alternatives: widget.alternatives,
+    );
+    if (context.isCupertino) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            button: true,
+            expanded: _expanded,
+            child: AppTappable(
+              onTap: () => setState(() => _expanded = !_expanded),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: AppSizes.buttonHeight,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        context.l10n.translationDetails,
+                        style: context.text.labelLarge,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    AnimatedRotation(
+                      turns: _expanded ? .5 : 0,
+                      duration: duration,
+                      child: Icon(
+                        AppIcons.chevronDown,
+                        size: AppIconSize.sm,
+                        color: context.colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          AnimatedSize(
+            duration: duration,
+            alignment: AlignmentDirectional.topStart,
+            child: _expanded
+                ? Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: content,
+                  )
+                : const SizedBox(width: double.infinity),
+          ),
+        ],
+      );
+    }
     // Its section's outline frames the tile, so the tile draws no border; the
     // title is styled as the section's title.
     return ExpansionTile(
@@ -45,35 +99,52 @@ class _TranslationDetailsState extends State<_TranslationDetails> {
           color: context.colors.onSurfaceVariant,
         ),
       ),
-      children: [
-        if (widget.explanation != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Text(
-              widget.explanation!,
-              style: context.text.bodyMedium,
-              textDirection: translationTextDirection(widget.explanation!),
-            ),
-          ),
-        if (widget.alternatives.isNotEmpty) ...[
-          Text(
-            context.l10n.translationAlternatives,
-            style: context.text.labelMedium.copyWith(
-              color: context.colors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          for (final alternative in widget.alternatives)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: Text(
-                alternative,
-                style: context.text.bodyMedium,
-                textDirection: translationTextDirection(alternative),
-              ),
-            ),
-        ],
-      ],
+      children: [content],
     );
   }
+}
+
+class _TranslationDetailsContent extends StatelessWidget {
+  const _TranslationDetailsContent({
+    required this.explanation,
+    required this.alternatives,
+  });
+
+  final String? explanation;
+  final List<String> alternatives;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      if (explanation != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+          child: Text(
+            explanation!,
+            style: context.text.bodyMedium,
+            textDirection: translationTextDirection(explanation!),
+          ),
+        ),
+      if (alternatives.isNotEmpty) ...[
+        Text(
+          context.l10n.translationAlternatives,
+          style: context.text.labelMedium.copyWith(
+            color: context.colors.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        for (final alternative in alternatives)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: Text(
+              alternative,
+              style: context.text.bodyMedium,
+              textDirection: translationTextDirection(alternative),
+            ),
+          ),
+      ],
+    ],
+  );
 }

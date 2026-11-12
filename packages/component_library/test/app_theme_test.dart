@@ -74,11 +74,27 @@ void main() {
             ),
           ),
         );
-        final search = tester.widget<TextField>(find.byType(TextField));
-        expect(
-          (search.decoration!.border! as OutlineInputBorder).borderRadius,
-          BorderRadius.circular(AppRadius.md),
+        final field = find.byType(TextField);
+        final search = tester.widget<TextField>(field);
+        final decoration = search.decoration!.applyDefaults(
+          Theme.of(tester.element(field)).inputDecorationTheme,
         );
+        final border =
+            (decoration.enabledBorder ?? decoration.border)!
+                as OutlineInputBorder;
+        final bounds =
+            Offset.zero & tester.getSize(find.byType(InputDecorator));
+        expect(border.borderRadius, BorderRadius.circular(AppRadius.md));
+        expect(border.getOuterPath(bounds).getBounds(), bounds);
+
+        await tester.showKeyboard(find.byType(EditableText));
+        await tester.pumpAndSettle();
+        final focusedBorder =
+            (decoration.focusedBorder ?? decoration.border)!
+                as OutlineInputBorder;
+        expect(focusedBorder.borderRadius, BorderRadius.circular(AppRadius.md));
+        expect(focusedBorder.getOuterPath(bounds).getBounds(), bounds);
+        expect(tester.getSize(find.byType(InputDecorator)), bounds.size);
       });
 
       test('muted text is a quieter cool gray on every surface in '

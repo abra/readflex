@@ -115,7 +115,7 @@ class LibraryContinueReadingCard extends StatelessWidget {
       onLongPress: onLongPressed,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: Material(
+        child: AppSurface(
           key: const ValueKey('libraryContinueReadingCard'),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -129,7 +129,7 @@ class LibraryContinueReadingCard extends StatelessWidget {
           color: isSelected
               ? colors.selectedControlBackground
               : colors.surfaceContainerLow,
-          child: InkWell(
+          child: AppTappable(
             borderRadius: BorderRadius.circular(AppRadius.lg),
             onTap: onPressed,
             onLongPress: onLongPressed,

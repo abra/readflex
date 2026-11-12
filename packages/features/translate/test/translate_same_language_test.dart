@@ -1,4 +1,6 @@
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoListTile, CupertinoPopupSurface;
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,6 +11,8 @@ import 'package:shared/shared.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 import 'package:translate/translate.dart';
+
+import '../../../component_library/test_support/platform_test_app.dart';
 
 /// Translating text that is already in the target language: no request, a
 /// clear message, and the definition for a word.
@@ -31,7 +35,7 @@ void main() {
   final targetMenu = find.byKey(const ValueKey('translation-target-language'));
 
   ReadflexLocalizations l10nOf(WidgetTester tester) =>
-      ReadflexLocalizations.of(tester.element(find.byType(Scaffold).first))!;
+      ReadflexLocalizations.of(tester.element(find.byType(TranslateSheet)))!;
 
   Widget app(Widget home) => MaterialApp(
     supportedLocales: ReadflexSupportedLocales.locales,
@@ -45,18 +49,27 @@ void main() {
     _RecordingService service, {
     TextSelectionContext selection = _word,
     bool canDefine = true,
+    bool cupertino = false,
+    Locale locale = const Locale('en'),
+    double textScale = 1,
   }) async {
+    final sheet = TranslateSheet(
+      selection: selection,
+      translationService: service,
+      preferencesService: preferences,
+      canDefine: canDefine,
+    );
     await tester.pumpWidget(
-      app(
-        Scaffold(
-          body: TranslateSheet(
-            selection: selection,
-            translationService: service,
-            preferencesService: preferences,
-            canDefine: canDefine,
-          ),
-        ),
-      ),
+      cupertino
+          ? PlatformTestApp(
+              platform: TargetPlatform.iOS,
+              locale: locale,
+              textScale: textScale,
+              supportedLocales: ReadflexSupportedLocales.locales,
+              localizationsDelegates: readflexLocalizationsDelegates,
+              home: sheet,
+            )
+          : app(Scaffold(body: sheet)),
     );
     await tester.pumpAndSettle();
   }
@@ -64,6 +77,10 @@ void main() {
   Future<void> chooseTarget(WidgetTester tester, String language) async {
     await tester.tap(targetMenu);
     await tester.pumpAndSettle();
+    final nativeOption = find.widgetWithText(CupertinoListTile, language);
+    if (nativeOption.evaluate().isNotEmpty) {
+      await tester.ensureVisible(nativeOption);
+    }
     await tester.tap(find.text(language).hitTestable().last);
     await tester.pumpAndSettle();
   }
@@ -109,6 +126,52 @@ void main() {
     expect(message, findsNothing);
     expect(find.text('Kraft'), findsOneWidget);
   });
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    testWidgets(
+      'Cupertino same-language recovery opens its native picker: $locale',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 740);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final service = _RecordingService();
+        await pumpSheet(
+          tester,
+          service,
+          selection: _paragraph,
+          cupertino: true,
+          locale: locale,
+          textScale: 2,
+        );
+        expect(service.targets, ['ru']);
+        await chooseTarget(tester, 'English');
+        final l10n = l10nOf(tester);
+        expect(message, findsOneWidget);
+        expect(service.targets, ['ru']);
+        expect(find.byType(CupertinoPopupSurface), findsNothing);
+        final recover = find.widgetWithText(
+          AppButton,
+          l10n.translationSelectLanguage,
+        );
+        await tester.ensureVisible(recover);
+        await tester.tap(recover);
+        await tester.pumpAndSettle();
+        expect(find.byType(CupertinoPopupSurface), findsOneWidget);
+        expect(find.byType(MenuItemButton), findsNothing);
+        final option = find.widgetWithText(CupertinoListTile, 'Deutsch');
+        await tester.ensureVisible(option);
+        expect(tester.getSize(option).height, greaterThanOrEqualTo(48));
+        await tester.tap(option);
+        await tester.pumpAndSettle();
+        expect(service.targets, ['ru', 'de']);
+        expect(message, findsNothing);
+        expect(find.text('Kraft'), findsOneWidget);
+        expect(find.byType(CupertinoPopupSurface), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('longer text points to the target menu instead', (tester) async {
     final service = _RecordingService();

@@ -23,23 +23,28 @@ class AppBusyButtonLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Visibility(
-          visible: !busy,
-          maintainSize: true,
-          maintainAnimation: true,
-          maintainState: true,
-          child: AppButtonLabel(label, maxLines: maxLines),
-        ),
-        if (busy)
-          Semantics(
-            label: label,
-            liveRegion: true,
-            child: const ButtonLoadingIndicator(),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: ButtonLoadingIndicator.defaultSize,
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Visibility(
+            visible: !busy,
+            maintainSize: true,
+            maintainAnimation: true,
+            maintainState: true,
+            child: AppButtonLabel(label, maxLines: maxLines),
           ),
-      ],
+          if (busy)
+            Semantics(
+              label: label,
+              liveRegion: true,
+              child: const ButtonLoadingIndicator(),
+            ),
+        ],
+      ),
     );
   }
 }

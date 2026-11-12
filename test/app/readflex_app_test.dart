@@ -40,7 +40,7 @@ void main() {
 
       final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
       expect(materialApp.routerConfig, same(router));
-      expect(materialApp.themeMode, ThemeMode.dark);
+      expect(materialApp.theme!.brightness, Brightness.dark);
       expect(materialApp.locale, const Locale('de'));
       expect(
         router.routeInformationProvider.value.uri.path,

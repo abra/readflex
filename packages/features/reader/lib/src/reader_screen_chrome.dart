@@ -429,10 +429,10 @@ class _ReaderBrightnessValueButton extends StatelessWidget {
           : context.l10n.readerUseSystemBrightness,
       excludeSemantics: true,
       onTap: onPressed,
-      child: Material(
+      child: AppSurface(
         color: active ? cs.selectedControlBackground : Colors.transparent,
         borderRadius: radius,
-        child: InkWell(
+        child: AppTappable(
           borderRadius: radius,
           onTap: onPressed,
           child: SizedBox(
@@ -604,15 +604,13 @@ class ReaderArticleProgressDriver extends StatelessWidget {
       child: IgnorePointer(
         child: Directionality(
           textDirection: document.$2 ? TextDirection.rtl : TextDirection.ltr,
-          child: LinearProgressIndicator(
+          child: AppLinearProgressIndicator(
             key: const ValueKey('readerArticleProgress'),
             value: progress,
             minHeight: _kReaderProgressTrackHeight,
             color: readerChromeInkColor(readerTheme),
             backgroundColor: readerChromeTrackColor(readerTheme),
             borderRadius: BorderRadius.zero,
-            stopIndicatorRadius: 0,
-            trackGap: 0,
             semanticsLabel: context.l10n.librarySourcePercentRead(
               (progress * 100).round(),
             ),
@@ -813,7 +811,7 @@ class _ReaderArticleTitleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = context.l10n.readerOpenOriginalArticle;
     final radius = BorderRadius.circular(AppRadius.sm);
-    return Tooltip(
+    return AppTooltip(
       message: label,
       child: Semantics(
         button: true,
@@ -822,10 +820,10 @@ class _ReaderArticleTitleButton extends StatelessWidget {
         value: title,
         excludeSemantics: true,
         onTap: onPressed,
-        child: Material(
+        child: AppSurface(
           color: Colors.transparent,
           borderRadius: radius,
-          child: InkWell(
+          child: AppTappable(
             key: const ValueKey('readerArticleTitleButton'),
             borderRadius: radius,
             onTap: onPressed,
@@ -1155,7 +1153,7 @@ class _ReaderChromeDock extends StatelessWidget {
         ),
         boxShadow: AppShadows.popover,
       ),
-      child: Material(
+      child: AppSurface(
         color: Colors.transparent,
         borderRadius: radius,
         clipBehavior: Clip.antiAlias,
@@ -1180,7 +1178,7 @@ class _ReaderChromeDock extends StatelessWidget {
   }
 }
 
-/// Equal 48dp action targets, with captions when a wide window has room.
+/// Reader actions with at least 48dp targets and captions where they fit.
 class _ReaderChromeActionStrip extends StatelessWidget {
   const _ReaderChromeActionStrip({
     required this.foregroundColor,
@@ -1298,6 +1296,13 @@ class _ReaderChromeActionStrip extends StatelessWidget {
     final showLabels =
         AppWindowSize.isWide(context) &&
         scaledLabelSize <= labelStyle.fontSize! * 1.3;
+    if (context.isCupertino && AppWindowSize.isWide(context)) {
+      return _ReaderCupertinoChromeActions(
+        actions: slots,
+        labelStyle: labelStyle,
+        showLabels: showLabels,
+      );
+    }
     final largestIcon = slots.fold(
       0.0,
       (size, action) => math.max(size, action.iconSize),
@@ -1353,10 +1358,16 @@ class _ReaderChromeAction extends StatelessWidget {
   const _ReaderChromeAction({
     required this.action,
     required this.showLabel,
+    this.glyphHeight,
+    this.captionHeight,
+    this.captionBaseline,
   });
 
   final _ReaderChromeActionData action;
   final bool showLabel;
+  final double? glyphHeight;
+  final double? captionHeight;
+  final double? captionBaseline;
 
   @override
   Widget build(BuildContext context) {
@@ -1372,37 +1383,61 @@ class _ReaderChromeAction extends StatelessWidget {
         ),
       );
     }
+    final caption = Text(
+      action.label,
+      maxLines: captionHeight == null ? 2 : 1,
+      softWrap: captionHeight == null,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: readerControlCaptionStyle(context).copyWith(
+        color: action.onPressed == null
+            ? action.color.withValues(alpha: 0.38)
+            : action.color,
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xs),
-      child: Tooltip(
+      child: AppTooltip(
         message: action.tooltip,
-        child: TextButton(
+        child: AppButton.text(
           onPressed: action.onPressed,
-          style: TextButton.styleFrom(
-            foregroundColor: action.color,
-            disabledForegroundColor: action.color.withValues(alpha: 0.38),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-            ),
+
+          foregroundColor: action.color,
+          disabledForegroundColor: action.color.withValues(alpha: 0.38),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
           ),
+
           child: SizedBox(
             width: double.infinity,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                action.glyph ?? Icon(action.icon, size: action.iconSize),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  action.label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: readerControlCaptionStyle(context).copyWith(
-                    color: action.onPressed == null
-                        ? action.color.withValues(alpha: 0.38)
-                        : action.color,
+                SizedBox(
+                  key: glyphHeight == null
+                      ? null
+                      : ValueKey('readerChromeActionGlyph-${action.tooltip}'),
+                  height: glyphHeight,
+                  child: Center(
+                    child:
+                        action.glyph ??
+                        Icon(action.icon, size: action.iconSize),
                   ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                SizedBox(
+                  key: captionHeight == null
+                      ? null
+                      : ValueKey('readerChromeActionCaption-${action.tooltip}'),
+                  height: captionHeight,
+                  child: captionBaseline == null
+                      ? caption
+                      : Baseline(
+                          baseline: captionBaseline!,
+                          baselineType: TextBaseline.alphabetic,
+                          child: caption,
+                        ),
                 ),
               ],
             ),
@@ -1500,6 +1535,8 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
   );
 
   void _handleChangeStart(double value) {
+    _dragReleaseTimer?.cancel();
+    _dragReleaseTimer = null;
     final seekValue = _seekValue(value);
     setState(() {
       _isDragging = true;
@@ -1508,6 +1545,11 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
   }
 
   void _handleChanged(double value) {
+    // Native accessibility adjustments have no drag start/end callbacks.
+    if (!_isDragging) {
+      _handleChangeEnd(value);
+      return;
+    }
     final seekValue = _seekValue(value);
     setState(() => _dragValue = seekValue);
   }
@@ -1561,37 +1603,43 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
         : TextDirection.ltr;
     final labelStyle = readerChromeLabelStyle(context);
     final numberStyle = readerChromeNumberStyle(context);
+    final progressInset = readerProgressTrackInsetOf(context);
+    final progressSlider = AppSlider(
+      value: sliderValue,
+      tapToSeek: true,
+      activeColor: widget.inkColor,
+      divisions: readerSliderDivisions(
+        sourceType: widget.sourceType,
+        format: widget.format,
+        totalPages: widget.chapterTotalPages,
+      ),
+      onChangeStart: _handleChangeStart,
+      onChanged: _handleChanged,
+      onChangeEnd: _handleChangeEnd,
+    );
     final progressTrack = showProgressSlider
-        ? SliderTheme(
-            data: SliderThemeData(
-              trackHeight: _kReaderProgressTrackHeight,
-              activeTrackColor: widget.inkColor,
-              inactiveTrackColor: widget.trackColor,
-              thumbColor: widget.inkColor,
-              overlayColor: widget.inkColor.withValues(alpha: 0.12),
-              thumbShape: const RoundSliderThumbShape(
-                enabledThumbRadius: _progressThumbRadius,
-              ),
-              overlayShape: const RoundSliderOverlayShape(
-                overlayRadius: readerProgressTrackInset,
-              ),
-              trackShape: const RoundedRectSliderTrackShape(),
-            ),
-            child: Slider(
-              value: sliderValue,
-              divisions: readerSliderDivisions(
-                sourceType: widget.sourceType,
-                format: widget.format,
-                totalPages: widget.chapterTotalPages,
-              ),
-              onChangeStart: _handleChangeStart,
-              onChanged: _handleChanged,
-              onChangeEnd: _handleChangeEnd,
-            ),
-          )
+        ? context.isCupertino
+              ? progressSlider
+              : SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: _kReaderProgressTrackHeight,
+                    activeTrackColor: widget.inkColor,
+                    inactiveTrackColor: widget.trackColor,
+                    thumbColor: widget.inkColor,
+                    overlayColor: widget.inkColor.withValues(alpha: 0.12),
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: _progressThumbRadius,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: readerProgressTrackInset,
+                    ),
+                    trackShape: const RoundedRectSliderTrackShape(),
+                  ),
+                  child: progressSlider,
+                )
         : Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: readerProgressTrackInset,
+            padding: EdgeInsets.symmetric(
+              horizontal: progressInset,
             ),
             child: Center(
               child: SizedBox(
@@ -1643,8 +1691,8 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: readerProgressTrackInset,
+            padding: EdgeInsets.symmetric(
+              horizontal: progressInset,
             ),
             child: _ReaderProgressLabels(
               start: startText,

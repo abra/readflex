@@ -2,13 +2,14 @@ import 'package:component_library/component_library.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'reader_highlight_expand_button.dart';
+import 'reader_drawer_layout.dart';
 
 /// Last row of a saved highlight: its location at the start and, when the
 /// text is clipped, Read more / Show less at the end of the same row.
 ///
 /// Leading/trailing follow the app locale. The row pads only the location;
-/// the button's themed 16dp padding is its ink bleed, so its label ends on
-/// the trailing gutter while the 48dp target reaches the drawer edge.
+/// the button's platform padding is its ink bleed. Native bottom panels
+/// inset that target by another 12dp to align its label with their 24dp gutter.
 class ReaderHighlightFooter extends StatelessWidget {
   const ReaderHighlightFooter({
     required this.location,
@@ -40,12 +41,13 @@ class ReaderHighlightFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final location = this.location;
+    final contentInset = readerDrawerContentInset(context);
     final appRtl = Directionality.of(context) == TextDirection.rtl;
     final label = location == null
         ? null
         : Padding(
             padding: EdgeInsetsDirectional.only(
-              start: AppSpacing.lg,
+              start: contentInset,
               end: canExpand ? 0 : endGutter,
             ),
             child: Text(
@@ -58,10 +60,18 @@ class ReaderHighlightFooter extends StatelessWidget {
             ),
           );
     if (!canExpand) return label ?? const SizedBox.shrink();
-    final button = ReaderHighlightExpandButton(
+    final expandButton = ReaderHighlightExpandButton(
       expanded: expanded,
       onPressed: onExpanded,
     );
+    final button = contentInset == AppSpacing.lg
+        ? expandButton
+        : Padding(
+            padding: EdgeInsetsDirectional.only(
+              end: contentInset - AppSpacing.md,
+            ),
+            child: expandButton,
+          );
     if (label == null) {
       return Align(alignment: AlignmentDirectional.centerEnd, child: button);
     }

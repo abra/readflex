@@ -55,7 +55,7 @@ class ReviewWordCard extends StatelessWidget {
         ],
         if (revealed) ...[
           const SizedBox(height: AppSpacing.xl),
-          const Divider(height: 1),
+          const AppDivider(height: 1),
           const SizedBox(height: AppSpacing.lg),
           Text(
             l10n.translationInContext,

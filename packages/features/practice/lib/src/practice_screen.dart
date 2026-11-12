@@ -111,6 +111,13 @@ class _PracticeViewState extends State<_PracticeView> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final settings = AppPlainIconButton(
+      key: const ValueKey('practiceSettingsButton'),
+      icon: AppIcons.settings,
+      tooltip: l10n.practiceSettingsTitle,
+      color: context.colors.onSurfaceVariant,
+      onPressed: _openSettings,
+    );
     return BlocBuilder<PracticeBloc, PracticeState>(
       builder: (context, state) {
         final ready = state.status == PracticeStatus.ready;
@@ -118,21 +125,19 @@ class _PracticeViewState extends State<_PracticeView> {
         final wide =
             AppWindowSize.isWide(context) &&
             MediaQuery.textScalerOf(context).scale(1) <= 1.5;
-        return Scaffold(
-          appBar: AppBar(
+        return AppScaffold(
+          appBar: AppNavigationBar(
             automaticallyImplyLeading: false,
             excludeHeaderSemantics: true,
             titleSpacing: 0,
-            title: PracticePageHeader(
-              title: l10n.practiceTitle,
-              trailing: AppPlainIconButton(
-                key: const ValueKey('practiceSettingsButton'),
-                icon: AppIcons.settings,
-                tooltip: l10n.practiceSettingsTitle,
-                color: context.colors.onSurfaceVariant,
-                onPressed: _openSettings,
-              ),
-            ),
+            leading: context.isCupertino ? const AppBackButton() : null,
+            actions: context.isCupertino ? [settings] : null,
+            title: context.isCupertino
+                ? Semantics(header: true, child: Text(l10n.practiceTitle))
+                : PracticePageHeader(
+                    title: l10n.practiceTitle,
+                    trailing: settings,
+                  ),
           ),
           body: SafeArea(
             top: false,
@@ -166,11 +171,10 @@ class _PracticeViewState extends State<_PracticeView> {
             ),
           ),
           floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerFloat,
+              AppFloatingActionButtonLocation.centerFloat,
           // The button arrives in the same frame as the content it belongs
           // to; Material's default would scale and turn it in on its own.
-          floatingActionButtonAnimator:
-              FloatingActionButtonAnimator.noAnimation,
+          floatingActionButtonAnimator: AppFloatingActionButtonAnimator.none,
           floatingActionButton: showStart && !wide
               ? ToastAvoidArea(
                   child: Padding(
@@ -439,7 +443,7 @@ class _PracticeCollections extends StatelessWidget {
                 padding: _rowPadding,
                 onTap: onWordsPressed,
               ),
-              const Divider(height: 1),
+              const AppDivider(height: 1),
               AppDrillInRow(
                 key: const ValueKey('practiceHighlights'),
                 icon: AppIcons.highlight,

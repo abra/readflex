@@ -148,7 +148,10 @@ void main() {
         final position = tester.state<ScrollableState>(scrollable).position;
         expect(position.maxScrollExtent, greaterThan(0));
         final scrollbar = tester.widget<Scrollbar>(
-          find.byKey(const ValueKey('reviewHighlightScrollbar')),
+          find.descendant(
+            of: find.byKey(const ValueKey('reviewHighlightScrollbar')),
+            matching: find.byType(Scrollbar),
+          ),
         );
         expect(scrollbar.thumbVisibility, isTrue);
         expect(scrollbar.controller!.position, same(position));

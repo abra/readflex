@@ -437,7 +437,7 @@ class _MenuView extends StatelessWidget {
                     padding: _kMenuRowPadding,
                     onTap: cubit.requestBookImport,
                   ),
-                  const Divider(),
+                  const AppDivider(),
                   AppDrillInRow(
                     key: const ValueKey('importMenu-article'),
                     leading: _MenuIconTile(
@@ -572,7 +572,7 @@ class _BookTermsViewState extends State<_BookTermsView> {
           ),
         ],
       ),
-      actions: FilledButton(
+      actions: AppButton(
         onPressed: _accepted ? cubit.acceptTermsAndPickBook : null,
         child: AppButtonLabel(l10n.commonContinue),
       ),
@@ -592,15 +592,14 @@ class _BookTermsCheckbox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MergeSemantics(
-      child: InkWell(
+      child: AppTappable(
         borderRadius: BorderRadius.circular(AppRadius.sm),
         onTap: () => onChanged(!accepted),
         child: Row(
           children: [
-            Checkbox(
+            AppCheckbox(
               value: accepted,
               onChanged: (value) => onChanged(value ?? false),
-              visualDensity: VisualDensity.standard,
             ),
             // No spacer: the target's own inset past the glyph is the gap.
             Expanded(
@@ -785,28 +784,27 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
+          AppTextField(
             controller: _controller,
             keyboardType: TextInputType.url,
             textInputAction: TextInputAction.done,
             autocorrect: false,
-            decoration: InputDecoration(
-              hintText: l10n.importArticleUrlHint,
-              // The message renders below on the gutter; an empty error keeps
-              // the error border without the decorator's subtext row.
-              error: error == null ? null : const SizedBox.shrink(),
-              suffixIcon: AppPlainIconButton(
-                key: const ValueKey('articleUrlPasteButton'),
-                tooltip: l10n.importPasteUrl,
-                icon: AppIcons.paste,
-                color: context.actionForeground,
-                onPressed: _pasteClipboardArticleUrl,
-              ),
-              suffixIconConstraints: const BoxConstraints.tightFor(
-                width: AppSizes.buttonHeight,
-                height: AppSizes.buttonHeight,
-              ),
+
+            hintText: l10n.importArticleUrlHint,
+            // The message renders below on the content gutter.
+            hasError: error != null,
+            suffixIcon: AppPlainIconButton(
+              key: const ValueKey('articleUrlPasteButton'),
+              tooltip: l10n.importPasteUrl,
+              icon: AppIcons.paste,
+              color: context.actionForeground,
+              onPressed: _pasteClipboardArticleUrl,
             ),
+            suffixIconConstraints: const BoxConstraints.tightFor(
+              width: AppSizes.buttonHeight,
+              height: AppSizes.buttonHeight,
+            ),
+
             onSubmitted: widget.isOffline
                 ? null
                 : (_) => cubit.submitArticleUrl(),
@@ -826,7 +824,7 @@ class _ArticleUrlEntryViewState extends State<_ArticleUrlEntryView> {
         ],
       ),
       hints: _ArticleUrlHints(color: muted),
-      actions: FilledButton(
+      actions: AppButton(
         onPressed: widget.isOffline || !widget.state.canSubmit
             ? null
             : cubit.submitArticleUrl,
@@ -1202,7 +1200,7 @@ class _BookUploadProgress extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(AppRadius.full),
-                child: LinearProgressIndicator(
+                child: AppLinearProgressIndicator(
                   value: finishing ? null : progress,
                   minHeight: 6,
                   backgroundColor: backgroundColor,
@@ -1509,7 +1507,7 @@ class _FailureView extends StatelessWidget {
         ),
       ),
       // Retry is the only command; leaving is the header Close's job.
-      action: FilledButton(
+      action: AppButton(
         onPressed: cubit.retryAfterFailure,
         child: AppButtonLabel(
           state.retryTarget == ImportFlowRetryTarget.article
@@ -1564,7 +1562,7 @@ class _SuccessLayout extends StatelessWidget {
         ),
         detailStyle: text.bodySmall.copyWith(color: muted),
       ),
-      action: FilledButton(
+      action: AppButton(
         onPressed: onDone,
         child: AppButtonLabel(context.l10n.commonDone),
       ),

@@ -27,7 +27,7 @@ class OnboardingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     debugLogScreenBuild('OnboardingScreen');
-    return Scaffold(
+    return AppScaffold(
       body: SafeArea(
         child: AppWindowSize.isWide(context)
             ? _OnboardingWideView(onAddBook: onAddBook, onNotNow: onNotNow)
@@ -204,13 +204,13 @@ class _OnboardingActions extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        FilledButton.icon(
+        AppButton.icon(
           onPressed: onAddBook,
           icon: const Icon(AppIcons.add, size: AppIconSize.sm),
           label: AppButtonLabel(l10n.onboardingAddBook),
         ),
         const SizedBox(height: AppSpacing.sm),
-        TextButton(
+        AppButton.text(
           onPressed: onNotNow,
           child: AppButtonLabel(l10n.onboardingNotNow),
         ),

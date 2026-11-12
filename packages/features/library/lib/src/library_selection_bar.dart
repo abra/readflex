@@ -185,18 +185,16 @@ class _CancelSelectionFab extends StatelessWidget {
     dimension: _cancelExtent,
     child: AppFloatingCapsule(
       height: _cancelExtent,
-      child: FloatingActionButton(
+      child: AppIconButton(
         key: const ValueKey('libraryCancelSelectionFab'),
-        heroTag: null,
         tooltip: context.l10n.libraryCancelSelection,
         onPressed: onPressed,
         backgroundColor: Colors.transparent,
         foregroundColor: context.colors.onSurface,
-        elevation: 0,
-        focusElevation: 0,
-        hoverElevation: 0,
-        highlightElevation: 0,
-        child: Icon(
+        shape: const CircleBorder(),
+        minimumSize: const Size.square(_cancelExtent),
+        fixedSize: const Size.square(_cancelExtent),
+        icon: Icon(
           AppIcons.close,
           size: AppIconSize.md,
           color: onPressed == null
@@ -290,7 +288,7 @@ class _SelectedCount extends StatelessWidget {
     final compact = count > 999
         ? '${MaterialLocalizations.of(context).formatDecimal(999)}+'
         : MaterialLocalizations.of(context).formatDecimal(count);
-    return Tooltip(
+    return AppTooltip(
       message: label,
       child: Semantics(
         key: const ValueKey('librarySelectedCount'),
@@ -319,35 +317,33 @@ class _CollectionAction extends StatelessWidget {
   final VoidCallback? onPressed;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
+  Widget build(BuildContext context) => AppTooltip(
     message: context.l10n.libraryAddToCollection,
     child: Semantics(
       expanded: open,
-      child: TextButton(
+      child: AppButton.text(
         key: const ValueKey('libraryAddToCollectionButton'),
         onPressed: onPressed,
-        style: TextButton.styleFrom(
-          minimumSize: const Size(0, AppSizes.buttonHeight),
-          padding: const EdgeInsets.symmetric(
-            horizontal: _collectionLabelPadding,
-            vertical: AppSpacing.sm,
-          ),
-          textStyle: context.text.labelLarge,
-          foregroundColor: open
-              ? context.colors.selectedControlForeground
-              : context.colors.onSurface,
-          backgroundColor: open
-              ? context.colors.selectedControlBackground
-              : null,
-          shape: const StadiumBorder(),
+
+        minimumSize: const Size(0, AppSizes.buttonHeight),
+        padding: const EdgeInsets.symmetric(
+          horizontal: _collectionLabelPadding,
+          vertical: AppSpacing.sm,
         ),
+        textStyle: context.text.labelLarge,
+        foregroundColor: open
+            ? context.colors.selectedControlForeground
+            : context.colors.onSurface,
+        backgroundColor: open ? context.colors.selectedControlBackground : null,
+        shape: const StadiumBorder(),
+
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (busy)
               SizedBox.square(
                 dimension: AppPlainIconButton.defaultIconSizeOf(context),
-                child: const CircularProgressIndicator(strokeWidth: 2),
+                child: const AppProgressIndicator(strokeWidth: 2),
               )
             else
               Icon(
@@ -382,22 +378,20 @@ class _DeleteSelectedButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return IconButton(
+    return AppIconButton(
       key: const ValueKey('libraryDeleteSelectedButton'),
       onPressed: onPressed,
       tooltip: context.l10n.commonDelete,
-      style: IconButton.styleFrom(
-        foregroundColor: colors.onError,
-        backgroundColor: colors.error,
-        disabledForegroundColor: colors.onSurface.withValues(alpha: .38),
-        disabledBackgroundColor: colors.onSurface.withValues(alpha: .12),
-        fixedSize: const Size.square(AppSizes.buttonHeight),
-        minimumSize: const Size.square(AppSizes.buttonHeight),
-        padding: EdgeInsets.zero,
-        shape: const CircleBorder(),
-        visualDensity: VisualDensity.standard,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
+
+      foregroundColor: colors.onError,
+      backgroundColor: colors.error,
+      disabledForegroundColor: colors.onSurface.withValues(alpha: .38),
+      disabledBackgroundColor: colors.onSurface.withValues(alpha: .12),
+      fixedSize: const Size.square(AppSizes.buttonHeight),
+      minimumSize: const Size.square(AppSizes.buttonHeight),
+      padding: EdgeInsets.zero,
+      shape: const CircleBorder(),
+
       icon: const Icon(AppIcons.delete, size: AppIconSize.md),
     );
   }

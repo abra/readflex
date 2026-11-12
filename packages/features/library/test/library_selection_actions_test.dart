@@ -142,15 +142,15 @@ void main() {
   ) async {
     await _pumpActions(tester, busy: true);
     expect(
-      tester.widget<FloatingActionButton>(find.byKey(_cancel)).onPressed,
+      tester.widget<AppIconButton>(find.byKey(_cancel)).onPressed,
       isNull,
     );
     expect(
-      tester.widget<TextButton>(find.byKey(_collections)).onPressed,
+      tester.widget<AppButton>(find.byKey(_collections)).onPressed,
       isNull,
     );
     expect(
-      tester.widget<IconButton>(find.byKey(_delete)).onPressed,
+      tester.widget<AppIconButton>(find.byKey(_delete)).onPressed,
       isNull,
     );
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -166,15 +166,15 @@ void main() {
       await _pumpActions(tester, open: true);
       expect(find.byIcon(AppIcons.chevronUp), findsOneWidget);
       expect(
-        tester.widget<IconButton>(find.byKey(_delete)).onPressed,
+        tester.widget<AppIconButton>(find.byKey(_delete)).onPressed,
         isNull,
       );
       expect(
-        tester.widget<TextButton>(find.byKey(_collections)).onPressed,
+        tester.widget<AppButton>(find.byKey(_collections)).onPressed,
         isNotNull,
       );
       expect(
-        tester.widget<FloatingActionButton>(find.byKey(_cancel)).onPressed,
+        tester.widget<AppIconButton>(find.byKey(_cancel)).onPressed,
         isNotNull,
       );
     },

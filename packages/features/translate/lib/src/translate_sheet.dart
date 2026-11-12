@@ -104,14 +104,39 @@ class _TranslateSheetViewState extends State<_TranslateSheetView> {
   final _sourceMenu = MenuController();
   final _targetMenu = MenuController();
 
-  void _chooseSourceLanguage() {
-    if (context.read<TranslateCubit>().state.isBusy) return;
-    _sourceMenu.open();
+  Future<void> _chooseSourceLanguage() async {
+    final cubit = context.read<TranslateCubit>();
+    if (cubit.state.isBusy) return;
+    if (!context.isCupertino) {
+      _sourceMenu.open();
+      return;
+    }
+    final selected = await showTranslationLanguagePicker(
+      context,
+      title: context.l10n.translationSourceLanguage,
+      selectedCode: cubit.state.sourceLanguageCode,
+      includeAuto: true,
+    );
+    if (selected != null && mounted) {
+      cubit.setSourceLanguage(widget.selection, selected);
+    }
   }
 
-  void _chooseTargetLanguage() {
-    if (context.read<TranslateCubit>().state.isBusy) return;
-    _targetMenu.open();
+  Future<void> _chooseTargetLanguage() async {
+    final cubit = context.read<TranslateCubit>();
+    if (cubit.state.isBusy) return;
+    if (!context.isCupertino) {
+      _targetMenu.open();
+      return;
+    }
+    final selected = await showTranslationLanguagePicker(
+      context,
+      title: context.l10n.translationTargetLanguage,
+      selectedCode: cubit.state.targetLanguageCode,
+    );
+    if (selected != null && mounted) {
+      cubit.setTargetLanguage(widget.selection, selected);
+    }
   }
 
   /// Closes the sheet so the action that opened it shows the definition,

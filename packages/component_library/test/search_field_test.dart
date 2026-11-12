@@ -45,26 +45,30 @@ void main() {
                 ),
               ),
             );
-            await tester.showKeyboard(find.byType(TextField));
+            await tester.showKeyboard(find.byType(EditableText));
             await tester.pumpAndSettle();
-            final fieldRect = tester.getRect(find.byType(TextField));
+            final fieldRect = tester.getRect(find.byType(AppTextField));
             final editableRect = tester.getRect(find.byType(EditableText));
             final prefixRect = tester.getRect(find.byIcon(AppIcons.search));
             final button = find.byTooltip('Clear query');
             expect(button, findsOneWidget);
             expect(tester.getSemantics(button).tooltip, 'Clear query');
             expect(tester.getSize(button), const Size.square(48));
-            final ink = tester.widget<InkWell>(
-              find.descendant(
-                of: find.byType(AppPlainIconButton),
-                matching: find.byType(InkWell),
-              ),
-            );
-            expect(ink.customBorder, isA<CircleBorder>());
-            expect(
-              ink.overlayColor!.resolve({WidgetState.pressed})!.a,
-              greaterThan(0),
-            );
+            final ink = platform == TargetPlatform.android
+                ? tester.widget<InkWell>(
+                    find.descendant(
+                      of: find.byType(AppPlainIconButton),
+                      matching: find.byType(InkWell),
+                    ),
+                  )
+                : null;
+            if (ink != null) {
+              expect(ink.customBorder, isA<CircleBorder>());
+              expect(
+                ink.overlayColor!.resolve({WidgetState.pressed})!.a,
+                greaterThan(0),
+              );
+            }
             await expectLater(
               tester,
               meetsGuideline(labeledTapTargetGuideline),
@@ -72,9 +76,26 @@ void main() {
 
             final gesture = await tester.startGesture(tester.getCenter(button));
             await tester.pump(const Duration(milliseconds: 100));
-            expect(ink.statesController!.value, contains(WidgetState.pressed));
+            if (platform == TargetPlatform.iOS) {
+              // Cupertino starts its fade once the tap recognizer accepts.
+              await tester.pump(const Duration(milliseconds: 100));
+            }
+            if (ink != null) {
+              expect(
+                ink.statesController!.value,
+                contains(WidgetState.pressed),
+              );
+            } else {
+              final fade = tester.widget<FadeTransition>(
+                find.descendant(
+                  of: find.byType(AppPlainIconButton),
+                  matching: find.byType(FadeTransition),
+                ),
+              );
+              expect(fade.opacity.value, lessThan(1));
+            }
             expect(changes, isEmpty);
-            expect(tester.getRect(find.byType(TextField)), fieldRect);
+            expect(tester.getRect(find.byType(AppTextField)), fieldRect);
             await gesture.up();
             await tester.pumpAndSettle();
             expect(controller.text, isEmpty);
@@ -82,7 +103,7 @@ void main() {
             expect(focus.hasFocus, isTrue);
             expect(tester.testTextInput.isVisible, isTrue);
             expect(find.byTooltip('Clear query'), findsNothing);
-            expect(tester.getRect(find.byType(TextField)), fieldRect);
+            expect(tester.getRect(find.byType(AppTextField)), fieldRect);
             expect(tester.getRect(find.byType(EditableText)), editableRect);
             expect(tester.getRect(find.byIcon(AppIcons.search)), prefixRect);
             expect(tester.takeException(), isNull);
@@ -109,7 +130,7 @@ void _textInputActionTests() {
       ),
     );
     expect(
-      tester.widget<TextField>(find.byType(TextField)).textInputAction,
+      tester.widget<EditableText>(find.byType(EditableText)).textInputAction,
       TextInputAction.search,
     );
   });
@@ -124,7 +145,7 @@ void _textInputActionTests() {
       ),
     );
     expect(
-      tester.widget<TextField>(find.byType(TextField)).textInputAction,
+      tester.widget<EditableText>(find.byType(EditableText)).textInputAction,
       isNull,
     );
   });

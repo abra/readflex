@@ -1,5 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
+import 'app_button.dart';
 import 'app_busy_button_label.dart';
 import 'app_button_label.dart';
 import 'theme/extensions/build_context_ext.dart';
@@ -67,19 +68,15 @@ class AppSheetActions extends StatelessWidget {
         primaryLabel: primaryLabel,
         secondaryLabel: secondaryLabel,
       );
-      final primary = FilledButton(
+      final primary = AppButton(
         onPressed: busy ? null : onPrimary,
         child: AppBusyButtonLabel(primaryLabel, busy: busy),
       );
       final colors = context.colors;
-      final secondary = OutlinedButton(
+      final secondary = AppButton.outlined(
         onPressed: busy ? null : onSecondary,
-        style: destructiveSecondary
-            ? OutlinedButton.styleFrom(
-                foregroundColor: colors.error,
-                side: BorderSide(color: colors.error),
-              )
-            : null,
+        foregroundColor: destructiveSecondary ? colors.error : null,
+        side: destructiveSecondary ? BorderSide(color: colors.error) : null,
         child: AppButtonLabel(secondaryLabel),
       );
       return stacked

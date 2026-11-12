@@ -23,11 +23,12 @@ such as immediate settings versus explicitly saved collection drafts.
 | Check | Readflex contract and evidence |
 | --- | --- |
 | Consistency | Reuse semantic tokens, header, choice, input and action components from `component_library`; compare settings via `settings_consistency_test.dart`. Do not invent per-screen colors, typography or icon geometry. |
+| Platform presentation | Mount actual Cupertino and Material roots. Check native page/navigation chrome, field/button/settings controls, grouped surfaces and motion through the shared App* API. An iOS platform flag inside a Material-only fixture is insufficient evidence for the real Cupertino root. |
 | Stable layout | Errors and busy states must not unexpectedly displace controls. Verify geometry during transitions as well as after settling; import form and shared sheet tests cover these paths. Do not solve this with arbitrary empty fixed-height space. |
 | Navigation | Back unwinds a step; Close exits the flow subject to draft guards. Check system Back, scrim/drag, interrupted transitions and reduced motion in the owning feature tests. |
 | Thumb reach | On a 390x844 phone held in one hand, the screen's primary action (Library "+"), frequent switches (the Library's collection switcher and Search, sharing the bottom capsule with "+") and controls used repeatedly in one session (the reader capsule, match navigation) sit in the bottom third. The Library capsule changes into a field above the keyboard; Back leaves search while Clear keeps editing. Secondary panels are bottom sheets whose header lands mid-screen; the in-place reader panels use `AppInlineSheet` at 60%. The top holds orientation and rare actions: titles (the Library title is a heading, not a second collection switcher) and Display. Narrowing the Library has one place, the Collections picker; there are no filter chips at the top. Do not move a frequent action to the top for tidiness, or stack a second row of chrome at the bottom. |
 | Scrolling | Short content has no false overflow/fades; long content has reachable last actions and a fixed header where the component promises one. Content scrolling under a fixed header clips on a band below its last control (the Library's 12dp under the title/count), so the fade never sits flush against text. Test both ends, keyboard insets and rotation. |
-| Controls | Check enabled, selected, disabled and loading semantics, localized labels, hit targets and duplicate-command prevention, not just the visible icon or color. Shared accessibility tests exercise both mobile platform policies. |
+| Controls | Check enabled, selected, disabled and loading semantics, localized labels, hit targets and duplicate-command prevention, not just the visible icon or color. Shared controls request 48dp targets; Cupertino navigation actions follow their native 44pt bar height, while sheet/reader/body controls retain 48dp. Shared accessibility tests exercise both mobile platform policies. |
 | Text and themes | Check real long translations, phone RTL, 200% text, light/dark themes and essential text visibility. Contrast tests cover named text/background pairs, not every possible rendering. |
 | State and recovery | Check empty, loading, success, error/retry and offline states where supported. UI-only changes must not add network/storage work. Keep unfinished product flows explicitly out of scope. |
 | Performance | Prefer existing bounded-work tests and profile real interactions when changing layout, lists or gestures. Do not add intrinsic layout, broad rebuilds, repeated text measurements or eager loading merely to satisfy a screenshot. |
@@ -64,6 +65,72 @@ Close out with the commands actually run, the profiles/devices inspected and
 unverified cases. Put temporary screenshots/logs under `.local/`, and generated
 review reports under `.local/reports/`. A passing checklist is not a claim of
 complete accessibility, visual correctness or performance on all devices.
+
+## Platform Contracts
+
+`ReadflexPlatformApp` selects `CupertinoApp.router` for iOS/macOS and
+`MaterialApp.router` elsewhere. App* components consume semantic theme roles
+and own their platform presentation. iOS uses system UI typography, opaque
+Cupertino grouped colors and Cupertino input/press behavior. Android retains
+Material controls and feedback. Reader document styles stay separate from app
+chrome. The inherited Material theme/compatibility bridge on iOS serves
+Pagecraft selection and legacy dependencies; its presence is not evidence
+that a visible control uses Material presentation.
+
+Use `packages/component_library/test_support/platform_test_app.dart` for
+feature contracts needing a real platform root, scope and scaffold. Assert
+state/actions through public App* controls or their intentional platform
+descendants rather than casting every keyed widget to a Material class.
+
+Shared modal coverage distinguishes the content-fit Cupertino popup from the
+Android Material route: opaque surface, native spring, root navigator/theme
+capture, pop result versus completed exit, one `onFullyHidden`, early pop,
+guarded scrim/drag, system Back, keyboard/safe areas and reduced motion.
+Cupertino headers retain centred titles, localized Back/Close and full-width
+wrapping at 320dp/200% in LTR/phone RTL; sheet controls remain 48dp. Narrowing a
+tablet popup retains its body state. Header/route tests live in
+`cupertino_sheet_header_test.dart` and `cupertino_app_bottom_sheet_test.dart`
+in `component_library/test/`.
+
+Narrow iOS Contents/Search panels, including comic Pages, share the routed
+sheet's card framing and header. Check them against Appearance/Display rather
+than only against another retained panel. Verify safe gaps and scrim in both
+themes, keyboard ownership, and retained text/focus/scroll state when switching
+between a bottom sheet and the expanded trailing panel. The latter remains a
+distinct layout. `cupertino_inline_sheet_test.dart` and
+`reader_inline_panel_headers_test.dart` cover these contracts; the native comic
+flow captures the actual Pages panel and verifies tab recovery/page navigation.
+
+Native-root feature tests cover Import URL validation/draft recovery and
+Highlight note confirmation/loading/error with keyboard constraints, plus
+Translation's language-picker recovery at large text in English and Arabic.
+`platform_presentation_test.dart` additionally mounts production `UiTestApp`
+roots for Android/iOS onboarding at 200% in German/phone Arabic, Library→Display,
+Practice navigation chrome and Reader Contents tabs without remounting pages.
+It uses bundled glyphs for portable Cupertino layout assertions; those font
+aliases do not verify the operating system's SF rasterization.
+These are widget contracts, not physical-device gesture or screen-reader runs.
+Interaction regressions must assert their result: opening a selected collection
+scope must succeed, and tapping the Reader track must relocate the rendered
+page. Checking that a Cupertino control exists or that a tap throws no exception
+does not establish those behaviors. `reader_platform_interactions_test.dart`
+exercises the production root; the native `platform_navigation_test.dart` checks
+Collections selection and actual Reader track relocation/menu recovery on the
+device viewport. Both phone and tablet regression batches include it.
+Its Reader flow opens chrome with a centre tap, checks full native captions,
+aligned glyphs/baselines and status/track edges, then exercises seeking and menus.
+The PDF flow checks four compact tabs, retained Pages selection and navigation
+to the actual second page. On iPad, build with
+`--dart-define=READFLEX_TEST_TABLET_ROTATION=true` to also check real rotation.
+Rotate to landscape and back for `READFLEX_READER_ROTATE:<orientation>` and
+then `READFLEX_PDF_ROTATE:<orientation>`. Both phases wait for actual window
+metrics with the controls open and preserve their reading/tab state;
+rotating an unmounted test is insufficient.
+Review full-screen iOS and Android captures independently with matching content,
+viewport, locale, brightness and text scale. Passing an existing Material
+baseline does not verify Cupertino UI; do not regenerate a baseline to hide an
+unexplained difference. VoiceOver/TalkBack, native handles and release/profile
+frame performance require separate device evidence.
 
 ## Commands
 
@@ -211,6 +278,7 @@ same as for `test-device` above.
 | Shared control accessibility | Named tap targets under iOS/Android policies, selected/disabled choice semantics, stable control geometry and named/noninteractive busy actions in LTR/RTL at normal/large text | `packages/component_library/test/control_accessibility_contract_test.dart` |
 | Toast feedback | Bottom placement 16dp above the safe inset or 8dp above the highest `ToastAvoidArea` (Library floating controls, reader chrome, selection panel, search bar), with the avoided control still tappable and a control mid-entrance counted at rest; neutral `inverseSurface` plate with a colored glyph in light/dark; 4s success and 6s/persistent error durations; 48dp circular/localized Close, full-message semantics, independent swipe, idle insertion and responsive safe-area layout; full-screen success/error over Library in all profiles, with RTL overridden to 390 x 844 | Toast package tests, `toast_golden_test.dart`, `integration_test/toast_test.dart` |
 | Theme text roles | Primary/secondary text on surface, sheet and input backgrounds; foreground/fill contrast for primary, secondary and destructive controls in light/dark | `packages/component_library/test/app_theme_test.dart` |
+| Platform roots and modal contracts | Actual Cupertino/Material roots and shared controls; content-fit Cupertino modal, centred/overflowing headers, state retention, safe areas, guarded dismissal, reduced motion and root-theme capture | Component `platform_controls_test.dart`, `cupertino_app_bottom_sheet_test.dart`, `cupertino_sheet_header_test.dart`; feature native presentation tests |
 | Onboarding | Welcome screen: an 80dp app icon above "Welcome to Readflex", a heading that shrinks instead of breaking a word (CJK never shrinks); four feature rows of equal weight with the real menu labels and no feature staged as a hero; Add your first book / Not now callbacks, 48dp targets and contrast; 480dp column on tablets, large-text scrolling in every locale, RTL; five visual profiles. Routing and the saved preference after remount live in `test/app/readflex_app_test.dart` | `onboarding_test.dart` |
 | Library | Search/clear/exit, empty results, layout preference; UI changes do not issue new storage reads. Four additional bottom-search profiles cover EN phone/tablet, DE 320dp/200% and AR phone/200%, including modelled keyboard insets and restored capsule geometry. Real keyboard insets are checked separately in the native controls flow | `app_flows_test.dart`, `library_search_golden_test.dart`, `integration_test/library_controls_test.dart` |
 | Library appearance | Cover-only 2:3 grid with generated title/author/site text on the artwork and 12dp gaps, display sheet, empty search results (Clear search) and pressed Display/search-clear actions in all profiles; list rows with title and author at the cover top and the status at its bottom, without the file format, and the compact favourites badge in light/dark and on an Arabic phone; an empty collection offers Show entire Library | `library_golden_test.dart`, `collection_management_golden_test.dart` |

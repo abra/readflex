@@ -39,11 +39,11 @@ class ScrollEdgeFade extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final theme = context.appTheme;
+    final isDark = theme.colors.brightness == Brightness.dark;
     final horizontal =
         edge == ScrollFadeEdge.start || edge == ScrollFadeEdge.end;
-    final surface = surfaceColor ?? theme.scaffoldBackgroundColor;
+    final surface = surfaceColor ?? theme.backgroundColor;
     final (begin, end) = switch (edge) {
       ScrollFadeEdge.top => (Alignment.topCenter, Alignment.bottomCenter),
       ScrollFadeEdge.bottom => (Alignment.bottomCenter, Alignment.topCenter),

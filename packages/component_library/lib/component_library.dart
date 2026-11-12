@@ -1,5 +1,15 @@
 // Icons
 // Widgets
+export 'src/app_scaffold.dart';
+export 'src/app_button.dart';
+export 'src/app_icon_button.dart';
+export 'src/app_text_field.dart';
+export 'src/app_progress_indicator.dart';
+export 'src/app_switch.dart';
+export 'src/app_slider.dart';
+export 'src/app_checkbox.dart';
+export 'src/app_surface.dart';
+export 'src/app_tooltip.dart';
 export 'src/action_bottom_sheet_layout.dart';
 export 'src/app_action_card.dart';
 export 'src/app_back_button.dart';
@@ -47,6 +57,9 @@ export 'src/selection_preview_card.dart';
 export 'src/show_app_bottom_sheet.dart';
 export 'src/source_cover_tokens.dart';
 // Theme
+export 'src/theme/app_theme_data.dart';
+export 'src/theme/app_platform_theme.dart';
+export 'src/theme/app_theme_scope.dart';
 export 'src/theme/app_system_ui_overlay.dart';
 export 'src/theme/app_text_theme.dart';
 export 'src/theme/app_theme.dart';

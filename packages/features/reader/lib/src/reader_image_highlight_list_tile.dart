@@ -66,7 +66,7 @@ class ReaderImageHighlightListTile extends StatelessWidget {
         Semantics(
           button: canNavigate,
           hint: canNavigate ? l10n.readerGoToPassage : null,
-          child: InkWell(
+          child: AppTappable(
             onTap: canNavigate ? onNavigate : null,
             // The body owns both gutters so Read more can bleed its ink into
             // the trailing one; a removed row ends on its Undo target instead.
@@ -109,9 +109,11 @@ class ReaderImageHighlightListTile extends StatelessWidget {
             ),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Divider(height: 1),
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: readerDrawerContentInset(context),
+          ),
+          child: const AppDivider(height: 1),
         ),
       ],
     );
@@ -152,9 +154,9 @@ class _ReaderImageHighlightTileBody extends StatelessWidget {
     final note = this.note;
     final status = this.status;
     // A removed row ends at its Undo target, which supplies the spacing.
-    final endGutter = removed ? 0.0 : AppSpacing.lg;
+    final endGutter = removed ? 0.0 : readerDrawerContentInset(context);
     final gutters = EdgeInsetsDirectional.only(
-      start: AppSpacing.lg,
+      start: readerDrawerContentInset(context),
       end: endGutter,
     );
     return LayoutBuilder(
@@ -171,7 +173,7 @@ class _ReaderImageHighlightTileBody extends StatelessWidget {
               )..layout(
                 maxWidth:
                     (constraints.maxWidth -
-                            AppSpacing.lg -
+                            readerDrawerContentInset(context) -
                             endGutter -
                             readerHighlightNoteIndent)
                         .clamp(0.0, double.infinity),

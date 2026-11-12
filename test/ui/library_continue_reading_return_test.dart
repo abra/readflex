@@ -43,6 +43,8 @@ void main() {
       description: 'the next page',
       timeout: const Duration(seconds: 30),
     );
+    // The fling may cross a page before its final scroll position settles.
+    await tester.pumpAndSettle();
     return readerBloc(tester).state.document!.readingProgress;
   }
 
@@ -79,8 +81,14 @@ void main() {
     // The Library behind the reader picks the book up while still covered.
     await waitForUi(
       tester,
-      () => offstageCard.evaluate().isNotEmpty,
-      description: 'Continue reading card behind the reader',
+      () => find
+          .descendant(
+            of: offstageCard,
+            matching: find.text(percent, skipOffstage: false),
+          )
+          .evaluate()
+          .isNotEmpty,
+      description: 'saved Continue reading progress behind the reader',
     );
     expect(card, findsNothing, reason: 'the reader still covers the Library');
 
@@ -143,6 +151,20 @@ void main() {
     await tapUi(tester, tile);
     await waitForPages(tester);
     final before = await readPast(tester, 0);
+    await waitForUi(
+      tester,
+      () => find
+          .descendant(
+            of: offstageCard,
+            matching: find.text(
+              '${(before * 100).round()}%',
+              skipOffstage: false,
+            ),
+          )
+          .evaluate()
+          .isNotEmpty,
+      description: 'first saved progress behind the reader',
+    );
     GoRouter.of(tester.element(find.byType(TextPagesView))).pop();
     await tester.pumpAndSettle();
     expect(fillFraction(), closeTo(before, .01));

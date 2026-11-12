@@ -33,9 +33,9 @@ class LibraryPracticeRow extends StatelessWidget {
     final colors = context.colors;
     final due = practice.due > 0;
     final glyphColor = due ? context.actionForeground : colors.onSurfaceVariant;
-    return Material(
+    return AppSurface(
       key: const ValueKey('libraryPracticeRow'),
-      type: MaterialType.transparency,
+      transparent: true,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         side: BorderSide(color: colors.outlineVariant),

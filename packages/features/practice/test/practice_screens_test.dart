@@ -490,7 +490,7 @@ void main() {
         await tester.tap(find.text('Open'));
         await settle(tester);
 
-        final appBar = find.byType(AppBar);
+        final appBar = find.byType(AppNavigationBar);
         expect(
           find.descendant(of: appBar, matching: find.text(title)),
           findsOneWidget,
@@ -521,7 +521,7 @@ void main() {
       expect(find.byTooltip('Назад'), findsOneWidget);
       expect(
         find.descendant(
-          of: find.byType(AppBar),
+          of: find.byType(AppNavigationBar),
           matching: find.text('Практика'),
         ),
         findsOneWidget,
@@ -541,7 +541,7 @@ void main() {
       await h.addWord('desert');
       await tester.pumpWidget(wordsScreen());
       await settle(tester);
-      await tester.enterText(find.byType(TextField), 'spice');
+      await tester.enterText(find.byType(EditableText), 'spice');
       await tester.pumpAndSettle();
       final editor = tester.element(find.byType(EditableText));
       final focus = tester

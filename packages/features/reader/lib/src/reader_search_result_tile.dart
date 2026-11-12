@@ -3,7 +3,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_directional_layout.dart';
+import 'reader_drawer_layout.dart';
 import 'reader_search_event.dart';
+import 'reader_navigation_tile.dart';
 
 class ReaderSearchResultTile extends StatelessWidget {
   const ReaderSearchResultTile({
@@ -24,13 +26,13 @@ class ReaderSearchResultTile extends StatelessWidget {
     final colors = context.colors;
     final chapterTitle = result.chapterTitle;
 
-    return ListTile(
+    return ReaderNavigationTile(
       selected: selected,
       selectedTileColor: colors.selectedControlBackground,
       // Full-bleed active row, like the Chapters tab; no themed tile radius.
       shape: const RoundedRectangleBorder(),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: readerDrawerContentInset(context),
         vertical: AppSpacing.xxs,
       ),
       minVerticalPadding: AppSpacing.xs,

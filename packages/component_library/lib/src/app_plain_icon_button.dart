@@ -1,5 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
+import 'app_icon_button.dart';
 import 'app_window_size.dart';
 import 'theme/tokens/app_icon_size.dart';
 import 'theme/tokens/app_sizes.dart';
@@ -44,17 +45,14 @@ class AppPlainIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final size = iconSize ?? defaultIconSizeOf(context);
-    return IconButton(
+    return AppIconButton(
       tooltip: tooltip,
       onPressed: onPressed,
-      style: IconButton.styleFrom(
-        foregroundColor: color,
-        disabledForegroundColor: color?.withValues(alpha: 0.38),
-        backgroundColor: Colors.transparent,
-        minimumSize: const Size.square(AppSizes.buttonHeight),
-        shape: const CircleBorder(),
-        visualDensity: VisualDensity.standard,
-      ),
+      foregroundColor: color,
+      disabledForegroundColor: color?.withValues(alpha: 0.38),
+      backgroundColor: const Color(0x00000000),
+      minimumSize: const Size.square(AppSizes.buttonHeight),
+      shape: const CircleBorder(),
       icon: iconWidget ?? Icon(icon, size: size),
     );
   }

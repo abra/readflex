@@ -79,7 +79,7 @@ void main() {
           await tester.pumpAndSettle();
           expectChoice('Dark', isSelected: true);
           expectChoice('Light', isSelected: false);
-          await tester.tap(find.text('Light'));
+          await tester.tap(find.text('Light'), warnIfMissed: false);
           expect(changes, 1);
           expect(tester.getRect(find.byType(AppChoiceControl<int>)), before);
           expect(tester.takeException(), isNull);
@@ -110,8 +110,16 @@ void main() {
             ),
           );
           await _expectAccessibleTargets(tester, platform);
-          final primary = find.byType(FilledButton);
-          final secondary = find.byType(OutlinedButton);
+          final primary = find.byWidgetPredicate(
+            (widget) =>
+                widget is AppButton &&
+                widget.variant == AppButtonVariant.filled,
+          );
+          final secondary = find.byWidgetPredicate(
+            (widget) =>
+                widget is AppButton &&
+                widget.variant == AppButtonVariant.outlined,
+          );
           final primaryRect = tester.getRect(primary);
           final secondaryRect = tester.getRect(secondary);
 
@@ -129,8 +137,8 @@ void main() {
             expect(data.flagsCollection.isEnabled, Tristate.isFalse);
             expect(data.hasAction(SemanticsAction.tap), isFalse);
           }
-          await tester.tap(primary);
-          await tester.tap(secondary);
+          await tester.tap(primary, warnIfMissed: false);
+          await tester.tap(secondary, warnIfMissed: false);
           expect(commands, 0);
 
           update(() => busy = false);

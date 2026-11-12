@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_page_thumbnail_cubit.dart';
+import 'reader_drawer_layout.dart';
 
 /// Thumbnails of every page (comics, PDF) in reading order, with the
 /// current page selected and scrolled into view.
@@ -79,11 +80,10 @@ class _PageGridViewState extends State<_PageGridView> {
       final columns = (constraints.maxWidth / math.max(150, scale.scale(120)))
           .floor()
           .clamp(1, 4);
-      // 16dp drawer gutter around the grid, 12dp between tiles.
+      final gutter = readerDrawerContentInset(context);
+      // Match the panel gutter, with 12dp between tiles.
       final width =
-          (constraints.maxWidth -
-              AppSpacing.lg * 2 -
-              AppSpacing.md * (columns - 1)) /
+          (constraints.maxWidth - gutter * 2 - AppSpacing.md * (columns - 1)) /
           columns;
       final extent = width * 1.5 + scale.scale(24) + AppSpacing.md;
       final maxOffset = math.max(
@@ -109,9 +109,9 @@ class _PageGridViewState extends State<_PageGridView> {
           child: GridView.builder(
             controller: _scroll,
             padding: EdgeInsets.fromLTRB(
+              gutter,
               AppSpacing.lg,
-              AppSpacing.lg,
-              AppSpacing.lg,
+              gutter,
               AppSpacing.lg + MediaQuery.paddingOf(context).bottom,
             ),
             scrollCacheExtent: const ScrollCacheExtent.pixels(0),
@@ -188,12 +188,12 @@ class _PageGridTileState extends State<_PageGridTile> {
             selected: widget.selected,
             button: true,
             label: label,
-            child: Material(
+            child: AppSurface(
               color: widget.selected
                   ? colors.selectedControlBackground
                   : colors.surfaceContainerLow,
               borderRadius: BorderRadius.circular(AppRadius.sm),
-              child: InkWell(
+              child: AppTappable(
                 onTap: widget.onTap,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 child: Column(

@@ -218,7 +218,8 @@ class _ResetAppearanceButton extends StatelessWidget {
             : null,
       );
     }
-    return TextButton.icon(
+    return AppButton.icon(
+      variant: AppButtonVariant.text,
       onPressed: canReset ? context.read<ReaderAppearanceCubit>().reset : null,
       icon: const Icon(AppIcons.refresh, size: AppIconSize.sm),
       label: AppButtonLabel(context.l10n.readerReset),
@@ -457,7 +458,7 @@ class _FontSizeControl extends StatelessWidget {
     return SizedBox(
       key: const ValueKey('reader-text-scale-control'),
       height: AppSizes.buttonHeight,
-      child: Material(
+      child: AppSurface(
         color: cs.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -532,13 +533,13 @@ class _TextSizeStepButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = context.colors;
     final enabled = onTap != null;
-    return Tooltip(
+    return AppTooltip(
       message: tooltip,
       child: Semantics(
         button: true,
         enabled: enabled,
         label: tooltip,
-        child: InkWell(
+        child: AppTappable(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.sm),
           child: SizedBox.square(
@@ -585,13 +586,13 @@ class _TextSizeValueButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
+    return AppTooltip(
       message: context.l10n.readerResetTextSize,
       child: Semantics(
         button: true,
         label: context.l10n.readerTextSize,
         value: label,
-        child: InkWell(
+        child: AppTappable(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.sm),
           child: SizedBox(

@@ -9,6 +9,22 @@ search, one Collections picker for what to show (Books, Articles, Comics,
 New, Favourites, your collections, sites and authors) and a list/grid toggle.
 Surfaced as the `Library` main screen (route `/library`).
 
+## Platform presentation
+
+`AppScaffold`, `AppButton`, `AppIconButton` and `AppTextField` select the
+platform presentation through `context.isCupertino`; the feature keeps one
+bloc and navigation flow. iOS uses a Cupertino page, native fields and
+`CupertinoSliverRefreshControl` inside the library scroll view. Android keeps
+Material controls and `RefreshIndicator`. Covers and the thumb toolbar share
+the app's custom presentation on both platforms. Collection destinations use
+native checkmark rows on iOS and checkbox rows on Android.
+
+Search retains its controller, focus node, horizontal viewport and live
+`EditableText` through toolbar and keyboard transitions. The closed search
+snapshot uses the same text style and offset. Platform-root tests cover this
+identity, refresh, 200% text and phone RTL; native keyboard checks live in
+`integration_test/library_controls_test.dart`.
+
 ## Public API
 
 `LibraryScreen` — stateless widget wired up in `routing.dart`. Provides BLoC
@@ -98,7 +114,7 @@ Practice has no tab; the Library is its one way in, in two places:
   the strokes close to 2dp. The silhouette combines the capsule's popover
   shadow with a soft, static primary-colour aura. The due count is its badge.
   One semantics node: "Practice, N cards due today".
-- The badge is Material's 16dp pill with a 2dp ring in the app surface's colour,
+- The badge is a custom 16dp pill with a 2dp ring in the app surface's colour,
   anchored at the glyph's top-end corner with an 8dp outset; a wider count
   grows inwards. 1–99 shows the exact count, and 100 or more
   shows "99+". Its width and height stay within the 48dp touch target; at
@@ -311,7 +327,7 @@ Scaffold animates the button to every new location.
 - `LibraryCollectionsButton`, at the start: the shown collection's icon
   (`libraryCollectionScopeIcon`, the same glyph as its picker row; Library
   uses `AppIcons.library`), its name (`libraryCollectionScopeLabel`, or
-  Library) on one line and a 16dp chevron. It is a stadium `TextButton`
+  Library) on one line and a 16dp chevron. It is a stadium `AppButton.text`
   whose 20dp glyph is centred in the round end; it is read as one button
   (label Choose collection, value the name) and is the only way into the
   Collections picker. Inside a collection it takes the selected pair
@@ -319,10 +335,9 @@ Scaffold animates the button to every new location.
   contrast over black and white covers under the translucent capsule.
 - `LibraryAddButton`, at the outer end: a filled `primary` circle with a
   24dp `onPrimary` "+" (tooltip Add to Library), flat inside the capsule. It
-  opens import at `LibraryImportEntry.menu` and takes Material's disabled
+  opens import at `LibraryImportEntry.menu` and takes the shared disabled
   filled colours while an import is open; switching collections stays
-  available meanwhile. Colours are explicit because `iconButtonTheme` styles
-  secondary square buttons.
+  available meanwhile. Its circular fill is explicit in `AppIconButton`.
 - Search sits between the collection switcher and "+". It changes the same
   capsule into a field above the keyboard, with Back at its directional start
   and a separate Clear search control when the query is nonempty. Back clears
@@ -360,7 +375,7 @@ it so it can be left. Selection replaces this group with the separate cancel
 button and contextual action capsule at the same bottom anchor.
 The floating controls switch immediately at their resting position.
 The Scaffold slot stays mounted with a `Visibility` wrapper and
-`FloatingActionButtonAnimator.noAnimation`, so it cannot cache exiting controls
+`AppFloatingActionButtonAnimator.none`, so it cannot cache exiting controls
 or scale/rotate the whole group. Hidden controls leave layout, input and
 semantics; collection-name and browse/search changes animate inside the capsule.
 System Back first leaves selection, then search, before navigating away; the

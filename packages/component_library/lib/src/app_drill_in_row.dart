@@ -1,4 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+
+import 'app_surface.dart';
 
 import 'app_icons.dart';
 import 'theme/extensions/build_context_ext.dart';
@@ -129,9 +131,9 @@ class AppDrillInRow extends StatelessWidget {
       label: title,
       value: subtitle ?? value,
       onTap: isEnabled ? onTap : null,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
+      child: AppSurface(
+        transparent: true,
+        child: AppTappable(
           onTap: isEnabled ? onTap : null,
           borderRadius: BorderRadius.circular(AppRadius.sm),
           child: Padding(

@@ -11,6 +11,7 @@ import 'reader_drawer_layout.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_search_cubit.dart';
 import 'reader_search_result_tile.dart';
+import 'reader_navigation_tile.dart';
 import 'reader_swipe_to_delete.dart';
 
 /// The reader's search sheet. Retained while hidden so the query, results
@@ -141,15 +142,18 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
         onClose: widget.onClose,
         semanticsLabel: context.l10n.readerSearchAction,
         header: _ReaderSearchHeader(onClose: widget.onClose),
-        // The list's bottom padding carries the system inset, like the
-        // Contents sheet; the sheet itself sits on the keyboard.
+        // The list keeps visual bottom padding and any unconsumed system inset;
+        // the sheet itself handles the keyboard and Cupertino safe areas.
         body: BlocBuilder<ReaderSearchCubit, ReaderSearchState>(
           builder: (context, state) {
             final l10n = context.l10n;
             return Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: readerDrawerContentInset(context),
+                    vertical: AppSpacing.lg,
+                  ),
                   child: SearchField(
                     controller: _field,
                     focusNode: _focus,
@@ -161,10 +165,10 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
                 ),
                 if (state.results.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      AppSpacing.lg,
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                      readerDrawerContentInset(context),
                       0,
-                      AppSpacing.lg,
+                      readerDrawerContentInset(context),
                       AppSpacing.sm,
                     ),
                     child: Align(
@@ -180,12 +184,12 @@ class _ReaderSearchPanelState extends State<ReaderSearchPanel> {
                 SizedBox(
                   height: 2,
                   child: state.isLoading
-                      ? LinearProgressIndicator(
+                      ? AppLinearProgressIndicator(
                           value: state.progress > 0 ? state.progress : null,
                         )
                       : null,
                 ),
-                const Divider(height: 1),
+                const AppDivider(height: 1),
                 Expanded(
                   child: ClipRect(
                     child: ScrollEdgeFadeStack(
@@ -291,8 +295,8 @@ class _ReaderSearchResults extends StatelessWidget {
         itemBuilder: (_, index) {
           if (index == 0) {
             return Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
+              padding: EdgeInsets.symmetric(
+                horizontal: readerDrawerContentInset(context),
                 vertical: AppSpacing.md,
               ),
               child: Text(
@@ -364,6 +368,14 @@ class _ReaderSearchHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    if (context.isCupertino && !AppWindowSize.isWide(context)) {
+      return BottomSheetHeader(
+        title: l10n.readerSearchAction,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+        onClose: onClose,
+        closeLabel: l10n.commonClose,
+      );
+    }
     return Padding(
       // The sheet's grab handle supplies the gap above the title.
       padding: EdgeInsetsDirectional.fromSTEB(
@@ -411,9 +423,9 @@ class _ReaderRecentSearchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: const EdgeInsetsDirectional.symmetric(
-        horizontal: AppSpacing.lg,
+    return ReaderNavigationTile(
+      contentPadding: EdgeInsetsDirectional.symmetric(
+        horizontal: readerDrawerContentInset(context),
         vertical: AppSpacing.xs,
       ),
       leading: Icon(

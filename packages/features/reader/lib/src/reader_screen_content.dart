@@ -51,7 +51,7 @@ class _ReaderScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       extendBodyBehindAppBar: true,
       extendBody: true,
       resizeToAvoidBottomInset: false,
@@ -784,7 +784,7 @@ class _ReaderSystemUiOverlayDriver extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: readerSystemUiOverlayStyle(
         readerTheme: readerTheme,
-        appNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
+        appNavigationBarColor: context.appTheme.backgroundColor,
       ),
       child: child,
     );
@@ -1002,7 +1002,7 @@ class _ReaderLoadingIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox.square(
       dimension: _kReaderLoadingIndicatorSize,
-      child: CircularProgressIndicator(
+      child: AppProgressIndicator(
         key: const ValueKey('readerLoadingProgress'),
         strokeWidth: 2,
         color: theme.primaryTextColor.withValues(alpha: 0.82),

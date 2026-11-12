@@ -213,7 +213,7 @@ class _LibraryOfflineStatus extends StatelessWidget {
       maintainSize: true,
       maintainState: true,
       maintainAnimation: true,
-      child: Tooltip(
+      child: AppTooltip(
         message: context.l10n.libraryOffline,
         child: Icon(AppIcons.offline, size: AppIconSize.xs, color: warning),
       ),
@@ -230,17 +230,18 @@ class _DisplayMenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (showLabel) {
-      return Tooltip(
+      return AppTooltip(
         message: context.l10n.libraryDisplayOptions,
         excludeFromSemantics: true,
-        child: TextButton.icon(
+        child: AppButton.icon(
+          variant: AppButtonVariant.text,
           key: const ValueKey('libraryHeaderDisplayButton'),
-          style: TextButton.styleFrom(
-            minimumSize: const Size(0, AppSizes.buttonHeight),
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            textStyle: context.text.labelLarge,
-            foregroundColor: context.colors.onSurfaceVariant,
-          ),
+
+          minimumSize: const Size(0, AppSizes.buttonHeight),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          textStyle: context.text.labelLarge,
+          foregroundColor: context.colors.onSurfaceVariant,
+
           onPressed: onPressed,
           icon: const Icon(AppIcons.settings, size: AppIconSize.md),
           label: Text(context.l10n.libraryDisplayOptions),

@@ -1,7 +1,8 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
 import 'app_icons.dart';
 import 'app_plain_icon_button.dart';
+import 'theme/extensions/build_context_ext.dart';
 
 /// Save / Saved toggle for a sheet row; the caller owns the persistence.
 ///
@@ -67,7 +68,7 @@ class _AppSaveToggleButtonState extends State<AppSaveToggleButton> {
         tooltip: tooltip,
         onPressed: widget.busy ? null : widget.onPressed,
         icon: icon,
-        color: widget.saved ? Theme.of(context).colorScheme.primary : null,
+        color: widget.saved ? context.colors.primary : null,
       ),
     );
   }

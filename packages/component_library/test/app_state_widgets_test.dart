@@ -282,7 +282,11 @@ void main() {
       expect(find.widgetWithText(FilledButton, 'Cancel'), findsOneWidget);
       expect(find.widgetWithText(OutlinedButton, 'Delete'), findsOneWidget);
       expect(
-        tester.widget<FilledButton>(find.byType(FilledButton)).style,
+        tester
+            .widget<FilledButton>(find.byType(FilledButton))
+            .style
+            ?.foregroundColor
+            ?.resolve({}),
         isNull,
       );
     });

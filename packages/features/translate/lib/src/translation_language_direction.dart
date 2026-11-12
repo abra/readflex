@@ -1,12 +1,29 @@
 import 'dart:math' as math;
 
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoListTile, CupertinoScrollbar;
 import 'package:contextual_translation_service/contextual_translation_service.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
 const _pickerPadding = AppSpacing.xxs;
 const _pickerIconGap = AppSpacing.xs;
+
+/// Opens the same native picker from a language trigger or a recovery action.
+Future<String?> showTranslationLanguagePicker(
+  BuildContext context, {
+  required String title,
+  required String selectedCode,
+  bool includeAuto = false,
+}) => showAppBottomSheet<String>(
+  context,
+  builder: (_) => _CupertinoLanguagePicker(
+    title: title,
+    selectedCode: selectedCode,
+    includeAuto: includeAuto,
+  ),
+);
 
 class TranslationLanguageDirection extends StatelessWidget {
   const TranslationLanguageDirection({
@@ -174,6 +191,26 @@ class _LanguageMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (context.isCupertino) {
+      return _LanguageMenuTrigger(
+        buttonKey: buttonKey,
+        semanticsLabel: semanticsLabel,
+        semanticsValue: semanticsValue ?? label,
+        label: label,
+        flushStart: flushStart,
+        onPressed: enabled
+            ? () async {
+                final selected = await showTranslationLanguagePicker(
+                  context,
+                  title: semanticsLabel,
+                  selectedCode: selectedCode,
+                  includeAuto: includeAuto,
+                );
+                if (selected != null && context.mounted) onChanged(selected);
+              }
+            : null,
+      );
+    }
     const options = ReadflexSupportedLocales.languages;
     final menuWidth = math.min(
       360.0,
@@ -215,7 +252,7 @@ class _LanguageMenu extends StatelessWidget {
             selected: selectedCode == autoSourceLanguageCode,
             onSelected: onSelected,
           ),
-          const Divider(height: 1),
+          const AppDivider(height: 1),
         ],
         // A fixed small option set uses natural row heights. MenuAnchor owns
         // scrolling; large text falls back to one column without tiny targets.
@@ -255,44 +292,180 @@ class _LanguageMenu extends StatelessWidget {
       ],
       builder: (context, menu, child) {
         void toggle() => menu.isOpen ? menu.close() : menu.open();
-        return Semantics(
-          label: semanticsLabel,
-          value: semanticsValue ?? label,
-          button: true,
-          enabled: enabled,
-          excludeSemantics: true,
-          onTap: enabled ? toggle : null,
-          child: TextButton(
-            key: buttonKey,
-            onPressed: enabled ? toggle : null,
-            // Colours and shape come from the text-button theme; only the
-            // compact label style, height and inset are picker-specific.
-            style: TextButton.styleFrom(
-              textStyle: context.text.bodySmall,
-              minimumSize: const Size(0, AppSizes.buttonHeight),
-              // Start-aligned content keeps the label on the edge when the
-              // measured width rounds up; the symmetric picker stays centred.
-              alignment: flushStart ? AlignmentDirectional.centerStart : null,
-              padding: EdgeInsetsDirectional.only(
-                start: flushStart ? 0 : _pickerPadding,
-                end: _pickerPadding,
-                top: AppSpacing.sm,
-                bottom: AppSpacing.sm,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(child: Text(label)),
-                const SizedBox(width: _pickerIconGap),
-                const Icon(AppIcons.chevronDown, size: AppIconSize.xs),
-              ],
-            ),
-          ),
+        return _LanguageMenuTrigger(
+          buttonKey: buttonKey,
+          semanticsLabel: semanticsLabel,
+          semanticsValue: semanticsValue ?? label,
+          label: label,
+          flushStart: flushStart,
+          onPressed: enabled ? toggle : null,
         );
       },
     );
   }
+}
+
+class _LanguageMenuTrigger extends StatelessWidget {
+  const _LanguageMenuTrigger({
+    required this.buttonKey,
+    required this.semanticsLabel,
+    required this.semanticsValue,
+    required this.label,
+    required this.flushStart,
+    required this.onPressed,
+  });
+
+  final Key buttonKey;
+  final String semanticsLabel;
+  final String semanticsValue;
+  final String label;
+  final bool flushStart;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: semanticsLabel,
+    value: semanticsValue,
+    button: true,
+    enabled: onPressed != null,
+    excludeSemantics: true,
+    onTap: onPressed,
+    child: AppButton.text(
+      key: buttonKey,
+      onPressed: onPressed,
+      textStyle: context.text.bodySmall,
+      minimumSize: const Size(0, AppSizes.buttonHeight),
+      alignment: flushStart
+          ? AlignmentDirectional.centerStart
+          : Alignment.center,
+      padding: EdgeInsetsDirectional.only(
+        start: flushStart ? 0 : _pickerPadding,
+        end: _pickerPadding,
+        top: AppSpacing.sm,
+        bottom: AppSpacing.sm,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: Text(label)),
+          const SizedBox(width: _pickerIconGap),
+          const Icon(AppIcons.chevronDown, size: AppIconSize.xs),
+        ],
+      ),
+    ),
+  );
+}
+
+class _CupertinoLanguagePicker extends StatefulWidget {
+  const _CupertinoLanguagePicker({
+    required this.title,
+    required this.selectedCode,
+    required this.includeAuto,
+  });
+
+  final String title;
+  final String selectedCode;
+  final bool includeAuto;
+
+  @override
+  State<_CupertinoLanguagePicker> createState() =>
+      _CupertinoLanguagePickerState();
+}
+
+class _CupertinoLanguagePickerState extends State<_CupertinoLanguagePicker> {
+  final _scroll = ScrollController();
+  final _selected = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final selectedContext = _selected.currentContext;
+      if (selectedContext != null) {
+        Scrollable.ensureVisible(selectedContext, alignment: .5);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      BottomSheetHeader(
+        title: widget.title,
+        onClose: () => Navigator.of(context).pop(),
+        closeLabel: context.l10n.commonClose,
+      ),
+      Flexible(
+        child: CupertinoScrollbar(
+          controller: _scroll,
+          child: SingleChildScrollView(
+            controller: _scroll,
+            child: Column(
+              children: [
+                if (widget.includeAuto) ...[
+                  _CupertinoLanguageOption(
+                    key: widget.selectedCode == autoSourceLanguageCode
+                        ? _selected
+                        : null,
+                    code: autoSourceLanguageCode,
+                    label: context.l10n.translationAutoSource,
+                    selected: widget.selectedCode == autoSourceLanguageCode,
+                  ),
+                  const AppDivider(height: 1),
+                ],
+                for (final language in ReadflexSupportedLocales.languages)
+                  _CupertinoLanguageOption(
+                    key: widget.selectedCode == language.code
+                        ? _selected
+                        : null,
+                    code: language.code,
+                    label: language.name,
+                    selected: widget.selectedCode == language.code,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+class _CupertinoLanguageOption extends StatelessWidget {
+  const _CupertinoLanguageOption({
+    required this.code,
+    required this.label,
+    required this.selected,
+    super.key,
+  });
+
+  final String code;
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    selected: selected,
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: AppSizes.buttonHeight),
+      child: CupertinoListTile(
+        backgroundColor: const Color(0x00000000),
+        title: Text(label, maxLines: 2),
+        trailing: selected
+            ? Icon(AppIcons.check, color: context.actionForeground)
+            : null,
+        onTap: () => Navigator.of(context).pop(code),
+      ),
+    ),
+  );
 }
 
 /// One language in the picker menu; disabled without [onSelected].

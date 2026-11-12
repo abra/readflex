@@ -98,7 +98,7 @@ void main() {
       testWidgets('an inset rounded panel with a compact source cover: '
           '${theme.brightness}', (tester) async {
         await pumpCard(tester, _article, theme: theme);
-        final material = tester.widget<Material>(
+        final material = tester.widget<AppSurface>(
           find.byKey(const ValueKey('libraryContinueReadingCard')),
         );
         expect(material.color, theme.colorScheme.surfaceContainerLow);
@@ -939,7 +939,7 @@ void main() {
           final strings = tester.element(_card).l10n;
           expect(
             tester
-                .widget<Material>(
+                .widget<AppSurface>(
                   find.byKey(const ValueKey('libraryContinueReadingCard')),
                 )
                 .color,
@@ -969,7 +969,7 @@ void main() {
           );
           expect(
             tester
-                .widget<Material>(
+                .widget<AppSurface>(
                   find.byKey(const ValueKey('libraryContinueReadingCard')),
                 )
                 .color,

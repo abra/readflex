@@ -1,4 +1,5 @@
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -47,13 +48,14 @@ void main() {
           );
           await tester.tap(find.text('Open sheet'));
           await tester.pump();
-          final controller = tester
-              .widget<BottomSheet>(find.byType(BottomSheet))
-              .animationController!;
-          final openingStatus = controller.status;
-          final openingBounds = tester.getRect(find.byType(BottomSheet));
+          final surface = preference.platform == TargetPlatform.iOS
+              ? find.byType(CupertinoPopupSurface)
+              : find.byType(BottomSheet);
+          final animation = ModalRoute.of(tester.element(surface))!.animation!;
+          final openingStatus = animation.status;
+          final openingBounds = tester.getRect(surface);
           await tester.pumpAndSettle();
-          final settledBounds = tester.getRect(find.byType(BottomSheet));
+          final settledBounds = tester.getRect(surface);
           expect(hidden, 0);
           expect(results, isEmpty);
           switch (exit) {
@@ -66,7 +68,7 @@ void main() {
           }
           await tester.pump();
           final hiddenAfterFirstFrame = hidden;
-          final sheetRemains = find.byType(BottomSheet).evaluate().isNotEmpty;
+          final sheetRemains = surface.evaluate().isNotEmpty;
           await tester.pumpAndSettle();
           expect(hidden, 1);
           expect(results, [exit == 'command' ? 'saved' : null]);
@@ -220,9 +222,9 @@ class _MotionSheetFixture extends StatelessWidget {
               builder: (context) => SizedBox(
                 height: 160,
                 child: Center(
-                  child: TextButton(
+                  child: _SheetCommand(
                     onPressed: () => Navigator.of(context).pop('saved'),
-                    child: const Text('Close sheet'),
+                    label: 'Close sheet',
                   ),
                 ),
               ),
@@ -234,4 +236,16 @@ class _MotionSheetFixture extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _SheetCommand extends StatelessWidget {
+  const _SheetCommand({required this.onPressed, required this.label});
+
+  final VoidCallback onPressed;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => context.isCupertino
+      ? CupertinoButton(onPressed: onPressed, child: Text(label))
+      : TextButton(onPressed: onPressed, child: Text(label));
 }

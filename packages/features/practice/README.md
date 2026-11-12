@@ -141,7 +141,9 @@ follows the same setting.
 
 ## Layout
 
-- The hub, Vocabulary and Highlights use `PracticePageHeader`: the directional
+- iOS uses `AppNavigationBar` with a centered native title, directional Back
+  and the hub's settings action in navigation slots. Android uses
+  `PracticePageHeader`: the directional
   `AppBackButton`, a semantic heading and optional settings action, aligned
   with the shared `AppContentFrame` (maximum 1200dp). Vocabulary and Highlights
   keep their search and lists within 960dp; the Vocabulary toolbar puts search
@@ -149,7 +151,7 @@ follows the same setting.
 - On phones the hub floats Start review at the bottom where Library floats "+": one
   filled stadium (`PracticeStartButton`) on the capsule's soft shadow, with
   no capsule around it. It appears in the same frame as the content, at
-  full size (`FloatingActionButtonAnimator.noAnimation`): Material's default
+  full size (`AppFloatingActionButtonAnimator.none`): Material's default
   would scale and turn it in on its own. When nothing is due the button
   offers Review ahead.
   An empty hub has no button: it is the shared `AppFirstRunState` (the
@@ -227,14 +229,17 @@ follows the same setting.
   `AppSheetActions.stacks` for long labels or large text. Both commands remain
   reachable without scrolling the summary and respect the bottom safe area.
 - The reading area clips painting and hit testing inside the card, with a
-  minimum 12dp separation from the controls. The opaque Material dock uses
-  `AppElevation.level1`
-  clipped to its upper edge, with no shadow below or beside it or extra divider;
+  minimum 12dp separation from the controls. Android's opaque dock uses
+  `AppElevation.level1` clipped to its upper edge, with no shadow below or
+  beside it. iOS uses an opaque dock with one top separator and no shadow;
   highlights have no dark scroll-edge fade. Word cards retain their existing
   scroll fade. Each new card starts at the top, while revealing the same word
   or returning from a highlight's source keeps its scroll position. Scroll
   notifications update only the position affordance; rating and scheduling state
-  remain in the session bloc.
+  remain in the session bloc. The highlight scrollbar is Cupertino on iOS
+  and Material on Android. Review overflow opens a native Cupertino action
+  sheet on iOS, with a destructive Remove action and Cancel; Android keeps
+  its anchored Material menu. Both dispatch the same session callbacks.
 - A word heading fits its longest unbreakable piece with `appFitLongestWord`,
   at the current locale, direction and text scale. It stays at least as large
   as `titleLarge`; unusually long words can wrap at that floor. The full text

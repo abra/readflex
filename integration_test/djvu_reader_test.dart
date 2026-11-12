@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -119,7 +120,7 @@ void main() {
     ui.showChrome();
     await tester.pump(const Duration(milliseconds: 400));
     await tapUi(tester, find.byTooltip(l10n.readerSearchAction).first);
-    final field = find.byType(TextField).hitTestable();
+    final field = find.byType(AppTextField).hitTestable();
     await tester.enterText(field, 'continues');
     final search = tester.element(field).read<ReaderSearchCubit>();
     await waitForUi(

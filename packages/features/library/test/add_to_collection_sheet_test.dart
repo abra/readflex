@@ -51,7 +51,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(BottomSheet), findsOneWidget);
-    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Draft');
+    expect(tester.widget<AppTextField>(_nameField()).controller!.text, 'Draft');
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.text('Reading').hitTestable(), findsOneWidget);
@@ -61,7 +61,7 @@ void main() {
     expect(find.byType(BottomSheet), findsOneWidget);
     await tester.tap(find.text('Keep editing'));
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Draft');
+    expect(tester.widget<AppTextField>(_nameField()).controller!.text, 'Draft');
     final close = find.descendant(
       of: find.byKey(const ValueKey('addToCollectionCreateStep')),
       matching: find.byTooltip('Close'),
@@ -249,12 +249,13 @@ void main() {
     final repository = FakeCollectionRepository();
     final harness = await _open(tester, repository);
     await tester.tap(_destination('reading'));
+    await tester.pumpAndSettle();
     final bounds = tester.getRect(find.byType(AddToCollectionSheet));
     await tester.tap(find.byKey(const ValueKey('libraryNewCollectionRow')));
     await tester.pumpAndSettle();
     expect(tester.getRect(find.byType(AddToCollectionSheet)), bounds);
     expect(
-      tester.widget<FilledButton>(_createButton()).onPressed,
+      tester.widget<AppButton>(_createButton()).onPressed,
       isNull,
     );
     await tester.enterText(_nameField(), 'Design');
@@ -289,7 +290,10 @@ void main() {
     await tester.tap(_createButton());
     await tester.pumpAndSettle();
     expect(harness.created, 0);
-    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Design');
+    expect(
+      tester.widget<AppTextField>(_nameField()).controller!.text,
+      'Design',
+    );
     expect(harness.cubit.state.selectedCollectionIds, {'reading'});
     expect(find.text('Failed to create collection'), findsOneWidget);
   });
@@ -326,12 +330,12 @@ void main() {
     expect(find.text('Discard changes?'), findsOneWidget);
     harness.key.currentState!.handleBack();
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Draft');
+    expect(tester.widget<AppTextField>(_nameField()).controller!.text, 'Draft');
     harness.key.currentState!.requestClose();
     await tester.pumpAndSettle();
     await tester.tap(find.text('Keep editing'));
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(_nameField()).controller!.text, 'Draft');
+    expect(tester.widget<AppTextField>(_nameField()).controller!.text, 'Draft');
     expect(harness.closeCount, 0);
   });
 
@@ -451,7 +455,7 @@ void main() {
     );
     expect(focus.hasFocus, isTrue);
     expect(
-      tester.widget<TextField>(_nameField()).controller!.text,
+      tester.widget<AppTextField>(_nameField()).controller!.text,
       'Focused draft',
     );
     height.value = 620;
@@ -618,8 +622,8 @@ Finder _destination(String id) =>
 
 Finder _submit() => find.byKey(const ValueKey('addToCollectionsSubmitButton'));
 
-FilledButton _submitButton(WidgetTester tester) =>
-    tester.widget<FilledButton>(_submit());
+AppButton _submitButton(WidgetTester tester) =>
+    tester.widget<AppButton>(_submit());
 
 Finder _nameField() => find.byKey(const ValueKey('newCollectionNameField'));
 

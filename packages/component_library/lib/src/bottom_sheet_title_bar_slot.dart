@@ -1,2 +1,2 @@
 /// The children of a `BottomSheetTitleBar`.
-enum BottomSheetTitleBarSlot { title, trailing, compactTrailing }
+enum BottomSheetTitleBarSlot { leading, title, trailing, compactTrailing }

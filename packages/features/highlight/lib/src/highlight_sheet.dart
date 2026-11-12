@@ -240,7 +240,7 @@ class _HighlightFormStep extends StatelessWidget {
                 ),
               ),
             ),
-          FilledButton(
+          AppButton(
             onPressed: isSaving
                 ? null
                 : () => cubit.save(
@@ -302,12 +302,11 @@ class _HighlightFormStep extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Padding(
               padding: _gutter,
-              child: TextField(
+              child: AppTextField(
                 controller: noteController,
-                decoration: InputDecoration(
-                  hintText: l10n.highlightNoteHint,
-                  isDense: true,
-                ),
+
+                hintText: l10n.highlightNoteHint,
+
                 maxLines: 2,
                 enabled: !isSaving,
                 onChanged: cubit.setNote,

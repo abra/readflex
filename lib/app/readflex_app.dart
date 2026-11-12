@@ -1,20 +1,20 @@
-// MaterialApp entry point: wires theme and router.
+// Platform application entry point: wires theme and router.
 //
 // StatefulWidget so that GoRouter is created once in initState and disposed
 // properly, avoiding recreation on every settings change (theme/locale).
 
-import 'package:component_library/component_library.dart';
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:readflex/app/app_system_ui_mode.dart';
 import 'package:readflex/app/dependency_scope.dart';
 import 'package:readflex/app/routing.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
+
+import 'readflex_platform_app.dart';
+
 import 'package:toast_service/toast_service.dart';
 
-/// Entry point for the application that creates [MaterialApp.router].
+/// Retains the feature router across platform theme and locale changes.
 class ReadflexApp extends StatefulWidget {
   const ReadflexApp({this.initialLocation = AppRoutes.root, super.key});
 
@@ -26,8 +26,6 @@ class ReadflexApp extends StatefulWidget {
 }
 
 class _ReadflexAppState extends State<ReadflexApp> {
-  final _globalKey = GlobalKey(debugLabel: 'ReadflexApp');
-
   late final GoRouter _router;
 
   @override
@@ -52,36 +50,15 @@ class _ReadflexAppState extends State<ReadflexApp> {
 
     return AppSystemUiMode(
       child: ToastWrapper(
-        child: MaterialApp.router(
-          debugShowCheckedModeBanner: false,
+        child: ReadflexPlatformApp(
           locale: locale,
-          supportedLocales: ReadflexSupportedLocales.locales,
-          localizationsDelegates: readflexLocalizationsDelegates,
-          themeMode: switch (themeMode) {
-            AppThemeMode.system => ThemeMode.system,
-            AppThemeMode.light => ThemeMode.light,
-            AppThemeMode.dark => ThemeMode.dark,
+          brightness: switch (themeMode) {
+            AppThemeMode.system => null,
+            AppThemeMode.light => Brightness.light,
+            AppThemeMode.dark => Brightness.dark,
           },
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
           routerConfig: _router,
-          builder: (context, child) {
-            final theme = Theme.of(context);
-            return KeyedSubtree(
-              key: _globalKey,
-              // toastification still resolves legacy UI theme/localizations.
-              // ignore: deprecated_member_use
-              child: MaterialUiCompatibilityBridge(
-                child: AnnotatedRegion<SystemUiOverlayStyle>(
-                  value: appSystemUiOverlayStyle(
-                    brightness: theme.brightness,
-                    backgroundColor: theme.scaffoldBackgroundColor,
-                  ),
-                  child: _AppTextScaling(child: child!),
-                ),
-              ),
-            );
-          },
+          builder: (context, child) => _AppTextScaling(child: child!),
         ),
       ),
     );

@@ -119,7 +119,7 @@ void main() {
                 localizationsDelegates: readflexLocalizationsDelegates,
                 home: BlocProvider.value(
                   value: cubit,
-                  child: Scaffold(
+                  child: AppScaffold(
                     floatingActionButtonLocation:
                         LibraryFloatingActionsLocation(
                           bottomViewPadding: bottom,
@@ -168,14 +168,14 @@ void main() {
               const ValueKey('libraryDeleteSelectedButton'),
             );
             expect(tester.getSize(action), const Size(48, 48));
-            final button = tester.widget<IconButton>(action);
+            final button = tester.widget<AppIconButton>(action);
             final colors = tester.element(action).colors;
             expect(
-              button.style!.backgroundColor!.resolve({}),
+              button.backgroundColor,
               colors.error,
             );
-            expect(button.style!.foregroundColor!.resolve({}), colors.onError);
-            expect(button.style!.shape!.resolve({}), isA<CircleBorder>());
+            expect(button.foregroundColor, colors.onError);
+            expect(button.shape, isA<CircleBorder>());
             final add = find.byKey(
               const ValueKey('libraryAddToCollectionButton'),
             );

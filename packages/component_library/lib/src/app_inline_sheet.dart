@@ -1,6 +1,10 @@
 import 'dart:math' as math;
 
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoLocalizations;
 import 'package:material_ui/material_ui.dart';
+
+import 'app_cupertino_sheet_surface.dart';
+import 'app_surface.dart';
 
 import 'app_inline_sheet_geometry.dart';
 import 'app_sheet_drag_handle.dart';
@@ -11,7 +15,7 @@ import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
 
-/// Caps the centered bottom sheet when a trailing panel does not fit.
+/// Caps the Android bottom sheet when a trailing panel does not fit.
 const double _kMaxWidth = 640;
 
 /// A release faster than this (logical pixels per second) moves one rest
@@ -41,10 +45,9 @@ const double _kRestTolerance = 0.001;
 /// past the top call [onClose], and the owner closes the sheet by setting
 /// [visible] to false. If the owner keeps it open, it settles back at half.
 ///
-/// The sheet sits on the keyboard and hands [body] a [MediaQuery] without
-/// the keyboard inset, so lists pad only for the visible system inset. A
-/// hidden sheet stays mounted offstage: no paint, tickers, focus or
-/// semantics.
+/// Android sits on the keyboard; Cupertino uses the modal card's outer safe
+/// gaps. The presenter removes consumed safe/keyboard insets from [body]. A
+/// hidden sheet stays mounted offstage: no paint, tickers, focus or semantics.
 /// Expanded windows use a full-height panel at the interface's trailing edge;
 /// resizing preserves the same header, body, query and scroll state.
 class AppInlineSheet extends StatefulWidget {
@@ -75,6 +78,8 @@ class AppInlineSheet extends StatefulWidget {
 
 class _AppInlineSheetState extends State<AppInlineSheet>
     with SingleTickerProviderStateMixin {
+  // Changing the native card into a wide panel must retain its editor/lists.
+  final _contentKey = GlobalKey();
   late final AnimationController _position = AnimationController(
     vsync: this,
     lowerBound: AppInlineSheetPosition.closed,
@@ -238,8 +243,11 @@ class _AppInlineSheetState extends State<AppInlineSheet>
     final textScale = MediaQuery.textScalerOf(context).scale(1);
     final colors = context.colors;
     final sheetTheme = Theme.of(context).bottomSheetTheme;
-    final scrim = sheetTheme.modalBarrierColor ?? Colors.black54;
-    final localizations = MaterialLocalizations.of(context);
+    final cupertino = context.isCupertino;
+    final scrim = cupertino
+        ? AppCupertinoSheetSurface.barrierColorOf(context)
+        : sheetTheme.modalBarrierColor ?? Colors.black54;
+    final localizations = cupertino ? null : MaterialLocalizations.of(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -251,6 +259,8 @@ class _AppInlineSheetState extends State<AppInlineSheet>
         );
         final bottomGap = sidePanel
             ? math.max(AppSpacing.xl, padding.bottom)
+            : cupertino
+            ? math.max(AppCupertinoSheetSurface.minimumGap, padding.bottom)
             : 0.0;
         final topGap = sidePanel ? padding.top + AppSpacing.xl : 0.0;
         final panelHeight = math.max(
@@ -260,7 +270,7 @@ class _AppInlineSheetState extends State<AppInlineSheet>
         final geometry = _geometry = sidePanel
             ? AppInlineSheetGeometry(half: panelHeight, full: panelHeight)
             : AppInlineSheetGeometry.resolve(
-                maxHeight: constraints.maxHeight,
+                maxHeight: constraints.maxHeight - bottomGap,
                 keyboardInset: keyboardInset,
                 topInset: padding.top,
                 textScale: textScale,
@@ -276,7 +286,7 @@ class _AppInlineSheetState extends State<AppInlineSheet>
           0.0,
           double.infinity,
         );
-        final sideInsets = sidePanel
+        final sideInsets = sidePanel || cupertino
             ? EdgeInsets.zero
             : EdgeInsets.only(
                 left: math.max(0, padding.left - side / 2),
@@ -319,46 +329,52 @@ class _AppInlineSheetState extends State<AppInlineSheet>
           ],
         );
 
+        final surfaceContent = KeyedSubtree(
+          key: _contentKey,
+          child: Padding(
+            padding: sideInsets,
+            // One MediaQuery: nested remove* helpers would each restart
+            // from the outer data and undo the other.
+            child: MediaQuery(
+              data: MediaQuery.of(context)
+                  .removePadding(
+                    removeLeft: true,
+                    removeRight: true,
+                    removeBottom: sidePanel || cupertino,
+                  )
+                  .removeViewInsets(removeBottom: true),
+              child: _AppInlineSheetMinHeight(
+                minHeight: AppInlineSheetGeometry.minHalfHeight,
+                child: content,
+              ),
+            ),
+          ),
+        );
         final surface = Semantics(
           scopesRoute: true,
           namesRoute: true,
           explicitChildNodes: true,
           label: widget.semanticsLabel,
-          child: Material(
-            color: sheetTheme.backgroundColor ?? colors.surface,
-            shape: RoundedRectangleBorder(
-              side: sidePanel
-                  ? BorderSide(
-                      color: colors.outlineVariant,
-                      width: 1 / MediaQuery.devicePixelRatioOf(context),
-                    )
-                  : BorderSide.none,
-              borderRadius: sidePanel
-                  ? BorderRadius.circular(AppRadius.xl)
-                  : const BorderRadius.vertical(
-                      top: Radius.circular(AppRadius.xl),
-                    ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: sideInsets,
-              // One MediaQuery: nested remove* helpers would each restart
-              // from the outer data and undo the other.
-              child: MediaQuery(
-                data: MediaQuery.of(context)
-                    .removePadding(
-                      removeLeft: true,
-                      removeRight: true,
-                      removeBottom: sidePanel,
-                    )
-                    .removeViewInsets(removeBottom: true),
-                child: _AppInlineSheetMinHeight(
-                  minHeight: AppInlineSheetGeometry.minHalfHeight,
-                  child: content,
+          child: cupertino && !sidePanel
+              ? AppCupertinoSheetSurface(child: surfaceContent)
+              : AppSurface(
+                  color: sheetTheme.backgroundColor ?? colors.surface,
+                  shape: RoundedRectangleBorder(
+                    side: sidePanel
+                        ? BorderSide(
+                            color: colors.outlineVariant,
+                            width: 1 / MediaQuery.devicePixelRatioOf(context),
+                          )
+                        : BorderSide.none,
+                    borderRadius: sidePanel
+                        ? BorderRadius.circular(AppRadius.xl)
+                        : const BorderRadius.vertical(
+                            top: Radius.circular(AppRadius.xl),
+                          ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: surfaceContent,
                 ),
-              ),
-            ),
-          ),
         );
 
         // Both slots stay in place while hidden: dropping the scrim would
@@ -377,8 +393,12 @@ class _AppInlineSheetState extends State<AppInlineSheet>
                             alpha: scrim.a * math.min(_position.value, 1),
                           ),
                           onDismiss: widget.onClose,
-                          semanticsLabel: localizations.scrimLabel,
-                          semanticsOnTapHint: localizations.scrimOnTapHint(
+                          semanticsLabel: cupertino
+                              ? CupertinoLocalizations.of(
+                                  context,
+                                ).modalBarrierDismissLabel
+                              : localizations!.scrimLabel,
+                          semanticsOnTapHint: localizations?.scrimOnTapHint(
                             widget.semanticsLabel,
                           ),
                         ),
@@ -386,8 +406,16 @@ class _AppInlineSheetState extends State<AppInlineSheet>
                     ),
             ),
             Positioned(
-              left: sidePanel ? math.max(AppSpacing.xl, padding.left) : 0,
-              right: sidePanel ? math.max(AppSpacing.xl, padding.right) : 0,
+              left: sidePanel
+                  ? math.max(AppSpacing.xl, padding.left)
+                  : cupertino
+                  ? math.max(AppCupertinoSheetSurface.minimumGap, padding.left)
+                  : 0,
+              right: sidePanel
+                  ? math.max(AppSpacing.xl, padding.right)
+                  : cupertino
+                  ? math.max(AppCupertinoSheetSurface.minimumGap, padding.right)
+                  : 0,
               top: topGap,
               bottom: keyboardInset + bottomGap,
               child: Offstage(
@@ -406,6 +434,8 @@ class _AppInlineSheetState extends State<AppInlineSheet>
                           constraints: BoxConstraints(
                             maxWidth: sidePanel
                                 ? AppSizes.sidePanelWidth
+                                : cupertino
+                                ? AppCupertinoSheetSurface.maxWidth
                                 : _kMaxWidth,
                           ),
                           child: AnimatedBuilder(

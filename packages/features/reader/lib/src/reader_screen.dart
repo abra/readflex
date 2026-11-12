@@ -68,6 +68,7 @@ import 'reader_search_event.dart';
 import 'reader_search_navigation_bar.dart';
 import 'reader_search_occlusion.dart';
 import 'reader_search_panel.dart';
+import 'reader_navigation_tile.dart';
 import 'reader_selection.dart';
 import 'reader_selection_cubit.dart';
 import 'reader_selection_tip.dart';
@@ -96,6 +97,7 @@ part 'reader_screen_djvu_body.dart';
 part 'reader_screen_text_body.dart';
 part 'reader_screen_article_body.dart';
 part 'reader_screen_chrome.dart';
+part 'reader_screen_cupertino_actions.dart';
 part 'reader_screen_drawers.dart';
 part 'reader_screen_context_panel.dart';
 

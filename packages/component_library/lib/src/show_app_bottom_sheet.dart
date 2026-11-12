@@ -1,17 +1,24 @@
 import 'dart:async';
 
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoLocalizations, CupertinoModalPopupRoute, CupertinoTheme;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 
 import 'app_bottom_safe_area.dart';
+import 'app_cupertino_sheet_surface.dart';
 import 'app_sheet_dismiss_guard.dart';
 import 'app_sheet_drag_handle.dart';
 import 'theme/extensions/build_context_ext.dart';
+
+part 'cupertino_app_bottom_sheet.dart';
 
 /// Shows a modal bottom sheet using the app's standard configuration.
 ///
 /// All sheets are shown via the root navigator (above tab bar),
 /// scroll-controlled (height fits content), and respect safe area.
+/// Android uses a Material sheet; iOS uses an opaque Cupertino popup with
+/// a native spring transition and a bounded bottom-centred tablet surface.
 ///
 /// By default the sheet is fully dismissible — the wrapper draws a
 /// drag handle at the top, and the user can also dismiss by dragging
@@ -28,12 +35,13 @@ import 'theme/extensions/build_context_ext.dart';
 /// it for forms whose [PopScope] protects unsaved changes.
 ///
 /// A step that holds an unsaved draft wraps itself in [AppSheetDismissGuard]:
-/// while the guard is enabled, scrim tap and drag-down call the guard instead
-/// of popping, and the drag handle gives way to a same-height spacer. Steps
+/// while the guard is enabled, scrim tap calls the guard and drag-down is
+/// ignored. The drag handle gives way to a same-height spacer. Steps
 /// without a draft keep the route's normal dismissal.
 ///
 /// The route owns the bottom safe area for every step, including nested forms.
 /// Content adds its visual bottom gap but must not consume system insets again.
+/// The returned future completes on pop; [onFullyHidden] runs after the exit.
 Future<T?> showAppBottomSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
@@ -41,6 +49,15 @@ Future<T?> showAppBottomSheet<T>(
   bool scrimClosesFlow = false,
   VoidCallback? onFullyHidden,
 }) {
+  if (context.isCupertino) {
+    return _showCupertinoAppBottomSheet<T>(
+      context,
+      builder: builder,
+      dismissible: dismissible,
+      scrimClosesFlow: scrimClosesFlow,
+      onFullyHidden: onFullyHidden,
+    );
+  }
   final navigator = Navigator.of(context, rootNavigator: true);
   final controller = BottomSheet.createAnimationController(
     navigator.overlay!,

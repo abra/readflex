@@ -77,12 +77,15 @@ class _PracticeHighlightsViewState extends State<_PracticeHighlightsView> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      appBar: AppBar(
+    return AppScaffold(
+      appBar: AppNavigationBar(
         automaticallyImplyLeading: false,
         excludeHeaderSemantics: true,
         titleSpacing: 0,
-        title: PracticePageHeader(title: l10n.practiceHighlightsTitle),
+        leading: context.isCupertino ? const AppBackButton() : null,
+        title: context.isCupertino
+            ? Semantics(header: true, child: Text(l10n.practiceHighlightsTitle))
+            : PracticePageHeader(title: l10n.practiceHighlightsTitle),
       ),
       body: SafeArea(
         top: false,
@@ -299,7 +302,7 @@ class PracticeHighlightRow extends StatelessWidget {
       onTapHint: l10n.practiceOpenInBook,
       onTap: onPressed,
       excludeSemantics: true,
-      child: InkWell(
+      child: AppTappable(
         onTap: onPressed,
         child: Padding(
           padding: const EdgeInsets.symmetric(

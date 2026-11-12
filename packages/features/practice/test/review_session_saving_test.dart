@@ -135,7 +135,7 @@ void main() {
               );
               expect(
                 tester
-                    .widget<LinearProgressIndicator>(
+                    .widget<AppLinearProgressIndicator>(
                       find.byKey(const ValueKey('reviewProgress')),
                     )
                     .value,

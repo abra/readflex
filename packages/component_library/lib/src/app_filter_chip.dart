@@ -1,4 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+
+import 'app_surface.dart';
 
 import 'app_window_size.dart';
 import 'theme/extensions/build_context_ext.dart';
@@ -46,8 +48,8 @@ class AppFilterChip extends StatelessWidget {
         ? cs.onSurface
         : cs.surfaceContainerHighest.withValues(alpha: 0.5);
 
-    // The outer detector catches the padding; the inner InkWell handles
-    // the body once and keeps its ripple inside the visible shape.
+    // The outer detector includes the padding in the target; the inner
+    // control keeps platform press feedback within the visible body.
     return Semantics(
       button: true,
       selected: selected,
@@ -65,10 +67,10 @@ class AppFilterChip extends StatelessWidget {
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
-            child: Material(
+            child: AppSurface(
               color: background,
               borderRadius: BorderRadius.circular(AppRadius.sm),
-              child: InkWell(
+              child: AppTappable(
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 child: ConstrainedBox(

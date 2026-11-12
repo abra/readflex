@@ -194,11 +194,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     await tapUi(tester, find.byTooltip(l10n.readerSearchAction).first);
     await tester.enterText(
-      find.byType(TextField).hitTestable(),
+      find.byType(AppTextField).hitTestable(),
       'Line 7 of page 3:',
     );
     final search = tester
-        .element(find.byType(TextField).hitTestable())
+        .element(find.byType(AppTextField).hitTestable())
         .read<ReaderSearchCubit>();
     await waitForUi(
       tester,

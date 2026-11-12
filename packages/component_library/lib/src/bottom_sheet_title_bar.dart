@@ -17,6 +17,8 @@ import 'bottom_sheet_title_bar_slot.dart';
 /// The title is scaled when painted, like a scale-down `FittedBox`: its size
 /// depends on the action's laid-out width, which no build-time font size can
 /// know.
+/// With [centerTitle], actions keep their navigation row and an overflowing
+/// title wraps below them, centred across the full bar.
 class BottomSheetTitleBar extends StatefulWidget {
   const BottomSheetTitleBar({
     required this.title,
@@ -25,11 +27,19 @@ class BottomSheetTitleBar extends StatefulWidget {
     required this.overflowSpacing,
     required this.minTitleScale,
     this.compactTrailing,
+    this.leading,
+    this.centerTitle = false,
     super.key,
-  }) : assert(minTitleScale > 0 && minTitleScale <= 1);
+  }) : assert(minTitleScale > 0 && minTitleScale <= 1),
+       assert(leading == null || centerTitle);
 
   final Widget title;
   final Widget trailing;
+  final Widget? leading;
+
+  /// Centres the title on the entire bar, reserving symmetric action slots.
+  /// An overflowing title moves below the navigation actions at full width.
+  final bool centerTitle;
 
   /// The same action in less width, such as an icon button for a labeled
   /// one. Only the action on screen is focusable, hit tested and announced.
@@ -62,6 +72,7 @@ class _BottomSheetTitleBarState extends State<BottomSheetTitleBar> {
   Widget build(BuildContext context) {
     final compactTrailing = widget.compactTrailing;
     return _TitleBarLayout(
+      leading: widget.leading,
       title: widget.title,
       trailing: ExcludeFocus(
         excluding: _compactShown,
@@ -73,6 +84,7 @@ class _BottomSheetTitleBarState extends State<BottomSheetTitleBar> {
       spacing: widget.spacing,
       overflowSpacing: widget.overflowSpacing,
       minTitleScale: widget.minTitleScale,
+      centerTitle: widget.centerTitle,
       onCompactShownChanged: _onCompactShownChanged,
     );
   }
@@ -85,21 +97,25 @@ class _TitleBarLayout
           RenderBox
         > {
   const _TitleBarLayout({
+    required this.leading,
     required this.title,
     required this.trailing,
     required this.compactTrailing,
     required this.spacing,
     required this.overflowSpacing,
     required this.minTitleScale,
+    required this.centerTitle,
     required this.onCompactShownChanged,
   });
 
   final Widget title;
+  final Widget? leading;
   final Widget trailing;
   final Widget? compactTrailing;
   final double spacing;
   final double overflowSpacing;
   final double minTitleScale;
+  final bool centerTitle;
   final ValueChanged<bool> onCompactShownChanged;
 
   @override
@@ -107,6 +123,7 @@ class _TitleBarLayout
 
   @override
   Widget? childForSlot(BottomSheetTitleBarSlot slot) => switch (slot) {
+    BottomSheetTitleBarSlot.leading => leading,
     BottomSheetTitleBarSlot.title => title,
     BottomSheetTitleBarSlot.trailing => trailing,
     BottomSheetTitleBarSlot.compactTrailing => compactTrailing,
@@ -119,6 +136,7 @@ class _TitleBarLayout
         spacing: spacing,
         overflowSpacing: overflowSpacing,
         minTitleScale: minTitleScale,
+        centerTitle: centerTitle,
         onCompactShownChanged: onCompactShownChanged,
       );
 
@@ -132,6 +150,7 @@ class _TitleBarLayout
       ..spacing = spacing
       ..overflowSpacing = overflowSpacing
       ..minTitleScale = minTitleScale
+      ..centerTitle = centerTitle
       ..onCompactShownChanged = onCompactShownChanged;
   }
 }
@@ -145,6 +164,7 @@ class RenderBottomSheetTitleBar extends RenderBox
     required this._spacing,
     required this._overflowSpacing,
     required this._minTitleScale,
+    this._centerTitle = false,
     this.onCompactShownChanged,
   });
 
@@ -180,6 +200,14 @@ class RenderBottomSheetTitleBar extends RenderBox
     markNeedsLayout();
   }
 
+  bool get centerTitle => _centerTitle;
+  bool _centerTitle;
+  set centerTitle(bool value) {
+    if (value == _centerTitle) return;
+    _centerTitle = value;
+    markNeedsLayout();
+  }
+
   /// Told after a layout that swaps the shown action.
   ValueChanged<bool>? onCompactShownChanged;
 
@@ -194,6 +222,7 @@ class RenderBottomSheetTitleBar extends RenderBox
   var _compactShown = false;
 
   RenderBox get _title => childForSlot(BottomSheetTitleBarSlot.title)!;
+  RenderBox? get _leading => childForSlot(BottomSheetTitleBarSlot.leading);
   RenderBox get _trailing => childForSlot(BottomSheetTitleBarSlot.trailing)!;
   RenderBox? get _compactTrailing =>
       childForSlot(BottomSheetTitleBarSlot.compactTrailing);
@@ -202,6 +231,7 @@ class RenderBottomSheetTitleBar extends RenderBox
   // Title first: paint, hit testing and semantics follow reading order.
   @override
   Iterable<RenderBox> get children => [
+    ?_leading,
     ?childForSlot(BottomSheetTitleBarSlot.title),
     ?childForSlot(BottomSheetTitleBarSlot.trailing),
     ?childForSlot(BottomSheetTitleBarSlot.compactTrailing),
@@ -217,9 +247,11 @@ class RenderBottomSheetTitleBar extends RenderBox
     double titleScale,
     bool compactShown,
     Offset titleOffset,
+    Offset leadingOffset,
     Offset trailingOffset,
   })
   _computeLayout(BoxConstraints constraints, ChildLayouter layoutChild) {
+    if (centerTitle) return _computeCenteredLayout(constraints, layoutChild);
     final loose = constraints.loosen();
     final trailing = layoutChild(_trailing, loose);
     final compactTrailing = _compactTrailing;
@@ -260,6 +292,7 @@ class RenderBottomSheetTitleBar extends RenderBox
           rtl ? size.width - shown.width : 0,
           (size.height - shown.height) / 2,
         ),
+        leadingOffset: Offset.zero,
         trailingOffset: Offset(
           rtl ? 0 : size.width - action.width,
           (size.height - action.height) / 2,
@@ -280,9 +313,108 @@ class RenderBottomSheetTitleBar extends RenderBox
       titleScale: 1.0,
       compactShown: false,
       titleOffset: Offset(rtl ? size.width - title.width : 0, 0),
+      leadingOffset: Offset.zero,
       trailingOffset: Offset(
         rtl ? size.width - trailing.width : 0,
         title.height + overflowSpacing,
+      ),
+    );
+  }
+
+  ({
+    Size size,
+    BoxConstraints titleConstraints,
+    double titleScale,
+    bool compactShown,
+    Offset titleOffset,
+    Offset leadingOffset,
+    Offset trailingOffset,
+  })
+  _computeCenteredLayout(
+    BoxConstraints constraints,
+    ChildLayouter layoutChild,
+  ) {
+    final loose = constraints.loosen();
+    final leadingBox = _leading;
+    final leading = leadingBox == null
+        ? Size.zero
+        : layoutChild(leadingBox, loose);
+    final trailing = layoutChild(_trailing, loose);
+    final compactBox = _compactTrailing;
+    final compact = compactBox == null ? null : layoutChild(compactBox, loose);
+    var titleConstraints = const BoxConstraints();
+    var title = layoutChild(_title, titleConstraints);
+    final width = constraints.hasBoundedWidth
+        ? constraints.maxWidth
+        : title.width + 2 * (math.max(leading.width, trailing.width) + spacing);
+    double roomBeside(Size action) {
+      final side = math.max(leading.width, action.width);
+      return math.max(0, width - 2 * (side + (side == 0 ? 0 : spacing)));
+    }
+
+    bool titleFits(Size action) =>
+        title.width * minTitleScale <= roomBeside(action);
+    bool actionsFit(Size action) =>
+        leading.width + action.width + (leading.width == 0 ? 0 : spacing) <=
+        width;
+    final compactShown =
+        compact != null &&
+        !titleFits(trailing) &&
+        (titleFits(compact) || (!actionsFit(trailing) && actionsFit(compact)));
+    final action = compactShown ? compact : trailing;
+    final rtl = textDirection == TextDirection.rtl;
+    final leadingX = rtl ? width - leading.width : 0.0;
+    final trailingX = rtl ? 0.0 : width - action.width;
+    if (titleFits(action)) {
+      final room = roomBeside(action);
+      final scale = title.width > room ? room / title.width : 1.0;
+      final shown = title * scale;
+      final size = constraints.constrain(
+        Size(
+          width,
+          math.max(shown.height, math.max(leading.height, action.height)),
+        ),
+      );
+      return (
+        size: size,
+        titleConstraints: titleConstraints,
+        titleScale: scale,
+        compactShown: compactShown,
+        titleOffset: Offset(
+          (size.width - shown.width) / 2,
+          (size.height - shown.height) / 2,
+        ),
+        leadingOffset: Offset(leadingX, (size.height - leading.height) / 2),
+        trailingOffset: Offset(trailingX, (size.height - action.height) / 2),
+      );
+    }
+    titleConstraints = BoxConstraints(maxWidth: width);
+    title = layoutChild(_title, titleConstraints);
+    final stackedActions = !actionsFit(action);
+    final actionHeight = stackedActions
+        ? leading.height + overflowSpacing + action.height
+        : math.max(leading.height, action.height);
+    final size = constraints.constrain(
+      Size(width, actionHeight + overflowSpacing + title.height),
+    );
+    return (
+      size: size,
+      titleConstraints: titleConstraints,
+      titleScale: 1.0,
+      compactShown: compactShown,
+      titleOffset: Offset(
+        (size.width - title.width) / 2,
+        actionHeight + overflowSpacing,
+      ),
+      leadingOffset: Offset(
+        leadingX,
+        stackedActions ? 0 : (actionHeight - leading.height) / 2,
+      ),
+      trailingOffset: Offset(
+        trailingX,
+        stackedActions
+            ? leading.height + overflowSpacing
+            : (actionHeight - action.height) / 2,
       ),
     );
   }
@@ -308,6 +440,9 @@ class RenderBottomSheetTitleBar extends RenderBox
       onCompactShownChanged?.call(_compactShown);
     }
     (_title.parentData! as BoxParentData).offset = layout.titleOffset;
+    if (_leading case final leading?) {
+      (leading.parentData! as BoxParentData).offset = layout.leadingOffset;
+    }
     // The hidden action shares the place, for focus rects until it leaves.
     for (final action in [_trailing, ?_compactTrailing]) {
       (action.parentData! as BoxParentData).offset = layout.trailingOffset;
@@ -321,14 +456,26 @@ class RenderBottomSheetTitleBar extends RenderBox
   @override
   double computeMinIntrinsicWidth(double height) => math.max(
     _title.getMinIntrinsicWidth(double.infinity),
-    _trailing.getMinIntrinsicWidth(double.infinity),
+    centerTitle
+        ? math.max(
+                _leading?.getMinIntrinsicWidth(double.infinity) ?? 0,
+                _trailing.getMinIntrinsicWidth(double.infinity),
+              ) *
+              2
+        : _trailing.getMinIntrinsicWidth(double.infinity),
   );
 
   @override
   double computeMaxIntrinsicWidth(double height) =>
       _title.getMaxIntrinsicWidth(double.infinity) +
-      spacing +
-      _trailing.getMaxIntrinsicWidth(double.infinity);
+      (centerTitle
+          ? 2 *
+                (spacing +
+                    math.max(
+                      _leading?.getMaxIntrinsicWidth(double.infinity) ?? 0,
+                      _trailing.getMaxIntrinsicWidth(double.infinity),
+                    ))
+          : spacing + _trailing.getMaxIntrinsicWidth(double.infinity));
 
   @override
   double computeMinIntrinsicHeight(double width) =>
@@ -378,6 +525,12 @@ class RenderBottomSheetTitleBar extends RenderBox
       );
     }
     final action = _shownTrailing;
+    if (_leading case final leading?) {
+      context.paintChild(
+        leading,
+        offset + (leading.parentData! as BoxParentData).offset,
+      );
+    }
     context.paintChild(
       action,
       offset + (action.parentData! as BoxParentData).offset,
@@ -395,6 +548,15 @@ class RenderBottomSheetTitleBar extends RenderBox
 
   @override
   bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    if (_leading case final leading?) {
+      final hitLeading = result.addWithPaintOffset(
+        offset: (leading.parentData! as BoxParentData).offset,
+        position: position,
+        hitTest: (result, transformed) =>
+            leading.hitTest(result, position: transformed),
+      );
+      if (hitLeading) return true;
+    }
     final action = _shownTrailing;
     final hitAction = result.addWithPaintOffset(
       offset: (action.parentData! as BoxParentData).offset,
@@ -415,6 +577,7 @@ class RenderBottomSheetTitleBar extends RenderBox
 
   @override
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
+    if (_leading case final leading?) visitor(leading);
     visitor(_title);
     visitor(_shownTrailing);
   }

@@ -4,9 +4,8 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 /// Read more / Show less for a highlight row.
 ///
-/// The themed 16dp button padding doubles as the row's content gutter: the
-/// owning column leaves this button unpadded so the label starts on the
-/// gutter while the ink bleeds into it.
+/// The platform button padding supplies the ink bleed. The owning footer adds
+/// only the extra inset needed by a native bottom panel's wider gutter.
 class ReaderHighlightExpandButton extends StatelessWidget {
   const ReaderHighlightExpandButton({
     required this.expanded,
@@ -20,7 +19,7 @@ class ReaderHighlightExpandButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return TextButton(
+    return AppButton.text(
       onPressed: onPressed,
       child: AppButtonLabel(
         expanded ? l10n.readerCollapseHighlight : l10n.readerExpandHighlight,

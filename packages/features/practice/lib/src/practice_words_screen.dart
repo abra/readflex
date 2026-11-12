@@ -96,12 +96,15 @@ class _PracticeWordsViewState extends State<_PracticeWordsView> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      appBar: AppBar(
+    return AppScaffold(
+      appBar: AppNavigationBar(
         automaticallyImplyLeading: false,
         excludeHeaderSemantics: true,
         titleSpacing: 0,
-        title: PracticePageHeader(title: l10n.practiceWordsTitle),
+        leading: context.isCupertino ? const AppBackButton() : null,
+        title: context.isCupertino
+            ? Semantics(header: true, child: Text(l10n.practiceWordsTitle))
+            : PracticePageHeader(title: l10n.practiceWordsTitle),
       ),
       body: SafeArea(
         top: false,
@@ -180,7 +183,7 @@ class _PracticeWordsViewState extends State<_PracticeWordsView> {
                                 padding: EdgeInsets.symmetric(
                                   horizontal: AppSpacing.lg,
                                 ),
-                                child: Divider(height: 1),
+                                child: AppDivider(height: 1),
                               ),
                               itemBuilder: (context, index) => PracticeWordRow(
                                 word: visible[index],
@@ -259,7 +262,7 @@ class PracticeWordRow extends StatelessWidget {
       value: meta,
       onTap: onPressed,
       excludeSemantics: true,
-      child: InkWell(
+      child: AppTappable(
         key: ValueKey('practiceWord-${entry.id}'),
         onTap: onPressed,
         child: Padding(

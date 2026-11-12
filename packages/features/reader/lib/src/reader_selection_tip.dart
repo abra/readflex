@@ -190,15 +190,18 @@ class ReaderSelectionTipCard extends StatelessWidget {
 
   /// The action color on an inverse plate: the opposite theme's action
   /// color, as the plate is the opposite theme's surface.
-  static Color actionColor(ColorScheme colors) =>
-      colors.brightness == Brightness.dark
-      ? colors.primary
-      : colors.primaryFixedDim;
+  static Color actionColor(AppThemeData theme) {
+    final colors = theme.colors;
+    if (theme.isCupertino) return colors.inversePrimary;
+    return colors.brightness == Brightness.dark
+        ? colors.primary
+        : colors.primaryFixedDim;
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final accent = actionColor(colors);
+    final accent = actionColor(context.appTheme);
     final radius = BorderRadius.circular(AppRadius.lg);
     // Measured on a body-size font: nonlinear scalers grow small and large
     // sizes differently.
@@ -211,9 +214,9 @@ class ReaderSelectionTipCard extends StatelessWidget {
     const message = Expanded(
       child: SingleChildScrollView(child: _ReaderSelectionTipMessage()),
     );
-    final dismiss = TextButton(
+    final dismiss = AppButton.text(
       onPressed: onDismiss,
-      style: TextButton.styleFrom(foregroundColor: accent),
+      foregroundColor: accent,
       child: AppButtonLabel(context.l10n.readerSelectionTipDismiss),
     );
 
@@ -222,7 +225,7 @@ class ReaderSelectionTipCard extends StatelessWidget {
         borderRadius: radius,
         boxShadow: AppShadows.popover,
       ),
-      child: Material(
+      child: AppSurface(
         color: colors.inverseSurface,
         borderRadius: radius,
         child: stacked

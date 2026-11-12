@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/scheduler.dart' show timeDilation;
@@ -242,7 +243,7 @@ void main() {
     await tapUi(tester, find.byTooltip(l10n.readerSearchAction).first);
     await tester.pumpAndSettle();
     final searchWatch = Stopwatch()..start();
-    await tester.enterText(find.byType(TextField).hitTestable(), 'the');
+    await tester.enterText(find.byType(AppTextField).hitTestable(), 'the');
     await waitForUi(
       tester,
       () => find
@@ -255,7 +256,7 @@ void main() {
     );
     final firstResultsMs = searchWatch.elapsedMilliseconds;
     final searchCubit = tester
-        .element(find.byType(TextField).hitTestable())
+        .element(find.byType(AppTextField).hitTestable())
         .read<ReaderSearchCubit>();
     await waitForUi(
       tester,

@@ -22,6 +22,45 @@ class ReviewSessionTopBar extends StatelessWidget {
   final VoidCallback onRemove;
   final bool isSaving;
 
+  Future<void> _openCupertinoActions(BuildContext context) async {
+    final l10n = context.l10n;
+    final selected = await showCupertinoModalPopup<_ReviewMenuAction>(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: Text(l10n.practiceMoreActions),
+        actions: [
+          if (canOpenInSource)
+            CupertinoActionSheetAction(
+              key: const ValueKey('reviewMenuOpen'),
+              onPressed: () =>
+                  Navigator.of(context).pop(_ReviewMenuAction.open),
+              child: Text(l10n.practiceOpenInBook),
+            ),
+          CupertinoActionSheetAction(
+            key: const ValueKey('reviewMenuRemove'),
+            isDestructiveAction: true,
+            onPressed: () =>
+                Navigator.of(context).pop(_ReviewMenuAction.remove),
+            child: Text(l10n.practiceRemoveFromReview),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.commonCancel),
+        ),
+      ),
+    );
+    if (!context.mounted) return;
+    switch (selected) {
+      case _ReviewMenuAction.open:
+        onOpenInSource();
+      case _ReviewMenuAction.remove:
+        onRemove();
+      case null:
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -55,35 +94,46 @@ class ReviewSessionTopBar extends StatelessWidget {
                       : context.text.screenCounter,
                 ),
               ),
-              MenuAnchor(
-                menuChildren: [
-                  MenuItemButton(
-                    key: const ValueKey('reviewMenuOpen'),
-                    onPressed: canOpenInSource && !isSaving
-                        ? onOpenInSource
-                        : null,
-                    leadingIcon: const Icon(AppIcons.book),
-                    child: Text(l10n.practiceOpenInBook),
-                  ),
-                  MenuItemButton(
-                    key: const ValueKey('reviewMenuRemove'),
-                    onPressed: isSaving ? null : onRemove,
-                    leadingIcon: const Icon(AppIcons.delete),
-                    child: Text(l10n.practiceRemoveFromReview),
-                  ),
-                ],
-                builder: (context, controller, _) => AppPlainIconButton(
+              if (context.isCupertino)
+                AppPlainIconButton(
                   key: const ValueKey('reviewMenu'),
                   tooltip: l10n.practiceMoreActions,
-                  icon: AppIcons.moreVertical,
+                  icon: AppIcons.moreHorizontal,
                   color: colors.onSurfaceVariant,
                   onPressed: isSaving
                       ? null
-                      : () => controller.isOpen
-                            ? controller.close()
-                            : controller.open(),
+                      : () => _openCupertinoActions(context),
+                )
+              else
+                MenuAnchor(
+                  menuChildren: [
+                    MenuItemButton(
+                      key: const ValueKey('reviewMenuOpen'),
+                      onPressed: canOpenInSource && !isSaving
+                          ? onOpenInSource
+                          : null,
+                      leadingIcon: const Icon(AppIcons.book),
+                      child: Text(l10n.practiceOpenInBook),
+                    ),
+                    MenuItemButton(
+                      key: const ValueKey('reviewMenuRemove'),
+                      onPressed: isSaving ? null : onRemove,
+                      leadingIcon: const Icon(AppIcons.delete),
+                      child: Text(l10n.practiceRemoveFromReview),
+                    ),
+                  ],
+                  builder: (context, controller, _) => AppPlainIconButton(
+                    key: const ValueKey('reviewMenu'),
+                    tooltip: l10n.practiceMoreActions,
+                    icon: AppIcons.moreVertical,
+                    color: colors.onSurfaceVariant,
+                    onPressed: isSaving
+                        ? null
+                        : () => controller.isOpen
+                              ? controller.close()
+                              : controller.open(),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -93,7 +143,7 @@ class ReviewSessionTopBar extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.full),
             child: TickerMode(
               enabled: !context.reduceMotion,
-              child: LinearProgressIndicator(
+              child: AppLinearProgressIndicator(
                 key: const ValueKey('reviewProgress'),
                 value: isSaving
                     ? null
@@ -111,6 +161,8 @@ class ReviewSessionTopBar extends StatelessWidget {
     );
   }
 }
+
+enum _ReviewMenuAction { open, remove }
 
 /// Words reveal their answer before rating. Highlights offer Keep / Show less
 /// immediately, with the next review interval under each action.
@@ -146,7 +198,7 @@ class ReviewSessionControls extends StatelessWidget {
             0,
           ),
           child: item is PracticeWordItem && !revealed
-              ? FilledButton(
+              ? AppButton(
                   key: const ValueKey('reviewShowAnswer'),
                   onPressed: isSaving ? null : onReveal,
                   child: AppButtonLabel(l10n.practiceShowAnswer),
@@ -177,12 +229,17 @@ class _ReviewControlsSurface extends StatelessWidget {
   Widget build(BuildContext context) => ClipRect(
     key: const ValueKey('reviewControlsShadowClip'),
     clipper: const _ReviewControlsShadowClipper(),
-    child: Material(
+    child: AppSurface(
       key: const ValueKey('reviewControlsPanel'),
       color: context.colors.surface,
-      elevation: AppElevation.level1,
-      surfaceTintColor: Colors.transparent,
-      child: AppBottomSafeArea(child: child),
+      elevation: context.isCupertino ? 0 : AppElevation.level1,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (context.isCupertino) const AppDivider(height: 0),
+          AppBottomSafeArea(child: child),
+        ],
+      ),
     ),
   );
 }
@@ -399,7 +456,7 @@ class ReviewRatingButton extends StatelessWidget {
     final l10n = context.l10n;
     final enabled = onPressed != null;
     final foreground = !enabled
-        ? Theme.of(context).disabledColor
+        ? context.appTheme.disabledColor
         : emphasis == ReviewRatingEmphasis.primary
         ? context.colors.onPrimary
         : context.colors.onSurface;
@@ -420,27 +477,27 @@ class ReviewRatingButton extends StatelessWidget {
       onTap: onPressed,
       excludeSemantics: true,
       child: switch (emphasis) {
-        ReviewRatingEmphasis.primary => FilledButton(
+        ReviewRatingEmphasis.primary => AppButton(
           onPressed: onPressed,
-          style: FilledButton.styleFrom(minimumSize: Size(0, minimumHeight)),
+          minimumSize: Size(0, minimumHeight),
           child: content,
         ),
-        ReviewRatingEmphasis.secondary => OutlinedButton(
+        ReviewRatingEmphasis.secondary => AppButton.outlined(
           onPressed: onPressed,
-          style: OutlinedButton.styleFrom(minimumSize: Size(0, minimumHeight)),
+          minimumSize: Size(0, minimumHeight),
           child: content,
         ),
-        ReviewRatingEmphasis.tonal => FilledButton.tonal(
+        ReviewRatingEmphasis.tonal => AppButton.tonal(
           onPressed: onPressed,
-          style: FilledButton.styleFrom(
-            backgroundColor: color.withValues(alpha: 0.16),
-            foregroundColor: foreground,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.sm,
-              vertical: AppSpacing.sm,
-            ),
-            minimumSize: Size(0, minimumHeight),
+
+          backgroundColor: color.withValues(alpha: 0.16),
+          foregroundColor: foreground,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.sm,
           ),
+          minimumSize: Size(0, minimumHeight),
+
           child: content,
         ),
       },
@@ -630,7 +687,7 @@ class _ReviewSummaryActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final primary = FilledButton(
+    final primary = AppButton(
       key: const ValueKey('reviewDone'),
       onPressed: onDone,
       child: AppButtonLabel(l10n.commonDone),
@@ -650,7 +707,7 @@ class _ReviewSummaryActions extends StatelessWidget {
               : LayoutBuilder(
                   builder: (context, constraints) {
                     final secondaryLabel = l10n.practiceReviewAgainCount(again);
-                    final secondary = OutlinedButton(
+                    final secondary = AppButton.outlined(
                       key: const ValueKey('reviewAgain'),
                       onPressed: onReviewAgain,
                       child: AppButtonLabel(secondaryLabel),

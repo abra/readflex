@@ -9,6 +9,7 @@ import 'mobi_native_test.dart' as mobi;
 import 'native_article_test.dart' as article;
 import 'native_import_test.dart' as imports;
 import 'pdf_reader_test.dart' as pdf;
+import 'platform_navigation_test.dart' as platform_navigation;
 import 'reader_flows_test.dart' as reader;
 import 'reader_note_sheet_test.dart' as notes;
 import 'toast_test.dart' as toasts;
@@ -53,6 +54,7 @@ void runNativeRegression({bool requireTablet = true}) {
   });
 
   group('Library', library_controls.main);
+  group('Platform navigation', platform_navigation.main);
   group('Reader', reader.main);
   group('Article', article.main);
   group('Import', imports.main);

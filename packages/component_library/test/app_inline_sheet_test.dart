@@ -1,4 +1,5 @@
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoPopupSurface;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -290,9 +291,12 @@ void main() {
 
         await tester.drag(find.text('Row 1'), const Offset(0, 160));
         await tester.pumpAndSettle();
+        final cupertino = tester.element(_surface).isCupertino;
+        final bottomGap = cupertino ? _homeIndicator : 0;
+        final halfHeight = (_fullHeight - bottomGap) * .6;
         expect(
           tester.getRect(_surface).top,
-          moreOrLessEquals(_phone.height - _halfHeight),
+          moreOrLessEquals(_phone.height - bottomGap - halfHeight),
         );
 
         await tester.drag(find.text('Row 1'), const Offset(0, 160));
@@ -396,7 +400,8 @@ void main() {
         expect(tester.getRect(find.text('Header')).top, lessThan(header));
         expect(tester.getRect(_surface), surface);
 
-        await tester.drag(find.text('Header'), const Offset(0, 300));
+        // The header has scrolled out of view; drag the visible content.
+        await tester.dragFrom(surface.center, const Offset(0, 300));
         await tester.pumpAndSettle();
         expect(host.closeRequests, 0);
         expect(tester.getRect(_surface), surface);
@@ -639,7 +644,12 @@ final _offstageFinder = find
     .descendant(of: _sheet, matching: find.byType(Offstage))
     .first;
 final _surface = find
-    .descendant(of: _sheet, matching: find.byType(Material))
+    .descendant(
+      of: _sheet,
+      matching: find.byWidgetPredicate(
+        (widget) => widget is AppSurface || widget is CupertinoPopupSurface,
+      ),
+    )
     .first;
 
 Future<_HostState> _pumpHost(

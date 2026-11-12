@@ -71,7 +71,8 @@ The root package (`readflex`) is the composition and integration layer.
 | `lib/app/resource_disposer.dart` | Reverse-order cleanup registry; retains externally owned monitoring during rollback. |
 | `lib/app/dependency_scope.dart` | Inherited scope for app-wide dependencies. |
 | `lib/app/app_scopes.dart` | Mounts dependency, preference, connectivity, and lifecycle scopes. |
-| `lib/app/readflex_app.dart` | Material app, theme/locale and a router retained across preference changes. |
+| `lib/app/readflex_app.dart` | Retains the router across preference changes and resolves saved brightness/locale preferences. |
+| `lib/app/readflex_platform_app.dart` | Cupertino/Material application root, platform theme and compatibility context; owns no feature state or dependencies. |
 | `lib/app/app_lifecycle.dart` | Best-effort resource disposal on detach, not pause or widget unmount. |
 | `lib/app/routing.dart` | GoRouter route table, route guards, navigation callbacks, feature wiring. |
 | `lib/app/screens` | Recovery screen for a failed bootstrap, shown before dependencies and the router exist. |
@@ -153,18 +154,43 @@ Use Flutter core `widgets`, `painting` and `rendering` imports for code that
 does not need design-library widgets or themes. Do not re-export the SDK or
 wrap every framework widget in `component_library`.
 
-Readflex keeps one design system in `component_library`. Platform-specific
-selection styling and controls stay inside the UI component that owns them;
-screens keep the same routing → Screen/Sheet → Bloc/Cubit → View boundaries.
-Pagecraft depends directly on the design libraries only for selection
-presentation and stays independent of Readflex's components and preferences.
-The native selection bridge takes colors from its host and uses core APIs.
+The application root is platform-specific: `ReadflexPlatformApp` mounts
+`CupertinoApp.router` on iOS/macOS and `MaterialApp.router` elsewhere.
+`AppScaffold` and `AppNavigationBar` select Cupertino page/navigation chrome
+or Material scaffold/app-bar chrome. Shared `AppButton`, `AppIconButton`,
+`AppTextField`, settings inputs and surfaces own the corresponding platform
+controls and feedback. These are Flutter platform design widgets; the OS text
+selection bridge is a separate capability.
 
-`preferences_service` owns `AppThemeMode`. The app maps it to UI `ThemeMode`;
-the stored `system`, `light` and `dark` names remain unchanged. The app root
-temporarily uses `MaterialUiCompatibilityBridge` for legacy third-party UI
-such as toastification. It bridges inherited theme/localization context, not
-public type signatures. `go_router` uses the standalone libraries too.
+The semantic contract remains in `component_library`: `AppThemeScope` provides
+`AppThemeData`, `AppThemeColors`, `AppTextTheme` and `AppStatusColors` through
+`context.appTheme`, `.colors`, `.text` and `.appColors`. Platform decisions use
+`context.isCupertino` inside the owning UI component, including feature-local
+pickers. They do not introduce platform-specific repositories, domain models,
+blocs or separate feature state. Screens retain
+routing → Screen/Sheet → Bloc/Cubit → View boundaries.
+
+`AppTheme.forPlatform` caches theme adapters by platform and brightness.
+iOS app chrome uses Cupertino system typography and opaque grouped surfaces;
+Android retains the Material palette and Geist/Literata app roles. Reader
+document typography, page appearance and pagination remain independent of app
+chrome. Android semantic text comes from the localized Material theme, so
+script-dependent geometry, letter spacing and baselines are preserved;
+Cupertino typography stays explicitly defined by its adapter.
+Pagecraft depends directly on the design libraries for selection
+presentation and stays independent of Readflex's components and preferences;
+the native selection bridge takes geometry/colors from its host.
+
+`preferences_service` owns `AppThemeMode`. The app resolves it to a brightness
+or follows the system; stored `system`, `light` and `dark` names are unchanged.
+`AppPlatformTheme` intentionally installs a Material `Theme` compatibility
+adapter even under Cupertino: Pagecraft's adaptive `SelectionArea` and legacy
+dependencies still consume it. The root's `MaterialUiCompatibilityBridge`
+also supplies legacy theme/localization context for third-party UI such as
+toastification. These adapters do not select visible app controls. New shared
+UI consumes semantic roles; `context.theme` is reserved for compatibility
+code. `AppThemeScope` is an `InheritedTheme`, so modal routes capture semantic
+and native themes together.
 
 App-owned motion resolves both `MediaQuery.reduceMotion` and `disableAnimations`;
 direct manipulation remains responsive. Shared UI uses
@@ -173,9 +199,9 @@ without depending on `component_library`.
 
 ## Accessibility
 
-Accessibility is a UI contract in this codebase. Prefer built-in Flutter and
-Material semantics first, then add explicit `Semantics` to custom controls whose
-role, state, value, or gesture would otherwise be unclear.
+Accessibility is a UI contract in this codebase. Prefer built-in Flutter,
+Material and Cupertino semantics first, then add explicit `Semantics` to
+custom controls whose role, state, value or gesture would otherwise be unclear.
 
 Reusable component semantics belong in `component_library`; feature-specific
 labels and values belong inside the feature package that owns the UI. Do not
@@ -190,7 +216,27 @@ Keep the detailed rules in `ACCESSIBILITY.md` aligned with real code and tests.
 Sheet presentation belongs to `component_library`, not individual feature Views.
 `showAppBottomSheet` owns modal presentation, handle, safe area and keyboard lift;
 `ActionBottomSheetLayout` owns header geometry, gutters and pinned actions.
-Its `.scrollable` constructor owns the single viewport for finite-content sheets
+Android retains `ModalBottomSheetRoute`. iOS uses a content-fit
+`CupertinoModalPopupRoute` with a native spring, opaque grouped surface and no
+backdrop blur. The popup stays bottom-centred, has an 8dp minimum safe gap and
+a 540dp maximum width; short forms do not become full-screen pages. Both paths
+use the root navigator and preserve results, draft guards and reduced motion.
+Routed Cupertino sheets and narrow retained `AppInlineSheet` panels share the
+internal `AppCupertinoSheetSurface`: the same opaque card, clipping, maximum
+width, safe gaps and brightness-resolved scrim. Contents (including comic Pages)
+and Search reuse `BottomSheetHeader` on these narrow iOS surfaces. Their retained
+state and expandable heights remain owned by `AppInlineSheet`; expanded trailing
+panels retain their separate layout.
+The result resolves on pop; `onFullyHidden` follows the exit/removal. A guarded
+step intercepts scrim dismissal and swallows downward drag without remounting
+its body. System Back stays with the step's `PopScope`.
+
+Cupertino sheet headers centre the title between native Back/Close slots and
+move an overflowing title below navigation at full width. Material keeps its
+existing title/action layout. Both use 48dp sheet controls and preserve
+localized actions at large text. Cupertino's 44pt native navigation-bar content
+height is a separate screen-chrome contract, not a reduction of shared targets.
+`ActionBottomSheetLayout.scrollable` owns the single viewport for finite-content sheets
 (Display, Appearance, Language, Translation and Definition). Forms and lazy lists
 retain the default constructor, without duplicating headers or nesting viewports.
 `AppSettingsSection` and `AppChoiceControl` supply common settings roles; features
@@ -273,7 +319,8 @@ stay phones in landscape, and a narrow Split View window reads like a phone.
 The reader's own text size stays at 100%; the multiplier only reaches the
 book style pagecraft lays out with.
 
-Modal utility sheets keep Material's 640dp width on wide windows. Reader
+Modal utility sheets keep Material's 640dp width on Android and use a
+bottom-centred 540dp maximum Cupertino popup on iOS. Reader
 Contents and Search use the same `AppInlineSheet` instance as narrow windows,
 presented as a 420dp panel at the trailing edge with safe-area gutters. Its
 body, search query, focus and scroll state survive resizing between panel and
@@ -287,7 +334,8 @@ not implemented.
 generated Flutter localization delegates, and user-facing UI copy. The root app
 wires `readflexLocalizationsDelegates`,
 `ReadflexSupportedLocales.locales`, and the current locale from
-`PreferencesScope.localeOf(context)` into `MaterialApp`.
+`PreferencesScope.localeOf(context)` into the selected `MaterialApp` or
+`CupertinoApp` root.
 The hand-maintained delegate list combines generated app strings with
 standalone UI delegates. Do not edit generated files to replace the legacy
 delegates that the SDK localization generator still emits.
@@ -321,7 +369,7 @@ When adding or renaming a localized key:
 |---------|----------------|--------------------|
 | `domain_models` | Pure domain models, enums, value objects, and app/domain exceptions. No Flutter, storage, or service dependencies. | none |
 | `local_storage` | Single Drift database (`readflex.db`, write-ahead log), tables, DAOs, migrations, storage rows. | none |
-| `component_library` | Design tokens, theme extensions, reusable UI components, bottom-sheet shell, shared visual primitives. | `native_text_selection` |
+| `component_library` | Semantic theme contracts, platform adapters and App* controls, design tokens, modal/inline sheet shells and shared visual primitives. | `native_text_selection` |
 | `readflex_localizations` | Generated Flutter localizations, ARB files, supported locale metadata, and `BuildContext` localization helpers. | none |
 | `shared` | Narrow cross-feature UI/action contracts, selection payloads, and saved-word presentation status (`WordSaveStatus`). | `domain_models` |
 
@@ -947,6 +995,16 @@ does not modify goldens or replace feature, native or performance checks. These
 tests remain in the normal package/root suites. The review checklist lives in
 [`test/ui/README.md`](test/ui/README.md#review-checklist); component specifications
 remain in `component_library`, not in a parallel generated design system.
+
+Platform contracts use actual Cupertino/Material application roots, not only a
+host-platform override. `packages/component_library/test_support/platform_test_app.dart`
+mounts the semantic/platform theme and scaffold for feature tests. Shared
+modal tests also use a pure Cupertino root to check inherited theme capture,
+root-navigator results, guarded drag/scrim, keyboard/safe-area ownership,
+reduced motion and retained state through resizing. Feature tests retain
+draft, validation, loading and recovery assertions through the public App*
+controls. These widget checks do not establish VoiceOver/TalkBack interaction,
+physical selection gestures or device FPS.
 
 Root UI flows in `test/ui/` mount the production root and router with real
 repositories, isolated SQLite/preferences, and deterministic external services.

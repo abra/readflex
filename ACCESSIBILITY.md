@@ -5,9 +5,10 @@ feature state, not in repositories, services, parsers, or domain models.
 
 ## Semantics Placement
 
-- Prefer built-in Flutter and Material semantics first: `TextField`,
-  `IconButton`, buttons, sliders, switches, checkboxes, and list rows already
-  expose useful accessibility data when configured with labels, tooltips,
+- Prefer built-in Flutter, Material and Cupertino semantics first. Shared
+  `AppTextField`, `AppIconButton`, buttons, sliders, switches, checkboxes and rows
+  delegate to their platform controls and expose useful accessibility data
+  when configured with labels, tooltips,
   enabled state, and error text.
 - Add `Semantics` manually for custom interactive surfaces such as source
   tiles, color swatches, custom action cards, custom chips, progress overlays,
@@ -18,6 +19,11 @@ feature state, not in repositories, services, parsers, or domain models.
   multiple feature widgets.
 - Do not add accessibility helpers to `shared` unless they are a real
   cross-feature contract. `shared` is not a general common package.
+
+`AppThemeScope` exposes the same semantic color/text roles under either app
+root. App chrome uses the platform's typography; reader document styles remain
+independent. A Material theme compatibility adapter under `CupertinoApp` does
+not make the app's visible controls Material or prove native accessibility.
 
 ## Widget Contract
 
@@ -59,9 +65,25 @@ existing text roles for important control captions. Explicit icon sizes and
 system text scaling remain authoritative. Narrow windows retain compact roles.
 Filter chips reserve at least 48dp in both hit-target dimensions, including
 short labels; their visible pill can stay compact. Larger text may grow it.
+Shared controls request a 48dp minimum target. The native Cupertino navigation
+bar has a 44pt content height plus the top safe area; actions inside that bar
+follow its constrained native height. Sheet, reader-toolbar and ordinary body
+controls retain 48dp. Do not shrink them to match navigation chrome.
+
+`AppIconButton` exposes one named button. Android uses Material's built-in
+tooltip semantics; Cupertino puts the localized tooltip on the action's
+semantics node and excludes decorative children to avoid duplicate names.
+Cupertino press feedback does not open a Material tooltip bubble. Disabled
+actions retain a name/state while removing the command tap action; loading
+commands retain their label and stable geometry.
 
 Sheet headings use a shared heading semantics node and a minimum 48dp title
 row. Close and trailing actions must remain reachable with enlarged text.
+Cupertino modal headers also name the route, centre short titles between
+navigation slots, and wrap long titles below them. Localized Back and Close
+remain separate actions in both directions. Modal results complete on pop;
+`onFullyHidden` follows the exit so new controls are not exposed midway through
+the outgoing modal. Scrim/drag policies preserve the existing draft guard.
 `AppSheetActions` stacks long localized labels rather than shrinking the font;
 busy states keep geometry and disable both commands. Reserved URL error space
 is excluded from semantics until a real error is present. Accent foregrounds
@@ -136,20 +158,29 @@ asserted in semantics, not inferred from color. Loading actions retain their
 name but expose no tap action; disabling a choice retains its selected state.
 Theme tests check named foreground/background pairs in light and dark mode;
 they do not establish contrast over arbitrary images, overlays or book styles.
-Selected controls are an accent wash with accent text (at least 4.5:1 on every
-surface) in both themes, together with selected semantics; rows that select
-also show a check. Muted text keeps at least 4.5:1 and stays clearly quieter
-than primary text.
+Cupertino small app captions retain the native secondary-label RGB at 80%
+opacity through `onSurfaceVariant`; section headings use the same role.
+Composited text contrast must reach 4.5:1 on grouped, sheet and container
+surfaces in both themes. SDK press and disabled colors remain native defaults.
+Portable widget/golden fallback fonts verify geometry; they do not establish
+production San Francisco metrics or replace native screenshot inspection.
+Custom selected rows use an accent wash with accent text and selected
+semantics; selection rows also show a check. Cupertino segmented controls use
+their native thumb presentation with selected/enabled state.
 The [UI review checklist](test/ui/README.md#review-checklist) links these checks
 to layout, navigation and performance contracts.
 
 Collections exposes selected state and a check as well as the selection fill.
 Reader active-result text and action icons use tested foreground/background
 pairs in both themes. Quote direction, note direction and interface direction
-are independent. Book/article text selection uses Flutter's `SelectionArea`
-with adaptive handles and magnifiers. These are Flutter controls, not an
-embedded OS text view; widget semantics tests do not establish their on-device
-touch behavior or screen-reader announcements.
+are independent. Book/article text selection keeps Flutter's `SelectionArea`
+for document geometry. The `native_text_selection` adapter supplies system
+selection controls for supported layouts, while unsupported geometry retains
+the Flutter fallback; application action menus stay in Flutter. Editable
+fields keep their platform input/IME connection. See the
+[native selection contract](packages/native_text_selection/README.md).
+Widget semantics tests do not establish on-device handle behavior or
+VoiceOver/TalkBack announcements.
 Onboarding is one static screen: the app icon is decorative,
 the heading is a header that shrinks rather than break a word at large text,
 each feature row reads as one item, the rows mirror in RTL, nothing animates,

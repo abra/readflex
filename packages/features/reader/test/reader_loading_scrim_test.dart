@@ -185,7 +185,7 @@ void main() {
 
       _expectLoading(tester);
       final readerTheme = ReaderThemePreset.mist.data;
-      final indicator = tester.widget<CircularProgressIndicator>(_progress);
+      final indicator = tester.widget<AppProgressIndicator>(_progress);
       expect(
         indicator.color,
         readerTheme.primaryTextColor.withValues(alpha: 0.82),
@@ -219,7 +219,7 @@ String _loadingLabel(WidgetTester tester) =>
 void _expectLoading(WidgetTester tester) {
   expect(_progress, findsOneWidget);
   expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  expect(tester.widget<CircularProgressIndicator>(_progress).value, isNull);
+  expect(tester.widget<AppProgressIndicator>(_progress).value, isNull);
   expect(_loadingOpacity(tester).opacity, 1);
   expect(find.byIcon(AppIcons.book), findsNothing);
   expect(find.semantics.byLabel(_loadingLabel(tester)), findsOneWidget);

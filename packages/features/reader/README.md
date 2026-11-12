@@ -5,6 +5,13 @@ Full-screen reader for books, comics, and saved articles. The single route
 chrome, and a text-selection context panel populated by pluggable
 `TextAction`s.
 
+Reader chrome uses the shared platform presentation (`AppScaffold`, buttons,
+fields, sliders and progress). `ReaderNavigationTile` adapts chapter, bookmark
+and search-result rows to Cupertino or Material. These UI choices do not
+change Pagecraft controllers, document layout, pagination or persisted reading
+positions. Text selection retains its adaptive SDK/native bridge and local
+selection-theme overrides; app actions remain custom.
+
 ## Maintainer reading path
 
 Start with the dependency injection in [app routing](../../../lib/app/routing.dart),
@@ -632,6 +639,13 @@ real labels (`highlightAction`, `commonCopy`, `translationAction`,
 
 ### Contents and Saved Passages
 
+Narrow Cupertino Contents/Search panels share `BottomSheetHeader` with modal
+sheets: a centred, wrapping title and circular Close. Their fields, tabs, page
+grid and list rows share the 24dp content gutter. Android and expanded 420dp
+sidebars retain their leading headers and 16dp gutters. `readerDrawerContentInset`
+owns that distinction; changing the frame never recreates a query, tab or scroll
+position. The match-navigation dock keeps its separate 16dp gutter.
+
 Highlights combine the existing text query with an optional color filter. The
 list caches that projection until its inputs change; reading-position updates
 do not refilter it. Quotes/notes expand in place without re-extracting content.
@@ -694,7 +708,7 @@ level align: chapters before the active one are read (muted title, 16dp check,
 semantics value `readerChapterRead`), the active chapter shows a dot in the
 selected foreground, later chapters and the parts containing the active
 chapter stay plain (`readerTocReadingStates`, cached per items/active index).
-Each row ends on the 16dp gutter with its start position as a muted
+Each row ends on the panel gutter with its start position as a muted
 `bodySmall` label in tabular figures, baseline-aligned with the title: the
 estimated start page (announced as "Page N"; the renderer's page 0 reads 1),
 else the whole start percent, else nothing. On the active row the label takes
@@ -702,14 +716,16 @@ the selected foreground, since the dark selected fill is tonal. The active
 chapter uses a rounded tonal fill inset 8dp from the panel edge, keeping the
 same text and position gutters. Active search results and bookmark rows keep
 their full-width selection surfaces. The highlight color
-filter strip starts on the 16dp gutter like the search field above it, with
+filter strip starts on the panel gutter like the search field above it, with
 8dp above and below its 48dp targets; its "All" entry is an `AppFilterChip`
 with a visible selected state and the swatches beside it paint 32dp circles
 (`ReaderHighlightColorButton(size:)`), while the selection popups keep 24dp.
-Highlight rows own both 16dp gutters inside the body so Read more / Show less
+Highlight rows own both panel gutters inside the body so Read more / Show less
 (`ReaderHighlightExpandButton`, `AppButtonLabel`) ends its label on the
-trailing gutter with the themed 16dp button padding and lets the ink and 48dp
-target extend to the drawer edge; quote, note and location text keep their 16dp
+trailing gutter with the platform button padding. Android and sidebars let
+the 48dp target reach the edge; narrow Cupertino adds 12dp outside its native
+12dp button padding to align the label with the 24dp gutter. Quote, note and
+location text keep their panel
 edges. Beside a location the button is bounded to half the row, so a long or
 2x label wraps inside it instead of overflowing.
 Empty tabs render `EmptyState(compact: true)`, scrollable when a short sheet
@@ -736,7 +752,7 @@ deletions can be restored independently; errors retain a retryable row. Delete,
 restore, normal bookmark toggles and dismissal share the existing serialized
 bookmark event bucket. Closing during deletion clears Undo after that write.
 Bookmark rows show only their text (`bodyMedium`, two lines) and location
-(`bodySmall`, muted) on the 16dp gutters, with no leading icon or trailing
+(`bodySmall`, muted) on the panel gutters, with no leading icon or trailing
 button. Deleting is an end-to-start swipe (`ReaderSwipeToDelete`, a
 `Dismissible` like the Library list) that reveals a full-bleed error fill with
 the trash glyph on the trailing gutter and the localized "Delete bookmark"
@@ -751,18 +767,29 @@ flight disables its own action; the serialized event bucket orders the rest.
 Inside the Contents `TabBarView` a horizontal drag that starts on a bookmark
 row belongs to the row, so tab paging works from the tab bar or outside the
 rows.
-Contents tabs fill the available width without shrinking their labels. They
+On iOS, Contents uses `AppChoiceControl` synchronized with its tab controller:
+a native segmented control when labels fit, wrapping accessible choices for
+long labels or large text. Four-tab PDF and DjVu panels use proportional segment
+widths to keep the control in one compact row when its full labels fit. Phones
+use the existing compact Reader caption role (`labelSmall`, 12sp); medium windows
+retain the native choice control's existing `bodyMedium` role (15sp), including
+inside a 420dp iPad sidebar. Three-tab panels retain their existing typography
+and equal-width fit rule. Narrow windows and large translated labels retain the
+wrapping fallback with 48dp targets rather than scrolling sideways.
+On Android, Contents tabs fill the available width
+without shrinking their labels. They
 share equal widths when every label fits; otherwise, each tab keeps room for
 its icon and label and receives an equal share of the spare width. Only a total
 width that exceeds the available space enables horizontal scrolling. The bar
 keeps an 8dp inset and each tab reserves at least 8dp beside its contents, so
-scrolling starts on the 16dp gutter. Measurements respect the locale, text
+scrolling starts on the panel gutter. Measurements respect the locale, text
 scale and reading direction.
 A label cut by the sheet edge fades into the sheet (`ScrollEdgeFadeStack`,
 horizontal) so it reads as more tabs to scroll to. Selected tabs use the same
 tonal fill and foreground as settings choices, without an underline or divider.
 Contents and Search use `titleMedium` headings with heading semantics.
-The "Contents" title stays on one line: a long translation at large text
+On Android and in expanded sidebars, the "Contents" title stays on one line:
+a long translation at large text
 shrinks to at most `readerDrawerTitleMinFontScale` (0.8) of its size before it
 ellipsizes (`readerFittedTitleFontSize`). The three Contents search fields
 fall back to the short `commonSearch` hint when the full one would be cut.
@@ -791,7 +818,7 @@ preview.
 - **Other books** keep Chapters, Bookmarks and Highlights.
 
 `ReaderPageGrid` shows comic, PDF and DjVu pages, initially revealing the saved
-page. The grid keeps the 16dp drawer gutter on every side (plus the bottom
+page. The grid keeps the panel gutter horizontally and 16dp vertically (plus the bottom
 system inset) with 12dp between tiles. Page order follows the book's
 progression direction independently of the app locale. Captions and controls still use the app locale. Only the visible
 Pages or Highlights tab owns `ReaderPageThumbnailCubit`; its callback is
@@ -876,9 +903,9 @@ results) and have no trailing control: removal is the same end-to-start swipe
 and custom semantics action as bookmark rows (`ReaderSwipeToDelete`, labelled
 "Remove from history"), and the row collapses with `AppMotion.short` (removed
 without resizing under reduced motion). Result and history lists pad their bottom with
-`readerDrawerListBottomPadding` (keyboard + system inset + 16dp), the same
-formula as the Contents lists; inside the sheet the keyboard inset reads as
-zero because the sheet itself sits on the keyboard.
+`readerDrawerListBottomPadding` (16dp plus any unconsumed insets), the same
+formula as the Contents lists. Every inline sheet consumes the keyboard;
+narrow Cupertino and expanded side panels also consume their safe bottom inset.
 The bottom match-navigation bar's Close target extends into the trailing
 gutter so its glyph ends on the 16dp line shared with the return row's
 percentage.
@@ -902,9 +929,9 @@ position has not changed meanwhile. Bookmark revisions also prevent an older
 source-load snapshot from overwriting edits made while it was pending.
 Bookmark rows delete by swipe (trash glyph in the swipe fill) and retain the
 existing in-place icon-only Undo action; the cross in the header only closes
-the drawer. Undo and Close glyphs are 20dp on phones and 24dp in medium windows,
-aligned to the
-Contents field's 16dp gutter with full 48dp targets
+the drawer. Undo glyphs are 20dp on phones and 24dp in medium windows,
+aligned to the Contents field's panel gutter with full 48dp targets.
+Cupertino Close keeps its native 28dp circular plate; the action centres align
 (`readerDrawerActionEndPadding` in `reader_drawer_layout.dart`, derived from
 the window's glyph size and 48dp target). Geometry tests compare the visible icon boxes,
 not only button bounds; native flows also exercise deletion and Undo.
@@ -918,14 +945,20 @@ selection panel and the search navigation bar are marked too, so a toast
 inside a centered 560dp maximum column. Its phone action strip is 60dp tall,
 with equal slots centring 48dp `AppPlainIconButton`s: Back, Contents, Appearance,
 Bookmark (custom filled/outline glyph passed as `iconWidget`) and Search; Row
-order mirrors in RTL. Expanded windows add captions in a strip at least 80dp
-tall; its height grows with the rendered label's scaled line height so two
-translated lines fit through 130% text. The whole captioned action is a button.
-Larger text keeps the compact icon actions.
+order mirrors in RTL. Expanded Material windows add captions in a strip at
+least 80dp tall; its height grows with the rendered label's scaled line height
+so two translated lines fit through 130% text. Expanded Cupertino windows
+show captions only when every complete name fits on one line at the existing
+17sp label role, through 130% text. Their slots share the remaining width after
+each name's measured width and padding, with aligned icon centres and caption
+baselines. If the names do not fit, or text is larger, the dock keeps the
+60dp icon strip and localized tooltips. The whole captioned action is a button.
 The existing tooltip and capability rules remain for every format.
-Medium windows (at least 600dp wide and 480dp tall) use the existing 15sp
-`labelLarge` role for chrome status and numbers, Contents tabs, Search counters,
-theme names and available action captions. Their utility glyphs use 24dp;
+Medium windows (at least 600dp wide and 480dp tall) use the existing
+`labelLarge` role for chrome status and numbers, Material Contents tabs, Search
+counters, theme names and available action captions. This role is 15sp in the
+Material theme and 17sp in the Cupertino theme. Native Contents choices retain
+their existing 15sp `bodyMedium` role. Medium utility glyphs use 24dp;
 phone roles stay unchanged, including short landscape windows. Measurement
 uses the same role and scaler as rendering, and progress numbers retain
 tabular figures. This only changes controls, not the page layout or location.
@@ -936,12 +969,15 @@ setting. Page-turn and active-bookmark glyphs, the page-bookmark indicator and
 other action accents use `context.actionForeground`.
 
 Status sits above the seek track, inset 12dp inside the dock, and follows the
-book's page progression like the slider itself. The scrubbing `Slider` (3dp
-track, 12dp thumb, 48dp-tall hit area) spans the row above the actions,
-with the same local drag preview and a single
-`goToFraction` on release; only this row rebuilds while dragging. The labels
-read on one line above it, inset by the slider's overlay radius
-(`readerProgressTrackInset`, 14dp) so they start and end with the track: at
+book's page progression like the slider itself. The scrubbing `AppSlider`
+spans the row above the actions, with the same local drag preview and a single
+`goToFraction` on release; only this row rebuilds while dragging. Android keeps
+the 3dp track and 12dp thumb; iOS keeps its native Cupertino thumb and track.
+Both have a 48dp-tall control and allow direct track taps to seek. Native
+accessibility increment/decrement actions commit immediately, without waiting
+for drag callbacks that Cupertino does not send. The labels
+read on one line above it, inset to the painted track (14dp on Material,
+8dp on Cupertino) so they start and end with the track: at
 the start the current chapter title for books,
 for articles `readingTimeLeft` (minutes left in the whole article) or the
 chapter title when there is no estimate; comics show neither a time nor their
@@ -953,6 +989,9 @@ label takes its own line, the chapter up to two lines and the page label
 end-aligned below it, so the slider never shares its line.
 Text and slider use the app surface's `onSurfaceVariant` and `outlineVariant`,
 so selecting a dark reading page in a light app never makes the dock unreadable.
+`test/reader_cupertino_dock_test.dart` checks the native iPad dock in both
+orientations, light/dark app palettes, translated captions and enlarged text,
+including aligned glyphs, complete names, track insets and action semantics.
 
 The top chrome is one centred `readerChromeLabel` line (`labelLarge` in medium
 windows) in `readerChromeInkColor`

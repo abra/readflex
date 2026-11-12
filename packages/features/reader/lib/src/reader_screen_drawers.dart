@@ -272,25 +272,33 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Padding(
-              // The sheet's grab handle supplies the gap above the title.
-              padding: EdgeInsetsDirectional.fromSTEB(
-                AppSpacing.lg,
-                0,
-                readerDrawerActionEndPadding(context),
-                AppSpacing.xs,
+            if (context.isCupertino && !AppWindowSize.isWide(context))
+              BottomSheetHeader(
+                title: l10n.readerContents,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                onClose: widget.onClose,
+                closeLabel: l10n.commonClose,
+              )
+            else
+              Padding(
+                // The sheet's grab handle supplies the gap above the title.
+                padding: EdgeInsetsDirectional.fromSTEB(
+                  AppSpacing.lg,
+                  0,
+                  readerDrawerActionEndPadding(context),
+                  AppSpacing.xs,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(child: _ReaderDrawerTitle(l10n.readerContents)),
+                    AppPlainIconButton(
+                      icon: AppIcons.close,
+                      tooltip: l10n.commonClose,
+                      onPressed: widget.onClose,
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                children: [
-                  Expanded(child: _ReaderDrawerTitle(l10n.readerContents)),
-                  AppPlainIconButton(
-                    icon: AppIcons.close,
-                    tooltip: l10n.commonClose,
-                    onPressed: widget.onClose,
-                  ),
-                ],
-              ),
-            ),
             ReaderContentsTabBar(tabs: tabs),
           ],
         ),
@@ -611,7 +619,10 @@ class _ReaderTocTabState extends State<_ReaderTocTab> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.symmetric(
+            horizontal: readerDrawerContentInset(context),
+            vertical: AppSpacing.lg,
+          ),
           child: SearchField(
             controller: widget.controller,
             hintText: widget.hintText,
@@ -684,7 +695,8 @@ class _ReaderTocListTile extends StatelessWidget {
     final l10n = context.l10n;
     final isActive = state == ReaderTocReadingState.active;
     final levelInset =
-        AppSpacing.lg + (item.level - 1).clamp(0, 4) * AppSpacing.md;
+        readerDrawerContentInset(context) +
+        (item.level - 1).clamp(0, 4) * AppSpacing.md;
     final titleStyle = context.text.bodyMedium.copyWith(
       color: switch (state) {
         ReaderTocReadingState.active => colors.selectedControlForeground,
@@ -707,7 +719,7 @@ class _ReaderTocListTile extends StatelessWidget {
         value: state == ReaderTocReadingState.read
             ? l10n.readerChapterRead
             : null,
-        child: ListTile(
+        child: ReaderNavigationTile(
           selected: isActive,
           selectedTileColor: colors.selectedControlBackground,
           shape: RoundedRectangleBorder(
@@ -715,7 +727,7 @@ class _ReaderTocListTile extends StatelessWidget {
           ),
           contentPadding: EdgeInsetsDirectional.only(
             start: levelInset.toDouble() - AppSpacing.sm,
-            end: AppSpacing.lg - AppSpacing.sm,
+            end: readerDrawerContentInset(context) - AppSpacing.sm,
             top: AppSpacing.xxs,
             bottom: AppSpacing.xxs,
           ),
@@ -875,7 +887,10 @@ class _ReaderBookmarksTabState extends State<_ReaderBookmarksTab> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.symmetric(
+            horizontal: readerDrawerContentInset(context),
+            vertical: AppSpacing.lg,
+          ),
           child: SearchField(
             controller: widget.controller,
             hintText: context.l10n.readerSearchBookmarks,
@@ -968,11 +983,13 @@ class _ReaderBookmarkListTile extends StatelessWidget {
     final content = bookmark.content.trim();
     final percentage = (bookmark.progress * 100).clamp(0, 100).round();
 
-    return ListTile(
+    return ReaderNavigationTile(
       contentPadding: EdgeInsetsDirectional.fromSTEB(
-        AppSpacing.lg,
+        readerDrawerContentInset(context),
         AppSpacing.xxs,
-        removed ? readerDrawerActionEndPadding(context) : AppSpacing.lg,
+        removed
+            ? readerDrawerActionEndPadding(context)
+            : readerDrawerContentInset(context),
         AppSpacing.xxs,
       ),
       minVerticalPadding: AppSpacing.xs,
@@ -1161,7 +1178,10 @@ class _ReaderHighlightsTabState extends State<_ReaderHighlightsTab>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
+          padding: EdgeInsets.symmetric(
+            horizontal: readerDrawerContentInset(context),
+            vertical: AppSpacing.lg,
+          ),
           child: SearchField(
             controller: widget.controller,
             hintText: context.l10n.readerSearchHighlights,
@@ -1267,8 +1287,8 @@ class _ReaderHighlightFilterStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
+      padding: EdgeInsets.symmetric(
+        horizontal: readerDrawerContentInset(context),
         vertical: AppSpacing.sm,
       ),
       child: Row(
@@ -1324,7 +1344,7 @@ class _ReaderDrawerContentFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return AppSurface(
       color: Colors.transparent,
       clipBehavior: Clip.hardEdge,
       child: DecoratedBox(

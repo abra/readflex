@@ -584,12 +584,12 @@ class _LibraryViewState extends State<_LibraryView>
                 // The empty library offers its own two import commands.
                 selector: (state) =>
                     state.status == LibraryStatus.success && !state.isEmpty,
-                builder: (context, hasItems) => Scaffold(
+                builder: (context, hasItems) => AppScaffold(
                   floatingActionButtonLocation: LibraryFloatingActionsLocation(
                     bottomViewPadding: viewPadding.bottom,
                   ),
                   floatingActionButtonAnimator:
-                      FloatingActionButtonAnimator.noAnimation,
+                      AppFloatingActionButtonAnimator.none,
                   floatingActionButton: Visibility(
                     visible: hasItems,
                     child: ToastAvoidArea(

@@ -1,43 +1,29 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:component_library/component_library.dart';
+import 'package:flutter/widgets.dart';
 
-/// [FloatingActionButtonLocation.endFloat] whose bottom safe inset holds
+/// [AppFloatingActionButtonLocation.endFloat] whose bottom safe inset holds
 /// while the keyboard moves.
 ///
-/// While the keyboard reports any inset, [Scaffold] passes a zero bottom
-/// `minViewPadding`, so `endFloat` rides a closing keyboard down into the
+/// While the keyboard reports any inset, a scaffold may pass a zero bottom
+/// view padding, so `endFloat` rides a closing keyboard down into the
 /// home indicator area and jumps back above it on the frame the inset
 /// reaches zero (and the reverse when it opens). With the view's own bottom
 /// padding the button stays `max(keyboard, safe inset) + 16dp` above the
 /// screen edge on every frame; everything else is `endFloat`'s layout.
-class LibraryFloatingActionsLocation extends StandardFabLocation
-    with FabEndOffsetX, FabFloatOffsetY {
+class LibraryFloatingActionsLocation extends AppFloatingActionButtonLocation {
   const LibraryFloatingActionsLocation({required this.bottomViewPadding});
 
-  /// `MediaQuery.viewPaddingOf(context).bottom` above the Scaffold. The
+  /// `MediaQuery.viewPaddingOf(context).bottom` above the scaffold. The
   /// keyboard does not change it.
   final double bottomViewPadding;
 
   @override
-  double getOffsetY(
-    ScaffoldPrelayoutGeometry scaffoldGeometry,
-    double adjustment,
-  ) => super.getOffsetY(
-    ScaffoldPrelayoutGeometry(
-      bottomSheetSize: scaffoldGeometry.bottomSheetSize,
-      contentBottom: scaffoldGeometry.contentBottom,
-      contentTop: scaffoldGeometry.contentTop,
-      floatingActionButtonSize: scaffoldGeometry.floatingActionButtonSize,
-      minInsets: scaffoldGeometry.minInsets,
-      minViewPadding: scaffoldGeometry.minViewPadding.copyWith(
-        bottom: bottomViewPadding,
-      ),
-      scaffoldSize: scaffoldGeometry.scaffoldSize,
-      snackBarSize: scaffoldGeometry.snackBarSize,
-      materialBannerSize: scaffoldGeometry.materialBannerSize,
-      textDirection: scaffoldGeometry.textDirection,
-    ),
-    adjustment,
-  );
+  Offset getOffset(AppScaffoldGeometry geometry) =>
+      AppFloatingActionButtonLocation.endFloat.getOffset(
+        geometry.copyWith(
+          viewPadding: geometry.viewPadding.copyWith(bottom: bottomViewPadding),
+        ),
+      );
 
   // Equal insets avoid restarting Scaffold's location controller on rebuilds.
   @override

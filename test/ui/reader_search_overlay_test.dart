@@ -61,15 +61,14 @@ void main() {
         l10n.readerBookmark,
       ]) {
         final button = find.byWidgetPredicate(
-          (widget) => widget is IconButton && widget.tooltip == label,
+          (widget) => widget is AppIconButton && widget.tooltip == label,
         );
         expect(
           tester.getSize(button),
           const Size.square(AppSizes.buttonHeight),
         );
-        final style = tester.widget<IconButton>(button).style!;
         expect(
-          style.shape?.resolve({WidgetState.pressed}),
+          tester.widget<AppIconButton>(button).shape,
           isA<CircleBorder>(),
         );
       }

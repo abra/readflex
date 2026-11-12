@@ -23,14 +23,11 @@ class PracticeStartButton extends StatelessWidget {
     final l10n = context.l10n;
     final label = ahead ? l10n.practiceReviewAhead : l10n.practiceStartReview;
     final icon = Icon(ahead ? AppIcons.reviewAgain : AppIcons.practice);
-    final style = FilledButton.styleFrom(
-      shape: floating
-          ? const StadiumBorder()
-          : RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
-      minimumSize: const Size(0, AppSizes.buttonHeight),
-    );
+    final shape = floating
+        ? const StadiumBorder()
+        : RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          );
     // The button keeps its height: the label scales up to 1.5× and drops
     // its icon past 1.3×, and the whole never exceeds the screen minus the
     // gutters, so the longest localized label still fits on one line.
@@ -50,15 +47,17 @@ class PracticeStartButton extends StatelessWidget {
             boxShadow: floating ? AppShadows.popover : const [],
           ),
           child: scale > _iconTextScale
-              ? FilledButton(
+              ? AppButton(
                   key: const ValueKey('practiceStartReview'),
-                  style: style,
+                  shape: shape,
+                  minimumSize: const Size(0, AppSizes.buttonHeight),
                   onPressed: onPressed,
                   child: AppButtonLabel(label, maxLines: 1),
                 )
-              : FilledButton.icon(
+              : AppButton.icon(
                   key: const ValueKey('practiceStartReview'),
-                  style: style,
+                  shape: shape,
+                  minimumSize: const Size(0, AppSizes.buttonHeight),
                   onPressed: onPressed,
                   icon: icon,
                   label: AppButtonLabel(label, maxLines: 1),
@@ -152,7 +151,7 @@ class PracticeTodayCard extends StatelessWidget {
               Align(alignment: AlignmentDirectional.centerStart, child: child),
             ],
             const SizedBox(height: AppSpacing.lg),
-            const Divider(height: 1),
+            const AppDivider(height: 1),
             const SizedBox(height: AppSpacing.lg),
             Wrap(
               key: const ValueKey('practiceTodayStats'),
@@ -204,7 +203,7 @@ class PracticeSourceRow extends StatelessWidget {
       onTapHint: l10n.practiceStartReview,
       onTap: onPressed,
       excludeSemantics: true,
-      child: InkWell(
+      child: AppTappable(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(AppRadius.sm),
         child: Padding(

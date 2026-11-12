@@ -229,7 +229,9 @@ void main() {
     for (final progress in [0.0, 0.42, 1.0]) {
       await reportProgress(tester, bloc, progress, pageProgressionRtl: true);
       expect(
-        tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+        tester
+            .widget<AppLinearProgressIndicator>(find.byKey(_progressKey))
+            .value,
         progress,
       );
     }
@@ -251,7 +253,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 16));
         expect(
           tester
-              .widget<LinearProgressIndicator>(find.byKey(_progressKey))
+              .widget<AppLinearProgressIndicator>(find.byKey(_progressKey))
               .value,
           progress,
         );
@@ -269,7 +271,7 @@ void main() {
     articleProgressCubit.update(0.8);
     await tester.pump(const Duration(milliseconds: 16));
     expect(
-      tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+      tester.widget<AppLinearProgressIndicator>(find.byKey(_progressKey)).value,
       0.8,
     );
 
@@ -280,7 +282,7 @@ void main() {
     articleProgressCubit.update(0.1);
     await tester.pump(const Duration(milliseconds: 16));
     expect(
-      tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+      tester.widget<AppLinearProgressIndicator>(find.byKey(_progressKey)).value,
       0.1,
     );
     expect(tester.hasRunningAnimations, isFalse);
@@ -293,7 +295,7 @@ void main() {
     await pump(tester, bloc: bloc, disableAnimations: true);
     await reportProgress(tester, bloc, 0.8, settleAnimations: false);
     expect(
-      tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+      tester.widget<AppLinearProgressIndicator>(find.byKey(_progressKey)).value,
       0.8,
     );
     expect(tester.hasRunningAnimations, isFalse);
@@ -309,7 +311,7 @@ void main() {
     ) as ReaderBloc;
     await pump(tester, bloc: bloc, settleAnimations: false);
     expect(
-      tester.widget<LinearProgressIndicator>(find.byKey(_progressKey)).value,
+      tester.widget<AppLinearProgressIndicator>(find.byKey(_progressKey)).value,
       0.65,
     );
     expect(tester.hasRunningAnimations, isFalse);
@@ -382,7 +384,7 @@ void main() {
         size: const Size(320, 640),
       );
       final progress = find.byKey(_progressKey);
-      final indicator = tester.widget<LinearProgressIndicator>(progress);
+      final indicator = tester.widget<AppLinearProgressIndicator>(progress);
       expect(indicator.color, readerChromeInkColor(theme.data));
       expect(indicator.backgroundColor, readerChromeTrackColor(theme.data));
       expect(tester.getSize(progress), const Size(320, 3));
@@ -435,7 +437,7 @@ void main() {
     final l10n = tester.element(find.byType(Scaffold)).l10n;
     final button = find.byKey(_titleButtonKey);
     expect(button, findsOneWidget);
-    expect(tester.widget<InkWell>(button).onTap, isNotNull);
+    expect(tester.widget<AppTappable>(button).onTap, isNotNull);
     expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
     final node = tester.getSemantics(
       find.bySemanticsLabel(l10n.readerOpenOriginalArticle),

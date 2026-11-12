@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -102,11 +103,11 @@ void main() {
     await tester.pumpAndSettle();
     final searchWatch = Stopwatch()..start();
     await tester.enterText(
-      find.byType(TextField).hitTestable(),
+      find.byType(AppTextField).hitTestable(),
       'Section 22',
     );
     final search = tester
-        .element(find.byType(TextField).hitTestable())
+        .element(find.byType(AppTextField).hitTestable())
         .read<ReaderSearchCubit>();
     await waitForUi(
       tester,

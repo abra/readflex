@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('drawer content frame clips local Material ink effects', () {
+  test('drawer content frame clips local platform press effects', () {
     final source = _readSource(
       packagePath: 'lib/src/reader_screen_drawers.dart',
     );
@@ -12,7 +12,7 @@ void main() {
       className: '_ReaderDrawerContentFrame',
     );
 
-    expect(frameSource, contains('return Material('));
+    expect(frameSource, contains('return AppSurface('));
     expect(frameSource, contains('color: Colors.transparent'));
     expect(frameSource, contains('clipBehavior: Clip.hardEdge'));
     expect(frameSource, contains('DecoratedBox('));

@@ -178,12 +178,11 @@ void main() {
         expect(clip.right, lessThan(frame.right));
         expect(clip.bottom, lessThan(frame.bottom));
         final fixedBounds = _highlightFixedBounds(tester);
-        final panelMaterial = tester.widget<Material>(
+        final panelSurface = tester.widget<AppSurface>(
           find.byKey(const ValueKey('reviewControlsPanel')),
         );
-        expect(panelMaterial.color, context.colors.surface);
-        expect(panelMaterial.elevation, AppElevation.level1);
-        expect(panelMaterial.surfaceTintColor, Colors.transparent);
+        expect(panelSurface.color, context.colors.surface);
+        expect(panelSurface.elevation, AppElevation.level1);
         final scrollable = find
             .descendant(
               of: viewportFinder,
@@ -198,7 +197,10 @@ void main() {
           isFalse,
         );
         final scrollbar = tester.widget<Scrollbar>(
-          find.byKey(const ValueKey('reviewHighlightScrollbar')),
+          find.descendant(
+            of: find.byKey(const ValueKey('reviewHighlightScrollbar')),
+            matching: find.byType(Scrollbar),
+          ),
         );
         expect(scrollbar.controller!.position, same(position));
         final keep = find.byKey(const ValueKey('reviewRate-keep'));
@@ -968,7 +970,11 @@ Future<void> _expectHighlightScrollbar(
   bool visible,
 ) async {
   final scrollbar = find.byKey(const ValueKey('reviewHighlightScrollbar'));
-  final controller = tester.widget<Scrollbar>(scrollbar).controller!;
+  final controller = tester
+      .widget<Scrollbar>(
+        find.descendant(of: scrollbar, matching: find.byType(Scrollbar)),
+      )
+      .controller!;
   expect(controller.position.maxScrollExtent > 0, visible);
   expect(
     find.descendant(

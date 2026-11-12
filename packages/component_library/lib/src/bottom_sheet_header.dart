@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoColors, CupertinoDynamicColor;
 import 'package:flutter/widgets.dart';
 
 import 'app_icons.dart';
@@ -9,7 +11,9 @@ import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
 
-/// Sheet title with an optional explicit close action.
+part 'cupertino_bottom_sheet_header.dart';
+
+/// Platform sheet header with explicit Back/Close actions and adaptive title.
 class BottomSheetHeader extends StatelessWidget {
   const BottomSheetHeader({
     required this.title,
@@ -26,8 +30,8 @@ class BottomSheetHeader extends StatelessWidget {
        assert(compactTrailing == null || trailing != null);
 
   /// A title may shrink to this share of its size to keep [trailing] beside
-  /// it, then [compactTrailing]; a longer title wraps and moves [trailing]
-  /// below it.
+  /// it, then [compactTrailing]. A longer title wraps; Android moves actions
+  /// below it, while Cupertino keeps navigation above the centred title.
   static const double minTitleScale = 0.8;
 
   final String title;
@@ -47,6 +51,9 @@ class BottomSheetHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (context.isCupertino) {
+      return _CupertinoBottomSheetHeader(header: this);
+    }
     final direction = Directionality.of(context);
     final insets = padding.resolve(direction);
     final iconInset = AppPlainIconButton.defaultIconOutsetOf(context);

@@ -1,5 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
+import 'app_button.dart';
 import 'app_busy_button_label.dart';
 import 'app_button_label.dart';
 import 'state_icon_frame.dart';
@@ -42,7 +43,7 @@ class ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.colors;
     final text = context.text;
-    final retry = FilledButton(
+    final retry = AppButton(
       onPressed: busy ? null : onRetry,
       child: AppBusyButtonLabel(retryLabel, busy: busy),
     );
@@ -83,7 +84,7 @@ class ErrorState extends StatelessWidget {
                   primaryLabel: retryLabel,
                   secondaryLabel: secondaryLabel!,
                   primary: retry,
-                  secondary: OutlinedButton(
+                  secondary: AppButton.outlined(
                     onPressed: busy ? null : onSecondary,
                     child: AppButtonLabel(secondaryLabel!),
                   ),

@@ -4,7 +4,7 @@ import 'package:component_library/component_library.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:readflex/app/readflex_platform_app.dart';
 import 'package:reader/src/reader_highlight_note_sheet.dart';
 
 import '../test/support/native_screenshots.dart';
@@ -18,15 +18,13 @@ void main() {
   ) async {
     ReaderHighlightNoteResult? result;
     await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.dark(),
+      ReadflexPlatformApp(
+        brightness: Brightness.dark,
         locale: const Locale('en'),
-        localizationsDelegates: readflexLocalizationsDelegates,
-        supportedLocales: ReadflexSupportedLocales.locales,
-        home: Scaffold(
+        home: AppScaffold(
           body: Builder(
             builder: (context) => Center(
-              child: TextButton(
+              child: AppButton.text(
                 onPressed: () async {
                   result = await showReaderHighlightNoteSheet(
                     context,
@@ -44,13 +42,13 @@ void main() {
     await tapUi(tester, find.text('Open note'));
     // Establish the native editor before sending synthetic text input; otherwise
     // its initial platform value can arrive after the test's draft update.
-    await tapUi(tester, find.byType(TextField));
+    await tapUi(tester, find.byType(AppTextField));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Unsaved comment');
+    await tester.enterText(find.byType(AppTextField), 'Unsaved comment');
     // Native keyboard insets move the sheet; tap after that transition settles.
     await tester.pumpAndSettle();
     expect(
-      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      tester.widget<AppTextField>(find.byType(AppTextField)).controller!.text,
       'Unsaved comment',
       reason: 'the platform editor must retain the entered draft',
     );
@@ -72,9 +70,9 @@ void main() {
     }
     await tapUi(tester, find.text('Keep editing'));
     expect(find.text('Unsaved comment'), findsOneWidget);
-    await tapUi(tester, find.byType(TextField));
+    await tapUi(tester, find.byType(AppTextField));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '');
+    await tester.enterText(find.byType(AppTextField), '');
     await tester.pumpAndSettle();
     await tapUi(tester, find.text('Save'));
     expect(result, isNotNull);

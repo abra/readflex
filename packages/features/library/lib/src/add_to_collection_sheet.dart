@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:collection_repository/collection_repository.dart';
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoListTile;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -328,7 +329,8 @@ class _PanelViewportState extends State<_PanelViewport> {
         constraints.maxWidth,
         MediaQuery.textScalerOf(context),
         Localizations.localeOf(context),
-        Theme.of(context),
+        context.text,
+        context.colors,
         widget.destinationCount,
         widget.favouritesSourceCount,
       );
@@ -655,7 +657,7 @@ class _DestinationResults extends StatelessWidget {
           else
             SliverList.separated(
               itemCount: resultCount,
-              separatorBuilder: (_, _) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const AppDivider(height: 1),
               itemBuilder: (context, index) {
                 if (showFavourites && index == 0) {
                   return _DestinationRow(
@@ -713,6 +715,67 @@ class _DestinationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final included = state.containingAll.contains(id);
+    final checked = included || state.selectedCollectionIds.contains(id);
+    final enabled = !included && !state.isBusy;
+    if (context.isCupertino) {
+      return Semantics(
+        key: ValueKey('addToCollectionDestination-$id'),
+        checked: checked,
+        enabled: enabled,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppSizes.buttonHeight),
+          child: CupertinoListTile(
+            backgroundColor: const Color(0x00000000),
+            leading: Icon(
+              icon,
+              size: AppIconSize.sm,
+              color: context.colors.onSurfaceVariant,
+            ),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.text.bodyLarge,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  '$sourceCount',
+                  style: context.text.bodyMedium.copyWith(
+                    color: context.colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            subtitle: included
+                ? Text(
+                    context.l10n.libraryAddedToCollection,
+                    maxLines: 2,
+                    style: context.text.bodySmall.copyWith(
+                      color: context.colors.onSurfaceVariant,
+                    ),
+                  )
+                : null,
+            trailing: checked
+                ? Icon(
+                    AppIcons.check,
+                    size: AppIconSize.sm,
+                    color: included
+                        ? context.colors.onSurfaceVariant
+                        : context.actionForeground,
+                  )
+                : null,
+            onTap: enabled
+                ? () =>
+                      context.read<AddToCollectionCubit>().toggleCollection(id)
+                : null,
+          ),
+        ),
+      );
+    }
     return CheckboxListTile(
       key: ValueKey('addToCollectionDestination-$id'),
       contentPadding: EdgeInsets.zero,
@@ -727,7 +790,14 @@ class _DestinationRow extends StatelessWidget {
       ),
       title: Row(
         children: [
-          Expanded(child: Text(label, style: context.text.bodyLarge)),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: context.text.bodyLarge,
+            ),
+          ),
           const SizedBox(width: AppSpacing.sm),
           Text(
             '$sourceCount',
@@ -760,7 +830,7 @@ class _AddToCollectionsAction extends StatelessWidget {
   final VoidCallback onSubmit;
 
   @override
-  Widget build(BuildContext context) => FilledButton(
+  Widget build(BuildContext context) => AppButton(
     key: const ValueKey('addToCollectionsSubmitButton'),
     onPressed: state.canSubmit ? onSubmit : null,
     child: AppBusyButtonLabel(
@@ -794,14 +864,12 @@ class _CreateCollectionContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextField(
+            AppTextField(
               key: const ValueKey('newCollectionNameField'),
               controller: controller,
               enabled: !state.isBusy,
               textInputAction: TextInputAction.done,
-              decoration: InputDecoration(
-                hintText: context.l10n.libraryNewCollectionName,
-              ),
+              hintText: context.l10n.libraryNewCollectionName,
               onSubmitted: (_) {
                 if (!state.isBusy && controller.text.trim().isNotEmpty) {
                   onCreate();
@@ -840,7 +908,7 @@ class _CreateCollectionAction extends StatelessWidget {
   Widget build(BuildContext context) =>
       ValueListenableBuilder<TextEditingValue>(
         valueListenable: controller,
-        builder: (context, value, _) => FilledButton(
+        builder: (context, value, _) => AppButton(
           key: const ValueKey('createCollectionSubmitButton'),
           onPressed: state.isBusy || value.text.trim().isEmpty
               ? null

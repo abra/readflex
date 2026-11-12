@@ -198,7 +198,7 @@ void main() {
     final state = bloc(tester).state;
     expect(
       tester
-          .widget<LinearProgressIndicator>(
+          .widget<AppLinearProgressIndicator>(
             find.byKey(const ValueKey('readerArticleProgress')),
           )
           .value,
@@ -238,7 +238,7 @@ void main() {
     expect(state.document!.readingProgress, greaterThan(0.3));
     expect(
       tester
-          .widget<LinearProgressIndicator>(
+          .widget<AppLinearProgressIndicator>(
             find.byKey(const ValueKey('readerArticleProgress')),
           )
           .value,
@@ -276,7 +276,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        tester.widget<LinearProgressIndicator>(line).value,
+        tester.widget<AppLinearProgressIndicator>(line).value,
         greaterThan(0),
       );
 
@@ -284,7 +284,7 @@ void main() {
       await tester.pump();
       await settle(tester, () => bloc(tester).state.atEnd);
       await tester.pumpAndSettle();
-      expect(tester.widget<LinearProgressIndicator>(line).value, 1);
+      expect(tester.widget<AppLinearProgressIndicator>(line).value, 1);
       await close(tester);
     },
   );
@@ -302,7 +302,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<LinearProgressIndicator>(
+          .widget<AppLinearProgressIndicator>(
             find.byKey(const ValueKey('readerArticleProgress')),
           )
           .value,
@@ -347,7 +347,7 @@ void main() {
         expect((fraction - reported).abs(), lessThan(0.004));
         expect(bloc(tester).state.document!.readingProgress, reported);
         expect(
-          tester.widget<LinearProgressIndicator>(line).value,
+          tester.widget<AppLinearProgressIndicator>(line).value,
           closeTo(fraction, 1e-9),
           reason: 'the line must follow the scroll in frame $frame',
         );
@@ -378,7 +378,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       tester
-          .widget<LinearProgressIndicator>(
+          .widget<AppLinearProgressIndicator>(
             find.byKey(const ValueKey('readerArticleProgress')),
           )
           .value,

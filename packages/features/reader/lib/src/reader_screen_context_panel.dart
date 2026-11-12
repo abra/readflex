@@ -1132,7 +1132,7 @@ class _TextSelectionPopupSurface extends StatelessWidget {
           panelColor,
           dividerColor,
         ),
-        child: Material(
+        child: AppSurface(
           color: Colors.transparent,
           borderRadius: radius,
           clipBehavior: Clip.antiAlias,
@@ -1154,7 +1154,7 @@ class _TextSelectionPopupSurface extends StatelessWidget {
                   ),
                 ),
               ),
-              Divider(
+              AppDivider(
                 height: _kTextSelectionPopupDividerHeight,
                 thickness: _kTextSelectionPopupDividerHeight,
                 color: dividerColor,
@@ -1195,7 +1195,7 @@ class _TextSelectionActionButton extends StatelessWidget {
     final foreground = enabled
         ? action.color
         : action.color.withValues(alpha: 0.38);
-    return Tooltip(
+    return AppTooltip(
       message: action.label,
       child: Semantics(
         button: true,
@@ -1203,7 +1203,7 @@ class _TextSelectionActionButton extends StatelessWidget {
         label: action.label,
         excludeSemantics: true,
         onTap: enabled ? action.onPressed : null,
-        child: InkWell(
+        child: AppTappable(
           onTap: enabled ? action.onPressed : null,
           child: ConstrainedBox(
             constraints: const BoxConstraints(
@@ -1271,7 +1271,7 @@ class _HighlightPopupSurface extends StatelessWidget {
           dividerColor,
           borderRadius: radius,
         ),
-        child: Material(
+        child: AppSurface(
           color: Colors.transparent,
           borderRadius: radius,
           clipBehavior: Clip.antiAlias,
@@ -1337,7 +1337,7 @@ class _ContextPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return AppSurface(
       color: panelColor,
       elevation: 0,
       child: AppBottomSafeArea(

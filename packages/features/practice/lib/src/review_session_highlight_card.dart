@@ -56,8 +56,8 @@ class _ReviewHighlightCardState extends State<ReviewHighlightCard> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          child: Material(
-            type: MaterialType.transparency,
+          child: AppSurface(
+            transparent: true,
             child: Padding(
               padding: EdgeInsets.all(padding),
               child: Column(
@@ -86,10 +86,9 @@ class _ReviewHighlightCardState extends State<ReviewHighlightCard> {
                     fit: FlexFit.loose,
                     child: ClipRect(
                       key: const ValueKey('reviewCardClip'),
-                      child: Scrollbar(
+                      child: _ReviewHighlightScrollbar(
                         key: const ValueKey('reviewHighlightScrollbar'),
                         controller: _scrollController,
-                        thumbVisibility: true,
                         child: ScrollConfiguration(
                           behavior: ScrollConfiguration.of(context).copyWith(
                             scrollbars: false,
@@ -133,6 +132,30 @@ class _ReviewHighlightCardState extends State<ReviewHighlightCard> {
       );
     },
   );
+}
+
+class _ReviewHighlightScrollbar extends StatelessWidget {
+  const _ReviewHighlightScrollbar({
+    required this.controller,
+    required this.child,
+    super.key,
+  });
+
+  final ScrollController controller;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => context.isCupertino
+      ? CupertinoScrollbar(
+          controller: controller,
+          thumbVisibility: true,
+          child: child,
+        )
+      : Scrollbar(
+          controller: controller,
+          thumbVisibility: true,
+          child: child,
+        );
 }
 
 class _ReviewHighlightSourceHeader extends StatelessWidget {
@@ -207,7 +230,7 @@ class _ReviewHighlightSourceHeader extends StatelessWidget {
         author,
         chapter,
       ].nonNulls.where((value) => value.isNotEmpty).toList();
-      return Tooltip(
+      return AppTooltip(
         message: labels.join('\n'),
         excludeFromSemantics: true,
         child: Semantics(
@@ -222,7 +245,7 @@ class _ReviewHighlightSourceHeader extends StatelessWidget {
           excludeSemantics: true,
           child: onOpenInSource == null
               ? content
-              : InkWell(
+              : AppTappable(
                   key: const ValueKey('reviewOpenInBook'),
                   onTap: onOpenInSource,
                   borderRadius: BorderRadius.circular(AppRadius.md),

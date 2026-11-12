@@ -147,7 +147,7 @@ void main() {
       await _pumpDirection(tester, enabled: false);
       for (final key in [_sourceKey, _targetKey]) {
         final finder = find.byKey(key);
-        expect(tester.widget<TextButton>(finder).onPressed, isNull);
+        expect(tester.widget<AppButton>(finder).onPressed, isNull);
         await tester.tap(finder);
         await tester.pump();
       }
@@ -178,8 +178,8 @@ void main() {
     expect(theme.textButtonTheme.style?.backgroundColor, isNull);
     for (final key in [_sourceKey, _targetKey]) {
       final finder = find.byKey(key);
-      final button = tester.widget<TextButton>(finder);
-      expect(button.style?.backgroundColor, isNull);
+      final button = tester.widget<AppButton>(finder);
+      expect(button.backgroundColor, isNull);
       expect(tester.getSize(finder).height, AppSizes.buttonHeight);
     }
   });
@@ -195,16 +195,14 @@ void main() {
       RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
     );
     for (final key in [_sourceKey, _targetKey]) {
-      final style = tester.widget<TextButton>(find.byKey(key)).style!;
-      expect(style.shape, isNull);
-      expect(style.backgroundColor, isNull);
-      expect(style.foregroundColor, isNull);
-      expect(style.side, isNull);
-      expect(style.textStyle!.resolve({}), context.text.bodySmall);
-      expect(
-        style.minimumSize!.resolve({}),
-        const Size(0, AppSizes.buttonHeight),
-      );
+      final button = tester.widget<AppButton>(find.byKey(key));
+      expect(button.variant, AppButtonVariant.text);
+      expect(button.shape, isNull);
+      expect(button.backgroundColor, isNull);
+      expect(button.foregroundColor, isNull);
+      expect(button.side, isNull);
+      expect(button.textStyle, context.text.bodySmall);
+      expect(button.minimumSize, const Size(0, AppSizes.buttonHeight));
     }
   });
 

@@ -89,21 +89,21 @@ void main() {
           collections.dx > add.dx ? collections.dx : add.dx,
         ),
       );
-      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(AppTextField), findsNothing);
 
       await tapUi(tester, find.byKey(const ValueKey('librarySearchButton')));
       final field = find.byKey(const ValueKey('librarySearchField'));
       final editable = tester.state<EditableTextState>(
         find.descendant(of: field, matching: find.byType(EditableText)),
       );
-      final controller = tester.widget<TextField>(field).controller!;
+      final controller = tester.widget<AppTextField>(field).controller!;
       expect(editable.widget.focusNode.hasFocus, isTrue);
       expect(
         tester.testTextInput.hasAnyClients,
         isTrue,
         reason: 'opening Search must attach input without tapping the field',
       );
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.byType(AppTextField), findsOneWidget);
       await expectUiGolden(tester, profile, 'library-search-empty-$suffix');
 
       // Widget captures model the inset; native tests verify the real IME.

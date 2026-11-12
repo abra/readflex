@@ -16,22 +16,20 @@ class LibraryAddButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    return IconButton(
+    return AppIconButton(
       key: const ValueKey('libraryAddButton'),
       onPressed: onPressed,
       tooltip: context.l10n.importAddToLibraryTitle,
-      style: IconButton.styleFrom(
-        foregroundColor: colors.onPrimary,
-        backgroundColor: colors.primary,
-        disabledForegroundColor: colors.onSurface.withValues(alpha: .38),
-        disabledBackgroundColor: colors.onSurface.withValues(alpha: .12),
-        fixedSize: const Size.square(AppSizes.buttonHeight),
-        minimumSize: const Size.square(AppSizes.buttonHeight),
-        padding: EdgeInsets.zero,
-        shape: const CircleBorder(),
-        visualDensity: VisualDensity.standard,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
+
+      foregroundColor: colors.onPrimary,
+      backgroundColor: colors.primary,
+      disabledForegroundColor: colors.onSurface.withValues(alpha: .38),
+      disabledBackgroundColor: colors.onSurface.withValues(alpha: .12),
+      fixedSize: const Size.square(AppSizes.buttonHeight),
+      minimumSize: const Size.square(AppSizes.buttonHeight),
+      padding: EdgeInsets.zero,
+      shape: const CircleBorder(),
+
       icon: const Icon(AppIcons.add, size: AppIconSize.md),
     );
   }

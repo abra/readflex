@@ -6,6 +6,7 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'reader_contents_tabs.dart';
 import 'reader_control_styles.dart';
+import 'reader_drawer_layout.dart';
 
 /// Contents tabs that fill the available width before scrolling is necessary.
 class ReaderContentsTabBar extends StatelessWidget {
@@ -26,6 +27,33 @@ class ReaderContentsTabBar extends StatelessWidget {
           ReaderContentsTab.highlights => l10n.readerHighlights,
         },
     ];
+    if (context.isCupertino) {
+      final controller = DefaultTabController.of(context);
+      final hasFourTabs = tabs.length > 3;
+      final useCompactLabels = hasFourTabs && !AppWindowSize.isMedium(context);
+      return Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: readerDrawerContentInset(context),
+          vertical: AppSpacing.sm,
+        ),
+        child: AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) => AppChoiceControl<int>(
+            selected: controller.index,
+            proportionalWidth: hasFourTabs,
+            options: [
+              for (var index = 0; index < labels.length; index++)
+                AppChoiceOption(
+                  value: index,
+                  label: labels[index],
+                  labelStyle: useCompactLabels ? context.text.labelSmall : null,
+                ),
+            ],
+            onChanged: controller.animateTo,
+          ),
+        ),
+      );
+    }
     final labelStyle = readerControlCaptionStyle(context);
     final iconSize = readerControlIconSize(context);
     final textDirection = Directionality.of(context);
@@ -66,9 +94,7 @@ class ReaderContentsTabBar extends StatelessWidget {
         return ScrollEdgeFadeStack(
           axis: Axis.horizontal,
           enabled: overflows,
-          surfaceColor:
-              Theme.of(context).bottomSheetTheme.backgroundColor ??
-              colors.surface,
+          surfaceColor: context.appTheme.sheetColor,
           fadeInsets: EdgeInsets.only(
             bottom: TabBarTheme.of(context).dividerHeight ?? 1,
           ),

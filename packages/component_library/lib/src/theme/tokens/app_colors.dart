@@ -1,4 +1,4 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/painting.dart';
 
 import 'primitive_colors.dart';
 

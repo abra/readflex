@@ -550,11 +550,9 @@ void main() {
             .maxScrollExtent;
         final viewport = find.descendant(
           of: find.byType(LibraryBody),
-          matching: find.byType(SingleChildScrollView),
+          matching: find.byType(SliverPadding),
         );
-        final initialPadding = tester
-            .widget<SingleChildScrollView>(viewport)
-            .padding;
+        final initialPadding = tester.widget<SliverPadding>(viewport).padding;
         expect(initialExtent, greaterThanOrEqualTo(0));
 
         fsrsRepository.stats = reviewStats(words: 1, due: 1);
@@ -568,7 +566,7 @@ void main() {
             .maxScrollExtent;
         expect(dueExtent, closeTo(initialExtent, .01));
         expect(
-          tester.widget<SingleChildScrollView>(viewport).padding,
+          tester.widget<SliverPadding>(viewport).padding,
           initialPadding,
         );
 
@@ -581,7 +579,7 @@ void main() {
           closeTo(initialExtent, .01),
         );
         expect(
-          tester.widget<SingleChildScrollView>(viewport).padding,
+          tester.widget<SliverPadding>(viewport).padding,
           initialPadding,
         );
         expect(tester.takeException(), isNull);

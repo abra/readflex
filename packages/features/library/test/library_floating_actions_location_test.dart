@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:component_library/component_library.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_floating_actions_location.dart';
 
@@ -9,30 +10,44 @@ void main() {
 
   // What the Scaffold passes: `minInsets.bottom` is the keyboard, and
   // `minViewPadding.bottom` is zeroed while any keyboard inset is reported.
-  ScaffoldPrelayoutGeometry geometry({
+  AppScaffoldGeometry geometry({
     double keyboard = 0,
     double viewPadding = safeInset,
     Size snackBar = Size.zero,
     Size bottomSheet = Size.zero,
     Size floatingActions = fab,
     TextDirection textDirection = TextDirection.ltr,
-  }) => ScaffoldPrelayoutGeometry(
+  }) => AppScaffoldGeometry(
     bottomSheetSize: bottomSheet,
     contentBottom: scaffold.height - keyboard,
-    contentTop: 0,
     floatingActionButtonSize: floatingActions,
-    minInsets: EdgeInsets.only(bottom: keyboard),
-    minViewPadding: EdgeInsets.only(bottom: keyboard == 0 ? viewPadding : 0),
+    viewInsets: EdgeInsets.only(bottom: keyboard),
+    viewPadding: EdgeInsets.only(bottom: keyboard == 0 ? viewPadding : 0),
     scaffoldSize: scaffold,
     snackBarSize: snackBar,
-    materialBannerSize: Size.zero,
     textDirection: textDirection,
   );
+
+  Offset materialReference(AppScaffoldGeometry geometry) =>
+      FloatingActionButtonLocation.endFloat.getOffset(
+        ScaffoldPrelayoutGeometry(
+          bottomSheetSize: geometry.bottomSheetSize,
+          contentBottom: geometry.contentBottom,
+          contentTop: 0,
+          floatingActionButtonSize: geometry.floatingActionButtonSize,
+          minInsets: geometry.viewInsets,
+          minViewPadding: geometry.viewPadding,
+          scaffoldSize: geometry.scaffoldSize,
+          snackBarSize: geometry.snackBarSize,
+          materialBannerSize: Size.zero,
+          textDirection: geometry.textDirection,
+        ),
+      );
 
   const location = LibraryFloatingActionsLocation(
     bottomViewPadding: safeInset,
   );
-  double gapFor(ScaffoldPrelayoutGeometry geometry) =>
+  double gapFor(AppScaffoldGeometry geometry) =>
       scaffold.height - (location.getOffset(geometry).dy + fab.height);
 
   test('matches endFloat without a keyboard', () {
@@ -40,7 +55,7 @@ void main() {
       final rest = geometry(textDirection: textDirection);
       expect(
         location.getOffset(rest),
-        FloatingActionButtonLocation.endFloat.getOffset(rest),
+        materialReference(rest),
       );
     }
   });
@@ -60,10 +75,7 @@ void main() {
     // endFloat drops into the inset under a nearly closed keyboard.
     expect(
       scaffold.height -
-          (FloatingActionButtonLocation.endFloat
-                  .getOffset(geometry(keyboard: 1))
-                  .dy +
-              fab.height),
+          (materialReference(geometry(keyboard: 1)).dy + fab.height),
       1 + kFloatingActionButtonMargin,
     );
   });
@@ -124,6 +136,21 @@ void main() {
       expect(
         scaffold.height - (flat.getOffset(g).dy + fab.height),
         keyboard + kFloatingActionButtonMargin,
+      );
+    }
+  });
+
+  test('landscape cutouts keep the end anchor inside safe padding', () {
+    for (final direction in TextDirection.values) {
+      final g = geometry(textDirection: direction).copyWith(
+        viewPadding: const EdgeInsets.fromLTRB(47, 0, 31, safeInset),
+      );
+      final offset = location.getOffset(g);
+      expect(
+        direction == TextDirection.rtl
+            ? offset.dx
+            : scaffold.width - offset.dx - fab.width,
+        (direction == TextDirection.rtl ? 47 : 31) + AppSpacing.lg,
       );
     }
   });

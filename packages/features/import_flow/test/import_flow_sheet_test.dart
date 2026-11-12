@@ -2,6 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show
+        CupertinoApp,
+        CupertinoButton,
+        CupertinoPageScaffold,
+        CupertinoPopupSurface,
+        CupertinoTextField;
 import 'package:domain_models/domain_models.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
@@ -39,6 +46,81 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, null);
   });
+
+  for (final locale in [const Locale('en'), const Locale('ar')]) {
+    testWidgets(
+      'Cupertino URL validation and draft stay usable at 200%: $locale',
+      (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(320, 740);
+        tester.view.devicePixelRatio = 1;
+        tester.view.viewInsets = const FakeViewPadding(bottom: 180);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetViewInsets);
+        late ReadflexLocalizations l10n;
+        var imports = 0;
+        await tester.pumpWidget(
+          _TestHost(
+            cupertino: true,
+            locale: locale,
+            textScaler: const TextScaler.linear(2),
+            onOpen: (context) {
+              l10n = context.l10n;
+              return showImportFlowSheet(
+                context,
+                entry: ImportFlowEntry.article,
+                onPickBookFile: () async => null,
+                onImportBook: (_, {onProgress}) async => null,
+                onImportArticle: (_, {onStage}) async {
+                  imports++;
+                  return null;
+                },
+              );
+            },
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.byType(CupertinoPopupSurface), findsOneWidget);
+        expect(find.byType(TextField), findsNothing);
+        tester.widget<AppTextField>(find.byType(AppTextField)).onSubmitted!('');
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.importArticleUrlRequired), findsOneWidget);
+        expect(
+          tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+          isTrue,
+        );
+        await tester.enterText(
+          find.byType(CupertinoTextField),
+          'https://example.com/a',
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+          isFalse,
+        );
+        final save = find.text(l10n.commonSave);
+        expect(save.hitTestable(), findsOneWidget);
+        expect(tester.getRect(save).bottom, lessThan(740 - 180));
+        await tester.tap(find.byTooltip(l10n.commonClose));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.commonDiscardChangesTitle), findsOneWidget);
+        await tester.tap(find.text(l10n.commonKeepEditing));
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<CupertinoTextField>(find.byType(CupertinoTextField))
+              .controller!
+              .text,
+          'https://example.com/a',
+        );
+        expect(imports, 0);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   for (final systemBack in [false, true]) {
     testWidgets('form back preserves URL, systemBack=$systemBack', (
@@ -1437,7 +1519,10 @@ void main() {
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(clipboardReadCount, 1);
     expect(field.controller!.text, 'https://example.com/keep');
-    expect(field.decoration!.error, isNotNull);
+    expect(
+      tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+      isTrue,
+    );
     expect(find.text('Enter a valid article URL'), findsOneWidget);
 
     await tester.enterText(
@@ -1446,8 +1531,8 @@ void main() {
     );
     await tester.pump();
     expect(
-      tester.widget<TextField>(find.byType(TextField)).decoration!.error,
-      isNull,
+      tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+      isFalse,
     );
   });
 
@@ -1481,7 +1566,10 @@ void main() {
 
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.controller!.text, 'https://example.com/article');
-    expect(field.decoration!.error, isNull);
+    expect(
+      tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+      isFalse,
+    );
     expect(urls, ['https://example.com/article']);
     await tester.enterText(
       find.byType(TextField),
@@ -1601,7 +1689,10 @@ void main() {
         await tester.pumpAndSettle();
         final field = tester.widget<TextField>(find.byType(TextField));
         expect(field.controller!.text, isEmpty);
-        expect(field.decoration!.error, isNotNull);
+        expect(
+          tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+          isTrue,
+        );
         expect(find.text('Enter a valid article URL'), findsOneWidget);
         expect(
           tester
@@ -1624,7 +1715,10 @@ void main() {
     await tester.pumpAndSettle();
     var field = tester.widget<TextField>(find.byType(TextField));
     expect(field.controller!.text, 'https://example.com/keep');
-    expect(field.decoration!.error, isNotNull);
+    expect(
+      tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+      isTrue,
+    );
     expect(find.text("Couldn't paste link"), findsOneWidget);
     readClipboard = () async => {'text': 'example.com/new'};
     await tester.tap(find.byIcon(AppIcons.paste));
@@ -1635,7 +1729,10 @@ void main() {
       field.controller!.selection,
       TextSelection.collapsed(offset: field.controller!.text.length),
     );
-    expect(field.decoration!.error, isNull);
+    expect(
+      tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+      isFalse,
+    );
   });
 
   for (final reply in ['example.com/stale', 'not a link']) {
@@ -1655,7 +1752,10 @@ void main() {
         await tester.pumpAndSettle();
         final field = tester.widget<TextField>(find.byType(TextField));
         expect(field.controller!.text, 'https://example.com/typed');
-        expect(field.decoration!.error, isNull);
+        expect(
+          tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+          isFalse,
+        );
       },
     );
   }
@@ -1886,90 +1986,94 @@ void main() {
     expect(bookIconRect.center.dy, closeTo(articleIconRect.center.dy, 0.1));
   });
 
-  testWidgets('book upload requires accepting terms before file picker', (
-    tester,
-  ) async {
-    var accepted = false;
-    var acceptCalls = 0;
-    var pickerCalls = 0;
-    var termsCalls = 0;
-    var privacyCalls = 0;
+  for (final cupertino in [false, true]) {
+    testWidgets('book upload requires accepting terms before file picker '
+        '(Cupertino: $cupertino)', (
+      tester,
+    ) async {
+      var accepted = false;
+      var acceptCalls = 0;
+      var pickerCalls = 0;
+      var termsCalls = 0;
+      var privacyCalls = 0;
 
-    await tester.pumpWidget(
-      _TestHost(
-        onOpen: (context) => showImportFlowSheet(
-          context,
-          onPickBookFile: () async {
-            pickerCalls += 1;
-            return null;
-          },
-          onImportBook: (file, {onProgress}) async => null,
-          onImportArticle: (_, {onStage}) async => null,
-          isBookImportTermsAccepted: () => accepted,
-          acceptBookImportTerms: () async {
-            acceptCalls += 1;
-            accepted = true;
-          },
-          onOpenTerms: () async => termsCalls += 1,
-          onOpenPrivacy: () async => privacyCalls += 1,
+      await tester.pumpWidget(
+        _TestHost(
+          cupertino: cupertino,
+          onOpen: (context) => showImportFlowSheet(
+            context,
+            onPickBookFile: () async {
+              pickerCalls += 1;
+              return null;
+            },
+            onImportBook: (file, {onProgress}) async => null,
+            onImportArticle: (_, {onStage}) async => null,
+            isBookImportTermsAccepted: () => accepted,
+            acceptBookImportTerms: () async {
+              acceptCalls += 1;
+              accepted = true;
+            },
+            onOpenTerms: () async => termsCalls += 1,
+            onOpenPrivacy: () async => privacyCalls += 1,
+          ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('File from device'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('File from device'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Before uploading'), findsOneWidget);
-    expect(
-      find.text(
-        'Only upload books, comics, and documents you have the right to use in Readflex.',
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.text('I confirm I have the right to upload this file.'),
-      findsOneWidget,
-    );
-    expect(find.textRange.ofSubstring('Terms'), findsOne);
-    expect(find.textRange.ofSubstring('Privacy Policy'), findsOne);
-    expect(pickerCalls, 0);
+      expect(find.text('Before uploading'), findsOneWidget);
+      expect(
+        find.text(
+          'Only upload books, comics, and documents you have the right to use in Readflex.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text('I confirm I have the right to upload this file.'),
+        findsOneWidget,
+      );
+      expect(find.textRange.ofSubstring('Terms'), findsOne);
+      expect(find.textRange.ofSubstring('Privacy Policy'), findsOne);
+      expect(pickerCalls, 0);
 
-    var continueButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Continue'),
-    );
-    expect(continueButton.onPressed, isNull);
+      var continueButton = tester.widget<AppButton>(
+        find.widgetWithText(AppButton, 'Continue'),
+      );
+      expect(continueButton.onPressed, isNull);
 
-    final legalText = find.byKey(const ValueKey('importFlowLegalText'));
-    await tester.ensureVisible(legalText);
-    await tester.pumpAndSettle();
-    await tester.tapOnText(find.textRange.ofSubstring('Terms'));
-    await Scrollable.ensureVisible(tester.element(legalText), alignment: 1);
-    await tester.pumpAndSettle();
-    await tester.tapOnText(find.textRange.ofSubstring('Privacy Policy'));
-    expect(termsCalls, 1);
-    expect(privacyCalls, 1);
+      final legalText = find.byKey(const ValueKey('importFlowLegalText'));
+      await tester.ensureVisible(legalText);
+      await tester.pumpAndSettle();
+      await tester.tapOnText(find.textRange.ofSubstring('Terms'));
+      await Scrollable.ensureVisible(tester.element(legalText), alignment: 1);
+      await tester.pumpAndSettle();
+      await tester.tapOnText(find.textRange.ofSubstring('Privacy Policy'));
+      expect(termsCalls, 1);
+      expect(privacyCalls, 1);
 
-    await tester.ensureVisible(find.byType(Checkbox));
-    await tester.pumpAndSettle();
-    expect(find.byType(Checkbox).hitTestable(), findsOneWidget);
-    await tester.tap(find.byType(Checkbox));
-    await tester.pump();
+      await tester.ensureVisible(find.byType(AppCheckbox));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppCheckbox).hitTestable(), findsOneWidget);
+      await tester.tap(find.byType(AppCheckbox));
+      await tester.pump();
 
-    continueButton = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Continue'),
-    );
-    expect(continueButton.onPressed, isNotNull);
+      continueButton = tester.widget<AppButton>(
+        find.widgetWithText(AppButton, 'Continue'),
+      );
+      expect(continueButton.onPressed, isNotNull);
 
-    await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
 
-    expect(acceptCalls, 1);
-    expect(pickerCalls, 1);
-    expect(accepted, isTrue);
-    expect(find.text('Add to Library'), findsOneWidget);
-  });
+      expect(acceptCalls, 1);
+      expect(pickerCalls, 1);
+      expect(accepted, isTrue);
+      expect(find.text('Add to Library'), findsOneWidget);
+    });
+  }
 
   testWidgets('cancelled book picker keeps menu open', (tester) async {
     var pickerCalls = 0;
@@ -2630,7 +2734,10 @@ void main() {
               .first,
         );
         expect(startInset(hintRow), AppSpacing.xl);
-        expect(tester.widget<TextField>(field).decoration!.error, isNull);
+        expect(
+          tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+          isFalse,
+        );
         final theme = Theme.of(tester.element(field));
         InputBorder paintedBorder() {
           // The decorator's border container carries the resolved border.
@@ -2657,7 +2764,10 @@ void main() {
         );
         expect(tester.getRect(error).bottom, lessThanOrEqualTo(hintRow.top));
         expect(tester.getRect(field), fieldBefore);
-        expect(tester.widget<TextField>(field).decoration!.error, isNotNull);
+        expect(
+          tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+          isTrue,
+        );
         expect(paintedBorder().borderSide.color, theme.colorScheme.error);
         expect(
           tester.widget<Text>(error).style?.color,
@@ -2677,7 +2787,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(error, findsNothing);
         expect(tester.getRect(field), fieldBefore);
-        expect(tester.widget<TextField>(field).decoration!.error, isNull);
+        expect(
+          tester.widget<AppTextField>(find.byType(AppTextField)).hasError,
+          isFalse,
+        );
 
         isOfflineController.add(true);
         await tester.pump();
@@ -2745,6 +2858,7 @@ class _TestHost extends StatefulWidget {
     this.textScaler = TextScaler.noScaling,
     this.locale = const Locale('en'),
     this.reducedMotion = false,
+    this.cupertino = false,
     this.theme,
   });
 
@@ -2752,6 +2866,7 @@ class _TestHost extends StatefulWidget {
   final TextScaler textScaler;
   final Locale locale;
   final bool reducedMotion;
+  final bool cupertino;
   final ThemeData? theme;
 
   @override
@@ -2761,6 +2876,38 @@ class _TestHost extends StatefulWidget {
 class _TestHostState extends State<_TestHost> {
   @override
   Widget build(BuildContext context) {
+    if (widget.cupertino) {
+      final adapter = AppTheme.forPlatform(
+        TargetPlatform.iOS,
+        Brightness.light,
+      );
+      return CupertinoApp(
+        theme: AppTheme.cupertino(adapter),
+        locale: widget.locale,
+        supportedLocales: ReadflexSupportedLocales.locales,
+        localizationsDelegates: readflexLocalizationsDelegates,
+        builder: (context, child) => AppThemeScope(
+          data: AppTheme.dataFor(adapter),
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: widget.textScaler,
+              disableAnimations: widget.reducedMotion,
+            ),
+            child: child!,
+          ),
+        ),
+        home: CupertinoPageScaffold(
+          child: Builder(
+            builder: (context) => Center(
+              child: CupertinoButton(
+                onPressed: () => widget.onOpen(context),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return MaterialApp(
       theme: widget.theme ?? AppTheme.light(),
       locale: widget.locale,

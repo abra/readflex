@@ -1,3 +1,4 @@
+import 'package:component_library/component_library.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -132,7 +133,7 @@ void main() {
       expect(cubit.state.containingAll, {weekendId});
       expect(cubit.state.selectedCollectionIds, isEmpty);
       final submit = find.byKey(const ValueKey('addToCollectionsSubmitButton'));
-      expect(tester.widget<FilledButton>(submit).onPressed, isNull);
+      expect(tester.widget<AppButton>(submit).onPressed, isNull);
       await snapshot(tester, 'collection-destinations');
 
       final destinationScrollable = find.descendant(
@@ -185,7 +186,7 @@ void main() {
       await revealDestination(research);
       await tapUi(tester, research);
       expect(cubit.state.selectedCollectionIds, {researchId});
-      expect(tester.widget<FilledButton>(submit).onPressed, isNotNull);
+      expect(tester.widget<AppButton>(submit).onPressed, isNotNull);
       expect(
         (await tester.runAsync(
               app.collectionRepository.getCollectionSourceIds,
@@ -237,7 +238,7 @@ void main() {
       expect(cubit.state.selectedCollectionIds, {researchId});
       await tester.ensureVisible(create);
       await tapUi(tester, create);
-      expect(tester.widget<TextField>(field).controller!.text, 'Learning');
+      expect(tester.widget<AppTextField>(field).controller!.text, 'Learning');
       await tester.ensureVisible(close);
       await tapUi(tester, close);
       expect(

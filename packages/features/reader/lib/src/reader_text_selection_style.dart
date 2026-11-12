@@ -1,16 +1,15 @@
+import 'package:component_library/component_library.dart';
 import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoTheme;
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:material_ui/material_ui.dart' show TextSelectionTheme;
 
 /// Shared selection colours for Flutter text and fixed-layout text overlays.
 ({Color fill, Color handle}) readerTextSelectionColorsOf(BuildContext context) {
-  final theme = Theme.of(context);
-  final cupertino =
-      theme.platform == TargetPlatform.iOS ||
-      theme.platform == TargetPlatform.macOS;
+  final cupertino = context.isCupertino;
   final accent = cupertino
       ? CupertinoTheme.of(context).selectionHandleColor
       : TextSelectionTheme.of(context).selectionHandleColor ??
-            theme.colorScheme.primary;
+            context.colors.primary;
   return (
     fill: accent.withValues(alpha: cupertino ? 0.20 : 0.40),
     handle: accent,

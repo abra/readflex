@@ -121,12 +121,12 @@ class _LanguageOption extends StatelessWidget {
       selected: selected,
       inMutuallyExclusiveGroup: true,
       button: true,
-      child: Material(
+      child: AppSurface(
         color: selected
             ? context.colors.selectedControlBackground
             : Colors.transparent,
         borderRadius: radius,
-        child: InkWell(
+        child: AppTappable(
           onTap: onPressed,
           borderRadius: radius,
           child: ConstrainedBox(

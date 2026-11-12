@@ -421,11 +421,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('libraryClearSearchButton')));
     await tester.pumpAndSettle();
     expect(
-      tester.widget<TextField>(_searchField).controller!.text,
+      tester.widget<AppTextField>(_searchField).controller!.text,
       '',
     );
     expect(
-      tester.widget<TextField>(_searchField).focusNode!.hasFocus,
+      tester.widget<AppTextField>(_searchField).focusNode!.hasFocus,
       isFalse,
     );
     // Still inside Comics: the comic is back, the book stays out.
@@ -887,7 +887,10 @@ void main() {
     expect(tester.widget<SearchFieldHint>(hint).text, 'Search library');
     expect(_searchClose, findsOneWidget);
     expect(_searchClear, findsNothing);
-    expect(tester.widget<TextField>(_searchField).focusNode!.hasFocus, isTrue);
+    expect(
+      tester.widget<AppTextField>(_searchField).focusNode!.hasFocus,
+      isTrue,
+    );
     expect(bookRepository.getBooksCallCount, 1);
   });
 
@@ -988,7 +991,7 @@ void main() {
     await tester.enterText(_searchField, 'Flutter');
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pumpAndSettle();
-    final focus = tester.widget<TextField>(_searchField).focusNode!;
+    final focus = tester.widget<AppTextField>(_searchField).focusNode!;
     expect(_addButton, findsNothing);
     expect(_collectionsButton, findsNothing);
     expect(_searchClear, findsOneWidget);
@@ -999,7 +1002,7 @@ void main() {
     expect(_searchField, findsOneWidget);
     expect(_searchClose, findsOneWidget);
     expect(_searchClear, findsNothing);
-    expect(tester.widget<TextField>(_searchField).controller!.text, isEmpty);
+    expect(tester.widget<AppTextField>(_searchField).controller!.text, isEmpty);
     expect(focus.hasFocus, isTrue);
     expect(find.text(_secondBook.title), findsWidgets);
 
@@ -1035,8 +1038,11 @@ void main() {
     );
 
     await _openSearch(tester);
-    expect(tester.widget<TextField>(_searchField).controller!.text, isEmpty);
-    expect(tester.widget<TextField>(_searchField).focusNode!.hasFocus, isTrue);
+    expect(tester.widget<AppTextField>(_searchField).controller!.text, isEmpty);
+    expect(
+      tester.widget<AppTextField>(_searchField).focusNode!.hasFocus,
+      isTrue,
+    );
     expect(bookRepository.getBooksCallCount, 1);
   });
 
@@ -1101,7 +1107,7 @@ void main() {
     expect(message, findsNothing);
     expect(find.text(_book.title), findsWidgets);
     expect(_searchField, findsOneWidget);
-    expect(tester.widget<TextField>(_searchField).controller!.text, isEmpty);
+    expect(tester.widget<AppTextField>(_searchField).controller!.text, isEmpty);
     expect(_searchClose.hitTestable(), findsOneWidget);
     expect(bookRepository.getBooksCallCount, 1);
     expect(tester.takeException(), isNull);
@@ -1204,7 +1210,7 @@ void main() {
     await tester.enterText(_searchField, 'Flutter');
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pumpAndSettle();
-    final focus = tester.widget<TextField>(_searchField).focusNode!;
+    final focus = tester.widget<AppTextField>(_searchField).focusNode!;
     await tester.longPress(find.text(_book.title));
     await tester.pumpAndSettle();
     expect(find.byType(LibrarySelectionBar), findsOneWidget);
@@ -1225,7 +1231,10 @@ void main() {
     await tester.tap(find.byTooltip('Cancel selection'));
     await tester.pumpAndSettle();
     expect(_searchField, findsOneWidget);
-    expect(tester.widget<TextField>(_searchField).controller!.text, 'Flutter');
+    expect(
+      tester.widget<AppTextField>(_searchField).controller!.text,
+      'Flutter',
+    );
     expect(focus.hasFocus, isFalse);
     expect(find.text(_secondBook.title), findsNothing);
     expect(bookRepository.getBooksCallCount, 1);
@@ -1246,8 +1255,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(LibrarySelectionBar), findsNothing);
     expect(_searchField, findsOneWidget);
-    expect(tester.widget<TextField>(_searchField).controller!.text, 'Flutter');
-    expect(tester.widget<TextField>(_searchField).focusNode!.hasFocus, isFalse);
+    expect(
+      tester.widget<AppTextField>(_searchField).controller!.text,
+      'Flutter',
+    );
+    expect(
+      tester.widget<AppTextField>(_searchField).focusNode!.hasFocus,
+      isFalse,
+    );
 
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -1272,7 +1287,7 @@ void main() {
     await tester.enterText(_searchField, 'Flutter');
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pumpAndSettle();
-    final focus = tester.widget<TextField>(_searchField).focusNode!;
+    final focus = tester.widget<AppTextField>(_searchField).focusNode!;
     await tester.tap(find.byKey(const ValueKey('libraryHeaderDisplayButton')));
     await tester.pumpAndSettle();
     final sheet = find.byType(BottomSheet);
@@ -1281,7 +1296,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(_searchField, findsOneWidget);
-    expect(tester.widget<TextField>(_searchField).controller!.text, 'Flutter');
+    expect(
+      tester.widget<AppTextField>(_searchField).controller!.text,
+      'Flutter',
+    );
     expect(focus.hasFocus, isFalse);
     expect(focus.canRequestFocus, isTrue);
     expect(bookRepository.getBooksCallCount, 1);
@@ -1306,7 +1324,7 @@ void main() {
       ),
     );
     await _openSearch(tester);
-    final focus = tester.widget<TextField>(_searchField).focusNode!;
+    final focus = tester.widget<AppTextField>(_searchField).focusNode!;
     await tester.tap(find.byKey(const ValueKey('libraryPracticeRow')));
     await tester.pumpAndSettle();
     expect(find.text('Practice route'), findsOneWidget);
@@ -1315,7 +1333,7 @@ void main() {
     navigator.currentState!.pop();
     await tester.pumpAndSettle();
     expect(_searchField, findsOneWidget);
-    expect(tester.widget<TextField>(_searchField).controller!.text, isEmpty);
+    expect(tester.widget<AppTextField>(_searchField).controller!.text, isEmpty);
     expect(focus.hasFocus, isFalse);
     expect(focus.canRequestFocus, isTrue);
   });
@@ -1378,7 +1396,10 @@ void main() {
     expect(searchFocusNode.hasFocus, isFalse);
     expect(searchFocusNode.canRequestFocus, isTrue);
     expect(_searchField, findsOneWidget);
-    expect(tester.widget<TextField>(_searchField).controller!.text, 'Flutter');
+    expect(
+      tester.widget<AppTextField>(_searchField).controller!.text,
+      'Flutter',
+    );
     expect(
       tester
           .widget<LibraryHeader>(find.byType(LibraryHeader))
@@ -1592,7 +1613,7 @@ void main() {
       tester.widget<Scaffold>(find.byType(Scaffold)).floatingActionButton,
       isNotNull,
     );
-    expect(tester.widget<IconButton>(_addButton).tooltip, 'Add to Library');
+    expect(tester.widget<AppIconButton>(_addButton).tooltip, 'Add to Library');
     // Only one "+" on screen: the header keeps the title and Display.
     expect(find.byIcon(AppIcons.add), findsOneWidget);
     await tester.tap(_addButton);
@@ -2224,7 +2245,7 @@ void main() {
     await tester.pumpAndSettle();
 
     VoidCallback? addPressed() =>
-        tester.widget<IconButton>(_addButton).onPressed;
+        tester.widget<AppIconButton>(_addButton).onPressed;
     Color? addFill() => tester
         .widget<Material>(
           find.descendant(of: _addButton, matching: find.byType(Material)),
@@ -2239,7 +2260,7 @@ void main() {
     expect(addFill(), colors.onSurface.withValues(alpha: .12));
     // Switching collections stays available meanwhile.
     expect(
-      tester.widget<TextButton>(_collectionsButton).onPressed,
+      tester.widget<AppButton>(_collectionsButton).onPressed,
       isNotNull,
     );
 
@@ -2255,12 +2276,12 @@ void main() {
     await tester.pumpAndSettle();
 
     VoidCallback? uploadPressed() => tester
-        .widget<ButtonStyleButton>(
+        .widget<AppButton>(
           find.byKey(const ValueKey('libraryEmptyUploadFile')),
         )
         .onPressed;
     VoidCallback? articlePressed() => tester
-        .widget<ButtonStyleButton>(
+        .widget<AppButton>(
           find.byKey(const ValueKey('libraryEmptySaveArticle')),
         )
         .onPressed;
@@ -4653,7 +4674,7 @@ void main() {
     testWidgets('closing search while the keyboard dismisses keeps the safe '
         'inset and never restores focus', (tester) async {
       await pumpPhone(tester, LibraryLayoutMode.list);
-      final focus = tester.widget<TextField>(_searchField).focusNode!;
+      final focus = tester.widget<AppTextField>(_searchField).focusNode!;
       await setKeyboard(tester, 320);
       await tester.tap(_searchClose);
       await tester.pumpAndSettle();

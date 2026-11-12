@@ -1,5 +1,7 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
+import 'app_button.dart';
+import 'app_progress_indicator.dart';
 import 'app_button_label.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_spacing.dart';
@@ -46,11 +48,11 @@ class AppStatusMessage extends StatelessWidget {
         ),
         if (busy) ...[
           const SizedBox(height: AppSpacing.md),
-          const LinearProgressIndicator(),
+          const AppLinearProgressIndicator(),
         ],
         if (actionLabel != null) ...[
           const SizedBox(height: AppSpacing.md),
-          FilledButton(
+          AppButton(
             onPressed: busy ? null : onAction,
             child: AppButtonLabel(actionLabel!),
           ),

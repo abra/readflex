@@ -92,7 +92,7 @@ class ReaderHighlightListTile extends StatelessWidget {
         Semantics(
           button: hasLocation,
           hint: hasLocation ? l10n.readerGoToPassage : null,
-          child: InkWell(
+          child: AppTappable(
             onTap: hasLocation ? onNavigate : null,
             // The body owns both gutters so Read more can bleed its ink into
             // the trailing one; a removed row ends on its Undo target instead.
@@ -138,9 +138,11 @@ class ReaderHighlightListTile extends StatelessWidget {
             ),
           ),
         ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Divider(height: 1),
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: readerDrawerContentInset(context),
+          ),
+          child: const AppDivider(height: 1),
         ),
       ],
     );
@@ -186,9 +188,10 @@ class _ReaderHighlightTileBody extends StatelessWidget {
     final l10n = context.l10n;
     final note = this.note;
     // A removed row ends at its Undo target, which supplies the spacing.
-    final endGutter = removed ? 0.0 : AppSpacing.lg;
+    final contentInset = readerDrawerContentInset(context);
+    final endGutter = removed ? 0.0 : contentInset;
     final gutters = EdgeInsetsDirectional.only(
-      start: AppSpacing.lg,
+      start: contentInset,
       end: endGutter,
     );
     final locationText = location != null || !hasLocation
@@ -204,7 +207,7 @@ class _ReaderHighlightTileBody extends StatelessWidget {
         // width, font and scaler rather than a character-count estimate.
         var canExpand = false;
         if (!removed) {
-          final quoteWidth = (constraints.maxWidth - AppSpacing.lg - endGutter)
+          final quoteWidth = (constraints.maxWidth - contentInset - endGutter)
               .clamp(0.0, double.infinity);
           final painter = TextPainter(
             text: TextSpan(text: quote, style: style),

@@ -1,6 +1,12 @@
 import 'dart:async';
 
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show
+        CupertinoApp,
+        CupertinoPageScaffold,
+        CupertinoPopupSurface,
+        CupertinoTextField;
 import 'package:domain_models/domain_models.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,21 +40,48 @@ void main() {
     TextSelectionContext selection = _selection,
     HighlightColorResolver? resolveColor,
     Locale locale = const Locale('en'),
+    bool cupertino = false,
+    double textScale = 1,
+    double keyboard = 0,
   }) async {
     late BuildContext hostContext;
+    final adapter = AppTheme.forPlatform(TargetPlatform.iOS, Brightness.light);
     await tester.pumpWidget(
-      MaterialApp(
-        locale: locale,
-        supportedLocales: ReadflexSupportedLocales.locales,
-        localizationsDelegates: readflexLocalizationsDelegates,
-        theme: AppTheme.light(),
-        home: Builder(
-          builder: (context) {
-            hostContext = context;
-            return const Scaffold();
-          },
-        ),
-      ),
+      cupertino
+          ? CupertinoApp(
+              theme: AppTheme.cupertino(adapter),
+              locale: locale,
+              supportedLocales: ReadflexSupportedLocales.locales,
+              localizationsDelegates: readflexLocalizationsDelegates,
+              builder: (context, child) => AppThemeScope(
+                data: AppTheme.dataFor(adapter),
+                child: MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    textScaler: TextScaler.linear(textScale),
+                    viewInsets: EdgeInsets.only(bottom: keyboard),
+                  ),
+                  child: child!,
+                ),
+              ),
+              home: Builder(
+                builder: (context) {
+                  hostContext = context;
+                  return const CupertinoPageScaffold(child: SizedBox.expand());
+                },
+              ),
+            )
+          : MaterialApp(
+              locale: locale,
+              supportedLocales: ReadflexSupportedLocales.locales,
+              localizationsDelegates: readflexLocalizationsDelegates,
+              theme: AppTheme.light(),
+              home: Builder(
+                builder: (context) {
+                  hostContext = context;
+                  return const Scaffold();
+                },
+              ),
+            ),
     );
     unawaited(
       showHighlightSheet(
@@ -74,6 +107,69 @@ void main() {
 
     expect(find.byType(HighlightSheet), findsNothing);
     expect(repository.highlights, isEmpty);
+  });
+
+  testWidgets('Cupertino note draft survives its decision and saves once', (
+    tester,
+  ) async {
+    await openSheet(tester, cupertino: true);
+    expect(find.byType(CupertinoPopupSurface), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    await tester.enterText(find.byType(CupertinoTextField), 'My note');
+    await tester.tap(find.byTooltip('Close'));
+    await tester.pumpAndSettle();
+    expect(find.text('Discard changes?'), findsOneWidget);
+    await tester.tap(find.text('Keep editing'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<CupertinoTextField>(find.byType(CupertinoTextField))
+          .controller!
+          .text,
+      'My note',
+    );
+    repository.awaitGate = Completer<void>();
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    expect(tester.widget<AppButton>(find.byType(AppButton)).onPressed, isNull);
+    expect(find.byType(ButtonLoadingIndicator), findsOneWidget);
+    await tester.tapAt(const Offset(10, 20));
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(find.text('Discard changes?'), findsNothing);
+    expect(find.byType(CupertinoPopupSurface), findsOneWidget);
+    repository.awaitGate!.complete();
+    await tester.pumpAndSettle();
+    expect(repository.highlights.single.note, 'My note');
+    expect(find.byType(CupertinoPopupSurface), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Cupertino narrow RTL form keeps Save above the keyboard', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    repository.shouldThrow = true;
+    await openSheet(
+      tester,
+      cupertino: true,
+      locale: const Locale('ar'),
+      selection: _arabicSelection,
+      textScale: 2,
+      keyboard: 180,
+    );
+    final context = tester.element(find.byType(HighlightSheet));
+    final save = find.text(context.l10n.commonSave);
+    expect(save.hitTestable(), findsOneWidget);
+    expect(tester.getRect(save).bottom, lessThan(740 - 180));
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+    expect(find.text(context.l10n.highlightFailedToSave), findsOneWidget);
+    expect(save.hitTestable(), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('header and body are 8dp apart like the other text sheets', (

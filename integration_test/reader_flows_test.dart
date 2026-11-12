@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:contextual_translation_service/contextual_translation_service.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoListTile, CupertinoPopupSurface;
 import 'package:dictionary_service/dictionary_service.dart';
 import 'package:flutter/gestures.dart' show kLongPressTimeout;
 import 'package:material_ui/material_ui.dart';
@@ -16,6 +18,8 @@ import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_result_tile.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
+import 'package:reader/src/reader_ui_cubit.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:pagecraft/all_formats.dart';
 
 import '../test/support/reading_fixture.dart';
@@ -26,6 +30,7 @@ import '../test/support/ui_test_services.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final cupertino = Platform.isIOS || Platform.isMacOS;
   late UiTestApp app;
 
   setUp(() async {
@@ -64,6 +69,22 @@ void main() {
   ReaderBloc readerBloc(WidgetTester tester) =>
       tester.element(pages).read<ReaderBloc>();
 
+  Finder activeSheetLayout() {
+    final sheet = cupertino
+        ? find.byType(CupertinoPopupSurface).last
+        : find.byType(BottomSheet).last;
+    final activeStep = find.descendant(
+      of: sheet,
+      matching: find.byWidgetPredicate(
+        (widget) => widget is AppSheetStep && widget.active,
+      ),
+    );
+    return find.descendant(
+      of: activeStep,
+      matching: find.byType(ActionBottomSheetLayout),
+    );
+  }
+
   void expectTrailingActionAligned(
     WidgetTester tester,
     Finder action, {
@@ -75,14 +96,18 @@ void main() {
     );
     final button = find.ancestor(
       of: action,
-      matching: find.byType(IconButton),
+      matching: find.byType(AppIconButton),
     );
     final field = tester.getRect(find.byType(SearchField).hitTestable());
     // Global rectangles include fractional native viewport transforms.
-    expect(icon.width, closeTo(close.width, .01));
-    expect(icon.height, closeTo(close.height, .01));
+    final iconSize = AppPlainIconButton.defaultIconSizeOf(
+      tester.element(action),
+    );
+    expect(icon.width, closeTo(iconSize, .01));
+    expect(icon.height, closeTo(iconSize, .01));
     expect(icon.center.dx, closeTo(close.center.dx, .01));
     expect(icon.right, closeTo(field.right, .01));
+    expect(button, findsOneWidget);
     expect(tester.getSize(button), const Size(48, 48));
   }
 
@@ -234,7 +259,10 @@ void main() {
       await showChrome(tester);
       final originalProgress = bloc.state.document!.readingProgress;
       await tapUi(tester, find.byTooltip('Search'));
-      await tester.enterText(find.byType(TextField).hitTestable(), 'devices');
+      await tester.enterText(
+        find.byType(AppTextField).hitTestable(),
+        'devices',
+      );
       await waitForUi(
         tester,
         () => find
@@ -245,7 +273,7 @@ void main() {
         description: 'search results from the actual book',
       );
       final searchCubit = tester
-          .element(find.byType(TextField).hitTestable())
+          .element(find.byType(AppTextField).hitTestable())
           .read<ReaderSearchCubit>();
       await waitForUi(
         tester,
@@ -263,7 +291,7 @@ void main() {
       await tapUi(tester, tile);
       await waitForUi(
         tester,
-        () => find.byType(TextField).hitTestable().evaluate().isEmpty,
+        () => find.byType(AppTextField).hitTestable().evaluate().isEmpty,
         description: 'search drawer closes on navigation',
       );
       final origin = searchCubit.state.returnLocation;
@@ -282,7 +310,7 @@ void main() {
       await tapUi(tester, find.byKey(const ValueKey('reader-search-reopen')));
       expect(
         tester
-            .widget<TextField>(find.byType(TextField).hitTestable())
+            .widget<AppTextField>(find.byType(AppTextField).hitTestable())
             .controller!
             .text,
         'devices',
@@ -291,7 +319,7 @@ void main() {
       expect(searchCubit.state.recentQueries, contains('devices'));
       await tester.binding.handlePopRoute();
       await tester.pump(const Duration(milliseconds: 350));
-      expect(find.byType(TextField).hitTestable(), findsNothing);
+      expect(find.byType(AppTextField).hitTestable(), findsNothing);
       expect(searchCubit.state.isNavigating, isTrue);
       await tapUi(tester, find.byKey(const ValueKey('reader-search-return')));
       await waitForUi(
@@ -325,9 +353,9 @@ void main() {
       expect(searchCubit.state.recentQueries, isEmpty);
       // Re-focus the retained field through a real gesture; enterText alone
       // reuses the test binding's old EditableText connection after unfocus.
-      await tapUi(tester, find.byType(TextField).hitTestable());
+      await tapUi(tester, find.byType(AppTextField).hitTestable());
       await tester.enterText(
-        find.byType(TextField).hitTestable(),
+        find.byType(AppTextField).hitTestable(),
         'zzzznotinthebook',
       );
       expect(searchCubit.state.query, 'zzzznotinthebook');
@@ -431,14 +459,22 @@ void main() {
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Font'));
       await tapUi(tester, find.text('Night'));
-      final appearanceBounds = tester.getRect(find.byType(BottomSheet));
+      final appearanceBounds = tester.getRect(
+        activeSheetLayout(),
+      );
       await tapUi(tester, find.byKey(const ValueKey('reader-font-picker')));
-      expect(tester.getRect(find.byType(BottomSheet)), appearanceBounds);
+      expect(
+        tester.getRect(activeSheetLayout()),
+        appearanceBounds,
+      );
       await tapUi(tester, find.byKey(const ValueKey('reader-font-sans')));
       expect(find.byTooltip('Back').hitTestable(), findsOneWidget);
       await capture(tester, 'book-font');
       await tapUi(tester, find.byTooltip('Back'));
-      expect(tester.getRect(find.byType(BottomSheet)), appearanceBounds);
+      expect(
+        tester.getRect(activeSheetLayout()),
+        appearanceBounds,
+      );
       await tapUi(tester, find.byTooltip('Increase text size'));
       final vertical = find.text('Vertical');
       await tester.ensureVisible(vertical);
@@ -463,7 +499,15 @@ void main() {
             proseSize(tester) > before,
         description: 'font size did not reach the page',
       );
-      await showChrome(tester);
+      final ui = tester.element(pages).read<ReaderUiCubit>();
+      await waitForUi(
+        tester,
+        () =>
+            ui.state.overlay == ReaderOverlay.none &&
+            ui.state.chromeVisible &&
+            find.byTooltip('Back').hitTestable().evaluate().isNotEmpty,
+        description: 'Appearance exit automatically restores reader chrome',
+      );
       await tapUi(tester, find.byTooltip('Back'));
       await openBook(tester, mount: false);
       await waitForUi(
@@ -667,17 +711,32 @@ void main() {
         description: 'contextual translation result',
       );
       expect(find.text('Zusatzakku'), findsNothing);
-      final details = find.byType(ExpansionTile);
+      final detailsLabel = find.text(
+        tester.element(find.text('Externer Akku')).l10n.translationDetails,
+      );
+      final details = find.ancestor(
+        of: detailsLabel,
+        matching: find.byType(cupertino ? AppTappable : ExpansionTile),
+      );
+      expect(details, findsOneWidget);
       await tester.ensureVisible(details);
       await tapUi(tester, details);
       await tester.ensureVisible(find.text('Ersatzakku'));
+      await tester.pump();
+      expect(find.text('Ersatzakku').hitTestable(), findsOneWidget);
       await capture(tester, 'book-translation-details');
       expect(app.contextualTranslationService.requests, hasLength(1));
 
       final target = find.byKey(const ValueKey('translation-target-language'));
       await tester.ensureVisible(target);
       await tapUi(tester, target);
-      final french = find.widgetWithText(MenuItemButton, 'Français');
+      final french = cupertino
+          ? find.descendant(
+              of: find.byType(CupertinoPopupSurface).last,
+              matching: find.widgetWithText(CupertinoListTile, 'Français'),
+            )
+          : find.widgetWithText(MenuItemButton, 'Français');
+      expect(french, findsOneWidget);
       await tester.ensureVisible(french);
       await tapUi(tester, french);
       await waitForUi(
@@ -871,7 +930,10 @@ void main() {
       final initialPosition = bloc.state.document?.currentCfi;
       await showChrome(tester);
       await tapUi(tester, find.byTooltip('Search'));
-      await tester.enterText(find.byType(TextField).hitTestable(), 'devices');
+      await tester.enterText(
+        find.byType(AppTextField).hitTestable(),
+        'devices',
+      );
       final results = find.byType(ReaderSearchResultTile).hitTestable();
       await waitForUi(
         tester,

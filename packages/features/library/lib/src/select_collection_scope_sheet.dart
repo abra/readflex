@@ -477,10 +477,14 @@ class _ScopeOptionRow extends StatelessWidget {
     final foreground = selected
         ? colors.selectedControlForeground
         : colors.onSurfaceVariant;
+    final selectionDecoration = BoxDecoration(
+      color: colors.selectedControlBackground,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
+    );
 
     return Semantics(
       selected: selected,
-      child: Material(
+      child: AppSurface(
         color: Colors.transparent,
         child: Stack(
           children: [
@@ -493,15 +497,17 @@ class _ScopeOptionRow extends StatelessWidget {
                     _collectionScopeRowInset,
                 top: 0,
                 bottom: 0,
-                child: Ink(
-                  key: ValueKey('collectionScopeSelection-$keyId'),
-                  decoration: BoxDecoration(
-                    color: colors.selectedControlBackground,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                  ),
-                ),
+                child: context.isCupertino
+                    ? DecoratedBox(
+                        key: ValueKey('collectionScopeSelection-$keyId'),
+                        decoration: selectionDecoration,
+                      )
+                    : Ink(
+                        key: ValueKey('collectionScopeSelection-$keyId'),
+                        decoration: selectionDecoration,
+                      ),
               ),
-            InkWell(
+            AppTappable(
               borderRadius: BorderRadius.circular(AppRadius.sm),
               onTap: onTap,
               child: SizedBox(

@@ -418,7 +418,7 @@ const double _kTapZoneHintGlyphSize = 44;
 /// the tinted zone as it is actually painted over the page. White on the
 /// accent tint failed (about 2.4:1) on Snow, Paper and Warm pages.
 @visibleForTesting
-Color readerTapZoneHintInk(AppColorsExt colors, Color composite) {
+Color readerTapZoneHintInk(AppStatusColors colors, Color composite) {
   double contrast(Color a, Color b) {
     final la = a.computeLuminance();
     final lb = b.computeLuminance();

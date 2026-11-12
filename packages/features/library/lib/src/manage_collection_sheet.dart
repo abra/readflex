@@ -82,10 +82,8 @@ double _nameFieldHeight(BuildContext context) {
   )..layout();
   final lineHeight = painter.preferredLineHeight;
   painter.dispose();
-  final padding =
-      Theme.of(context).inputDecorationTheme.contentPadding?.vertical ??
-      AppSpacing.lg * 2;
-  return lineHeight + padding;
+  final padding = AppTextField.contentPaddingOf(context).vertical;
+  return math.max(AppSizes.inputHeight, lineHeight + padding);
 }
 
 /// Whether the count label and the delete button cannot share one row at
@@ -758,13 +756,11 @@ class _ManageCollectionContent extends StatelessWidget {
       if (canRename) ...[
         Padding(
           padding: _sheetHorizontalPadding,
-          child: TextField(
+          child: AppTextField(
             controller: nameController,
             enabled: !state.isBusy,
             textInputAction: TextInputAction.done,
-            decoration: InputDecoration(
-              hintText: context.l10n.libraryCollectionNameRequired,
-            ),
+            hintText: context.l10n.libraryCollectionNameRequired,
             onSubmitted: (_) => canSave ? onSave() : null,
           ),
         ),
@@ -876,7 +872,7 @@ class _SaveCollectionAction extends StatelessWidget {
   final bool busy;
 
   @override
-  Widget build(BuildContext context) => FilledButton(
+  Widget build(BuildContext context) => AppButton(
     onPressed: busy ? null : onSave,
     child: AppBusyButtonLabel(context.l10n.commonSave, busy: busy),
   );
@@ -910,10 +906,10 @@ class _CollectionCountRow extends StatelessWidget {
     if (deleteLabel == null) {
       return Padding(padding: _sheetHorizontalPadding, child: count);
     }
-    final button = TextButton(
+    final button = AppButton.text(
       key: const ValueKey('libraryDeleteCollectionButton'),
       onPressed: enabled ? onDeletePressed : null,
-      style: TextButton.styleFrom(foregroundColor: context.colors.error),
+      foregroundColor: context.colors.error,
       child: AppButtonLabel(deleteLabel),
     );
     return LayoutBuilder(
@@ -1133,7 +1129,7 @@ class _CollectionSourceRow extends StatelessWidget {
         if (showDivider)
           Padding(
             padding: _sheetHorizontalPadding,
-            child: Divider(
+            child: AppDivider(
               key: ValueKey('collectionSourceDivider-${source.id}'),
               height: _collectionSourceDividerHeight,
             ),

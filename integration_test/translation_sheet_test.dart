@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:preferences_service/preferences_service.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:readflex/app/readflex_platform_app.dart';
 import 'package:shared/shared.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
@@ -119,17 +119,14 @@ void main() {
         );
         // Use the device viewport and native clipboard, but no live provider or user data.
         await tester.pumpWidget(
-          MaterialApp(
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.light(),
-            localizationsDelegates: readflexLocalizationsDelegates,
-            supportedLocales: ReadflexSupportedLocales.locales,
+          ReadflexPlatformApp(
+            brightness: Brightness.light,
             locale: const Locale('en'),
-            home: const Scaffold(),
+            home: const AppScaffold(),
           ),
         );
         showTranslateSheet(
-          tester.element(find.byType(Scaffold)),
+          tester.element(find.byType(AppScaffold)),
           selection: TextSelectionContext(
             selectedText: example.word,
             contextText: example.sentence,

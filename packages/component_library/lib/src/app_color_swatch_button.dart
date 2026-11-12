@@ -1,4 +1,7 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+
+import 'app_surface.dart';
+import 'app_tooltip.dart';
 
 import 'app_icons.dart';
 import 'theme/extensions/build_context_ext.dart';
@@ -64,12 +67,12 @@ class AppColorSwatchButton extends StatelessWidget {
       onTap: onPressed,
       child: SizedBox.square(
         dimension: AppSizes.buttonHeight,
-        child: Tooltip(
+        child: AppTooltip(
           message: tooltip,
           excludeFromSemantics: true,
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
+          child: AppSurface(
+            transparent: true,
+            child: AppTappable(
               customBorder: const CircleBorder(),
               onTap: onPressed,
               child: Center(

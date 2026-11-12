@@ -34,7 +34,7 @@ void main() {
           final chip = find.byType(AppFilterChip);
           final target = tester.getRect(chip);
           final body = tester.getRect(
-            find.descendant(of: chip, matching: find.byType(Material)),
+            find.descendant(of: chip, matching: find.byType(AppSurface)),
           );
           expect(target.size, const Size(48, 48));
           expect(body.height, AppSizes.chipHeight);

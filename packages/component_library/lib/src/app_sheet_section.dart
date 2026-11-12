@@ -1,3 +1,5 @@
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoColors, CupertinoDynamicColor;
 import 'package:flutter/widgets.dart';
 
 import 'app_plain_icon_button.dart';
@@ -6,10 +8,9 @@ import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
 
-/// One section of a sheet body, outlined so that sections read as separate
-/// blocks: a hairline in the divider color, no fill.
+/// One section of a sheet body: an Android outline or a Cupertino grouped fill.
 ///
-/// The outline is drawn behind full-width content rather than around it.
+/// The outline or grouped fill is drawn behind full-width content.
 /// [child] keeps the sheet's geometry: text stays on the 24dp gutter, under
 /// the sheet title, and an `AppSheetActionRow` glyph stays on the same edge.
 /// The outline sits [outlineInsetFor] from either side of the sheet, so a 48dp
@@ -55,7 +56,15 @@ class AppSheetSection extends StatelessWidget {
           right: outlineInset,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              border: Border.all(color: context.colors.outlineVariant),
+              color: context.isCupertino
+                  ? CupertinoDynamicColor.resolve(
+                      CupertinoColors.secondarySystemGroupedBackground,
+                      context,
+                    )
+                  : null,
+              border: context.isCupertino
+                  ? null
+                  : Border.all(color: context.colors.outlineVariant),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
           ),
@@ -95,7 +104,15 @@ class AppSheetSectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       header: true,
-      child: Text(text, style: context.text.labelLarge),
+      child: Text(
+        text,
+        style: context.isCupertino
+            ? context.text.labelLarge.copyWith(
+                color: context.colors.onSurfaceVariant,
+                fontWeight: FontWeight.w400,
+              )
+            : context.text.labelLarge,
+      ),
     );
   }
 }

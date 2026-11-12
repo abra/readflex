@@ -11,7 +11,7 @@ class AppTextSelectionHost extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => NativeEditableSelectionHost(
-    handleColor: context.theme.textSelectionTheme.selectionHandleColor,
+    handleColor: context.appTheme.selectionHandleColor,
     child: child,
   );
 }

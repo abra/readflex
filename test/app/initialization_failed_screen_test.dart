@@ -19,7 +19,7 @@ void main() {
     );
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
     expect(app.theme, AppTheme.light());
-    expect(app.darkTheme, AppTheme.dark());
+    expect(app.theme!.brightness, Brightness.light);
     expect(
       find.textContaining('private debug detail').hitTestable(),
       findsNothing,

@@ -287,7 +287,26 @@ AppBootstrap сначала проверяет конфигурацию, зат�
 и зависимости. `composition.dart` создаёт одну AppDatabase, каталоги documents,
 репозитории, PreferencesService и платформенные/сетевые сервисы.
 DependenciesContainer хранит готовые объекты; AppScopes монтирует их в tree.
-ReadflexApp создаёт MaterialApp.router, тему и locale.
+ReadflexApp сохраняет GoRouter и передаёт тему и locale в ReadflexPlatformApp.
+На iOS и macOS оболочка использует CupertinoApp.router, на остальных платформах
+— MaterialApp.router. Бизнес-состояние и зависимости от этого выбора не меняются.
+
+Платформенные различия сосредоточены в component_library: AppScaffold,
+AppNavigationBar, AppButton, AppTextField, AppChoiceControl и другие App-компоненты
+выбирают соответствующие Cupertino или Material реализации. AppThemeScope хранит
+общие смысловые роли цветов и текста, поэтому feature View не зависит от
+Material ThemeData. На iOS элементы интерфейса используют системный шрифт,
+группированные поверхности и нативные элементы управления; собственные настройки
+шрифта и вёрстка текста книги в Pagecraft остаются отдельным контрактом.
+
+Общий showAppBottomSheet сохраняет результаты, draft guards, управление фокусом
+и callback после завершения закрытия. На iOS он открывает Cupertino popup с
+нативной пружинной анимацией и заголовком по центру; на Android — Material bottom
+sheet. Настройки и команды остаются теми же, отдельные feature Cubit не нужны.
+
+Внутри Cupertino-оболочки намеренно остаётся служебный адаптер Material Theme
+и MaterialUiCompatibilityBridge: они нужны адаптивному SelectionArea и сторонним
+пакетам. Это совместимость зависимостей, а не второй видимый интерфейс.
 
 GoRouter сохраняется при изменениях настроек: смена темы не должна создавать
 новый navigation stack. При неуспешной инициализации показывается recovery

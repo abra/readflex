@@ -629,7 +629,9 @@ void main() {
         find.descendant(of: action, matching: find.byType(Opacity)),
         findsNothing,
       );
-      final button = tester.widget<TextButton>(action);
+      final button = tester.widget<TextButton>(
+        find.descendant(of: action, matching: find.byType(TextButton)),
+      );
       expect(button.style?.splashFactory, isNull);
       expect(button.style?.overlayColor, isNull);
       expect(button.style?.foregroundBuilder, isNull);

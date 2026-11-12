@@ -145,9 +145,7 @@ class _ThemeSwatchStripState extends State<_ThemeSwatchStrip> {
   @override
   Widget build(BuildContext context) => ScrollEdgeFadeStack(
     axis: Axis.horizontal,
-    surfaceColor:
-        Theme.of(context).bottomSheetTheme.backgroundColor ??
-        context.colors.surface,
+    surfaceColor: context.appTheme.sheetColor,
     child: SingleChildScrollView(
       controller: _controller,
       scrollDirection: Axis.horizontal,
@@ -194,9 +192,9 @@ class _ThemeSwatch extends StatelessWidget {
       label: label,
       excludeSemantics: true,
       onTap: onTap,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
+      child: AppSurface(
+        transparent: true,
+        child: AppTappable(
           onTap: onTap,
           borderRadius: radius,
           child: ConstrainedBox(

@@ -1,7 +1,10 @@
 import 'dart:io';
+import 'dart:ui' show CheckedState;
 
 import 'package:component_library/component_library.dart';
 import 'package:connectivity_service/connectivity_service.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoApp, CupertinoPageScaffold, CupertinoPopupSurface;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -13,6 +16,10 @@ import '../test/support/ui_test_driver.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final cupertino = Platform.isIOS || Platform.isMacOS;
+
+  Finder sheetFinder() =>
+      cupertino ? find.byType(CupertinoPopupSurface) : find.byType(BottomSheet);
 
   tearDownAll(() {
     binding.reportData ??= {};
@@ -34,14 +41,14 @@ void main() {
   }
 
   void expectSheetCloseAlignment(WidgetTester tester) {
-    // The sheet's surface: on a wide window the BottomSheet spans the screen
-    // and centres its 640dp Material.
-    final sheet = find
-        .descendant(
-          of: find.byType(BottomSheet).last,
-          matching: find.byType(Material),
-        )
-        .first;
+    final sheet = cupertino
+        ? sheetFinder().last
+        : find
+              .descendant(
+                of: sheetFinder().last,
+                matching: find.byType(Material),
+              )
+              .first;
     final header = find.ancestor(
       of: find.widgetWithIcon(AppPlainIconButton, AppIcons.close).hitTestable(),
       matching: find.byType(BottomSheetHeader),
@@ -55,11 +62,47 @@ void main() {
         matching: find.widgetWithIcon(AppPlainIconButton, AppIcons.close),
       ),
     );
-    expect(
-      tester.getRect(sheet).right - icon.right,
-      closeTo(AppSpacing.xl, .01),
-    );
+    final headerContext = tester.element(header);
+    final sheetRect = tester.getRect(sheet);
+    final headerInsets = tester
+        .widget<BottomSheetHeader>(header)
+        .padding
+        .resolve(Directionality.of(headerContext));
+    final closeGutter = cupertino
+        ? headerInsets.right -
+              AppPlainIconButton.defaultIconOutsetOf(headerContext) +
+              (AppSizes.buttonHeight - 28) / 2
+        : AppSpacing.xl;
+    expect(sheetRect.right - icon.right, closeTo(closeGutter, .01));
     expect(button.size, const Size(48, 48));
+    if (cupertino) {
+      final logicalWidth =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      expect(sheetRect.width, lessThanOrEqualTo(540));
+      expect(sheetRect.left, greaterThanOrEqualTo(AppSpacing.sm));
+      expect(
+        logicalWidth - sheetRect.right,
+        greaterThanOrEqualTo(AppSpacing.sm),
+      );
+      final title = tester.widget<BottomSheetHeader>(header).title;
+      final titleRect = tester.getRect(
+        find.descendant(of: header, matching: find.text(title)),
+      );
+      expect(titleRect.center.dx, closeTo(sheetRect.center.dx, 1));
+      // The glyph paints at 18dp inside the native 28dp close-circle box.
+      expect(icon.size, const Size.square(28));
+      expect(
+        tester
+            .widget<Icon>(
+              find.descendant(
+                of: header,
+                matching: find.byIcon(AppIcons.close),
+              ),
+            )
+            .size,
+        18,
+      );
+    }
   }
 
   testWidgets('native import menu closes and opens both import paths', (
@@ -70,11 +113,19 @@ void main() {
     tester.platformDispatcher.defaultRouteNameTestValue = '/';
     addTearDown(tester.platformDispatcher.clearDefaultRouteNameTestValue);
     await tester.pumpWidget(app.widget);
+    expect(
+      find.byType(cupertino ? CupertinoApp : MaterialApp),
+      findsOneWidget,
+    );
+    expect(
+      find.byType(cupertino ? CupertinoPageScaffold : Scaffold),
+      findsOneWidget,
+    );
     final add = find.byKey(const ValueKey('libraryAddButton'));
     await tapUi(tester, add);
     await capture(tester, 'import-menu');
     expectSheetCloseAlignment(tester);
-    final sheetRect = tester.getRect(find.byType(BottomSheet));
+    final sheetRect = tester.getRect(sheetFinder());
     final menuRect = tester.getRect(find.byType(ActionBottomSheetLayout));
     final menuTitleTop =
         tester.getTopLeft(find.text('Add to Library')).dy - sheetRect.top;
@@ -96,7 +147,7 @@ void main() {
     );
     await tapUi(tester, find.byKey(const ValueKey('importMenu-article')));
     expect(
-      find.byType(TextField),
+      find.byType(AppTextField),
       findsNothing,
       reason:
           'offline article import stays closed and Library search is inactive',
@@ -112,7 +163,7 @@ void main() {
 
     await tapUi(tester, find.byKey(const ValueKey('importMenu-article')));
     expect(find.byKey(const ValueKey('articleUrlPasteButton')), findsOneWidget);
-    expect(tester.getRect(find.byType(BottomSheet)), sheetRect);
+    expect(tester.getRect(sheetFinder()), sheetRect);
     expect(
       tester.getTopLeft(find.text('Save article')).dy - sheetRect.top,
       closeTo(menuTitleTop, .5),
@@ -123,12 +174,12 @@ void main() {
                 find.text('Creates a clean article for offline reading.'),
               )
               .dy -
-          tester.getRect(find.byType(TextField).last).bottom,
+          tester.getRect(find.byType(AppTextField).last).bottom,
       greaterThanOrEqualTo(AppSpacing.sm),
       reason: 'hints stay separated from the reserved validation area',
     );
     expect(
-      tester.getTopLeft(find.widgetWithText(FilledButton, 'Save')).dy -
+      tester.getTopLeft(find.widgetWithText(AppButton, 'Save')).dy -
           tester.getRect(find.text('Adds it to your Library.')).bottom,
       closeTo(AppSpacing.sm, .5),
       reason: 'the hint group sits next to the action buttons',
@@ -140,18 +191,18 @@ void main() {
     await tapUi(tester, find.byKey(const ValueKey('importMenu-book')));
     expect(find.text('Before uploading'), findsOneWidget);
     expect(
-      tester.getRect(find.byType(BottomSheet)),
+      tester.getRect(sheetFinder()),
       sheetRect,
       reason: 'compact consent must keep the import menu height',
     );
     expect(
       Scrollable.of(
-        tester.element(find.byType(Checkbox)),
+        tester.element(find.byType(AppCheckbox)),
       ).position.maxScrollExtent,
       0,
       reason: 'consent must fit without scrolling on the native phone viewport',
     );
-    expect(find.byType(Checkbox).hitTestable(), findsOneWidget);
+    expect(find.byType(AppCheckbox).hitTestable(), findsOneWidget);
     expect(
       tester
           .getRect(find.text('I confirm I have the right to upload this file.'))
@@ -160,19 +211,29 @@ void main() {
     );
     expect(
       tester.getTopLeft(find.text('Before uploading')).dy -
-          tester.getRect(find.byType(BottomSheet)).top,
+          tester.getRect(sheetFinder()).top,
       closeTo(menuTitleTop, .5),
     );
     await capture(tester, 'import-book-terms');
     expectSheetCloseAlignment(tester);
     expect(find.text('Cancel'), findsNothing);
     await tapUi(tester, find.byTooltip('Back'));
-    expect(tester.getRect(find.byType(BottomSheet)), sheetRect);
+    expect(tester.getRect(sheetFinder()), sheetRect);
     await tapUi(tester, find.byTooltip('Close'));
+    await waitForUi(
+      tester,
+      () => find.text('Add to Library').evaluate().isEmpty,
+      description: 'import menu close exit to finish',
+    );
     expect(find.text('Add to Library'), findsNothing);
     await tapUi(tester, add);
     await tester.drag(find.text('Add to Library'), const Offset(0, 350));
     await tester.pumpAndSettle();
+    await waitForUi(
+      tester,
+      () => find.text('Add to Library').evaluate().isEmpty,
+      description: 'import menu drag exit to finish',
+    );
     expect(find.text('Add to Library'), findsNothing);
     await unmountUi(tester);
   });
@@ -313,7 +374,7 @@ void main() {
       find.byKey(const ValueKey('libraryHeaderDisplayButton')),
     );
     await capture(tester, 'library-display');
-    final displayRect = tester.getRect(find.byType(BottomSheet));
+    final displayRect = tester.getRect(sheetFinder());
     expect(
       tester.getBottomLeft(find.byType(ActionBottomSheetLayout)).dy -
           tester
@@ -325,12 +386,12 @@ void main() {
     );
     expectSheetCloseAlignment(tester);
     await tapUi(tester, find.byKey(const ValueKey('libraryLanguagePicker')));
-    expect(find.byType(BottomSheet), findsOneWidget);
-    expect(tester.getRect(find.byType(BottomSheet)), displayRect);
+    expect(sheetFinder(), findsOneWidget);
+    expect(tester.getRect(sheetFinder()), displayRect);
     await tapUi(tester, find.byTooltip('Back'));
-    expect(tester.getRect(find.byType(BottomSheet)), displayRect);
+    expect(tester.getRect(sheetFinder()), displayRect);
     await tapUi(tester, find.byKey(const ValueKey('libraryLanguagePicker')));
-    final languageSheet = find.byType(BottomSheet).last;
+    final languageSheet = sheetFinder().last;
     final english = find.byKey(const ValueKey('libraryLanguageOption-en'));
     final chinese = find.byKey(const ValueKey('libraryLanguageOption-zh'));
     final hindi = find.byKey(const ValueKey('libraryLanguageOption-hi'));
@@ -377,7 +438,7 @@ void main() {
     expectSheetCloseAlignment(tester);
     final russian = find.byKey(const ValueKey('libraryLanguageOption-ru'));
     await tapUi(tester, russian);
-    expect(tester.getRect(find.byType(BottomSheet)), displayRect);
+    expect(tester.getRect(sheetFinder()), displayRect);
     expect(russian.hitTestable(), findsOneWidget);
     expect(
       find.byKey(const ValueKey('libraryLanguagePicker')).hitTestable(),
@@ -412,7 +473,11 @@ void main() {
     await tapUi(tester, find.byTooltip('Back'));
     await tapUi(tester, find.text('Dark'));
     expect(
-      Theme.of(tester.element(find.byType(ActionBottomSheetLayout))).brightness,
+      tester
+          .element(find.byType(ActionBottomSheetLayout))
+          .appTheme
+          .colors
+          .brightness,
       Brightness.dark,
     );
     await capture(tester, 'library-display-dark');
@@ -453,7 +518,87 @@ void main() {
     final destination = find.byKey(
       ValueKey('addToCollectionDestination-${created.id}'),
     );
-    expect(tester.widget<CheckboxListTile>(destination).value, isTrue);
+    final destinationDiagnostics = <Map<String, Object?>>[];
+    binding.reportData ??= {};
+    binding.reportData!['createdCollectionDestination'] =
+        destinationDiagnostics;
+    void recordDestination(String stage) {
+      if (destination.evaluate().isEmpty) {
+        destinationDiagnostics.add({'stage': stage, 'built': false});
+        return;
+      }
+      final bounds = tester.getRect(destination);
+      final node = tester.getSemantics(destination);
+      final semanticsData = node.getSemanticsData();
+      final scrolls = find.ancestor(
+        of: destination,
+        matching: find.byType(Scrollable),
+      );
+      final viewports = <Map<String, Object?>>[];
+      for (final element in scrolls.evaluate()) {
+        final finder = find.byElementPredicate(
+          (candidate) => identical(candidate, element),
+        );
+        final position = tester.state<ScrollableState>(finder).position;
+        final viewport = tester.getRect(finder);
+        viewports.add({
+          'bounds': [
+            viewport.left,
+            viewport.top,
+            viewport.right,
+            viewport.bottom,
+          ],
+          'pixels': position.pixels,
+          'viewport': position.viewportDimension,
+        });
+      }
+      final row = tester.widget(destination);
+      destinationDiagnostics.add({
+        'stage': stage,
+        'built': true,
+        'bounds': [bounds.left, bounds.top, bounds.right, bounds.bottom],
+        'hitTestable': destination.hitTestable().evaluate().isNotEmpty,
+        'checked': semanticsData.flagsCollection.isChecked.toString(),
+        'checkboxValue': row is CheckboxListTile ? row.value : null,
+        'semanticsLabel': semanticsData.label,
+        'keyboardInset':
+            tester.view.viewInsets.bottom / tester.view.devicePixelRatio,
+        'scrolls': viewports,
+      });
+    }
+
+    recordDestination('before-scroll');
+    await tester.ensureVisible(destination);
+    await tester.pumpAndSettle();
+    await waitForUi(
+      tester,
+      () => destination.hitTestable().evaluate().isNotEmpty,
+      description: 'created collection row is visible and interactive',
+    );
+    recordDestination('visible');
+    await capture(tester, 'collection-created-selected');
+    // CheckboxListTile's MergeSemantics exposes child flags in serialized data.
+    await waitForUi(
+      tester,
+      () =>
+          destination.evaluate().isNotEmpty &&
+          tester
+                  .getSemantics(destination)
+                  .getSemanticsData()
+                  .flagsCollection
+                  .isChecked ==
+              CheckedState.isTrue,
+      description: 'created collection is selected and announced as checked',
+    );
+    recordDestination('checked');
+    expect(
+      tester
+          .getSemantics(destination)
+          .getSemanticsData()
+          .flagsCollection
+          .isChecked,
+      CheckedState.isTrue,
+    );
     expect(
       (await app.collectionRepository.getCollectionSourceIds())[created.id] ??
           const <String>{},
@@ -484,21 +629,21 @@ void main() {
     );
     await tapUi(tester, find.byKey(const ValueKey('libraryCollectionsButton')));
     final collectionSearch = find.descendant(
-      of: find.byType(BottomSheet),
-      matching: find.byType(TextField),
+      of: sheetFinder(),
+      matching: find.byType(AppTextField),
     );
     await tester.enterText(collectionSearch, 'Reading');
     await tester.pumpAndSettle();
-    final collectionsSheet = tester.element(find.byType(BottomSheet));
+    final collectionsSheet = tester.element(sheetFinder());
     await tapUi(
       tester,
       find.byKey(ValueKey('collectionScopeManage-manual-${collection.id}')),
     );
     await capture(tester, 'collection-manage');
-    expect(tester.element(find.byType(BottomSheet)), same(collectionsSheet));
+    expect(tester.element(sheetFinder()), same(collectionsSheet));
     await tapUi(tester, find.byTooltip('Back'));
     expect(
-      tester.widget<TextField>(collectionSearch).controller!.text,
+      tester.widget<AppTextField>(collectionSearch).controller!.text,
       'Reading',
     );
     await capture(tester, 'collection-return-to-query');
@@ -512,7 +657,14 @@ void main() {
     final removeIcon = tester.getRect(
       find.descendant(of: remove, matching: find.byIcon(AppIcons.delete)),
     );
-    expect(removeIcon.size, closeIcon.size);
+    expect(
+      removeIcon.size,
+      cupertino
+          ? Size.square(
+              AppPlainIconButton.defaultIconSizeOf(tester.element(remove)),
+            )
+          : closeIcon.size,
+    );
     expect(removeIcon.center.dx, closeIcon.center.dx);
     expect(tester.getSize(remove), const Size(48, 48));
     void expectShortCollectionFits() {
@@ -545,7 +697,7 @@ void main() {
     expect(find.text('Removed after Save'), findsOneWidget);
     expectShortCollectionFits();
     final saveBottom = tester
-        .getRect(find.widgetWithText(FilledButton, 'Save'))
+        .getRect(find.widgetWithText(AppButton, 'Save'))
         .bottom;
     final logicalHeight =
         tester.view.physicalSize.height / tester.view.devicePixelRatio;
@@ -555,7 +707,11 @@ void main() {
       logicalHeight - saveBottom,
       closeTo(
         AppSpacing.lg +
-            (safeBottom > AppSpacing.lg ? safeBottom : AppSpacing.lg),
+            (safeBottom > (cupertino ? AppSpacing.sm : AppSpacing.lg)
+                ? safeBottom
+                : cupertino
+                ? AppSpacing.sm
+                : AppSpacing.lg),
         1,
       ),
     );
@@ -569,7 +725,7 @@ void main() {
     expect(find.text('Manage collection'), findsOneWidget);
     final field = find.descendant(
       of: find.byKey(const ValueKey('manageCollectionContent')),
-      matching: find.byType(TextField),
+      matching: find.byType(AppTextField),
     );
     await tapUi(tester, field);
     await tester.enterText(field, 'Unsaved');
@@ -604,7 +760,7 @@ void main() {
     final sourceBounds = tester.getRect(
       find.byKey(ValueKey('collectionSource-${app.book!.id}')),
     );
-    final save = find.widgetWithText(FilledButton, 'Save');
+    final save = find.widgetWithText(AppButton, 'Save');
     final saveBounds = tester.getRect(save);
     final keyboardTop =
         (tester.view.physicalSize.height - tester.view.viewInsets.bottom) /
@@ -632,8 +788,8 @@ void main() {
     expect(sourceBounds.top, greaterThanOrEqualTo(viewportBounds.top));
     expect(sourceBounds.bottom, lessThanOrEqualTo(viewportBounds.bottom));
     expect(saveBounds.height, AppSizes.buttonHeight);
-    expect(tester.widget<FilledButton>(save).onPressed, isNotNull);
-    expect(tester.widget<TextField>(field).controller!.text, 'Unsaved');
+    expect(tester.widget<AppButton>(save).onPressed, isNotNull);
+    expect(tester.widget<AppTextField>(field).controller!.text, 'Unsaved');
     expect(editable.widget.focusNode.hasFocus, isTrue);
     // A short landscape viewport can clip the list's bottom padding under a
     // native keyboard. Roomy windows must still fit without scrolling.
@@ -665,7 +821,7 @@ void main() {
     await capture(tester, 'collection-discard');
     expect(find.byType(AlertDialog), findsNothing);
     await tapUi(tester, find.byTooltip('Back'));
-    expect(find.widgetWithText(TextField, 'Unsaved'), findsOneWidget);
+    expect(find.widgetWithText(AppTextField, 'Unsaved'), findsOneWidget);
     await tapUi(tester, find.text('Delete collection'));
     await tapUi(tester, find.byTooltip('Close'));
     expect(find.text('Discard changes?'), findsOneWidget);

@@ -1,4 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+
+import 'app_surface.dart';
 
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_icon_size.dart';
@@ -49,12 +51,12 @@ class AppActionCard extends StatelessWidget {
       label: title,
       value: subtitle,
       onTap: onTap,
-      child: Material(
+      child: AppSurface(
         color: cs.surfaceContainerHighest.withValues(
           alpha: enabled ? 0.6 : 0.36,
         ),
         borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
+        child: AppTappable(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.md),
           child: Padding(
@@ -140,12 +142,12 @@ class AppActionTile extends StatelessWidget {
       enabled: enabled,
       label: title,
       onTap: onTap,
-      child: Material(
+      child: AppSurface(
         color: cs.surfaceContainerHighest.withValues(
           alpha: enabled ? 0.6 : 0.36,
         ),
         borderRadius: BorderRadius.circular(AppRadius.md),
-        child: InkWell(
+        child: AppTappable(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadius.md),
           child: Padding(

@@ -83,13 +83,13 @@ class _FontOption extends StatelessWidget {
       excludeSemantics: true,
       focusable: true,
       onTap: onPressed,
-      child: Material(
+      child: AppSurface(
         color: selected ? colors.selectedControlBackground : colors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.sm),
         ),
         clipBehavior: Clip.antiAlias,
-        child: InkWell(
+        child: AppTappable(
           onTap: onPressed,
           child: Padding(
             padding: const EdgeInsets.symmetric(

@@ -1,15 +1,17 @@
 import 'dart:math' as math;
 
 import 'package:component_library/component_library.dart';
-import 'package:flutter/painting.dart';
+import 'package:flutter/widgets.dart';
 
 /// Gap between the chapter (or time) label and the page label above the slider.
 const readerProgressLabelGap = AppSpacing.md;
 
-/// The slider's overlay radius, which is also how far its track is inset
-/// from the slider's box. The labels above it take the same inset, so they
-/// start and end with the track.
+/// Material track inset, matching the Reader slider's overlay radius.
 const readerProgressTrackInset = 14.0;
+
+/// Aligns status labels and non-interactive tracks with the platform slider.
+double readerProgressTrackInsetOf(BuildContext context) =>
+    context.isCupertino ? AppSpacing.sm : readerProgressTrackInset;
 
 const _referenceFontSize = 14.0;
 const _stackedTextScale = 1.3;

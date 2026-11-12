@@ -185,8 +185,8 @@ fixed below the Translation title; only the result,
 context and details scroll. The controls remain reachable after scrolling to the
 end of a long result, including when they stack on narrow/large-text screens.
 Opening a source-language recovery menu does not move the result viewport.
-The two language menus size to their labels, retain 48px minimum tap targets and
-adapt to system text scaling. They are `TextButton`s on the shared text-button
+The two language triggers size to their labels, retain 48px minimum tap targets and
+adapt to system text scaling. They use `AppButton.text` on the shared action
 theme (shape, foreground and transparent background come from the theme, so
 labels keep at least 4.5:1 contrast); only the compact `bodySmall` label style,
 height and 2dp ink inset are picker-specific. The source picker drops its
@@ -197,6 +197,11 @@ there is no duplicate direction caption or visible From/To label. Those roles
 remain available to assistive technologies. Controls stack with a downward
 arrow when the labels cannot fit side by side. The horizontal arrow and control
 order follow the UI writing direction. Menus are disabled while a request runs.
+Android uses an anchored Material menu. iOS opens a native-style sheet of
+Cupertino language rows with the selected language visible and checked. The
+same picker serves language triggers and same-language/error recovery actions;
+the result goes through the existing cubit. Details use a Cupertino disclosure
+on iOS and an `ExpansionTile` on Android, with the same explanation body.
 An automatically detected language is shown compactly as **English**, for example.
 Its accessibility value still includes the localized auto-detection prefix, and
 Auto remains selected in the menu. Neither preference nor request changes from

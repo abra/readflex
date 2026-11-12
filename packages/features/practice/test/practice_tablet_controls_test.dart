@@ -265,15 +265,34 @@ void main() {
             final keep = find.byKey(const ValueKey('reviewRate-keep'));
             final showLess = find.byKey(const ValueKey('reviewRate-showLess'));
             expect(
-              find.descendant(of: keep, matching: find.byType(FilledButton)),
+              find.descendant(of: keep, matching: find.byType(AppButton)),
               findsOneWidget,
+            );
+            expect(
+              tester
+                  .widget<AppButton>(
+                    find.descendant(of: keep, matching: find.byType(AppButton)),
+                  )
+                  .variant,
+              AppButtonVariant.filled,
             );
             expect(
               find.descendant(
                 of: showLess,
-                matching: find.byType(OutlinedButton),
+                matching: find.byType(AppButton),
               ),
               findsOneWidget,
+            );
+            expect(
+              tester
+                  .widget<AppButton>(
+                    find.descendant(
+                      of: showLess,
+                      matching: find.byType(AppButton),
+                    ),
+                  )
+                  .variant,
+              AppButtonVariant.outlined,
             );
             final primaryRect = tester.getRect(keep);
             final secondaryRect = tester.getRect(showLess);

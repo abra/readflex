@@ -2,6 +2,8 @@ import 'package:component_library/component_library.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/semantics.dart' show CustomSemanticsAction;
 
+import 'reader_drawer_layout.dart';
+
 /// End-to-start swipe that deletes one drawer row, like the Library list.
 ///
 /// A swipe cannot be performed with a screen reader, so the same delete is
@@ -73,8 +75,8 @@ class _ReaderSwipeDeleteBackground extends StatelessWidget {
       child: ColoredBox(
         color: colors.error,
         child: Padding(
-          padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpacing.lg,
+          padding: EdgeInsetsDirectional.symmetric(
+            horizontal: readerDrawerContentInset(context),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,

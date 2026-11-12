@@ -53,21 +53,16 @@ class ReaderSearchNavigationBar extends StatelessWidget {
   final VoidCallback onEndSearch;
   final VoidCallback onReturn;
 
-  // Only the row padding differs from the themed text button; press feedback
-  // stays the theme's ink.
-  static ButtonStyle _textActionStyle(EdgeInsets padding) =>
-      TextButton.styleFrom(padding: padding);
-
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final origin = state.returnLocation;
-    return Material(
+    return AppSurface(
       color: context.colors.surface,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Divider(height: 1),
+          const AppDivider(height: 1),
           SizedBox(
             height: _navigationRowHeight(context),
             child: Padding(
@@ -76,17 +71,15 @@ class ReaderSearchNavigationBar extends StatelessWidget {
               padding: EdgeInsetsDirectional.fromSTEB(
                 AppSpacing.sm,
                 0,
-                readerDrawerActionEndPadding(context),
+                readerDrawerActionEndPadding(context, inPanel: false),
                 0,
               ),
               child: Row(
                 children: [
                   Expanded(
-                    child: TextButton(
+                    child: AppButton.text(
                       key: const ValueKey('reader-search-reopen'),
-                      style: _textActionStyle(
-                        const EdgeInsets.all(AppSpacing.sm),
-                      ),
+                      padding: const EdgeInsets.all(AppSpacing.sm),
                       onPressed: onOpenSearch,
                       child: Row(
                         children: [
@@ -151,17 +144,15 @@ class ReaderSearchNavigationBar extends StatelessWidget {
             ),
           ),
           if (origin != null) ...[
-            const Divider(height: 1),
+            const AppDivider(height: 1),
             SizedBox(
               height: _returnRowHeight(context),
               width: double.infinity,
-              child: TextButton(
+              child: AppButton.text(
                 key: const ValueKey('reader-search-return'),
-                style: _textActionStyle(
-                  const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.sm,
-                  ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
                 ),
                 onPressed: onReturn,
                 child: Row(

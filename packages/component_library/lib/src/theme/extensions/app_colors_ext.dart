@@ -1,10 +1,13 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../app_theme_data.dart';
+
 /// Semantic color tokens that extend [ThemeData] beyond [ColorScheme].
 ///
 /// Access via `Theme.of(context).extension<AppColorsExt>()!`
 /// or the shorthand `Theme.of(context).ext`.
-class AppColorsExt extends ThemeExtension<AppColorsExt> {
+class AppColorsExt extends ThemeExtension<AppColorsExt>
+    implements AppStatusColors {
   const AppColorsExt({
     required this.highlightYellow,
     required this.highlightBlue,
@@ -31,35 +34,58 @@ class AppColorsExt extends ThemeExtension<AppColorsExt> {
     required this.onDarkSwatch,
   });
 
+  @override
   final Color highlightYellow;
+  @override
   final Color highlightBlue;
+  @override
   final Color highlightGreen;
+  @override
   final Color highlightPink;
+  @override
   final Color highlightPurple;
+  @override
   final Color ratingAgain;
+  @override
   final Color ratingHard;
+  @override
   final Color ratingGood;
+  @override
   final Color ratingEasy;
+  @override
   final Color warning;
+  @override
   final Color warningForeground;
+  @override
   final Color info;
+  @override
   final Color success;
+  @override
   final Color successForeground;
+  @override
   final Color successContainer;
+  @override
   final Color onSuccessContainer;
 
   /// Status glyphs on [ColorScheme.inverseSurface], the neutral plate of a
   /// notification: the other theme's success and error tones, so they read
   /// on the inverted background.
+  @override
   final Color successOnInverse;
+  @override
   final Color errorOnInverse;
+  @override
   final Color proBadge;
+  @override
   final Color proBadgeForeground;
+  @override
   final Color divider;
 
   /// Ink for a check or glyph drawn over a light sample color (a highlight
   /// swatch, a reader theme preview); [onDarkSwatch] is its counterpart.
+  @override
   final Color onLightSwatch;
+  @override
   final Color onDarkSwatch;
 
   @override

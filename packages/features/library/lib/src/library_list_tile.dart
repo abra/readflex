@@ -333,7 +333,7 @@ class _ListRowShell extends StatelessWidget {
                 start: gutters.start,
                 end: gutters.end,
                 top: 0,
-                child: const Divider(
+                child: const AppDivider(
                   key: ValueKey('libraryListRowTopDivider'),
                 ),
               ),

@@ -151,8 +151,14 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(tester.widget(uploadButton), isA<FilledButton>());
-      expect(tester.widget(articleButton), isA<OutlinedButton>());
+      expect(
+        tester.widget<AppButton>(uploadButton).variant,
+        AppButtonVariant.filled,
+      );
+      expect(
+        tester.widget<AppButton>(articleButton).variant,
+        AppButtonVariant.outlined,
+      );
 
       final upload = tester.getRect(uploadButton);
       final article = tester.getRect(articleButton);
@@ -177,8 +183,10 @@ void main() {
     final entries = <LibraryImportEntry>[];
     await pumpBody(tester, LibraryState(), onImportPressed: entries.add);
     await tester.ensureVisible(uploadButton);
+    await tester.pumpAndSettle();
     await tester.tap(uploadButton);
     await tester.ensureVisible(articleButton);
+    await tester.pumpAndSettle();
     await tester.tap(articleButton);
     expect(entries, [LibraryImportEntry.file, LibraryImportEntry.article]);
   });
@@ -187,8 +195,8 @@ void main() {
     tester,
   ) async {
     await pumpBody(tester, LibraryState(), importEnabled: false);
-    expect(tester.widget<FilledButton>(uploadButton).onPressed, isNull);
-    expect(tester.widget<OutlinedButton>(articleButton).onPressed, isNull);
+    expect(tester.widget<AppButton>(uploadButton).onPressed, isNull);
+    expect(tester.widget<AppButton>(articleButton).onPressed, isNull);
   });
 
   testWidgets('filtered-out state applies the 16dp gutter once', (
@@ -309,11 +317,11 @@ void main() {
         tester,
       ) async {
         await pumpBody(tester, state);
-        final scroll = tester.widget<SingleChildScrollView>(
-          find.byType(SingleChildScrollView),
+        final padding = tester.widget<SliverPadding>(
+          find.byType(SliverPadding),
         );
         expect(
-          scroll.padding,
+          padding.padding,
           EdgeInsets.only(
             bottom: libraryContentBottomPadding(
               tester.element(find.byType(EmptyState)),
@@ -327,10 +335,8 @@ void main() {
   testWidgets('an empty library has no "+" to clear', (tester) async {
     await pumpBody(tester, LibraryState(sources: const []));
     expect(
-      tester
-          .widget<SingleChildScrollView>(find.byType(SingleChildScrollView))
-          .padding,
-      isNull,
+      tester.widget<SliverPadding>(find.byType(SliverPadding)).padding,
+      EdgeInsets.zero,
     );
   });
 }

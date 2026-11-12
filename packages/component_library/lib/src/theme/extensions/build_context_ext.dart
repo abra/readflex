@@ -1,7 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../app_text_theme.dart';
-import 'app_colors_ext.dart';
+import '../app_theme.dart';
+import '../app_theme_data.dart';
+import '../app_theme_scope.dart';
 
 /// Convenience accessors on [BuildContext] for cleaner UI code.
 ///
@@ -15,13 +17,19 @@ import 'app_colors_ext.dart';
 /// `AppTypography.textTheme` always defines every role, so call sites don't
 /// need the `!` operator.
 extension BuildContextThemeX on BuildContext {
+  /// Material adapter for compatibility code; shared UI reads semantic roles.
   ThemeData get theme => Theme.of(this);
 
-  ColorScheme get colors => theme.colorScheme;
+  AppThemeData get appTheme =>
+      AppThemeScope.maybeOf(this) ?? AppTheme.dataFor(theme);
 
-  AppTextTheme get text => AppTextTheme(theme.textTheme);
+  bool get isCupertino => appTheme.isCupertino;
 
-  AppColorsExt get appColors => theme.ext;
+  AppThemeColors get colors => appTheme.colors;
+
+  AppTextTheme get text => appTheme.text;
+
+  AppStatusColors get appColors => appTheme.appColors;
 
   /// Accent on app surfaces, not the fill of primary buttons or reader pages.
   Color get actionForeground => colors.brightness == Brightness.dark

@@ -1,4 +1,6 @@
 import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart'
+    show CupertinoSliverRefreshControl;
 import 'package:domain_models/domain_models.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -34,6 +36,7 @@ class LibraryContentScrollView extends StatelessWidget {
     this.leading,
     this.continueReadingSource,
     this.selectionActionsHeight,
+    this.onRefresh,
     super.key,
   });
 
@@ -49,6 +52,7 @@ class LibraryContentScrollView extends StatelessWidget {
   final LibrarySelectionState selection;
   final double? selectionActionsHeight;
   final ScrollController scrollController;
+  final Future<void> Function()? onRefresh;
   final void Function(LibrarySource source) onSourcePressed;
   final void Function(LibrarySource source) onSourceLongPressed;
 
@@ -63,14 +67,15 @@ class LibraryContentScrollView extends StatelessWidget {
     final cardCount = hasCard ? 1 : 0;
     return CustomScrollView(
       controller: scrollController,
-      // Bouncing parent guarantees the elastic snap-back even on short
-      // content where ClampingScrollPhysics (the Android default) would
-      // silently absorb the drag without returning.
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
+      physics: AlwaysScrollableScrollPhysics(
+        parent: context.isCupertino
+            ? const BouncingScrollPhysics()
+            : const ClampingScrollPhysics(),
       ),
       semanticChildCount: sources.length + cardCount,
       slivers: [
+        if (context.isCupertino && onRefresh != null)
+          CupertinoSliverRefreshControl(onRefresh: onRefresh),
         if (continueReadingSource != null || leading != null)
           SliverPadding(
             padding: const EdgeInsets.only(

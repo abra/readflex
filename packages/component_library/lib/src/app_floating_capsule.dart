@@ -1,5 +1,6 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
 
+import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_shadows.dart';
 
 /// Fill opacity of [AppFloatingCapsule]: content scrolled under it stays
@@ -25,7 +26,7 @@ class AppFloatingCapsule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final colors = context.colors;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface.withValues(alpha: kAppFloatingCapsuleOpacity),

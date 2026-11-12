@@ -1,5 +1,7 @@
-import 'package:material_ui/material_ui.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 
+import 'app_text_field.dart';
 import 'app_icons.dart';
 import 'app_plain_icon_button.dart';
 import 'search_field_hint.dart';
@@ -50,68 +52,65 @@ class SearchField extends StatelessWidget {
       color: colors.onSurface,
     );
 
-    return TextField(
+    return AppTextField(
       controller: controller,
       focusNode: focusNode,
       onChanged: onChanged,
       textInputAction: textInputAction,
       style: fieldStyle,
-      decoration: InputDecoration(
-        hintText: compact == null ? hintText : null,
-        hint: compact == null
-            ? null
-            : SearchFieldHint(
-                text: hintText,
-                compactText: compact,
-                style: _hintStyle(context, fieldStyle),
-              ),
-        prefixIcon: Icon(
-          AppIcons.search,
-          size: AppIconSize.xs,
-          color: colors.onSurface.withValues(alpha: 0.55),
-        ),
-        suffixIcon: controller != null
-            ? ValueListenableBuilder<TextEditingValue>(
-                valueListenable: controller!,
-                builder: (context, value, _) {
-                  if (value.text.isEmpty) return const SizedBox.shrink();
-                  return AppPlainIconButton(
-                    icon: AppIcons.close,
-                    iconSize: AppIconSize.xs,
-                    color: clearIconColor,
-                    tooltip: clearButtonSemanticsLabel,
-                    onPressed: () {
-                      controller!.clear();
-                      onChanged?.call('');
-                    },
-                  );
-                },
-              )
-            : null,
-        suffixIconConstraints: const BoxConstraints(
-          minWidth: AppSizes.buttonHeight,
-          minHeight: AppSizes.buttonHeight,
-        ),
-        isDense: true,
-        filled: true,
-        fillColor: colors.surfaceContainerHighest,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
-        ),
+      hintText: hintText,
+      hint: compact == null
+          ? null
+          : SearchFieldHint(
+              text: hintText,
+              compactText: compact,
+              style: _hintStyle(context, fieldStyle),
+            ),
+      prefixIcon: Icon(
+        AppIcons.search,
+        size: AppIconSize.xs,
+        color: colors.onSurface.withValues(alpha: 0.55),
+      ),
+      suffixIcon: controller != null
+          ? ValueListenableBuilder<TextEditingValue>(
+              valueListenable: controller!,
+              builder: (context, value, _) {
+                if (value.text.isEmpty) return const SizedBox.shrink();
+                return AppPlainIconButton(
+                  icon: AppIcons.close,
+                  iconSize: AppIconSize.xs,
+                  color: clearIconColor,
+                  tooltip: clearButtonSemanticsLabel,
+                  onPressed: () {
+                    controller!.clear();
+                    onChanged?.call('');
+                  },
+                );
+              },
+            )
+          : null,
+      suffixIconConstraints: const BoxConstraints(
+        minWidth: AppSizes.buttonHeight,
+        minHeight: AppSizes.buttonHeight,
+      ),
+      filled: true,
+      fillColor: colors.surfaceContainerHighest,
+      borderless: context.isCupertino,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      dense: true,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
       ),
     );
   }
 
-  // A custom hint widget gets no style from the decorator, so resolve the
-  // chain it applies to `hintText`: the Material 3 body style, the field's
-  // own style, the default hint color, then the theme's hint style.
+  // Match the platform input's placeholder cascade for custom hint widgets.
   static TextStyle _hintStyle(BuildContext context, TextStyle fieldStyle) {
-    final theme = Theme.of(context);
+    if (context.isCupertino) {
+      return fieldStyle.copyWith(color: context.colors.onSurfaceVariant);
+    }
+    final theme = context.theme;
     return theme.textTheme.bodyLarge!
         .merge(fieldStyle)
         .merge(TextStyle(color: theme.colorScheme.onSurfaceVariant))

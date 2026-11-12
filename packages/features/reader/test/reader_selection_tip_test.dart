@@ -154,7 +154,9 @@ void main() {
         );
         expect(title.style!.color, colors.onInverseSurface);
 
-        final accent = ReaderSelectionTipCard.actionColor(colors);
+        final accent = ReaderSelectionTipCard.actionColor(
+          tester.element(card).appTheme,
+        );
         final detail = Color.alphaBlend(
           colors.onInverseSurface.withValues(
             alpha: ReaderSelectionTipCard.detailAlpha,
