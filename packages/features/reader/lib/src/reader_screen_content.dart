@@ -661,24 +661,35 @@ class _ReadyContentState extends State<_ReadyContent> {
                           visible:
                               surfaceReady && sourceType != SourceType.article,
                         ),
-                        ReaderTopChromeDriver(
-                          readerTheme: readerTheme,
-                          onArticleTitlePressed: widget.onArticleTitlePressed,
-                        ),
-                        if (surfaceReady)
-                          ReaderArticleProgressDriver(readerTheme: readerTheme),
                         const ReaderPageBookmarkIndicatorDriver(),
-                        const ReaderBrightnessChromeDriver(),
-                        if (!searchNavigation.active)
-                          ReaderBottomChromeDriver(
+                        ReaderFloatingChromeLayout(
+                          progress: surfaceReady
+                              ? ReaderArticleProgressDriver(
+                                  inChromeLayout: true,
+                                  readerTheme: readerTheme,
+                                )
+                              : null,
+                          top: ReaderTopChromeDriver(
+                            inChromeLayout: true,
                             readerTheme: readerTheme,
-                            onTocPressed: _openTocDrawer,
-                            onFontPressed: _openAppearanceSheet,
-                            onPageTurnPressed: _togglePageTurnStyle,
-                            onBookmarkPressed: _toggleBookmark,
-                            onSearchPressed: _openSearchDrawer,
-                            onSeekFraction: _seekFraction,
+                            onArticleTitlePressed: widget.onArticleTitlePressed,
                           ),
+                          brightness: const ReaderBrightnessChromeDriver(
+                            inChromeLayout: true,
+                          ),
+                          dock: searchNavigation.active
+                              ? null
+                              : ReaderBottomChromeDriver(
+                                  inChromeLayout: true,
+                                  readerTheme: readerTheme,
+                                  onTocPressed: _openTocDrawer,
+                                  onFontPressed: _openAppearanceSheet,
+                                  onPageTurnPressed: _togglePageTurnStyle,
+                                  onBookmarkPressed: _toggleBookmark,
+                                  onSearchPressed: _openSearchDrawer,
+                                  onSeekFraction: _seekFraction,
+                                ),
+                        ),
                         const _ReaderImagePageProgressOverlayDriver(),
                         ReaderSelectionTipDriver(surfaceReady: surfaceReady),
                         _ContextPanelDriver(

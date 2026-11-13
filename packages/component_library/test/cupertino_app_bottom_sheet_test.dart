@@ -427,7 +427,11 @@ void main() {
     );
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
-    expect(tester.getSize(find.byType(CupertinoPopupSurface)).width, 540);
+    final modal = find.byWidgetPredicate(
+      (widget) => widget is AppSurface && widget.role == AppSurfaceRole.modal,
+    );
+    expect(tester.getSize(modal).width, 540);
+    expect(tester.getRect(modal).center, const Offset(516, 683));
     await tester.tap(find.text('Increment'));
     await tester.pump();
     tester.view.physicalSize = const Size(390, 844);

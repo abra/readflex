@@ -121,7 +121,7 @@ void main() {
       find.byType(cupertino ? CupertinoPageScaffold : Scaffold),
       findsOneWidget,
     );
-    final add = find.byKey(const ValueKey('libraryAddButton'));
+    final add = find.byKey(const ValueKey('libraryCapsuleActionButton'));
     await tapUi(tester, add);
     await capture(tester, 'import-menu');
     expectSheetCloseAlignment(tester);
@@ -261,7 +261,7 @@ void main() {
       greaterThanOrEqualTo(48),
     );
     expect(
-      tester.getSize(find.byKey(const ValueKey('libraryAddButton'))),
+      tester.getSize(find.byKey(const ValueKey('libraryCapsuleActionButton'))),
       const Size.square(AppSizes.buttonHeight),
     );
     expect(
@@ -345,7 +345,10 @@ void main() {
       isTrue,
     );
     expect(app.bookRepository.reads, initialReads);
-    await tapUi(tester, find.byKey(const ValueKey('librarySearchCloseButton')));
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('libraryCapsuleActionButton')),
+    );
     await tester.pumpAndSettle();
     await waitForUi(
       tester,
@@ -366,7 +369,7 @@ void main() {
     await capture(tester, 'library-selection');
     await tapUi(tester, find.byTooltip('Cancel selection'));
     expect(
-      find.byKey(const ValueKey('libraryAddButton')),
+      find.byKey(const ValueKey('libraryCapsuleActionButton')),
       findsOneWidget,
     );
     await tapUi(

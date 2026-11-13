@@ -45,8 +45,8 @@ class LibraryContinueReadingCard extends StatelessWidget {
     final text = context.text;
     final l10n = context.l10n;
     final wide = AppWindowSize.isWide(context);
-    final coverWidth = wide ? 80.0 : kLibraryListCoverWidth;
-    final coverHeight = wide ? 120.0 : kLibraryListCoverHeight;
+    const coverWidth = kLibraryListCoverWidth;
+    const coverHeight = kLibraryListCoverHeight;
     final progress = source.readingProgress.clamp(0.0, 1.0).toDouble();
     final percent = (progress * 100).round();
     final timeLeft = l10n.readingTimeLeft(source.estimatedMinutesLeft);
@@ -94,6 +94,15 @@ class LibraryContinueReadingCard extends StatelessWidget {
                 metadataHeight +
                 _progressBarHeight <=
             coverHeight;
+    final appearance = AppSurfaceAppearance.resolve(
+      context,
+      AppSurfaceRole.contentCard,
+    );
+    final shape = isSelected
+        ? appearance.shape.copyWith(
+            side: BorderSide(color: colors.selectedControlForeground),
+          )
+        : appearance.shape;
 
     return Semantics(
       container: true,
@@ -117,20 +126,12 @@ class LibraryContinueReadingCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         child: AppSurface(
           key: const ValueKey('libraryContinueReadingCard'),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            side: BorderSide(
-              color: isSelected
-                  ? colors.selectedControlForeground
-                  : colors.outlineVariant,
-            ),
-          ),
+          role: AppSurfaceRole.contentCard,
+          shape: shape,
           clipBehavior: Clip.antiAlias,
-          color: isSelected
-              ? colors.selectedControlBackground
-              : colors.surfaceContainerLow,
+          color: isSelected ? colors.selectedControlBackground : null,
           child: AppTappable(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
+            customBorder: shape,
             onTap: onPressed,
             onLongPress: onLongPressed,
             child: Padding(

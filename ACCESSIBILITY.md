@@ -70,6 +70,18 @@ bar has a 44pt content height plus the top safe area; actions inside that bar
 follow its constrained native height. Sheet, reader-toolbar and ordinary body
 controls retain 48dp. Do not shrink them to match navigation chrome.
 
+Reader brightness retains three 48dp targets in constrained windows. When the
+vertical pill cannot fit above the dock, including 568×320 at 200% text, it uses
+a horizontal 184×48dp arrangement. The title shares the top row without painting
+behind the pill, and article progress remains visible below it. Safe-area
+gutters and RTL placement apply to the whole arrangement; increasing,
+decreasing, dragging and returning to system brightness remain available.
+The layout changes chrome only and retains control state through rotation and
+hide/show. `reader_floating_chrome_layout_test.dart` covers Android/iOS roots,
+German and Arabic phone RTL, enlarged text and constrained asymmetric insets;
+these are layout, interaction and semantics contracts rather than native
+screen-reader evidence.
+
 `AppIconButton` exposes one named button. Android uses Material's built-in
 tooltip semantics; Cupertino puts the localized tooltip on the action's
 semantics node and excludes decorative children to avoid duplicate names.
@@ -84,6 +96,13 @@ navigation slots, and wrap long titles below them. Localized Back and Close
 remain separate actions in both directions. Modal results complete on pop;
 `onFullyHidden` follows the exit so new controls are not exposed midway through
 the outgoing modal. Scrim/drag policies preserve the existing draft guard.
+Expanded settings/forms centre their surface; contextual controls use a trailing
+panel. Both retain focused text, selection and the current step when resized.
+There is no drag handle on expanded panels; Close remains an explicit action.
+Confirmation alerts default to Cancel. Their iOS actions retain an explicit
+enabled button/tap semantics node at enlarged text sizes, where the current
+Cupertino action renderer omits those properties; native labels and gestures
+remain intact. Destructive commands use the semantic error foreground.
 `AppSheetActions` stacks long localized labels rather than shrinking the font;
 busy states keep geometry and disable both commands. Reserved URL error space
 is excluded from semantics until a real error is present. Accent foregrounds
@@ -105,6 +124,8 @@ whole instead of clipping.
 On expanded windows the same content occupies a bounded trailing panel;
 RTL mirrors its edge, resizing retains query/focus, and vertical list gestures
 only scroll the list. Close and the dismissible scrim remain available.
+The panel reaches the window edge, with the home-indicator inset inside its
+opaque surface so the final action remains reachable above it.
 
 The Library's bottom capsule keeps each control its own node: the collection
 switcher merges into one button (label Choose collection, value the shown
@@ -113,12 +134,17 @@ and "+" is a labelled filled icon button. The header title above it is a heading
 that names the shown collection; it has no tap action. Browse captions scale to
 200%; at 320dp and 200% the capsule remains within the gutters, truncating a long
 collection name rather than clipping.
-Opening Search changes the capsule into one editable field. Back and Clear
-search are distinct labelled controls: Back clears the query and leaves search;
-Clear retains editing and focus. The field follows the user's text scale, using
+Opening Search moves the magnifier to the directional start and changes the
+capsule into one editable field. The magnifier becomes decorative while editing.
+The filled end button cross-fades from Add to a directional chevron labelled
+Back. Back and Clear search are distinct labelled controls: Back clears the
+query and leaves search; Clear retains editing and focus. The field follows
+the user's text scale, using
 a shorter visible hint when needed while retaining the full search description
 in semantics. Outgoing controls leave input, focus and semantics during their
-fade; reduced motion settles the change immediately. Returning from a reader or
+fade. While closing, the end button leaves input, focus and semantics until
+it has returned to Add, preventing a second Close tap from importing.
+Reduced motion settles the whole change immediately. Returning from a reader or
 Practice preserves the query without automatically reopening the keyboard.
 With little room above the keyboard, compact no-results feedback stays above
 the field; its labelled Clear and Back controls remain available.
@@ -151,6 +177,13 @@ When behavior changes accessibility output, add focused tests:
 Manual checks should still be done for major flows with VoiceOver on iOS,
 TalkBack on Android, Xcode Accessibility Inspector, or Android Accessibility
 Scanner.
+VoiceOver/TalkBack device checks are explicitly deferred for the current native
+UI follow-up. Existing widget semantics, native screenshots and the profile
+harness do not verify spoken announcements, focus traversal or screen-reader
+activation. `make profile-ui DEVICE=<physical-device-id>` verifies hardware
+identity and collects Flutter frame timings; it does not close those
+accessibility gaps. See the [profiling contract](test/ui/README.md#native-ui-frame-profiling)
+for emulator handling and the limits of refresh-rate/compositor measurements.
 
 `make test-ui-contracts` includes shared choice/action accessibility tests for
 both mobile platform policies, LTR/RTL and normal/large text. Selection is

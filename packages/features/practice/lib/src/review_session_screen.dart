@@ -218,15 +218,10 @@ class _ReviewWordCardViewport extends StatelessWidget {
                   ),
                   child: SizedBox(
                     width: double.infinity,
-                    child: DecoratedBox(
+                    child: AppSurface(
                       key: const ValueKey('reviewStudyCard'),
-                      decoration: BoxDecoration(
-                        color: context.colors.surfaceContainerLow,
-                        border: Border.all(
-                          color: context.colors.outlineVariant,
-                        ),
-                        borderRadius: BorderRadius.circular(AppRadius.lg),
-                      ),
+                      role: AppSurfaceRole.reviewCard,
+                      clipBehavior: Clip.antiAlias,
                       child: Padding(
                         padding: const EdgeInsets.all(AppSpacing.xl),
                         child: child,

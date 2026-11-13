@@ -29,11 +29,11 @@ final _row = find.byKey(const ValueKey('libraryPracticeRow'));
 final _button = find.byKey(const ValueKey('libraryPracticeButton'));
 final _badge = find.byKey(const ValueKey('libraryPracticeBadge'));
 final _capsule = find.byKey(const ValueKey('libraryFloatingActions'));
-final _add = find.byKey(const ValueKey('libraryAddButton'));
+final _add = find.byKey(const ValueKey('libraryCapsuleActionButton'));
 final _searchButton = find.byKey(const ValueKey('librarySearchButton'));
 final _searchField = find.byKey(const ValueKey('librarySearchField'));
 final _searchClear = find.byKey(const ValueKey('librarySearchClearButton'));
-final _searchClose = find.byKey(const ValueKey('librarySearchCloseButton'));
+final _searchClose = _add;
 
 final _book = Book(
   id: 'b-1',

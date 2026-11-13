@@ -5,7 +5,7 @@ import 'package:cupertino_ui/cupertino_ui.dart'
         kCupertinoModalBarrierColor;
 import 'package:flutter/widgets.dart';
 
-import 'theme/extensions/build_context_ext.dart';
+import 'app_surface_appearance.dart';
 
 /// Internal Cupertino card shared by routed and retained bottom sheets.
 /// The presenter owns positioning, safe areas and dismissal behavior.
@@ -25,9 +25,18 @@ class AppCupertinoSheetSurface extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => CupertinoPopupSurface(
-    blurSigma: 0,
-    isSurfacePainted: false,
-    child: ColoredBox(color: context.appTheme.sheetColor, child: child),
-  );
+  Widget build(BuildContext context) {
+    final appearance = AppSurfaceAppearance.resolve(
+      context,
+      AppSurfaceRole.modal,
+    );
+    return ClipPath(
+      clipper: ShapeBorderClipper(shape: appearance.shape),
+      child: CupertinoPopupSurface(
+        blurSigma: 0,
+        isSurfacePainted: false,
+        child: ColoredBox(color: appearance.color, child: child),
+      ),
+    );
+  }
 }

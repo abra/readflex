@@ -259,12 +259,14 @@ a failed single delete re-reads storage rather than re-emitting the old list.
 The list swipe's `confirmDismiss` awaits that effect (matched by source id): the
 row leaves only after storage confirms, and a failed write springs it back
 beside the error toast.
-Delete confirmations follow the shared safe-default model: the safe choice is
-the filled primary, named for what it keeps ("Keep" for library items, "Keep
-collection" for a collection, never "Cancel"), and Delete is the outlined
-error-coloured secondary (`AppSheetActions`, `destructiveSecondary: true`) in
-the layout's `footer`, 24dp after the body text and 16dp above the route's
-safe area. Keep closes only the confirmation and never writes. The list swipe background, cover New/finished
+Library item deletion uses `showAppConfirmationDialog`: a native Cupertino or
+Material confirmation dialog on the root navigator, including on tablets.
+The count-aware title and message retain the selected item count. Keep is the
+safe default and Delete is destructive; only explicit confirmation returns
+`BookDeletionScope.keepLearningData`. Keep and system dismissal do not write.
+Collection deletion and discard decisions remain steps in their guarded sheet
+flow, using the filled safe choice and outlined destructive secondary through
+`AppSheetActions`. The list swipe background, cover New/finished
 badges and selection checks use directional placement, so they mirror in RTL.
 Grid selection scale, the grid and Continue reading progress fills and the
 list/grid cross-fade resolve their durations through `context.motion`,
@@ -333,14 +335,15 @@ Scaffold animates the button to every new location.
   Collections picker. Inside a collection it takes the selected pair
   (`selectedControlBackground` / `…Foreground`). Tests check 4.5:1 text
   contrast over black and white covers under the translucent capsule.
-- `LibraryAddButton`, at the outer end: a filled `primary` circle with a
+- `LibraryCapsuleActionButton`, at the outer end: a filled `primary` circle with a
   24dp `onPrimary` "+" (tooltip Add to Library), flat inside the capsule. It
   opens import at `LibraryImportEntry.menu` and takes the shared disabled
   filled colours while an import is open; switching collections stays
   available meanwhile. Its circular fill is explicit in `AppIconButton`.
-- Search sits between the collection switcher and "+". It changes the same
-  capsule into a field above the keyboard, with Back at its directional start
-  and a separate Clear search control when the query is nonempty. Back clears
+- Search sits between the collection switcher and "+". Opening it moves the
+  magnifier to the directional start as the capsule expands into a field above
+  the keyboard. The filled end button's "+" cross-fades to a directional chevron
+  (Back); Clear search appears beside it when the query is nonempty. Back clears
   the query, closes editing and drops focus; Clear only empties the query and
   retains focus. Both keep the selected collection. The field uses the user's
   text scale and a compact localized hint when needed, with the full hint in
@@ -359,14 +362,18 @@ so its text scales up to
 directly. Scope-only changes stay in the capsule's selector; entering or leaving
 search also updates the screen's editing and focus state.
 Search uses the available width up to 480dp, preserving the same directional
-end and bottom anchor. The surface resizes over `AppMotion.short` (200ms), with
-`AppMotion.quick` (120ms) fade-through: outgoing controls disappear before the
-incoming controls become visible, so labels never paint over each other.
-Exiting controls are inert and excluded
-from focus and semantics. There is one live editable field, even through rapid
-reversals. Stable keys on the Stack's direct positioned children keep the live
-editor mounted when the outgoing mode is removed, preserving its native input
-connection. The screen performs no extra storage reads to enter or leave search.
+end and bottom anchor. Width, magnifier position and the plus/chevron cross-fade
+share one eased progress over `AppMotion.short` (200ms). The collection label
+fades out before the field fades in; directional clips keep both clear of the
+moving magnifier. Closing reverses from the current progress, including during
+rapid toggles. The end button retains its native element and cannot import
+until closing finishes. Reduced motion settles all three changes together.
+Inactive controls leave input, focus and semantics. There is one live editable
+field, even through rapid reversals; stable positioned children retain its
+native input connection throughout opening and keyboard frames. Closing uses
+a frozen query and scroll offset instead of another live editor. Viewport and
+collection-name width changes animate separately from search progress. The
+screen performs no extra storage reads to enter or leave search.
 Practice is hidden while editing so the field owns the floating group.
 
 The capsule appears only once the library has loaded items: the empty
@@ -489,13 +496,14 @@ the list and grid below, so the book is never shown twice; searching or a
 collection drops the card and lists the source in its place again. The item
 count still includes it.
 
-The card uses the tonal surface (`surfaceContainerLow`), an outline and the
-16dp radius, with 16dp outer horizontal insets and 16dp inner padding,
-`kLibraryContentTopPadding` below
+The card uses `AppSurfaceRole.contentCard`: a quiet opaque card with an iOS
+continuous 18dp shape, or the Material surface color and 16dp outlined shape.
+Its tap feedback follows the same resolved shape. It keeps 16dp outer
+horizontal insets and 16dp inner padding, `kLibraryContentTopPadding` below
 the header's band and `kLibraryContinueReadingGap` (16dp) above the first
 cover; it scrolls with the content. The `LibraryListCoverSlot` stays 60×90 on
-phones and grows to 80×120 in wide windows, followed by
-`kLibraryListCoverToTextGap` (14dp). The text column holds a header with the Continue reading label
+phones and tablets, followed by `kLibraryListCoverToTextGap` (14dp).
+The text column holds a header with the Continue reading label
 and progress/time caption, a serif `titleMedium` title (`titleLarge` in wide
 windows; the largest font that
 fits the complete title in the available width and height, with wrapping and
@@ -507,9 +515,9 @@ caption reads "{percent}% · {time left}". Time left is
 `readingTimeLeft(LibrarySource.estimatedMinutesLeft)` and is omitted when
 unknown (books have no character count).
 
-Up to 130% text, the compact text stays between the cover's top and bottom
-edges, with 16dp inner vertical padding. Title fitting checks both the
-available width and height, using the actual scaled font metrics and a bounded
+Up to 130% text, the 122dp card keeps its compact text between the cover's top
+and bottom edges, with 16dp inner vertical padding. Title fitting checks both
+the available width and height, using the actual scaled font metrics and a bounded
 binary search when the theme size does not fit; the progress bar ends at the
 cover's bottom edge. The title and author stay together, with unused space below.
 
@@ -636,7 +644,7 @@ already has Close/Back, so no Cancel sits beside it, per the Command Footers
 contract). Save wraps `AppBusyButtonLabel`, so a write shows a spinner with
 stable geometry while Save, Close and the row actions are disabled. The delete
 confirmation body is start-aligned `bodyMedium` on the 24dp gutter like the
-Discard and Delete items confirmations.
+the sibling Discard decision.
 Collection edits remain staged until Save. At the root, Close and system Back
 prompt only when there are actual edits. Drag/scrim dismissal is disabled for
 this form so it cannot bypass the guard. Delete is secondary and has its own
@@ -675,9 +683,10 @@ shadows when the viewport permits; shadows only indicate real hidden content.
 
 Add to collection opens `AddToCollectionSheet` through the shared
 `showAppBottomSheet` route. The modal scrim covers the Library, including the
-contextual capsule and separate cancel FAB. The shared sheet owns its width,
-safe-area margins, drag handle and keyboard offset. The destination list remains
-lazy and bounded. When the keyboard or large text leaves too little space for
+contextual capsule and separate cancel FAB. The shared form presentation owns
+its width, centered tablet placement, safe-area margins, drag handle and keyboard
+offset. Standalone Manage collection uses the same form role. The destination
+list remains lazy and bounded. When the keyboard or large text leaves too little space for
 its controls, the whole sheet content scrolls; search, destinations and the
 primary action remain reachable. Step changes reset that outer scroll to the
 header; keyboard resizing preserves form focus.
@@ -722,5 +731,5 @@ Shared controls remain in `component_library`.
 - `domain_models` — `Book`, `Article`, `LibrarySource`
 - `component_library` — theme, `SearchField`, `ScrollEdgeFadeStack`, `EmptyState`,
   `ErrorState`, `AppDrillInRow`, `AppPlainIconButton`, `AppSheetActions`,
-  `AppIcons`, `AppSpacing`, `AppRadius`, `AppMotion`
+  `AppConfirmationDialog`, `AppIcons`, `AppSpacing`, `AppRadius`, `AppMotion`
 - `flutter_bloc`, `equatable`, `stream_transform` (for debounce)

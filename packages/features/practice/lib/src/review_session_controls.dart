@@ -620,13 +620,10 @@ class _ReviewSummaryCard extends StatelessWidget {
     final l10n = context.l10n;
     final text = context.text;
     final colors = context.colors;
-    return DecoratedBox(
+    return AppSurface(
       key: const ValueKey('reviewSummaryCard'),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        border: Border.all(color: colors.outlineVariant),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
+      role: AppSurfaceRole.reviewCard,
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(

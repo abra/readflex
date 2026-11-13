@@ -252,14 +252,17 @@ void main() {
                     ),
                   )
                   .decoration
-              as BoxDecoration;
-      expect(decoration.border, isNull);
+              as ShapeDecoration;
+      expect((decoration.shape as OutlinedBorder).side, BorderSide.none);
       expect(decoration.color!.a, 1);
       final context = tester.element(find.byType(AppSheetSection));
-      expect(
-        decoration.color,
-        CupertinoColors.secondarySystemGroupedBackground.resolveFrom(context),
+      final appearance = AppSurfaceAppearance.resolve(
+        context,
+        AppSurfaceRole.field,
       );
+      expect(decoration.color, appearance.color);
+      expect(decoration.shape, appearance.shape);
+      expect(decoration.shape, isA<RoundedSuperellipseBorder>());
       expect(find.text('Reading'), findsOneWidget);
       expect(find.text('Body'), findsOneWidget);
       expect(tester.takeException(), isNull);

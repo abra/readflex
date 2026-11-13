@@ -2,6 +2,8 @@ import 'package:component_library/component_library.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../test_support/platform_test_app.dart';
+
 /// A sheet section is outlined without moving its content: text keeps the
 /// sheet's 24dp gutter and a utility target reaches the outline.
 void main() {
@@ -98,6 +100,47 @@ void main() {
       expect(decoration.borderRadius, BorderRadius.circular(AppRadius.md));
       expect(decoration.color, isNull, reason: 'no fill');
     }
+  });
+
+  testWidgets('grouped Cupertino background uses its role and custom inset', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const PlatformTestApp(
+        platform: TargetPlatform.iOS,
+        home: Align(
+          alignment: Alignment.topCenter,
+          child: AppSheetSection(
+            horizontalInset: AppSpacing.xl,
+            child: SizedBox(key: contentKey, height: 40),
+          ),
+        ),
+      ),
+    );
+    final context = tester.element(find.byType(AppSheetSection));
+    final appearance = AppSurfaceAppearance.resolve(
+      context,
+      AppSurfaceRole.field,
+    );
+    final background = find.descendant(
+      of: find.byType(AppSheetSection),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is DecoratedBox && widget.decoration is ShapeDecoration,
+      ),
+    );
+    final decoration =
+        tester.widget<DecoratedBox>(background).decoration as ShapeDecoration;
+    expect(decoration.color, appearance.color);
+    expect(decoration.color!.a, 1);
+    expect(decoration.shape, isA<RoundedSuperellipseBorder>());
+    expect(decoration.shape, appearance.shape);
+    final section = tester.getRect(find.byType(AppSheetSection));
+    final fill = tester.getRect(background);
+    expect(fill.left - section.left, AppSpacing.xl);
+    expect(section.right - fill.right, AppSpacing.xl);
+    expect(tester.getSize(find.byKey(contentKey)).width, section.width);
+    expect(tester.takeException(), isNull);
   });
 
   for (final direction in TextDirection.values) {

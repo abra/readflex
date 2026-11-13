@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'app_cupertino_sheet_surface.dart';
 import 'app_surface.dart';
+import 'app_surface_appearance.dart';
 
 import 'app_inline_sheet_geometry.dart';
 import 'app_sheet_drag_handle.dart';
@@ -258,11 +259,11 @@ class _AppInlineSheetState extends State<AppInlineSheet>
           rtl ? padding.left : padding.right,
         );
         final bottomGap = sidePanel
-            ? math.max(AppSpacing.xl, padding.bottom)
+            ? 0.0
             : cupertino
             ? math.max(AppCupertinoSheetSurface.minimumGap, padding.bottom)
             : 0.0;
-        final topGap = sidePanel ? padding.top + AppSpacing.xl : 0.0;
+        final topGap = sidePanel ? padding.top : 0.0;
         final panelHeight = math.max(
           0.0,
           constraints.maxHeight - keyboardInset - topGap - bottomGap,
@@ -332,7 +333,9 @@ class _AppInlineSheetState extends State<AppInlineSheet>
         final surfaceContent = KeyedSubtree(
           key: _contentKey,
           child: Padding(
-            padding: sideInsets,
+            padding: sideInsets.copyWith(
+              bottom: sidePanel ? padding.bottom : 0,
+            ),
             // One MediaQuery: nested remove* helpers would each restart
             // from the outer data and undo the other.
             child: MediaQuery(
@@ -358,20 +361,17 @@ class _AppInlineSheetState extends State<AppInlineSheet>
           child: cupertino && !sidePanel
               ? AppCupertinoSheetSurface(child: surfaceContent)
               : AppSurface(
-                  color: sheetTheme.backgroundColor ?? colors.surface,
-                  shape: RoundedRectangleBorder(
-                    side: sidePanel
-                        ? BorderSide(
-                            color: colors.outlineVariant,
-                            width: 1 / MediaQuery.devicePixelRatioOf(context),
-                          )
-                        : BorderSide.none,
-                    borderRadius: sidePanel
-                        ? BorderRadius.circular(AppRadius.xl)
-                        : const BorderRadius.vertical(
+                  role: sidePanel ? AppSurfaceRole.sidePanel : null,
+                  color: sidePanel
+                      ? null
+                      : sheetTheme.backgroundColor ?? colors.surface,
+                  shape: sidePanel
+                      ? null
+                      : const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
                             top: Radius.circular(AppRadius.xl),
                           ),
-                  ),
+                        ),
                   clipBehavior: Clip.antiAlias,
                   child: surfaceContent,
                 ),
@@ -407,12 +407,12 @@ class _AppInlineSheetState extends State<AppInlineSheet>
             ),
             Positioned(
               left: sidePanel
-                  ? math.max(AppSpacing.xl, padding.left)
+                  ? 0
                   : cupertino
                   ? math.max(AppCupertinoSheetSurface.minimumGap, padding.left)
                   : 0,
               right: sidePanel
-                  ? math.max(AppSpacing.xl, padding.right)
+                  ? 0
                   : cupertino
                   ? math.max(AppCupertinoSheetSurface.minimumGap, padding.right)
                   : 0,

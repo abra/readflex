@@ -337,19 +337,22 @@ void _expectProgressAlignment(WidgetTester tester, {required bool rtl}) {
 
 void _expectAppPalette(WidgetTester tester) {
   final context = tester.element(find.byKey(_dockKey));
-  final decoration =
-      tester.widget<DecoratedBox>(find.byKey(_dockKey)).decoration
-          as BoxDecoration;
-  expect(decoration.color, context.colors.surface);
+  final surface = tester.widget<AppSurface>(find.byKey(_dockKey));
+  expect(surface.role, AppSurfaceRole.floatingToolbar);
+  expect(surface.borderRadius, BorderRadius.circular(AppRadius.xl));
+  final appearance = AppSurfaceAppearance.resolve(context, surface.role!);
   for (final key in [_startKey, _pageKey]) {
     final color = tester.widget<Text>(find.byKey(key)).style!.color!;
     expect(color, context.colors.onSurfaceVariant);
-    final ink = Color.alphaBlend(color, decoration.color!).computeLuminance();
-    final surface = decoration.color!.computeLuminance();
-    expect(
-      (math.max(ink, surface) + .05) / (math.min(ink, surface) + .05),
-      greaterThanOrEqualTo(4.5),
-    );
+    for (final page in [const Color(0xFF000000), const Color(0xFFFFFFFF)]) {
+      final fill = Color.alphaBlend(appearance.color, page);
+      final ink = Color.alphaBlend(color, fill).computeLuminance();
+      final background = fill.computeLuminance();
+      expect(
+        (math.max(ink, background) + .05) / (math.min(ink, background) + .05),
+        greaterThanOrEqualTo(4.5),
+      );
+    }
   }
 }
 

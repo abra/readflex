@@ -5,6 +5,7 @@ Future<T?> _showCupertinoAppBottomSheet<T>(
   required WidgetBuilder builder,
   required bool dismissible,
   required bool scrimClosesFlow,
+  required AppSheetPresentation presentation,
   VoidCallback? onFullyHidden,
 }) {
   final navigator = Navigator.of(context, rootNavigator: true);
@@ -18,6 +19,7 @@ Future<T?> _showCupertinoAppBottomSheet<T>(
     reduceMotion: context.reduceMotion,
     scrimClosesFlow: scrimClosesFlow,
     dismissRegistry: registry,
+    presentation: presentation,
     barrierDismissible: dismissible,
     barrierColor: AppCupertinoSheetSurface.barrierColorOf(context),
     barrierLabel: CupertinoLocalizations.of(context).modalBarrierDismissLabel,
@@ -50,6 +52,7 @@ class _CupertinoAppSheetRoute<T> extends CupertinoModalPopupRoute<T> {
     required this.reduceMotion,
     required this.scrimClosesFlow,
     required this.dismissRegistry,
+    required this.presentation,
     required super.builder,
     required super.barrierDismissible,
     required super.barrierColor,
@@ -59,6 +62,7 @@ class _CupertinoAppSheetRoute<T> extends CupertinoModalPopupRoute<T> {
   final bool reduceMotion;
   final bool scrimClosesFlow;
   final AppSheetDismissRegistry dismissRegistry;
+  final AppSheetPresentation presentation;
 
   AnimationController? get dragController => controller;
 
@@ -73,6 +77,16 @@ class _CupertinoAppSheetRoute<T> extends CupertinoModalPopupRoute<T> {
   Simulation createSimulation({required bool forward}) => reduceMotion
       ? _InstantSheetSimulation(forward ? 1 : 0)
       : super.createSimulation(forward: forward);
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) => AppWindowSize.isWide(context)
+      ? child
+      : super.buildTransitions(context, animation, secondaryAnimation, child);
 
   void onScrimDismiss() {
     final guard = dismissRegistry.value;
@@ -145,6 +159,7 @@ class _CupertinoAppSheetSurface<T> extends StatefulWidget {
 class _CupertinoAppSheetSurfaceState<T>
     extends State<_CupertinoAppSheetSurface<T>> {
   final _cardKey = GlobalKey();
+  final _contentKey = GlobalKey();
   bool _dragging = false;
   bool _userGesture = false;
 
@@ -221,59 +236,63 @@ class _CupertinoAppSheetSurfaceState<T>
   @override
   Widget build(BuildContext context) {
     final cupertinoTheme = CupertinoTheme.of(context);
+    final wide = AppWindowSize.isWide(context);
+    final content = DefaultTextStyle(
+      key: _contentKey,
+      style: cupertinoTheme.textTheme.textStyle,
+      child: ValueListenableBuilder<VoidCallback?>(
+        valueListenable: widget.dismissRegistry,
+        child: Flexible(child: widget.child),
+        builder: (context, guard, body) {
+          final canDrag = widget.dismissible && guard == null && !wide;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onVerticalDragStart: canDrag ? _onDragStart : null,
+            onVerticalDragUpdate: canDrag ? _onDragUpdate : null,
+            onVerticalDragEnd: canDrag ? _onDragEnd : null,
+            onVerticalDragCancel: canDrag ? _onDragCancel : null,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (canDrag)
+                  const AppSheetDragHandle()
+                else
+                  SizedBox(height: wide ? 12 : kAppSheetDragHandleExtent),
+                body!,
+              ],
+            ),
+          );
+        },
+      ),
+    );
+    if (wide) {
+      return _ExpandedAppSheet(
+        presentation: widget.route.presentation,
+        animation: widget.route.animation!,
+        child: content,
+      );
+    }
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SafeArea(
-        minimum: const EdgeInsets.all(AppCupertinoSheetSurface.minimumGap),
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AppCupertinoSheetSurface.maxWidth,
-            ),
-            child: Semantics(
-              scopesRoute: true,
-              explicitChildNodes: true,
-              child: AppCupertinoSheetSurface(
-                key: _cardKey,
-                child: DefaultTextStyle(
-                  style: cupertinoTheme.textTheme.textStyle,
-                  child: ValueListenableBuilder<VoidCallback?>(
-                    valueListenable: widget.dismissRegistry,
-                    child: Flexible(child: widget.child),
-                    builder: (context, guard, body) {
-                      final canDrag = widget.dismissible && guard == null;
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onVerticalDragStart: widget.dismissible
-                            ? _onDragStart
-                            : null,
-                        onVerticalDragUpdate: widget.dismissible
-                            ? _onDragUpdate
-                            : null,
-                        onVerticalDragEnd: widget.dismissible
-                            ? _onDragEnd
-                            : null,
-                        onVerticalDragCancel: widget.dismissible
-                            ? _onDragCancel
-                            : null,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (canDrag)
-                              const AppSheetDragHandle()
-                            else
-                              const SizedBox(
-                                height: kAppSheetDragHandleExtent,
-                              ),
-                            body!,
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+      child: MediaQuery.removeViewInsets(
+        context: context,
+        removeBottom: true,
+        child: SafeArea(
+          minimum: const EdgeInsets.all(AppCupertinoSheetSurface.minimumGap),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: AppCupertinoSheetSurface.maxWidth,
+              ),
+              child: Semantics(
+                scopesRoute: true,
+                explicitChildNodes: true,
+                child: AppCupertinoSheetSurface(
+                  key: _cardKey,
+                  child: content,
                 ),
               ),
             ),

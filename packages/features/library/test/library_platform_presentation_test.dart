@@ -63,9 +63,26 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
+        final action = tester.element(
+          find.byKey(const ValueKey('libraryCapsuleActionButton')),
+        );
         await tester.tap(find.byKey(const ValueKey('librarySearchButton')));
-        await tester.pumpAndSettle();
+        await tester.pump();
         final editor = tester.element(find.byType(EditableText));
+        for (var frame = 0; frame < 14; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          expect(tester.element(find.byType(EditableText)), same(editor));
+          expect(
+            tester.element(
+              find.byKey(
+                const ValueKey('libraryCapsuleActionButton'),
+              ),
+            ),
+            same(action),
+          );
+          expect(focus.hasFocus, isTrue);
+          expect(tester.testTextInput.hasAnyClients, isTrue);
+        }
         final field = find.byKey(const ValueKey('librarySearchField'));
         await tester.enterText(field, 'A search that stays focused');
         tester.view.viewInsets = const FakeViewPadding(bottom: 320);
@@ -75,7 +92,7 @@ void main() {
         expect(tester.element(find.byType(EditableText)), same(editor));
         expect(controller.text, 'A search that stays focused');
         await tester.tap(
-          find.byKey(const ValueKey('librarySearchCloseButton')),
+          find.byKey(const ValueKey('libraryCapsuleActionButton')),
         );
         await tester.pumpAndSettle();
         expect(find.byType(EditableText), findsNothing);

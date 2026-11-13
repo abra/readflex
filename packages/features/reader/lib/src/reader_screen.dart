@@ -44,6 +44,7 @@ import 'reader_drawer_messages.dart';
 import 'reader_drawer_title_fit.dart';
 import 'reader_external_link_prompt.dart';
 import 'reader_font_ink.dart';
+import 'reader_floating_chrome_layout.dart';
 import 'reader_highlight_color.dart';
 import 'reader_highlight_controls.dart';
 import 'reader_highlight_effect_listener.dart';
@@ -117,8 +118,7 @@ const _kReaderBrightnessStep = 0.05;
 const _kReaderBrightnessEpsilon = 0.0001;
 // Three 48dp controls stacked inside the pill's horizontal/vertical padding.
 const _kReaderBrightnessChromeWidth = AppSizes.buttonHeight + AppSpacing.xs * 2;
-const _kReaderBrightnessChromeHeight =
-    AppSizes.buttonHeight * 3 + AppSpacing.sm * 2 + AppSpacing.md * 2;
+const _kReaderBrightnessChromeHeight = readerBrightnessChromeLength;
 const _kReaderBrightnessChromeDragHeight =
     _kReaderBrightnessChromeHeight - AppSpacing.sm * 2;
 const _kArticleReaderTopMargin = 32.0;

@@ -1,8 +1,7 @@
-import 'package:cupertino_ui/cupertino_ui.dart'
-    show CupertinoColors, CupertinoDynamicColor;
 import 'package:flutter/widgets.dart';
 
 import 'app_plain_icon_button.dart';
+import 'app_surface_appearance.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_radius.dart';
 import 'theme/tokens/app_sizes.dart';
@@ -26,6 +25,7 @@ class AppSheetSection extends StatelessWidget {
     required this.child,
     this.title,
     this.padding = defaultPadding,
+    this.horizontalInset,
     super.key,
   });
 
@@ -45,28 +45,32 @@ class AppSheetSection extends StatelessWidget {
   final String? title;
   final EdgeInsets padding;
 
+  /// Overrides the background's inset without moving its full-width content.
+  final double? horizontalInset;
+
   @override
   Widget build(BuildContext context) {
     final title = this.title;
-    final outlineInset = outlineInsetFor(context);
+    final outlineInset = horizontalInset ?? outlineInsetFor(context);
+    final appearance = AppSurfaceAppearance.resolve(
+      context,
+      AppSurfaceRole.field,
+    );
     return Stack(
       children: [
         Positioned.fill(
           left: outlineInset,
           right: outlineInset,
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.isCupertino
-                  ? CupertinoDynamicColor.resolve(
-                      CupertinoColors.secondarySystemGroupedBackground,
-                      context,
-                    )
-                  : null,
-              border: context.isCupertino
-                  ? null
-                  : Border.all(color: context.colors.outlineVariant),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-            ),
+            decoration: context.isCupertino
+                ? ShapeDecoration(
+                    color: appearance.color,
+                    shape: appearance.shape,
+                  )
+                : BoxDecoration(
+                    border: Border.all(color: context.colors.outlineVariant),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
           ),
         ),
         Padding(

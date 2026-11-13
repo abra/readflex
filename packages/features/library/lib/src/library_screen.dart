@@ -31,7 +31,7 @@ import 'manage_collection_sheet.dart';
 import 'library_selection_cubit.dart';
 import 'library_selection_bar.dart';
 import 'select_collection_scope_sheet.dart';
-import 'confirm_book_deletion_sheet.dart';
+import 'confirm_book_deletion_dialog.dart';
 
 const _sourceRouteReturnRefreshDelay = Duration(milliseconds: 320);
 
@@ -488,7 +488,7 @@ class _LibraryViewState extends State<_LibraryView>
     final selection = context.read<LibrarySelectionCubit>();
     final ids = selection.state.selectedIds;
     if (ids.isEmpty) return;
-    final scope = await showConfirmBookDeletionSheet(
+    final scope = await showConfirmBookDeletionDialog(
       context,
       count: ids.length,
     );
@@ -497,7 +497,7 @@ class _LibraryViewState extends State<_LibraryView>
     selection.clear();
   }
 
-  /// Confirms the swipe-to-delete via the same bottom sheet, then waits for
+  /// Confirms the swipe-to-delete via the same native dialog, then waits for
   /// the write. Resolves `true` once storage confirms the delete so
   /// `Dismissible` finishes the row, `false` (cancel or failure) to spring
   /// it back. The delete event is dispatched here so we know the chosen
@@ -506,7 +506,7 @@ class _LibraryViewState extends State<_LibraryView>
     BuildContext context,
     LibrarySource source,
   ) async {
-    final scope = await showConfirmBookDeletionSheet(context, count: 1);
+    final scope = await showConfirmBookDeletionDialog(context, count: 1);
     if (scope == null || !context.mounted) return false;
     final completer = Completer<bool>();
     _pendingSwipeDeletions[source.id] = completer;

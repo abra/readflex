@@ -3,6 +3,7 @@
 .PHONY: test-tools check-architecture
 .PHONY: test-phone test-tablet test-tablet-layout
 .PHONY: test-native-selection
+.PHONY: profile-ui
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
@@ -198,6 +199,10 @@ update-goldens:
 test-device:
 	@test -n "$(DEVICE)" || { echo "Specify DEVICE from '$(FLUTTER) devices'."; exit 2; }
 	READFLEX_NATIVE_DEVICE="$(DEVICE)" READFLEX_NATIVE_COVERAGE="$(COVERAGE)" $(FLUTTER) drive --driver=test_driver/ui_driver.dart --target=integration_test/reader_flows_test.dart -d "$(DEVICE)"
+
+## Profile warmed native UI on verified physical hardware: DEVICE=<id> [ALLOW_EMULATOR=1]
+profile-ui:
+	$(DART) scripts/native_ui_performance.dart --device "$(DEVICE)" $(if $(filter 1 true,$(ALLOW_EMULATOR)),--allow-emulator,)
 
 ## Check native selection activation and our menus: DEVICE=<iOS17+/Android-id>
 test-native-selection:

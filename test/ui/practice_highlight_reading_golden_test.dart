@@ -115,10 +115,9 @@ void main() {
         expect(frameBounds.right, lessThanOrEqualTo(outerViewport.right));
         expect(frameBounds.bottom, lessThan(outerViewport.bottom));
         expect(frameBounds.width, lessThanOrEqualTo(640));
-        final frameClip = tester.widget<ClipRRect>(
-          find.descendant(of: frame, matching: find.byType(ClipRRect)).first,
-        );
-        expect(frameClip.borderRadius, BorderRadius.circular(AppRadius.lg));
+        final frameSurface = tester.widget<AppSurface>(frame);
+        expect(frameSurface.role, AppSurfaceRole.reviewCard);
+        expect(frameSurface.clipBehavior, Clip.antiAlias);
 
         final clip = find.byKey(const ValueKey('reviewCardClip'));
         final panel = find.byKey(const ValueKey('reviewControlsPanel'));

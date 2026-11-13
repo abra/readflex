@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:library_feature/src/library_bloc.dart';
+import 'package:library_feature/src/library_capsule_action_button.dart';
 import 'package:library_feature/src/library_floating_actions.dart';
 import 'package:library_feature/src/library_floating_actions_location.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
@@ -12,9 +13,9 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 final _capsule = find.byKey(const ValueKey('libraryFloatingActions'));
 final _collections = find.byKey(const ValueKey('libraryCollectionsButton'));
 final _search = find.byKey(const ValueKey('librarySearchButton'));
-final _add = find.byKey(const ValueKey('libraryAddButton'));
+final _add = find.byKey(const ValueKey('libraryCapsuleActionButton'));
 final _field = find.byKey(const ValueKey('librarySearchField'));
-final _close = find.byKey(const ValueKey('librarySearchCloseButton'));
+final _close = _add;
 final _clear = find.byKey(const ValueKey('librarySearchClearButton'));
 
 double _layerOpacity(WidgetTester tester, String key) {
@@ -175,7 +176,85 @@ void main() {
       expect(tester.getSize(_capsule).height, 56);
       expect(_field, findsNothing);
     });
+
+    testWidgets('one magnifier and end button retain geometry through search '
+        'and reversal in $locale', (tester) async {
+      final harness = await _pump(tester, locale: locale);
+      final initial = tester.getRect(_capsule);
+      final magnifier = tester.element(_search);
+      final action = tester.element(_add);
+      final actionBounds = tester.getRect(_add);
+      final rtl = locale.languageCode == 'ar';
+      var previousX = tester.getCenter(_search).dx;
+      harness.open();
+      await tester.pump();
+      for (var frame = 0; frame < 8; frame++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final bounds = tester.getRect(_capsule);
+        final centre = tester.getCenter(_search);
+        final progress = tester
+            .widget<LibraryCapsuleActionButton>(
+              find.byType(LibraryCapsuleActionButton),
+            )
+            .progress
+            .value;
+        expect(tester.element(_search), same(magnifier));
+        expect(tester.element(_close), same(action));
+        expect(tester.getRect(_close), rectMoreOrLessEquals(actionBounds));
+        expect(
+          bounds.width,
+          closeTo(initial.width + (358 - initial.width) * progress, .01),
+        );
+        final leadingDistance = rtl
+            ? bounds.right - centre.dx
+            : centre.dx - bounds.left;
+        expect(
+          leadingDistance,
+          closeTo(28 + (bounds.width - 108) * (1 - progress), .01),
+        );
+        expect(
+          centre.dx,
+          rtl ? greaterThanOrEqualTo(previousX) : lessThanOrEqualTo(previousX),
+        );
+        previousX = centre.dx;
+        expect(_search.hitTestable(), findsNothing);
+        expect(tester.takeException(), isNull);
+      }
+      final reversingBounds = tester.getRect(_capsule);
+      final reversingIcon = tester.getCenter(_search);
+      harness.close();
+      await tester.pump();
+      expect(tester.getRect(_capsule), rectMoreOrLessEquals(reversingBounds));
+      expect(tester.getCenter(_search), offsetMoreOrLessEquals(reversingIcon));
+      await tester.pumpAndSettle();
+      expect(tester.element(_search), same(magnifier));
+      expect(tester.element(_add), same(action));
+      expect(tester.getRect(_capsule), rectMoreOrLessEquals(initial));
+    });
   }
+
+  testWidgets(
+    'a second Close tap cannot trigger Import while returning to Add',
+    (
+      tester,
+    ) async {
+      final harness = await _pump(tester);
+      harness.open();
+      await tester.pumpAndSettle();
+      final centre = tester.getCenter(_close);
+      await tester.tapAt(centre);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(_add.hitTestable(), findsNothing);
+      await tester.tapAt(centre);
+      await tester.pump();
+      expect(harness.closed, 1);
+      expect(harness.additions, 0);
+      await tester.pumpAndSettle();
+      await tester.tap(_add);
+      expect(harness.additions, 1);
+    },
+  );
 
   testWidgets('one surface expands, preserves its anchor and reverses', (
     tester,
@@ -390,7 +469,14 @@ void main() {
     await tester.pump();
     expect(tester.getRect(_capsule).width, closeTo(358, .01));
     expect(_field, findsOneWidget);
-    expect(_add, findsNothing);
+    expect(
+      tester
+          .widget<LibraryCapsuleActionButton>(
+            find.byType(LibraryCapsuleActionButton),
+          )
+          .searchActive,
+      isTrue,
+    );
     harness.close();
     await tester.pump();
     expect(tester.getRect(_capsule), rectMoreOrLessEquals(initial));

@@ -368,7 +368,7 @@ class _ReaderSearchHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    if (context.isCupertino && !AppWindowSize.isWide(context)) {
+    if (context.isCupertino) {
       return BottomSheetHeader(
         title: l10n.readerSearchAction,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),

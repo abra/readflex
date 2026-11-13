@@ -254,19 +254,27 @@ void main() {
           expect(dock.right, rect.right);
           expect(dock.bottom, rect.bottom);
           expect(dock.top, lessThan(tester.getRect(find.byType(Slider)).top));
-          final decoration =
-              tester.widget<DecoratedBox>(find.byKey(_dockKey)).decoration
-                  as BoxDecoration;
-          expect(decoration.borderRadius, BorderRadius.circular(AppRadius.xl));
-          expect(decoration.boxShadow, AppShadows.popover);
+          final surface = tester.widget<AppSurface>(find.byKey(_dockKey));
+          expect(surface.role, AppSurfaceRole.floatingToolbar);
+          expect(surface.borderRadius, BorderRadius.circular(AppRadius.xl));
           final context = tester.element(find.byType(Scaffold));
-          expect(
-            decoration.color,
-            context.colors.surface,
+          final appearance = AppSurfaceAppearance.resolve(
+            context,
+            surface.role!,
           );
-          final border = decoration.border! as Border;
-          expect(border.top.color, context.colors.outlineVariant);
-          expect(border.top.width, 1 / tester.view.devicePixelRatio);
+          final material = tester.widget<Material>(
+            find
+                .descendant(
+                  of: find.byKey(_dockKey),
+                  matching: find.byType(Material),
+                )
+                .first,
+          );
+          expect(material.color, appearance.color);
+          expect(material.elevation, appearance.elevation);
+          final side = (material.shape! as OutlinedBorder).side;
+          expect(side.color, context.colors.outlineVariant);
+          expect(side.width, 1 / tester.view.devicePixelRatio);
         },
       );
     }
@@ -748,7 +756,10 @@ void main() {
         );
         await pump(tester, theme: preset);
         final context = tester.element(find.byType(Scaffold));
-        final page = context.colors.surface;
+        final page = AppSurfaceAppearance.resolve(
+          context,
+          AppSurfaceRole.floatingToolbar,
+        ).color;
         final ink = context.colors.onSurfaceVariant;
         for (final key in [_startLabelKey, _pageLabelKey]) {
           final color = tester.widget<Text>(find.byKey(key)).style!.color!;
@@ -764,10 +775,8 @@ void main() {
           context.colors.outlineVariant,
         );
         expect(
-          (tester.widget<DecoratedBox>(find.byKey(_dockKey)).decoration
-                  as BoxDecoration)
-              .color,
-          page,
+          tester.widget<AppSurface>(find.byKey(_dockKey)).role,
+          AppSurfaceRole.floatingToolbar,
         );
       });
     }

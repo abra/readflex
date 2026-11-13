@@ -1,9 +1,21 @@
 import 'dart:async';
 
+import 'package:component_library/component_library.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoPopupSurface;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pagecraft/pagecraft.dart' show FixedPagePainter;
 import 'package:pagecraft/src/formats/pdf/pdf_native_task.dart';
+
+/// The visible modal frame across native phone sheets and expanded panels.
+Finder get appSheetFrame => find.byWidgetPredicate(
+  (widget) =>
+      widget is BottomSheet ||
+      widget is CupertinoPopupSurface ||
+      widget is AppSurface &&
+          (widget.role == AppSurfaceRole.modal ||
+              widget.role == AppSurfaceRole.sidePanel),
+);
 
 /// Bounded condition wait, including real SQLite/platform work outside the
 /// widget test's fake clock. Avoid pumpAndSettle while a spinner is active.

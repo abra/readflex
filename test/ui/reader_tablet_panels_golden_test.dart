@@ -169,9 +169,9 @@ Rect _panelBounds(WidgetTester tester, Type owner) {
 void _expectPanel(Rect panel, Size window, {required bool rtl}) {
   if (AppWindowSize.isWideSize(window)) {
     expect(panel.width, AppSizes.sidePanelWidth);
-    expect(panel.top, AppSpacing.xl);
-    expect(window.height - panel.bottom, AppSpacing.xl);
-    expect(rtl ? panel.left : window.width - panel.right, AppSpacing.xl);
+    expect(panel.top, 0);
+    expect(panel.bottom, window.height);
+    expect(rtl ? panel.left : window.width - panel.right, 0);
   } else {
     expect(panel.width, 640);
     expect(panel.center.dx, window.width / 2);

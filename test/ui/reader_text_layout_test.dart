@@ -115,11 +115,11 @@ void main() {
     await tester.pumpAndSettle();
     await tapUi(tester, find.byTooltip(readerContext.l10n.readerFontAction));
     await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(appSheetFrame, findsOneWidget);
   }
 
   Future<void> closeSheetAndLeave(WidgetTester tester) async {
-    Navigator.of(tester.element(find.byType(BottomSheet))).pop();
+    Navigator.of(tester.element(appSheetFrame)).pop();
     await tester.pumpAndSettle();
     await leave(tester);
   }
@@ -281,7 +281,7 @@ void main() {
       find.byTooltip(readerContext.l10n.readerAppearanceTitle),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(appSheetFrame, findsOneWidget);
     expect(find.byKey(const ValueKey('reader-columns-control')), findsNothing);
     await closeSheetAndLeave(tester);
   });

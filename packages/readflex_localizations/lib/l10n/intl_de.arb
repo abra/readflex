@@ -130,7 +130,7 @@
   "libraryCreateCollectionPrompt": "{count, plural, one{Erstelle eine Sammlung für 1 ausgewähltes Element.} other{Erstelle eine Sammlung für {count} ausgewählte Elemente.}}",
   "libraryNewCollectionName": "Name der neuen Sammlung",
   "libraryDeleteItemsTitle": "{count, plural, one{Dieses Element löschen?} other{{count} Elemente löschen?}}",
-  "libraryDeleteItemsBody": "{count, plural, other{Die Bibliothekseinträge, Markierungen und Lesezeichen werden gelöscht.}}",
+  "libraryDeleteItemsBody": "{count, plural, other{Die Einträge, Markierungen und Lesezeichen werden gelöscht.}}",
   "libraryCollectionsTitle": "Sammlungen",
   "librarySearchCollectionsHint": "Sammlungen durchsuchen",
   "libraryNoCollectionsYet": "Noch keine Sammlungen",

@@ -79,7 +79,7 @@ void main() {
         find.byKey(const ValueKey('librarySearchButton')),
       );
       final add = tester.getCenter(
-        find.byKey(const ValueKey('libraryAddButton')),
+        find.byKey(const ValueKey('libraryCapsuleActionButton')),
       );
       expect(searchButton.dy, closeTo(add.dy, .01));
       expect(
@@ -134,7 +134,7 @@ void main() {
 
       await tapUi(
         tester,
-        find.byKey(const ValueKey('librarySearchCloseButton')),
+        find.byKey(const ValueKey('libraryCapsuleActionButton')),
       );
       tester.view.viewInsets = const FakeViewPadding();
       await tester.pumpAndSettle();

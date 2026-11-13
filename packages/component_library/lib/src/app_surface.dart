@@ -1,19 +1,23 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' as material;
 
+import 'app_surface_appearance.dart';
 import 'theme/extensions/build_context_ext.dart';
 import 'theme/tokens/app_motion.dart';
 import 'theme/tokens/app_shadows.dart';
 
-/// Shared app surface; only Android uses Material's painted elevation.
+/// An app surface with platform-specific shape, fill and elevation.
 class AppSurface extends StatelessWidget {
   const AppSurface({
     required this.child,
+    this.role,
     this.color,
     this.shape,
     this.borderRadius,
-    this.elevation = 0,
+    this._elevation,
     this.shadowColor,
     this.clipBehavior = Clip.none,
     this.transparent = false,
@@ -21,51 +25,124 @@ class AppSurface extends StatelessWidget {
   });
 
   final Widget child;
+  final AppSurfaceRole? role;
   final Color? color;
   final ShapeBorder? shape;
   final BorderRadiusGeometry? borderRadius;
-  final double elevation;
+  final double? _elevation;
+
+  /// The legacy explicit value; role defaults are resolved during build.
+  double get elevation => _elevation ?? 0;
   final Color? shadowColor;
   final Clip clipBehavior;
   final bool transparent;
 
   @override
   Widget build(BuildContext context) {
+    final appearance = role == null
+        ? null
+        : AppSurfaceAppearance.resolve(context, role!);
+    final effectiveColor = color ?? appearance?.color;
+    final effectiveElevation = _elevation ?? appearance?.elevation ?? 0;
+    final effectiveShape =
+        shape ??
+        (borderRadius != null
+            ? context.isCupertino && appearance != null
+                  ? RoundedSuperellipseBorder(
+                      borderRadius: borderRadius,
+                      side: appearance.shape.side,
+                    )
+                  : RoundedRectangleBorder(
+                      borderRadius: borderRadius!,
+                      side: appearance?.shape.side ?? BorderSide.none,
+                    )
+            : appearance?.shape);
     if (!context.isCupertino) {
       return material.Material(
-        color: color,
+        color: effectiveColor,
         type: transparent
             ? material.MaterialType.transparency
             : material.MaterialType.canvas,
-        shape: shape,
-        borderRadius: borderRadius,
-        elevation: elevation,
+        shape: appearance == null ? shape : effectiveShape,
+        borderRadius: appearance == null ? borderRadius : null,
+        elevation: effectiveElevation,
         shadowColor: shadowColor,
         surfaceTintColor: const Color(0x00000000),
         clipBehavior: clipBehavior,
         child: child,
       );
     }
-    final effectiveShape =
-        shape ??
-        RoundedRectangleBorder(
-          borderRadius: borderRadius ?? BorderRadius.zero,
-        );
+    return _AppCupertinoSurface(
+      color: transparent
+          ? const Color(0x00000000)
+          : effectiveColor ?? context.colors.surface,
+      shape: effectiveShape ?? const RoundedRectangleBorder(),
+      shadows: _elevation != null
+          ? effectiveElevation > 0
+                ? AppShadows.popover
+                : const []
+          : appearance?.shadows ?? const [],
+      blurSigma: transparent ? 0 : appearance?.blurSigma ?? 0,
+      maintainBackdropFilter: role == AppSurfaceRole.floatingToolbar,
+      clipBehavior: clipBehavior,
+      child: child,
+    );
+  }
+}
+
+class _AppCupertinoSurface extends StatelessWidget {
+  const _AppCupertinoSurface({
+    required this.color,
+    required this.shape,
+    required this.shadows,
+    required this.blurSigma,
+    required this.maintainBackdropFilter,
+    required this.clipBehavior,
+    required this.child,
+  });
+
+  final Color color;
+  final ShapeBorder shape;
+  final List<BoxShadow> shadows;
+  final double blurSigma;
+  final bool maintainBackdropFilter;
+  final Clip clipBehavior;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final painted = DecoratedBox(
+      decoration: ShapeDecoration(
+        color: color,
+        shape: shape,
+      ),
+      child: child,
+    );
+    final contents = maintainBackdropFilter || blurSigma > 0
+        ? ClipPath(
+            clipper: ShapeBorderClipper(shape: shape),
+            child: BackdropFilter(
+              enabled: blurSigma > 0,
+              filter: ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
+              child: painted,
+            ),
+          )
+        : clipBehavior == Clip.none
+        ? painted
+        : ClipPath(
+            clipper: ShapeBorderClipper(shape: shape),
+            clipBehavior: clipBehavior,
+            child: painted,
+          );
+    if (shadows.isEmpty) return contents;
     return DecoratedBox(
       decoration: ShapeDecoration(
-        color: transparent
-            ? const Color(0x00000000)
-            : color ?? context.colors.surface,
-        shape: effectiveShape,
-        shadows: elevation > 0 ? AppShadows.popover : null,
+        shape: shape is OutlinedBorder
+            ? (shape as OutlinedBorder).copyWith(side: BorderSide.none)
+            : shape,
+        shadows: shadows,
       ),
-      child: clipBehavior == Clip.none
-          ? child
-          : ClipPath(
-              clipper: ShapeBorderClipper(shape: effectiveShape),
-              clipBehavior: clipBehavior,
-              child: child,
-            ),
+      child: contents,
     );
   }
 }

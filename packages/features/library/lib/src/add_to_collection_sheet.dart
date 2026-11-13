@@ -18,6 +18,7 @@ Future<int?> showAddToCollectionSheet({
   cubit.load(sourceIds: sourceIds);
   return showAppBottomSheet<int>(
     context,
+    presentation: AppSheetPresentation.form,
     scrimClosesFlow: true,
     builder: (sheetContext) => BlocProvider.value(
       value: cubit,

@@ -505,7 +505,7 @@ class ReadflexLocalizationsDe extends ReadflexLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Die Bibliothekseinträge, Markierungen und Lesezeichen werden gelöscht.',
+      other: 'Die Einträge, Markierungen und Lesezeichen werden gelöscht.',
     );
     return '$_temp0';
   }

@@ -81,7 +81,7 @@ void main() {
     await tester.pump();
     await gesture.up();
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.tap(find.byKey(AppConfirmationDialog.confirmButtonKey));
     await tester.pumpAndSettle();
 
     final toast = find.textContaining('deleted');
@@ -93,7 +93,7 @@ void main() {
       tester.getRect(toast).bottom,
       lessThanOrEqualTo(capsule.top - AppSpacing.sm),
     );
-    await tester.tap(find.byKey(const ValueKey('libraryAddButton')));
+    await tester.tap(find.byKey(const ValueKey('libraryCapsuleActionButton')));
     await tester.pump();
     expect(addPresses, 1);
 

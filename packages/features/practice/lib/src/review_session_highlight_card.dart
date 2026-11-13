@@ -47,86 +47,77 @@ class _ReviewHighlightCardState extends State<ReviewHighlightCard> {
       final compact =
           constraints.maxWidth - padding * 2 < 240 ||
           MediaQuery.textScalerOf(context).scale(1) > 1.5;
-      return DecoratedBox(
+      return AppSurface(
         key: const ValueKey('reviewStudyCard'),
-        decoration: BoxDecoration(
-          color: context.colors.surfaceContainerLowest,
-          border: Border.all(color: context.colors.outlineVariant),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          child: AppSurface(
-            transparent: true,
-            child: Padding(
-              padding: EdgeInsets.all(padding),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if ([title, author, chapter].any(
-                    (value) => value?.isNotEmpty == true,
-                  )) ...[
-                    _ReviewHighlightSourceHeader(
-                      key: const ValueKey('reviewLocation'),
-                      source: source,
-                      title: title,
-                      author: author,
-                      chapter: chapter,
-                      denseHeight: denseHeight,
-                      onOpenInSource: widget.onOpenInSource,
-                    ),
-                    SizedBox(
-                      height: compact || denseHeight
-                          ? AppSpacing.md
-                          : AppSpacing.lg,
-                    ),
-                  ],
-                  Flexible(
-                    fit: FlexFit.loose,
-                    child: ClipRect(
-                      key: const ValueKey('reviewCardClip'),
-                      child: _ReviewHighlightScrollbar(
-                        key: const ValueKey('reviewHighlightScrollbar'),
+        role: AppSurfaceRole.reviewCard,
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: EdgeInsets.all(padding),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if ([title, author, chapter].any(
+                (value) => value?.isNotEmpty == true,
+              )) ...[
+                _ReviewHighlightSourceHeader(
+                  key: const ValueKey('reviewLocation'),
+                  source: source,
+                  title: title,
+                  author: author,
+                  chapter: chapter,
+                  denseHeight: denseHeight,
+                  onOpenInSource: widget.onOpenInSource,
+                ),
+                SizedBox(
+                  height: compact || denseHeight
+                      ? AppSpacing.md
+                      : AppSpacing.lg,
+                ),
+              ],
+              Flexible(
+                fit: FlexFit.loose,
+                child: ClipRect(
+                  key: const ValueKey('reviewCardClip'),
+                  child: _ReviewHighlightScrollbar(
+                    key: const ValueKey('reviewHighlightScrollbar'),
+                    controller: _scrollController,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        scrollbars: false,
+                      ),
+                      child: SingleChildScrollView(
+                        key: const ValueKey('reviewCardViewport'),
                         controller: _scrollController,
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context).copyWith(
-                            scrollbars: false,
-                          ),
-                          child: SingleChildScrollView(
-                            key: const ValueKey('reviewCardViewport'),
-                            controller: _scrollController,
-                            primary: false,
-                            padding: const EdgeInsetsDirectional.only(
-                              end: AppSpacing.md,
+                        primary: false,
+                        padding: const EdgeInsetsDirectional.only(
+                          end: AppSpacing.md,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              quote,
+                              key: const ValueKey('reviewQuote'),
+                              textDirection: _directionOf(quote),
+                              style: AppTypography.serif(
+                                textStyle: context.text.bodyLarge,
+                                color: context.colors.onSurface,
+                                letterSpacing: 0,
+                              ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text(
-                                  quote,
-                                  key: const ValueKey('reviewQuote'),
-                                  textDirection: _directionOf(quote),
-                                  style: AppTypography.serif(
-                                    textStyle: context.text.bodyLarge,
-                                    color: context.colors.onSurface,
-                                    letterSpacing: 0,
-                                  ),
-                                ),
-                                if (note != null && note.isNotEmpty) ...[
-                                  const SizedBox(height: AppSpacing.xl),
-                                  _ReviewHighlightNote(note: note),
-                                ],
-                              ],
-                            ),
-                          ),
+                            if (note != null && note.isNotEmpty) ...[
+                              const SizedBox(height: AppSpacing.xl),
+                              _ReviewHighlightNote(note: note),
+                            ],
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       );

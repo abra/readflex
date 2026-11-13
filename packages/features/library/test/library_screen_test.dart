@@ -36,14 +36,14 @@ import 'helpers/fake_fsrs_repository.dart';
 
 const double _collectionSourcesMaxHeightForTest = 260;
 
-final _addButton = find.byKey(const ValueKey('libraryAddButton'));
+final _addButton = find.byKey(const ValueKey('libraryCapsuleActionButton'));
 final _collectionsButton = find.byKey(
   const ValueKey('libraryCollectionsButton'),
 );
 final _capsule = find.byKey(const ValueKey('libraryFloatingActions'));
 final _searchButton = find.byKey(const ValueKey('librarySearchButton'));
 final _searchField = find.byKey(const ValueKey('librarySearchField'));
-final _searchClose = find.byKey(const ValueKey('librarySearchCloseButton'));
+final _searchClose = _addButton;
 final _searchClear = find.byKey(const ValueKey('librarySearchClearButton'));
 
 /// Lets every toast expire and leave. The toast overlay outlives a test, so a
@@ -992,8 +992,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pumpAndSettle();
     final focus = tester.widget<AppTextField>(_searchField).focusNode!;
-    expect(_addButton, findsNothing);
-    expect(_collectionsButton, findsNothing);
+    expect(find.byTooltip('Add to Library'), findsNothing);
+    expect(_collectionsButton.hitTestable(), findsNothing);
     expect(_searchClear, findsOneWidget);
     expect(find.text(_secondBook.title), findsNothing);
 
@@ -1615,7 +1615,7 @@ void main() {
     );
     expect(tester.widget<AppIconButton>(_addButton).tooltip, 'Add to Library');
     // Only one "+" on screen: the header keeps the title and Display.
-    expect(find.byIcon(AppIcons.add), findsOneWidget);
+    expect(find.byTooltip('Add to Library'), findsOneWidget);
     await tester.tap(_addButton);
     await tester.pumpAndSettle();
     expect(entries, [LibraryImportEntry.menu]);
@@ -1831,24 +1831,29 @@ void main() {
               ),
             )
             .color;
-        // The capsule is translucent: check text contrast over both a black
-        // and a white cover under it.
+        // Only translucent platform surfaces depend on the cover underneath.
         void expectReadable(String label, Color segment) {
-          for (final under in [
-            const Color(0xFF000000),
-            const Color(0xFFFFFFFF),
-          ]) {
-            final fill = Color.alphaBlend(
-              segment,
-              Color.alphaBlend(
-                colors.surface.withValues(alpha: kAppFloatingCapsuleOpacity),
-                under,
-              ),
-            );
+          final capsule = AppSurfaceAppearance.resolve(
+            tester.element(_collectionsButton),
+            AppSurfaceRole.floatingToolbar,
+          ).color;
+          final backgrounds = capsule.a < 1
+              ? [
+                  for (final cover in const [
+                    Color(0xFF000000),
+                    Color(0xFFFFFFFF),
+                  ])
+                    Color.alphaBlend(capsule, cover),
+                ]
+              : [capsule];
+          for (final background in backgrounds) {
+            final fill = segment.a < 1
+                ? Color.alphaBlend(segment, background)
+                : segment;
             expect(
               _contrast(_labelColor(tester, label)!, fill),
               greaterThanOrEqualTo(4.5),
-              reason: 'over $under',
+              reason: 'over capsule fill $background',
             );
           }
         }
@@ -4022,8 +4027,23 @@ void main() {
         }
         final sheet = find.byType(AddToCollectionSheet);
         final sheetBounds = tester.getRect(sheet);
-        final routeBounds = tester.getRect(find.byType(BottomSheet));
-        expect(routeBounds.bottom, closeTo(window.height, .5));
+        final expanded = AppWindowSize.isWideSize(window);
+        final routeBounds = tester.getRect(
+          expanded
+              ? find.byWidgetPredicate(
+                  (widget) =>
+                      widget is AppSurface &&
+                      widget.role == AppSurfaceRole.modal,
+                )
+              : find.byType(BottomSheet),
+        );
+        if (expanded) {
+          expect(routeBounds.width, 540);
+          expect(routeBounds.center.dx, closeTo(window.width / 2, .5));
+          expect(routeBounds.bottom, lessThan(window.height));
+        } else {
+          expect(routeBounds.bottom, closeTo(window.height, .5));
+        }
         expect(sheetBounds.top, greaterThanOrEqualTo(0));
         expect(sheetBounds.left, greaterThanOrEqualTo(safeSide - .5));
         expect(
@@ -4119,7 +4139,7 @@ void main() {
 
   Future<void> swipeAndConfirmDelete(WidgetTester tester, Book book) async {
     await swipeRow(tester, book);
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+    await tester.tap(find.byKey(AppConfirmationDialog.confirmButtonKey));
     await tester.pumpAndSettle();
   }
 
@@ -4193,7 +4213,7 @@ void main() {
     final restingRect = tester.getRect(listRow(_book));
 
     await swipeRow(tester, _book);
-    await tester.tap(find.widgetWithText(FilledButton, 'Keep'));
+    await tester.tap(find.byKey(AppConfirmationDialog.cancelButtonKey));
     await tester.pumpAndSettle();
 
     expect(tester.getRect(listRow(_book)), restingRect);

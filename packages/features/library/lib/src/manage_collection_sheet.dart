@@ -124,6 +124,7 @@ Future<ManageCollectionSheetResult?> showManageCollectionSheet({
 }) {
   return showAppBottomSheet<ManageCollectionSheetResult>(
     context,
+    presentation: AppSheetPresentation.form,
     // Scrim and drag go through the same draft guard as Close.
     scrimClosesFlow: true,
     builder: (_) => BlocProvider.value(
@@ -1017,7 +1018,7 @@ class _DeleteCollectionConfirmationContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Start-aligned like the sibling Discard and Delete items confirmations.
+    // Start-aligned like the sibling Discard decision.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

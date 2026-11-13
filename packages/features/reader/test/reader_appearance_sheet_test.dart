@@ -55,16 +55,15 @@ void main() {
     expect(find.text('Font'), findsOneWidget);
 
     expect(find.byKey(const ValueKey('reader-font-picker')), findsOneWidget);
-    // The swatch grid bleeds its 4dp ink inset past the gutter the Font row
-    // sits on; the painted samples line up with the row.
+    // Swatches bleed 4dp past the gutter; Font has the group's 12dp inset.
     final fontPicker = tester.getRect(
       find.byKey(const ValueKey('reader-font-picker')),
     );
     final presets = tester.getRect(
       find.byKey(const ValueKey('reader-theme-presets')),
     );
-    expect(fontPicker.left - presets.left, AppSpacing.xs);
-    expect(presets.right - fontPicker.right, AppSpacing.xs);
+    expect(fontPicker.left - presets.left, AppSpacing.xs + AppSpacing.md);
+    expect(presets.right - fontPicker.right, AppSpacing.xs + AppSpacing.md);
     expect(find.text('Literata'), findsOneWidget);
     expect(find.text('PT Serif'), findsNothing);
     expect(find.text('Open Sans'), findsNothing);
@@ -100,7 +99,7 @@ void main() {
         findsOneWidget,
       );
     }
-    expect(find.text('Normal'), findsOneWidget);
+    expect(find.text('Normal'), findsNWidgets(2));
     expect(find.text('Justified'), findsOneWidget);
     expect(find.text('Horizontal'), findsOneWidget);
     expect(find.text('Vertical'), findsOneWidget);
@@ -108,8 +107,10 @@ void main() {
     expect(find.text('Page margins'), findsOneWidget);
     expect(find.text('Text alignment'), findsOneWidget);
     expect(
-      tester.getSize(find.byKey(const ValueKey('reader-text-scale-control'))),
-      tester.getSize(find.byKey(const ValueKey('reader-line-height-control'))),
+      tester
+          .getSize(find.byKey(const ValueKey('reader-line-height-control')))
+          .width,
+      greaterThan(tester.getSize(textScaleControl).width),
     );
     expect(
       tester.getSize(find.byKey(const ValueKey('reader-margin-control'))).width,
@@ -324,12 +325,11 @@ void main() {
     });
   });
 
-  group('compact rows', () {
+  group('grouped typeface controls', () {
     const compactControls = [
       'reader-text-scale-control',
-      'reader-line-height-control',
     ];
-    const compactLabels = ['Font size', 'Line spacing'];
+    const compactLabels = ['Font size'];
 
     for (final direction in TextDirection.values) {
       testWidgets('controls take the end half, on the split of the choices '
@@ -345,7 +345,11 @@ void main() {
         );
         for (final key in compactControls) {
           final control = tester.getRect(find.byKey(ValueKey(key)));
-          expect(control.width, closeTo(column.width / 2, 1e-6), reason: key);
+          expect(
+            control.width,
+            closeTo(column.width / 2 - AppSpacing.md, 1e-6),
+            reason: key,
+          );
           expect(
             ltr ? control.left : control.right,
             closeTo(column.center.dx, 1e-6),
@@ -353,7 +357,7 @@ void main() {
           );
           expect(
             ltr ? control.right : control.left,
-            ltr ? column.right : column.left,
+            ltr ? column.right - AppSpacing.md : column.left + AppSpacing.md,
           );
         }
         final rows = [
@@ -368,7 +372,7 @@ void main() {
           final text = tester.getRect(find.text(label));
           expect(
             ltr ? text.left : text.right,
-            ltr ? column.left : column.right,
+            ltr ? column.left + AppSpacing.md : column.right - AppSpacing.md,
           );
           expect(
             find.ancestor(
@@ -395,7 +399,6 @@ void main() {
       );
       final captions = [
         'Размер текста',
-        'Межстрочный интервал',
         'Поля страницы',
       ];
       for (final (index, key) in [
@@ -403,7 +406,13 @@ void main() {
         'reader-margin-control',
       ].indexed) {
         final control = tester.getRect(find.byKey(ValueKey(key)));
-        expect(control.width, column.width, reason: key);
+        expect(
+          control.width,
+          key == 'reader-text-scale-control'
+              ? column.width - AppSpacing.md * 2
+              : column.width,
+          reason: key,
+        );
         final caption = find.text(captions[index]);
         expect(
           find.ancestor(of: caption, matching: find.byType(AppSettingsSection)),
@@ -426,15 +435,14 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('a label that would need a third line stacks both text rows', (
+    testWidgets('large text stacks size under its caption', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(390, 1400);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      // Below the large-text rule: 1.28 x 14 < 18.
-      const scale = TextScaler.linear(1.28);
+      const scale = TextScaler.linear(1.5);
       await tester.openAppearanceSheet(cubit, textScaler: scale);
       for (final label in compactLabels) {
         expect(
@@ -442,12 +450,10 @@ void main() {
             of: find.text(label),
             matching: find.byType(AppSettingsSection),
           ),
-          findsNothing,
+          findsOneWidget,
           reason: label,
         );
       }
-      // The test font's square glyphs break "Межстрочный" over three lines
-      // in the half row.
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.openAppearanceSheet(
         cubit,
@@ -507,7 +513,7 @@ void main() {
       final lineSpacing = tester.getRect(
         find.byKey(const ValueKey('reader-line-height-control')),
       );
-      expect(alignment.top - lineSpacing.bottom, AppSpacing.xl);
+      expect(alignment.top - lineSpacing.bottom, AppSpacing.lg);
       expect(
         tester.getRect(find.text('Page margins')).top - alignmentControl.bottom,
         AppSpacing.lg,
@@ -812,6 +818,7 @@ void main() {
     );
     expect(_selectedAlignment(tester), ReaderTextAlignment.start);
 
+    await tester.revealAppearanceControl(find.text('Justified'));
     await tester.tap(find.text('Justified'));
     await tester.pumpAndSettle();
 
@@ -825,7 +832,12 @@ void main() {
       ReaderTextAlignment.justify,
     );
 
-    await tester.tap(find.text('Normal'));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey('reader-text-alignment-control')),
+        matching: find.text('Normal'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(
@@ -900,11 +912,13 @@ void main() {
     expect(preferencesService.readerAppearanceOverrideFor(_sourceId), isNull);
   });
 
-  testWidgets('glyph segments ink selected and idle states like icons', (
+  testWidgets('preset choices keep shared selected and idle colors', (
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
-    final colors = tester.element(find.byType(BottomSheet)).colors;
+    final colors = tester
+        .element(find.byType(ActionBottomSheetLayout).hitTestable())
+        .colors;
     Color? ink(String key) =>
         IconTheme.of(tester.element(find.byKey(ValueKey(key)))).color;
 
@@ -935,12 +949,14 @@ void main() {
             find
                 .ancestor(
                   of: find.byKey(const ValueKey('reader-line-spacing-normal')),
-                  matching: find.byType(TextButton),
+                  matching: find.byWidgetPredicate(
+                    (widget) => widget is ButtonStyleButton,
+                  ),
                 )
                 .first,
           )
           .height,
-      AppSizes.buttonHeight,
+      greaterThanOrEqualTo(AppSizes.buttonHeight),
     );
   });
 
@@ -1152,9 +1168,14 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       final semantics = tester.ensureSemantics();
       await tester.openAppearanceSheet(cubit, showPageTurnControls: book);
-      final bounds = tester.getRect(find.byType(BottomSheet));
+      final bounds = tester.getRect(
+        find.byType(ActionBottomSheetLayout).hitTestable(),
+      );
       await tester.openFontStep();
-      expect(tester.getRect(find.byType(BottomSheet)), bounds);
+      expect(
+        tester.getRect(find.byType(ActionBottomSheetLayout).hitTestable()),
+        bounds,
+      );
       expect(find.text('Appearance').hitTestable(), findsNothing);
       expect(find.semantics.byLabel('Reset'), findsNothing);
       for (final preset in ReaderFontPreset.values) {
@@ -1164,24 +1185,37 @@ void main() {
           tester.widget<Text>(sample).style?.fontFamily,
           preset.fontFamily,
         );
+        final sampleStyle = tester.widget<Text>(sample).style!;
+        expect(
+          sampleStyle.fontSize,
+          tester.element(sample).text.bodyLarge.fontSize,
+        );
+        expect(sampleStyle.fontWeight, FontWeight.w400);
+        expect(sampleStyle.height, 1.45);
         expect(
           tester
               .getSize(find.byKey(ValueKey('reader-font-option-${preset.id}')))
               .height,
-          greaterThanOrEqualTo(48),
+          greaterThanOrEqualTo(AppSizes.buttonHeight * 2),
         );
       }
-      final scroll = tester.state<ScrollableState>(
-        find.descendant(
-          of: find.byType(ReaderFontSheet),
-          matching: find.byType(Scrollable),
-        ),
+      final viewport = find.descendant(
+        of: find.byType(ReaderFontSheet),
+        matching: find.byType(Scrollable),
       );
-      expect(scroll.position.maxScrollExtent, 0);
       for (final preset in [ReaderFontPreset.sans, ReaderFontPreset.geist]) {
-        await tester.tap(find.byKey(ValueKey('reader-font-${preset.id}')));
+        final option = find.byKey(ValueKey('reader-font-option-${preset.id}'));
+        await tester.revealAppearanceControl(option);
+        expect(
+          tester.getRect(option).bottom,
+          lessThanOrEqualTo(tester.getRect(viewport).bottom + .01),
+        );
+        await tester.tap(option);
         await tester.pumpAndSettle();
-        expect(tester.getRect(find.byType(BottomSheet)), bounds);
+        expect(
+          tester.getRect(find.byType(ActionBottomSheetLayout).hitTestable()),
+          bounds,
+        );
         expect(cubit.state.effectiveAppearance.fontId, preset.id);
         expect(
           tester.getSemantics(
@@ -1200,7 +1234,10 @@ void main() {
       }
       await tester.tap(find.byTooltip('Back').hitTestable());
       await tester.pumpAndSettle();
-      expect(tester.getRect(find.byType(BottomSheet)), bounds);
+      expect(
+        tester.getRect(find.byType(ActionBottomSheetLayout).hitTestable()),
+        bounds,
+      );
       expect(find.text('Geist').hitTestable(), findsOneWidget);
       expect(find.text('Page turn'), book ? findsOneWidget : findsNothing);
       expect(tester.takeException(), isNull);
@@ -1210,7 +1247,7 @@ void main() {
 
   for (final locale in [const Locale('en'), const Locale('ar')]) {
     testWidgets(
-      'theme samples, Font row and font options share the 24dp gutter $locale',
+      'theme samples and font options use 24dp, grouped Font adds 12dp $locale',
       (tester) async {
         tester.view.physicalSize = const Size(390, 844);
         tester.view.devicePixelRatio = 1;
@@ -1218,7 +1255,9 @@ void main() {
         addTearDown(tester.view.resetDevicePixelRatio);
         await tester.openAppearanceSheet(cubit, locale: locale);
         final rtl = locale.languageCode == 'ar';
-        final l10n = tester.element(find.byType(BottomSheet)).l10n;
+        final l10n = tester
+            .element(find.byType(ActionBottomSheetLayout).hitTestable())
+            .l10n;
         double leading(Rect rect) => rtl ? 390 - rect.right : rect.left;
         double trailing(Rect rect) => rtl ? rect.left : 390 - rect.right;
 
@@ -1248,8 +1287,11 @@ void main() {
         );
 
         final fontRow = find.byKey(const ValueKey('reader-font-picker'));
-        expect(leading(tester.getRect(fontRow)), AppSpacing.xl);
-        expect(trailing(tester.getRect(fontRow)), AppSpacing.xl);
+        expect(leading(tester.getRect(fontRow)), AppSpacing.xl + AppSpacing.md);
+        expect(
+          trailing(tester.getRect(fontRow)),
+          AppSpacing.xl + AppSpacing.md,
+        );
         expect(
           leading(
             tester.getRect(
@@ -1259,11 +1301,11 @@ void main() {
               ),
             ),
           ),
-          AppSpacing.xl,
+          AppSpacing.xl + AppSpacing.md,
         );
         expect(
           leading(tester.getRect(find.text(l10n.readerFontSize))),
-          AppSpacing.xl,
+          AppSpacing.xl + AppSpacing.md,
         );
 
         await tester.openFontStep();
@@ -1300,7 +1342,7 @@ void main() {
     expect(find.text('Appearance').hitTestable(), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.byType(ActionBottomSheetLayout).hitTestable(), findsNothing);
   });
 
   testWidgets('Close on Font dismisses the entire flow', (tester) async {
@@ -1308,7 +1350,7 @@ void main() {
     await tester.openFontStep();
     await tester.tap(find.byTooltip('Close').hitTestable());
     await tester.pumpAndSettle();
-    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.byType(ActionBottomSheetLayout).hitTestable(), findsNothing);
   });
 
   testWidgets('font navigation supports RTL and reduced motion', (
@@ -1401,7 +1443,9 @@ void main() {
 
   testWidgets('theme sample text is localized', (tester) async {
     await tester.openAppearanceSheet(cubit, locale: const Locale('ru'));
-    final l10n = tester.element(find.byType(BottomSheet)).l10n;
+    final l10n = tester
+        .element(find.byType(ActionBottomSheetLayout).hitTestable())
+        .l10n;
     expect(l10n.readerAppearanceSample, isNot('Aa'));
     expect(
       find.text(l10n.readerAppearanceSample),
@@ -1434,7 +1478,9 @@ void main() {
   ) async {
     final semantics = tester.ensureSemantics();
     await tester.openAppearanceSheet(cubit);
-    final l10n = tester.element(find.byType(BottomSheet)).l10n;
+    final l10n = tester
+        .element(find.byType(ActionBottomSheetLayout).hitTestable())
+        .l10n;
     final lineSpacing = {
       ReaderLineSpacingPreset.compact: l10n.readerLineSpacingCompact,
       ReaderLineSpacingPreset.normal: l10n.readerLineSpacingNormal,
@@ -1457,8 +1503,7 @@ void main() {
         expect(
           tester.getSemantics(target),
           isSemantics(
-            label: '',
-            tooltip: entry.value,
+            label: entry.value,
             isButton: true,
             isEnabled: true,
             hasSelectedState: true,
@@ -1475,8 +1520,7 @@ void main() {
         expect(
           tester.getSemantics(target),
           isSemantics(
-            label: '',
-            tooltip: entry.value,
+            label: entry.value,
             isButton: true,
             isEnabled: true,
             hasSelectedState: true,
@@ -1499,9 +1543,15 @@ void main() {
       (l10n.readerPageTurnHorizontalShort, true),
       (l10n.readerPageTurnVerticalShort, false),
     ]) {
-      await tester.revealAppearanceControl(find.text(label));
+      final option = label == l10n.readerAlignNormal
+          ? find.descendant(
+              of: find.byKey(const ValueKey('reader-text-alignment-control')),
+              matching: find.text(label),
+            )
+          : find.text(label);
+      await tester.revealAppearanceControl(option);
       expect(
-        tester.getSemantics(find.text(label)),
+        tester.getSemantics(option),
         isSemantics(
           label: label,
           isButton: true,
@@ -1604,10 +1654,12 @@ void main() {
       for (final size in const [Size(390, 844), Size(844, 390)]) {
         setWindow(tester, size);
         await reopen(tester, showColumnControls: true);
-        final l10n = tester.element(find.byType(BottomSheet)).l10n;
+        final l10n = tester
+            .element(find.byType(ActionBottomSheetLayout).hitTestable())
+            .l10n;
 
         expect(
-          find.byType(BottomSheet),
+          find.byType(ActionBottomSheetLayout).hitTestable(),
           findsOneWidget,
           reason: 'the sheet is open',
         );
@@ -1623,21 +1675,23 @@ void main() {
       // Articles and PDF pages: the caller leaves the row out.
       await reopen(tester);
       expect(
-        find.byType(BottomSheet),
+        find.byType(ActionBottomSheetLayout).hitTestable(),
         findsOneWidget,
         reason: 'the sheet is open',
       );
       expect(columnsControl, findsNothing);
       await reopen(tester, pdfControls: true);
       expect(
-        find.byType(BottomSheet),
+        find.byType(ActionBottomSheetLayout).hitTestable(),
         findsOneWidget,
         reason: 'the sheet is open',
       );
       expect(columnsControl, findsNothing);
 
       await reopen(tester, showColumnControls: true);
-      final l10n = tester.element(find.byType(BottomSheet)).l10n;
+      final l10n = tester
+          .element(find.byType(ActionBottomSheetLayout).hitTestable())
+          .l10n;
       await tester.ensureVisible(columnsControl);
       await tester.pumpAndSettle();
 
@@ -1671,7 +1725,9 @@ void main() {
     ) async {
       setWindow(tester, tabletLandscape);
       await tester.openAppearanceSheet(cubit, showColumnControls: true);
-      final l10n = tester.element(find.byType(BottomSheet)).l10n;
+      final l10n = tester
+          .element(find.byType(ActionBottomSheetLayout).hitTestable())
+          .l10n;
       await tester.ensureVisible(columnsControl);
       await tester.pumpAndSettle();
       final selectedForeground = tester
@@ -1726,7 +1782,9 @@ void main() {
       setWindow(tester, tabletLandscape);
       await cubit.setColumns(ReaderColumns.one);
       await tester.openAppearanceSheet(cubit, showColumnControls: true);
-      final l10n = tester.element(find.byType(BottomSheet)).l10n;
+      final l10n = tester
+          .element(find.byType(ActionBottomSheetLayout).hitTestable())
+          .l10n;
       await tester.ensureVisible(columnsControl);
       await tester.pumpAndSettle();
 
@@ -1766,7 +1824,9 @@ void main() {
           );
           await tester.ensureVisible(columnsControl);
           await tester.pumpAndSettle();
-          final l10n = tester.element(find.byType(BottomSheet)).l10n;
+          final l10n = tester
+              .element(find.byType(ActionBottomSheetLayout).hitTestable())
+              .l10n;
           for (final label in [
             l10n.readerColumnsAuto,
             l10n.readerColumnsOne,
@@ -1820,7 +1880,9 @@ void main() {
         find
             .ancestor(
               of: find.byKey(ValueKey(key)),
-              matching: find.byType(TextButton),
+              matching: find.byWidgetPredicate(
+                (widget) => widget is ButtonStyleButton,
+              ),
             )
             .first,
       );
@@ -1850,7 +1912,9 @@ void main() {
     tester,
   ) async {
     await tester.openAppearanceSheet(cubit);
-    final colors = tester.element(find.byType(BottomSheet)).colors;
+    final colors = tester
+        .element(find.byType(ActionBottomSheetLayout).hitTestable())
+        .colors;
     final small = _textSizeGlyph(tester, 'reader-text-scale-decrease');
     final large = _textSizeGlyph(tester, 'reader-text-scale-increase');
 
@@ -1935,7 +1999,9 @@ void main() {
     );
     await tester.pump();
     await tester.openAppearanceSheet(cubit);
-    final colors = tester.element(find.byType(BottomSheet)).colors;
+    final colors = tester
+        .element(find.byType(ActionBottomSheetLayout).hitTestable())
+        .colors;
     InkWell step(String key) => tester.widget<InkWell>(
       find.descendant(
         of: find.byKey(ValueKey(key)),
@@ -1994,18 +2060,16 @@ Finder _fixedTabBodyHeightFinder() {
 }
 
 ReaderLineSpacingPreset _selectedLineSpacing(WidgetTester tester) => tester
-    .widget<SegmentedButton<ReaderLineSpacingPreset>>(
-      find.byType(SegmentedButton<ReaderLineSpacingPreset>),
+    .widget<AppChoiceControl<ReaderLineSpacingPreset>>(
+      find.byKey(const ValueKey('reader-line-height-control')),
     )
-    .selected
-    .single;
+    .selected;
 
 ReaderMarginPreset _selectedMargin(WidgetTester tester) => tester
-    .widget<SegmentedButton<ReaderMarginPreset>>(
-      find.byType(SegmentedButton<ReaderMarginPreset>),
+    .widget<AppChoiceControl<ReaderMarginPreset>>(
+      find.byKey(const ValueKey('reader-margin-control')),
     )
-    .selected
-    .single;
+    .selected;
 
 ReaderTextAlignment _selectedAlignment(WidgetTester tester) => tester
     .widget<AppChoiceControl<ReaderTextAlignment>>(

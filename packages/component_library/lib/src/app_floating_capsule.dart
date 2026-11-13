@@ -1,19 +1,18 @@
 import 'package:flutter/widgets.dart';
 
-import 'theme/extensions/build_context_ext.dart';
-import 'theme/tokens/app_shadows.dart';
+import 'app_surface.dart';
+import 'app_surface_appearance.dart';
 
-/// Fill opacity of [AppFloatingCapsule]: content scrolled under it stays
+/// Normal Cupertino fill opacity: content scrolled under the capsule stays
 /// faintly visible while its labels keep their contrast.
-const double kAppFloatingCapsuleOpacity = 0.92;
+const double kAppFloatingCapsuleOpacity =
+    AppSurfaceAppearance.floatingToolbarOpacity;
 
 /// Stadium that floats a screen's bottom controls over its content: the
 /// reader chrome, and the Library's collection switcher with "+".
 ///
-/// A dumb container: the `surface` at [kAppFloatingCapsuleOpacity], a
-/// hairline `outlineVariant` border and [AppShadows.popover], with the radius
-/// following [height]. The caller owns the controls, their insets and
-/// placement; controls paint their own ink.
+/// Cupertino clips backdrop blur to the stadium; Material paints its native
+/// elevation. The caller owns placement, insets and interaction feedback.
 class AppFloatingCapsule extends StatelessWidget {
   const AppFloatingCapsule({
     required this.height,
@@ -26,17 +25,9 @@ class AppFloatingCapsule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.surface.withValues(alpha: kAppFloatingCapsuleOpacity),
-        borderRadius: BorderRadius.circular(height / 2),
-        border: Border.all(
-          color: colors.outlineVariant,
-          width: 1 / MediaQuery.devicePixelRatioOf(context),
-        ),
-        boxShadow: AppShadows.popover,
-      ),
+    return AppSurface(
+      role: AppSurfaceRole.floatingToolbar,
+      clipBehavior: Clip.antiAlias,
       child: SizedBox(height: height, child: child),
     );
   }

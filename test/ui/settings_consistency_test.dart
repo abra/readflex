@@ -82,7 +82,17 @@ void main() {
         displayGap,
       );
       final sectionLeft = tester.getTopLeft(find.text('Theme')).dx;
-      expect(tester.getTopLeft(find.text('Font size')).dx, sectionLeft);
+      final typeface = find.byKey(const ValueKey('reader-typeface-settings'));
+      expect(tester.getTopLeft(typeface).dx, sectionLeft);
+      // Typeface and size share the grouped section's 12dp inner inset.
+      expect(
+        tester.getTopLeft(find.text('Font size')).dx,
+        sectionLeft + AppSpacing.md,
+      );
+      expect(
+        tester.getTopLeft(find.text('Font')).dx,
+        tester.getTopLeft(find.text('Font size')).dx,
+      );
       expect(tester.getTopLeft(find.text('Line spacing')).dx, sectionLeft);
       final decrease = tester.getSize(
         find.byKey(const ValueKey('reader-text-scale-decrease')),

@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
+  _UiTestWidgetsFlutterBinding();
   late GoldenFileComparator previous;
   setUpAll(() {
     previous = goldenFileComparator;
@@ -17,6 +18,11 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   });
   tearDownAll(() => goldenFileComparator = previous);
   await testMain();
+}
+
+class _UiTestWidgetsFlutterBinding extends AutomatedTestWidgetsFlutterBinding {
+  @override
+  bool get disableShadows => false;
 }
 
 class _UiGoldenComparator extends LocalFileComparator {

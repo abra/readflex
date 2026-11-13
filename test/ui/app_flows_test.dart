@@ -44,7 +44,10 @@ void main() {
     expect(find.text(ReadingFixture.bookTitle), findsNothing);
     await tapUi(tester, find.byTooltip('Clear search'));
     expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
-    await tapUi(tester, find.byKey(const ValueKey('librarySearchCloseButton')));
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('libraryCapsuleActionButton')),
+    );
     await tapUi(tester, find.byTooltip('Display options'));
     await tapUi(tester, find.text('List'));
     expect(app.preferencesService.current.libraryLayoutMode, 'list');
@@ -63,7 +66,10 @@ void main() {
   ) async {
     await launch(tester);
     app.articleExtractionService.fail = true;
-    await tapUi(tester, find.byKey(const ValueKey('libraryAddButton')));
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('libraryCapsuleActionButton')),
+    );
     await tapUi(tester, find.byKey(const ValueKey('importMenu-article')));
     await tester.enterText(
       find.byType(TextField).last,
@@ -115,7 +121,10 @@ void main() {
     tester,
   ) async {
     await launch(tester);
-    await tapUi(tester, find.byKey(const ValueKey('libraryAddButton')));
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('libraryCapsuleActionButton')),
+    );
     app.connectivityService.setStatus(ConnectivityStatus.offline);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('importMenu-article')));

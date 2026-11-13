@@ -146,7 +146,11 @@ label and highlighted excerpt, while retaining document direction and the
 three-line excerpt limit. Neither leaf owns repositories or the page's lifecycle.
 
 Appearance uses `ActionBottomSheetLayout.scrollable`, the same shell as Display,
-Language and the text-action result sheets. `AppSettingsSection` and
+Language and the text-action result sheets. Its contextual presentation is a
+bottom sheet on phones and a 420dp trailing panel in expanded windows, on both
+platforms. The same route retains the Appearance/Font step, scroll position and
+per-source settings while resizing. The app palette styles this chrome; reader
+themes, document fonts and pagination remain independent. `AppSettingsSection` and
 `AppChoiceControl` share settings typography, spacing and selection states.
 `ReaderThemeSwatches` shows each theme as a sample in the preset's page colors
 (`readerAppearanceSample`) with its name: an ink tile with a 48dp target and
@@ -158,30 +162,34 @@ rows of three (so "Бумага" never breaks mid-word); when even three do not 
 opens with the selected theme centered and then keeps the reader's position.
 Each swatch keeps a 4dp ink inset around its sample
 (`ReaderThemeSwatches.inkInset`), so the sheet body gutter is reduced by that
-inset for the swatches only: sample borders, the "Theme" label, the Font row
-and the setting rows all sit on the 24dp gutter while the ink tiles bleed 4dp
-past it. Font options use the same fill-plus-check
+inset for the swatches only: sample borders, the "Theme" label
+and the setting groups sit on the 24dp surface gutter while the ink tiles bleed
+4dp past it. The Font/size group's text has a further 12dp inner inset.
+Font options use the same fill-plus-check
 selection as the Language sheet, without an extra border, and the same 8dp
 option inset: the Font sheet body gives those 8dp back so option text and the
 check glyph land on 24dp. The Font row shows the active typeface and
-opens a sample picker inside the same route. Appearance's content determines
-both steps' height; the picker scrolls only when its samples need more space.
+opens a sample picker inside the same route. On phones Appearance's content
+determines both steps' height; expanded panels fill the available height.
+The picker scrolls only when its samples need more space.
 Selection applies immediately through `ReaderAppearanceCubit` and stays in the
 picker. Back returns to Appearance; Close or a scrim tap dismisses the whole
 flow. The hidden step cannot receive input, focus or accessibility actions.
 Font samples are localized and use their actual bundled typefaces.
+Preview rows keep at least 96dp, 16dp vertical padding and the app's regular
+`bodyLarge` sample at 1.45 line height. They grow with text scale and scroll
+inside the unchanged step bounds; the sample and check retain the 24dp gutter.
 Font size steps between a small and a large Literata "A" (14/22sp, following
 text scale until the large one fills its 48dp target); the percentage between
 them is a muted caption, accented while the source overrides it, and tapping
-it resets that override. Line spacing and Page margins are icon-only presets
-(`reader_layout_presets.dart`) drawn by `ReaderLineSpacingGlyph` and
-`ReaderMarginsGlyph`: Compact 1.4 / Normal 1.6 / Relaxed 1.8 line height and
+it resets that override. Line spacing and Page margins are labeled presets
+(`reader_layout_presets.dart`): Compact 1.4 / Normal 1.6 / Relaxed 1.8 line height and
 Narrow 4 / Medium 8 / Wide 12% side margin, where Normal and Medium are the
 defaults. A stored value between presets shows the nearest one (a midpoint
 shows the default) and is not rewritten; tapping a preset, including the one
 shown as nearest, commits its exact value through the existing preview/commit
-calls. The glyph segments are icon-only `AppChoiceControl`s with
-`AppChoiceOption.glyph` and `reselectable`, so tapping the preset shown as the
+calls. These text-only segments use `AppChoiceControl` with
+`reselectable`, so tapping the preset shown as the
 nearest match applies its exact value. Alignment offers labeled Normal (start)
 and Justified choices; a legacy stored `end` reads back as start. Page turn (books only)
 offers labeled Horizontal and Vertical paging. Page animation (Slide/Cover)
@@ -189,11 +197,10 @@ is global and selected from Library's top-right Display action. It is not a
 per-book control, and Reader Reset leaves it unchanged. Cover is the default;
 older preferences and unknown global IDs retain it. Legacy source animation
 keys are ignored while other source settings are preserved. Theme, text settings
-and layout have separate groups. Font, Font size and Line spacing stay together,
-8dp apart; the latter controls fill the end half of the column. Both move under
-captions, as full-width controls 16dp apart, when the sheet is narrow at large text, when half the
-column cannot hold three 48dp segments, or when a label would need a third
-line. Layout starts 24dp below the text settings: Text alignment, Page margins,
+and layout have separate groups. Font and Font size share an `AppSheetSection`
+with platform-native grouped styling. The size stepper fills the end half of
+its row, moving below its caption when the two labels cannot share the space
+with full 48dp targets. Line spacing, Text alignment, Page margins,
 Page turn and the available Columns choice use `AppSettingsSection` captions
 above full-width controls, 16dp apart, where `AppChoiceControl`
 reflows long translations instead of truncating them. Reset keeps its label
@@ -202,14 +209,17 @@ and otherwise becomes a tooltip-labeled icon (`headerCompactTrailing`); only
 when even that does not fit does it move below the title. Controls keep
 their narrow `context.select` subscriptions and existing preview/commit/reset
 callbacks; scrolling the sheet does not recreate the page.
-`test/reader_appearance_layout_test.dart` checks gutters, the half-width
-controls in LTR/RTL, en/ru/de fit, Reset beside the title and whole theme names
+`test/reader_appearance_layout_test.dart` checks gutters, the grouped size
+control in LTR/RTL, en/ru/de fit, Reset beside the title and whole theme names
 at 320dp with the bundled faces; `test/reader_theme_swatches_test.dart` covers
 the five, three and scrolling layouts and the opening position.
 Root goldens cover portrait, landscape, 2x text and RTL, including access to
 the page-turn controls and font sample. Native reader flows check equal
 step heights, manual return, engine style updates,
 persistence across reopening and reset to inherited settings.
+`test/reader_native_appearance_test.dart` mounts actual Cupertino/Material roots
+and checks immediate choices, Font/Appearance height, phone RTL and 200% text,
+short-screen reachability, PDF controls and retained state across resizing.
 
 ```dart
 abstract class TextAction {
@@ -639,12 +649,15 @@ real labels (`highlightAction`, `commonCopy`, `translationAction`,
 
 ### Contents and Saved Passages
 
-Narrow Cupertino Contents/Search panels share `BottomSheetHeader` with modal
-sheets: a centred, wrapping title and circular Close. Their fields, tabs, page
-grid and list rows share the 24dp content gutter. Android and expanded 420dp
-sidebars retain their leading headers and 16dp gutters. `readerDrawerContentInset`
-owns that distinction; changing the frame never recreates a query, tab or scroll
-position. The match-navigation dock keeps its separate 16dp gutter.
+Cupertino Contents/Search panels share `BottomSheetHeader` with Appearance at
+every width: a centred, wrapping title and circular Close. Their fields, tabs,
+page grid and list rows use 24dp on phones and 16dp in expanded 420dp sidebars.
+Android retains its leading headers and 16dp content gutter.
+`readerDrawerContentInset` owns that distinction; changing the frame never
+recreates a query, tab or scroll position. Native-root panel tests check the
+same header and preserved focus/query/tab state across iPad and 320dp windows,
+including German/Arabic at 200% text. The match-navigation dock keeps its
+separate 16dp gutter.
 
 Highlights combine the existing text query with an optional color filter. The
 list caches that projection until its inputs change; reading-position updates
@@ -931,12 +944,16 @@ Bookmark rows delete by swipe (trash glyph in the swipe fill) and retain the
 existing in-place icon-only Undo action; the cross in the header only closes
 the drawer. Undo glyphs are 20dp on phones and 24dp in medium windows,
 aligned to the Contents field's panel gutter with full 48dp targets.
-Cupertino Close keeps its native 28dp circular plate; the action centres align
+Cupertino Close keeps its native 28dp circular plate; phone action centres align
 (`readerDrawerActionEndPadding` in `reader_drawer_layout.dart`, derived from
-the window's glyph size and 48dp target). Geometry tests compare the visible icon boxes,
+the window's glyph size and 48dp target). Expanded Cupertino Close follows the
+shared header's 24dp gutter; row actions retain the list's 16dp gutter.
+Geometry tests compare the visible icon boxes,
 not only button bounds; native flows also exercise deletion and Undo.
 The bottom chrome is one rounded reading dock: status, seeking and actions
-share an opaque app surface, hairline outline and `AppShadows.popover`. The
+share `AppSurfaceRole.floatingToolbar`, a 28dp corner and the shared hairline.
+Cupertino clips backdrop blur to this bounded surface and uses the shared
+soft shadow; Material paints its native tonal fill and elevation. The
 dock forms one `ToastAvoidArea`, enabled only while the
 chrome shows (the hidden chrome stays mounted, slid out); the fallback
 selection panel and the search navigation bar are marked too, so a toast
@@ -984,9 +1001,11 @@ chapter title when there is no estimate; comics show neither a time nor their
 archive file names. At the end is the percent/page label: short and numeric
 in every locale, it keeps its natural width, bounded only by the row, so its
 digits never truncate (`reader_chrome_progress_layout.dart`); the chapter
-takes the rest on one line and truncates first. Above 130% text each
-label takes its own line, the chapter up to two lines and the page label
-end-aligned below it, so the slider never shares its line.
+takes the rest on one line and truncates first. Above 130% text, sufficient
+height lets each label take its own line: the chapter up to two lines and the
+page label end-aligned below it. A constrained dock places both labels in one
+row using their actual laid-out heights; neither layout shares the slider's
+line or reduces the requested text size.
 Text and slider use the app surface's `onSurfaceVariant` and `outlineVariant`,
 so selecting a dark reading page in a light app never makes the dock unreadable.
 `test/reader_cupertino_dock_test.dart` checks the native iPad dock in both
@@ -1008,11 +1027,32 @@ bar and only scrim it (`readerSystemUiOverlayStyle`).
 Active bookmark/Undo icons and the tab indicator use the accessible action
 foreground. Active search results use the same selected color pair as Contents
 and settings controls; text and emphasized matches remain readable on that fill.
-The brightness pill beside the page uses `PositionedDirectional(end:)` and
-slides toward that edge in RTL. Phones keep a 56dp pill with 4dp inner padding,
+The brightness pill tracks the interface's trailing edge and slides toward it
+in RTL. Phones keep a 56dp pill with 4dp inner padding,
 16dp inside the safe edge. Expanded windows use a 48dp pill with no extra
 horizontal padding, floating 8dp inside the safe edge. Both keep the same
 48dp controls; the compact tablet width leaves room for the floating gap.
+`ReaderFloatingChromeLayout` lays out the top line, article progress, dock and
+brightness together with bounded children. Article progress paints above the
+top line's page backdrop, keeps the full safe width and animates back to the
+safe top when the title hides. The pill keeps its original centre unless it
+would overlap the dock; it then moves above it with an 8dp gap and respects the
+safe top.
+When that space cannot hold the vertical pill, it becomes a horizontal 184×48dp
+control alongside the top line. The title receives the remaining width instead
+of drawing behind the controls, with a 4dp safe-edge gutter for the shared row.
+If safe insets also constrain the dock height, its chapter and page/percent
+labels share a row instead of stacking; text keeps its requested size and
+the seek slider and action targets retain their heights.
+All three brightness targets remain 48dp; decreasing is at the logical start,
+increasing at the logical end, and the centre supports
+horizontal drag and returning to system brightness. An unobstructed side rail
+in landscape keeps its original position. Layout owns this geometry without
+post-frame measurement or service state; chrome visibility
+does not recreate either control, and the reading canvas keeps its size.
+The 568×320, 200% text contracts cover both platform roots, phone RTL, landscape
+safe insets (including 24dp top and 34dp bottom), commands and rotation without
+replacing the brightness or seek control elements.
 The temporary overlay preserves the reading canvas. The top line shares the
 capsule's 16dp content gutter. The transient CBZ page pill sits
 `appBottomSafeInset` (minimum 16dp) plus 12dp above the bottom edge. Its step buttons are

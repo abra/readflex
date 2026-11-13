@@ -36,6 +36,9 @@ void main() {
     ('default', const Locale('en'), const Size(390, 844), 1.0),
     ('long German labels', const Locale('de'), const Size(320, 568), 2.0),
     ('RTL large text', const Locale('ar'), const Size(320, 568), 2.0),
+    ('iPad', const Locale('en'), const Size(1024, 768), 1.0),
+    ('iPad German large text', const Locale('de'), const Size(1024, 768), 2.0),
+    ('iPad RTL large text', const Locale('ar'), const Size(1024, 768), 2.0),
   ]) {
     testWidgets(
       'Cupertino comic Contents has shared chrome and recovers $name',
@@ -67,9 +70,10 @@ void main() {
         final context = tester.element(find.byType(ReaderTocDrawerDriver));
         final l10n = context.l10n;
         _expectSharedHeader(tester, l10n.readerContents);
+        final gutter = AppWindowSize.isWideSize(size) ? 16.0 : 24.0;
         final grid = tester.widget<GridView>(find.byType(GridView));
-        expect((grid.padding! as EdgeInsets).left, 24);
-        expect((grid.padding! as EdgeInsets).right, 24);
+        expect((grid.padding! as EdgeInsets).left, gutter);
+        expect((grid.padding! as EdgeInsets).right, gutter);
         await tester.tap(find.text(l10n.readerBookmarks));
         await tester.pumpAndSettle();
         final field = find.byType(AppTextField).hitTestable();
@@ -82,14 +86,43 @@ void main() {
           of: find.byType(ListView),
           matching: find.byType(Scrollable),
         );
-        final scroll = tester.state<ScrollableState>(list).position;
+        final scrollState = tester.state<ScrollableState>(list);
+        final scroll = scrollState.position;
         scroll.jumpTo(100);
         await tester.pumpAndSettle();
         final offset = scroll.pixels;
         final header = tester.getRect(find.byType(BottomSheetHeader));
         final fieldBounds = tester.getRect(field);
-        expect(fieldBounds.left - header.left, 24);
-        expect(header.right - fieldBounds.right, 24);
+        expect(fieldBounds.left - header.left, gutter);
+        expect(header.right - fieldBounds.right, gutter);
+        if (AppWindowSize.isWideSize(size)) {
+          final focus = tester
+              .widget<EditableText>(find.byType(EditableText).hitTestable())
+              .focusNode;
+          expect(focus.hasFocus, isTrue);
+          for (final width in [const Size(320, 568), size]) {
+            tester.view.physicalSize = width;
+            await tester.pumpAndSettle();
+            _expectSharedHeader(tester, l10n.readerContents);
+            expect(
+              tester.state(find.byType(EditableText).hitTestable()),
+              same(fieldState),
+            );
+            expect(
+              tester
+                  .widget<EditableText>(find.byType(EditableText).hitTestable())
+                  .focusNode,
+              same(focus),
+            );
+            expect(focus.hasFocus, isTrue);
+            expect(
+              tester.widget<AppTextField>(field).controller!.text,
+              'Anchor',
+            );
+            final tabs = tester.element(find.byType(ReaderContentsTabBar));
+            expect(DefaultTabController.of(tabs).index, 1);
+          }
+        }
         await tester.tap(find.byTooltip(l10n.commonClose));
         await tester.pumpAndSettle();
         expect(visible.value, isFalse);
@@ -104,8 +137,8 @@ void main() {
           same(fieldState),
         );
         expect(tester.widget<AppTextField>(field).controller!.text, 'Anchor');
-        expect(tester.state<ScrollableState>(list).position, same(scroll));
-        expect(scroll.pixels, offset);
+        expect(tester.state<ScrollableState>(list), same(scrollState));
+        expect(scrollState.position.pixels, offset);
         await tester.tap(find.text(l10n.readerHighlights));
         await tester.pumpAndSettle();
         expect(DefaultTabController.of(tabContext).index, 2);
@@ -132,107 +165,144 @@ void main() {
     );
   }
 
-  testWidgets(
-    'Cupertino Reader Search retains state and its expanded sidebar',
-    (
-      tester,
-    ) async {
-      _configure(tester, const Size(390, 844));
-      final cubit = ReaderSearchCubit();
-      addTearDown(cubit.close);
-      cubit.recentQuerySelected(
-        'devices',
-        searchBook: (_) => Stream.fromIterable([
-          ReaderSearchResults(
-            requestId: 1,
-            results: List.generate(
-              40,
-              (index) => ReaderSearchResult(
-                cfi: 'cfi-$index',
-                chapterTitle: 'Chapter $index',
-                excerpt: const ReaderSearchExcerpt(
-                  pre: 'The ',
-                  match: 'devices',
-                  post: ' run.',
+  for (final (locale, scale) in [
+    (const Locale('en'), 1.0),
+    (const Locale('de'), 2.0),
+    (const Locale('ar'), 2.0),
+  ]) {
+    testWidgets(
+      'Cupertino Reader Search retains state across phone and iPad $locale',
+      (
+        tester,
+      ) async {
+        _configure(
+          tester,
+          scale == 1 ? const Size(390, 844) : const Size(320, 568),
+        );
+        final cubit = ReaderSearchCubit();
+        addTearDown(cubit.close);
+        cubit.recentQuerySelected(
+          'devices',
+          searchBook: (_) => Stream.fromIterable([
+            ReaderSearchResults(
+              requestId: 1,
+              results: List.generate(
+                40,
+                (index) => ReaderSearchResult(
+                  cfi: 'cfi-$index',
+                  chapterTitle: 'Chapter $index',
+                  excerpt: const ReaderSearchExcerpt(
+                    pre: 'The ',
+                    match: 'devices',
+                    post: ' run.',
+                  ),
+                ),
+              ),
+            ),
+            const ReaderSearchDone(requestId: 1),
+          ]),
+        );
+        final visible = ValueNotifier(true);
+        addTearDown(visible.dispose);
+        var searches = 0;
+        await tester.pumpWidget(
+          PlatformTestApp(
+            platform: TargetPlatform.iOS,
+            locale: locale,
+            textScale: scale,
+            supportedLocales: ReadflexSupportedLocales.locales,
+            localizationsDelegates: readflexLocalizationsDelegates,
+            home: BlocProvider.value(
+              value: cubit,
+              child: ValueListenableBuilder<bool>(
+                valueListenable: visible,
+                builder: (context, shown, _) => Stack(
+                  children: [
+                    Center(
+                      child: AppButton(
+                        key: const ValueKey('reopen-panel'),
+                        onPressed: () => visible.value = true,
+                        child: const Text('Reopen'),
+                      ),
+                    ),
+                    ReaderSearchPanel(
+                      visible: shown,
+                      format: BookFormat.epub,
+                      pageProgressionRtl: false,
+                      onClose: () => visible.value = false,
+                      onSearch: (_) {
+                        searches++;
+                        return const Stream.empty();
+                      },
+                      onResultSelected: (_) {},
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
-          const ReaderSearchDone(requestId: 1),
-        ]),
-      );
-      final visible = ValueNotifier(true);
-      addTearDown(visible.dispose);
-      var searches = 0;
-      await tester.pumpWidget(
-        PlatformTestApp(
-          platform: TargetPlatform.iOS,
-          supportedLocales: ReadflexSupportedLocales.locales,
-          localizationsDelegates: readflexLocalizationsDelegates,
-          home: BlocProvider.value(
-            value: cubit,
-            child: ValueListenableBuilder<bool>(
-              valueListenable: visible,
-              builder: (context, shown, _) => Stack(
-                children: [
-                  Center(
-                    child: AppButton(
-                      key: const ValueKey('reopen-panel'),
-                      onPressed: () => visible.value = true,
-                      child: const Text('Reopen'),
-                    ),
-                  ),
-                  ReaderSearchPanel(
-                    visible: shown,
-                    format: BookFormat.epub,
-                    pageProgressionRtl: false,
-                    onClose: () => visible.value = false,
-                    onSearch: (_) {
-                      searches++;
-                      return const Stream.empty();
-                    },
-                    onResultSelected: (_) {},
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      _expectSharedHeader(tester, 'Search');
-      final field = find.byType(AppTextField).hitTestable();
-      final editor = tester.state(find.byType(EditableText).hitTestable());
-      final list = tester.widget<ListView>(find.byType(ListView));
-      list.controller!.jumpTo(150);
-      await tester.pumpAndSettle();
-      final offset = list.controller!.offset;
-      final results = cubit.state.results;
-      await tester.tap(find.byTooltip('Close'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('reopen-panel')));
-      await tester.pumpAndSettle();
-      expect(tester.widget<AppTextField>(field).controller!.text, 'devices');
-      expect(
-        tester.state(find.byType(EditableText).hitTestable()),
-        same(editor),
-      );
-      expect(list.controller!.offset, offset);
-      expect(cubit.state.results, same(results));
-      expect(searches, 0);
-      tester.view.physicalSize = const Size(1024, 768);
-      await tester.pumpAndSettle();
-      expect(find.byType(BottomSheetHeader), findsNothing);
-      final sidebarField = tester.getRect(field);
-      expect(sidebarField.width, 420 - 32);
-      expect(readerDrawerContentInset(tester.element(field)), 16);
-      expect(
-        tester.state(find.byType(EditableText).hitTestable()),
-        same(editor),
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+        );
+        await tester.pumpAndSettle();
+        final l10n = tester.element(find.byType(ReaderSearchPanel)).l10n;
+        _expectSharedHeader(tester, l10n.readerSearchAction);
+        final field = find.byType(AppTextField).hitTestable();
+        final editor = tester.state(find.byType(EditableText).hitTestable());
+        final list = tester.widget<ListView>(find.byType(ListView));
+        list.controller!.jumpTo(150);
+        await tester.pumpAndSettle();
+        final offset = list.controller!.offset;
+        final results = cubit.state.results;
+        await tester.tap(find.byTooltip(l10n.commonClose));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('reopen-panel')));
+        await tester.pumpAndSettle();
+        expect(tester.widget<AppTextField>(field).controller!.text, 'devices');
+        expect(
+          tester.state(find.byType(EditableText).hitTestable()),
+          same(editor),
+        );
+        expect(list.controller!.offset, offset);
+        expect(cubit.state.results, same(results));
+        expect(searches, 0);
+        await tester.tap(field);
+        await tester.pumpAndSettle();
+        final focus = tester
+            .widget<EditableText>(find.byType(EditableText).hitTestable())
+            .focusNode;
+        for (final size in [
+          const Size(1024, 768),
+          const Size(320, 568),
+          const Size(1024, 768),
+        ]) {
+          tester.view.physicalSize = size;
+          await tester.pumpAndSettle();
+          _expectSharedHeader(tester, l10n.readerSearchAction);
+          if (AppWindowSize.isWideSize(size)) {
+            expect(tester.getRect(field).width, 420 - 32);
+            expect(readerDrawerContentInset(tester.element(field)), 16);
+          }
+          expect(
+            tester.state(find.byType(EditableText).hitTestable()),
+            same(editor),
+          );
+          expect(
+            tester
+                .widget<EditableText>(find.byType(EditableText).hitTestable())
+                .focusNode,
+            same(focus),
+          );
+          expect(focus.hasFocus, isTrue);
+          expect(
+            tester.widget<AppTextField>(field).controller!.text,
+            'devices',
+          );
+          expect(cubit.state.results, same(results));
+          expect(searches, 0);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }
 
 void _configure(WidgetTester tester, Size size) {

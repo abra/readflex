@@ -17,7 +17,6 @@ import 'package:shared_preferences_platform_interface/shared_preferences_async_p
 const _gutter = AppSpacing.xl;
 const _compactControls = [
   'reader-text-scale-control',
-  'reader-line-height-control',
 ];
 const _labeledControls = [
   'reader-text-alignment-control',
@@ -57,7 +56,6 @@ void main() {
       expect(find.text(l10n.readerReset).hitTestable(), findsOneWidget);
 
       for (final label in [
-        l10n.readerFontSize,
         l10n.readerLineSpacing,
         l10n.readerTextAlignment,
         l10n.readerPageMargins,
@@ -65,10 +63,14 @@ void main() {
       ]) {
         expect(leading(tester.getRect(find.text(label))), _gutter);
       }
+      expect(
+        leading(tester.getRect(find.text(l10n.readerFontSize))),
+        _gutter + AppSpacing.md,
+      );
       // Compact controls fill the end half of the column: they start on its
       // center, the split of the labeled choices, and end on the gutter.
       for (final key in _compactControls) {
-        expect(trailing(rectOf(key)), _gutter, reason: key);
+        expect(trailing(rectOf(key)), _gutter + AppSpacing.md, reason: key);
         expect(leading(rectOf(key)), 390 / 2, reason: key);
         expect(
           rectOf(key).height,
@@ -77,6 +79,7 @@ void main() {
       }
       // Labeled choices span the gutters below their label.
       for (final (key, label) in [
+        ('reader-line-height-control', l10n.readerLineSpacing),
         (_labeledControls[0], l10n.readerTextAlignment),
         ('reader-margin-control', l10n.readerPageMargins),
         (_labeledControls[1], l10n.readerPageTurn),
@@ -98,7 +101,7 @@ void main() {
       expect(
         tester.getRect(find.text(l10n.readerTextAlignment)).top -
             rectOf('reader-line-height-control').bottom,
-        AppSpacing.xl,
+        AppSpacing.lg,
       );
       expect(
         tester.getRect(find.text(l10n.readerPageMargins)).top -
@@ -114,15 +117,14 @@ void main() {
       final decrease = rectOf('reader-text-scale-decrease');
       final increase = rectOf('reader-text-scale-increase');
       expect(leading(decrease), lessThan(leading(increase)));
-      expect(trailing(increase), _gutter);
-      // Glyph segments mirror with the control; Compact/Narrow lead.
-      expect(
-        leading(rectOf('reader-line-spacing-compact')),
-        lessThan(leading(rectOf('reader-line-spacing-relaxed'))),
+      expect(trailing(increase), _gutter + AppSpacing.md);
+      // Preset order stays logical even when long labels need separate rows.
+      final spacing = tester.widget<AppChoiceControl<ReaderLineSpacingPreset>>(
+        find.byKey(const ValueKey('reader-line-height-control')),
       );
       expect(
-        leading(rectOf('reader-margin-narrow')),
-        lessThan(leading(rectOf('reader-margin-wide'))),
+        spacing.options.map((option) => option.value),
+        ReaderLineSpacingPreset.values,
       );
       expect(tester.takeException(), isNull);
     });
@@ -223,8 +225,14 @@ void main() {
         l10n.readerPageTurnHorizontalShort,
         l10n.readerPageTurnVerticalShort,
       ]) {
+        final text = label == l10n.readerAlignNormal
+            ? find.descendant(
+                of: find.byKey(const ValueKey('reader-text-alignment-control')),
+                matching: find.text(label),
+              )
+            : find.text(label);
         final paragraph = tester.renderObject<RenderParagraph>(
-          find.text(label),
+          text,
         );
         expect(_lineCount(paragraph), 1, reason: label);
         expect(paragraph.didExceedMaxLines, isFalse, reason: label);
@@ -255,7 +263,7 @@ void main() {
       // Compact controls drop below their caption, spanning the gutters.
       for (final (key, label) in [
         (_compactControls[0], l10n.readerFontSize),
-        (_compactControls[1], l10n.readerLineSpacing),
+        ('reader-line-height-control', l10n.readerLineSpacing),
         ('reader-margin-control', l10n.readerPageMargins),
       ]) {
         final control = tester.getRect(find.byKey(ValueKey(key)));
@@ -264,8 +272,11 @@ void main() {
           AppSpacing.sm,
           reason: key,
         );
-        expect(control.right, contentEnd, reason: key);
-        expect(control.left, _gutter, reason: key);
+        final innerInset = key == 'reader-text-scale-control'
+            ? AppSpacing.md
+            : 0;
+        expect(control.right, contentEnd - innerInset, reason: key);
+        expect(control.left, _gutter + innerInset, reason: key);
       }
       // Labeled options keep 48dp, stay inside the gutters and wrap only
       // between words.

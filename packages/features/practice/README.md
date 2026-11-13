@@ -197,7 +197,7 @@ follows the same setting.
   shows the word large with reading and part of speech and the sentence with
   the word in bold; the answer adds the meaning in context, the word's own
   meaning and the sentence translation. Highlights use a top-aligned reading
-  card on `surfaceContainerLowest`, with the full regular-weight serif
+  card using `AppSurfaceRole.reviewCard`, with the full regular-weight serif
   `bodyLarge` passage and natural paragraph tracking. Paragraph breaks remain
   intact. A saved note follows in a quieter `bodyMedium` block. Highlights have
   no answer to reveal; an absent or blank note adds no placeholder.
@@ -223,6 +223,11 @@ follows the same setting.
   only those four small text runs to keep natural fallback-font metrics and
   equal button heights, without intrinsic layout or forced text struts.
   Word ratings retain their tonal colours and also stack when necessary.
+  Word, highlight and completion cards share this surface role: continuous,
+  opaque grouped cards on Cupertino; outlined semantic surfaces on Material.
+  The dock stays independent: one top separator and no shadow on Cupertino,
+  Material elevation clipped to the reading area's upper edge. Completion
+  actions remain pinned at the bottom.
   The completion summary stays at most 480dp wide and scrolls independently of
   its pinned bottom dock. Done fills the 640dp action measure when it is the
   only command; an optional outlined Review again shares the dock and uses

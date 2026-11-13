@@ -36,6 +36,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
     this.footerPadding = defaultFooterPadding,
     super.key,
   }) : _scrollable = false,
+       expandBody = false,
        headerBottom = null,
        assert(footer == null || constrainBody);
 
@@ -53,6 +54,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
     this.backLabel,
     this.headerBottom,
     this.bodyPadding = defaultBodyPadding,
+    this.expandBody = false,
     super.key,
   }) : _scrollable = true,
        constrainBody = true,
@@ -80,6 +82,9 @@ class ActionBottomSheetLayout extends StatelessWidget {
   );
 
   final bool _scrollable;
+
+  /// Fill a bounded contextual panel instead of capping a phone sheet's body.
+  final bool expandBody;
 
   /// Persistent context, such as translation direction, below the title.
   final Widget? headerBottom;
@@ -136,12 +141,15 @@ class ActionBottomSheetLayout extends StatelessWidget {
     final body = _scrollable
         ? ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight:
-                  MediaQuery.sizeOf(context).height *
-                  (MediaQuery.textScalerOf(context).scale(14) > 20 ? .78 : .72),
+              maxHeight: expandBody
+                  ? double.infinity
+                  : MediaQuery.sizeOf(context).height *
+                        (MediaQuery.textScalerOf(context).scale(14) > 20
+                            ? .78
+                            : .72),
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisSize: expandBody ? MainAxisSize.max : MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (headerBottom != null) ...[
@@ -167,7 +175,7 @@ class ActionBottomSheetLayout extends StatelessWidget {
         : Padding(padding: bodyPadding, child: child);
 
     final content = Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: expandBody ? MainAxisSize.max : MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         header,

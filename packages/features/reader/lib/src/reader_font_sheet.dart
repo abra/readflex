@@ -28,6 +28,7 @@ class ReaderFontSheet extends StatelessWidget {
     final selected = ReaderFontPreset.fromId(fontId);
     return ActionBottomSheetLayout.scrollable(
       title: context.l10n.readerFont,
+      expandBody: AppWindowSize.isWide(context),
       onBack: onBack,
       backLabel: context.l10n.commonBack,
       onClose: onClose,
@@ -74,6 +75,10 @@ class _FontOption extends StatelessWidget {
     final foreground = selected
         ? colors.selectedControlForeground
         : colors.onSurface;
+    final shape = AppSurfaceAppearance.resolve(
+      context,
+      AppSurfaceRole.field,
+    ).shape.copyWith(side: BorderSide.none);
     return Semantics(
       key: ValueKey('reader-font-option-${preset.id}'),
       button: true,
@@ -84,56 +89,62 @@ class _FontOption extends StatelessWidget {
       focusable: true,
       onTap: onPressed,
       child: AppSurface(
+        role: AppSurfaceRole.field,
         color: selected ? colors.selectedControlBackground : colors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-        ),
+        shape: shape,
         clipBehavior: Clip.antiAlias,
         child: AppTappable(
           onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _optionInkInset,
-              vertical: AppSpacing.sm,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppSizes.buttonHeight * 2,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        preset.label,
-                        key: ValueKey('reader-font-${preset.id}'),
-                        style: context.text.labelLarge.copyWith(
-                          color: foreground,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _optionInkInset,
+                vertical: AppSpacing.lg,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          preset.label,
+                          key: ValueKey('reader-font-${preset.id}'),
+                          style: context.text.labelLarge.copyWith(
+                            color: foreground,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    SizedBox.square(
-                      dimension: AppIconSize.sm,
-                      child: selected
-                          ? Icon(
-                              AppIcons.check,
-                              size: AppIconSize.sm,
-                              color: foreground,
-                            )
-                          : null,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  context.l10n.readerFontSample,
-                  key: ValueKey('reader-font-sample-${preset.id}'),
-                  style: context.text.bodyMedium.copyWith(
-                    fontFamily: preset.fontFamily,
-                    height: 1.35,
-                    color: foreground,
+                      const SizedBox(width: AppSpacing.sm),
+                      SizedBox.square(
+                        dimension: AppIconSize.sm,
+                        child: selected
+                            ? Icon(
+                                AppIcons.check,
+                                size: AppIconSize.sm,
+                                color: foreground,
+                              )
+                            : null,
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    context.l10n.readerFontSample,
+                    key: ValueKey('reader-font-sample-${preset.id}'),
+                    style: context.text.bodyLarge.copyWith(
+                      fontFamily: preset.fontFamily,
+                      fontWeight: FontWeight.w400,
+                      height: 1.45,
+                      color: foreground,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

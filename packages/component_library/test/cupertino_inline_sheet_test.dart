@@ -104,9 +104,9 @@ void main() {
       expect(find.byType(AppCupertinoSheetSurface), findsNothing);
       final panel = tester.getRect(find.byType(AppSurface));
       expect(panel.width, 420);
-      expect(panel.right, 1024 - 24);
-      expect(panel.top, 47 + 24);
-      expect(panel.bottom, 1366 - 34);
+      expect(panel.right, 1024);
+      expect(panel.top, 47);
+      expect(panel.bottom, 1366);
       expect(tester.state(find.byType(EditableText)), same(editor));
       expect(body.focus.hasFocus, isTrue);
       expect(body.field.text, 'Chapter 12');

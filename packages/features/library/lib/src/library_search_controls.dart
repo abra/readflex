@@ -8,7 +8,6 @@ class LibrarySearchControls extends StatelessWidget {
     required this.controller,
     required this.focusNode,
     required this.onChanged,
-    required this.onClose,
     required this.scrollController,
     this.canRequestFocus = true,
     super.key,
@@ -17,7 +16,6 @@ class LibrarySearchControls extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onChanged;
-  final VoidCallback onClose;
   final bool canRequestFocus;
   final ScrollController scrollController;
 
@@ -29,12 +27,6 @@ class LibrarySearchControls extends StatelessWidget {
     );
     return Row(
       children: [
-        AppPlainIconButton(
-          key: const ValueKey('librarySearchCloseButton'),
-          tooltip: l10n.commonBack,
-          icon: AppIcons.back,
-          onPressed: onClose,
-        ),
         Expanded(
           child: AppTextField(
             key: const ValueKey('librarySearchField'),
@@ -94,14 +86,6 @@ class LibrarySearchSnapshot extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      SizedBox.square(
-        dimension: AppSizes.buttonHeight,
-        child: Icon(
-          AppIcons.back,
-          size: AppPlainIconButton.defaultIconSizeOf(context),
-          color: context.colors.onSurface,
-        ),
-      ),
       Expanded(
         child: text.isEmpty
             ? SearchFieldHint(

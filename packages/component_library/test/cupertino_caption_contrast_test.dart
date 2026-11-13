@@ -1,8 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:component_library/component_library.dart';
-import 'package:cupertino_ui/cupertino_ui.dart'
-    show CupertinoColors, CupertinoDynamicColor;
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoColors;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -63,9 +62,9 @@ void main() {
         final title = find.text('Caption');
         final context = tester.element(title);
         final foreground = tester.widget<Text>(title).style!.color!;
-        final background = CupertinoDynamicColor.resolve(
-          CupertinoColors.secondarySystemGroupedBackground,
-          context,
+        final background = Color.alphaBlend(
+          AppSurfaceAppearance.resolve(context, AppSurfaceRole.field).color,
+          context.appTheme.sheetColor,
         );
         expect(foreground, context.colors.onSurfaceVariant);
         expect(_contrast(foreground, background), greaterThanOrEqualTo(4.5));

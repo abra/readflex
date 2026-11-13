@@ -272,7 +272,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (context.isCupertino && !AppWindowSize.isWide(context))
+            if (context.isCupertino)
               BottomSheetHeader(
                 title: l10n.readerContents,
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),

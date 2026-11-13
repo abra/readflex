@@ -177,6 +177,12 @@ document typography, page appearance and pagination remain independent of app
 chrome. Android semantic text comes from the localized Material theme, so
 script-dependent geometry, letter spacing and baselines are preserved;
 Cupertino typography stays explicitly defined by its adapter.
+`AppSurfaceRole` describes content/review cards, floating toolbars, menus,
+modals, fields and side panels. `AppSurfaceAppearance` resolves shape, fill and
+depth against the existing semantic theme. Cupertino cards use continuous
+corners without elevation; bounded toolbar blur and a soft shadow belong to
+floating controls. Material retains its surface-container fills and painted
+elevation. Feature Views choose the surface purpose, not a platform palette.
 Pagecraft depends directly on the design libraries for selection
 presentation and stays independent of Readflex's components and preferences;
 the native selection bridge takes geometry/colors from its host.
@@ -214,19 +220,31 @@ Keep the detailed rules in `ACCESSIBILITY.md` aligned with real code and tests.
 ## Shared Sheet Design
 
 Sheet presentation belongs to `component_library`, not individual feature Views.
+Short confirmations use `showAppConfirmationDialog`: native Cupertino alert
+actions or a Material alert, with a safe default Cancel and caller-owned text.
+The helper returns only `true`, `false` or null; the feature maps explicit
+confirmation to its domain command. Library item deletion uses this alert;
+collection draft guards keep their existing multi-step flow.
 `showAppBottomSheet` owns modal presentation, handle, safe area and keyboard lift;
 `ActionBottomSheetLayout` owns header geometry, gutters and pinned actions.
 Android retains `ModalBottomSheetRoute`. iOS uses a content-fit
 `CupertinoModalPopupRoute` with a native spring, opaque grouped surface and no
-backdrop blur. The popup stays bottom-centred, has an 8dp minimum safe gap and
-a 540dp maximum width; short forms do not become full-screen pages. Both paths
-use the root navigator and preserve results, draft guards and reduced motion.
+backdrop blur. In narrow windows the popup has an 8dp minimum safe gap and a
+540dp maximum width. `AppSheetPresentation` distinguishes immediate settings,
+saved forms, action lists and contextual controls: at 840×480dp, settings/forms
+become centred 540dp modals, action lists use the trailing bottom edge and
+contextual controls use a flush 420dp trailing panel. Window changes keep the
+same route and reparent the keyed content, preserving drafts, steps and focus.
+Both paths use the root navigator and preserve results, guards and reduced
+motion. Mixed-step flows keep one presentation rather than changing routes.
 Routed Cupertino sheets and narrow retained `AppInlineSheet` panels share the
 internal `AppCupertinoSheetSurface`: the same opaque card, clipping, maximum
 width, safe gaps and brightness-resolved scrim. Contents (including comic Pages)
 and Search reuse `BottomSheetHeader` on these narrow iOS surfaces. Their retained
 state and expandable heights remain owned by `AppInlineSheet`; expanded trailing
-panels retain their separate layout.
+panels use the shared `sidePanel` surface, with their bottom safe area inside
+the opaque panel. Appearance and Font fill the contextual panel's available
+height through `ActionBottomSheetLayout.scrollable(expandBody: true)`.
 The result resolves on pop; `onFullyHidden` follows the exit/removal. A guarded
 step intercepts scrim dismissal and swallows downward drag without remounting
 its body. System Back stays with the step's `PopScope`.
@@ -309,7 +327,12 @@ or scale the reading engine's text. Resizing is driven by the window's
   add the Auto / One / Two Columns choice. pagecraft lays out one column or a
   landscape spread, and articles keep one centred column. Status, seeking
   and actions share one bounded bottom dock; expanded windows expose labels
-  when text fits. See the reader and pagecraft READMEs.
+  when text fits. `ReaderFloatingChromeLayout` measures the title, article
+  progress, brightness controls and dock together without resizing the page.
+  Constrained height moves brightness into a horizontal row and lets dock
+  metadata share a row; both retain their existing state and action targets.
+  This geometry stays in presentation, outside Reader services and pagecraft.
+  See the reader and pagecraft READMEs.
 
 Reading text size is not a layout, so it has its own rule: a tablet-sized
 window, at least 600 on its shortest side (Android's `sw600dp`), renders book

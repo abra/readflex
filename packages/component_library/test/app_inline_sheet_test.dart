@@ -52,9 +52,9 @@ void main() {
 
       final surface = tester.getRect(_surface);
       expect(surface.width, AppSizes.sidePanelWidth);
-      expect(surface.right, 1024 - AppSpacing.xl);
-      expect(surface.top, _statusBar + AppSpacing.xl);
-      expect(surface.bottom, 1366 - _homeIndicator);
+      expect(surface.right, 1024);
+      expect(surface.top, _statusBar);
+      expect(surface.bottom, 1366);
       expect(tester.takeException(), isNull);
     });
 
@@ -68,11 +68,11 @@ void main() {
       );
       await _open(tester);
 
-      expect(tester.getRect(_surface).left, AppSpacing.xl);
+      expect(tester.getRect(_surface).left, 0);
       expect(tester.getRect(_surface).width, AppSizes.sidePanelWidth);
     });
 
-    testWidgets('the inset side panel consumes the bottom safe area once', (
+    testWidgets('the flush side panel consumes the bottom safe area once', (
       tester,
     ) async {
       await _pumpHost(
@@ -82,7 +82,7 @@ void main() {
       );
       await _open(tester);
 
-      expect(tester.getRect(_surface).bottom, 1366 - _homeIndicator);
+      expect(tester.getRect(_surface).bottom, 1366);
       expect(_InsetProbe.lastBottomPadding, 0);
       expect(_InsetProbe.lastViewInset, 0);
     });

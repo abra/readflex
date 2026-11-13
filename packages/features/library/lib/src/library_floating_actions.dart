@@ -4,8 +4,8 @@ import 'package:component_library/component_library.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 
-import 'library_add_button.dart';
 import 'library_bloc.dart';
+import 'library_capsule_action_button.dart';
 import 'library_collections_button.dart';
 import 'library_layout.dart';
 import 'library_practice_button.dart';
@@ -64,6 +64,7 @@ class LibraryFloatingActions extends StatefulWidget {
 class _LibraryFloatingActionsState extends State<LibraryFloatingActions>
     with SingleTickerProviderStateMixin {
   late final AnimationController _mode;
+  late final CurvedAnimation _progress;
   late final CurvedAnimation _searchOpacity;
   late final CurvedAnimation _browseProgress;
   late final Animation<double> _browseOpacity;
@@ -77,9 +78,10 @@ class _LibraryFloatingActionsState extends State<LibraryFloatingActions>
   @override
   void initState() {
     super.initState();
-    _mode = AnimationController(vsync: this, duration: AppMotion.quick)
+    _mode = AnimationController(vsync: this, duration: AppMotion.short)
       ..value = widget.searchActive ? 1 : 0
       ..addStatusListener(_onStatus);
+    _progress = CurvedAnimation(parent: _mode, curve: Curves.easeInOutCubic);
     _searchOpacity = CurvedAnimation(
       parent: _mode,
       curve: const Interval(.5, 1, curve: Curves.easeInOutCubic),
@@ -163,6 +165,7 @@ class _LibraryFloatingActionsState extends State<LibraryFloatingActions>
     _mode.removeStatusListener(_onStatus);
     _searchOpacity.dispose();
     _browseProgress.dispose();
+    _progress.dispose();
     _mode.dispose();
     _searchScrollController.dispose();
     super.dispose();
@@ -187,20 +190,15 @@ class _LibraryFloatingActionsState extends State<LibraryFloatingActions>
           ) +
           AppSizes.buttonHeight * 2 +
           _controlInset * 3;
-      final targetWidth = widget.searchActive
-          ? searchWidth
-          : math.min(browseWidth, naturalBrowseWidth);
       final browse = _ModeLayer(
         key: const ValueKey('libraryBrowseModeLayer'),
         active: !widget.searchActive,
         opacity: _browseOpacity,
         child: MediaQuery.withClampedTextScaling(
           maxScaleFactor: kLibraryFloatingActionsMaxTextScale,
-          child: _BrowseControls(
+          child: LibraryCollectionsButton(
             scope: widget.searchActive ? _exitingScope : widget.scope,
-            onCollectionsPressed: widget.onCollectionsPressed,
-            onSearchPressed: widget.onSearchPressed,
-            onAddPressed: widget.onAddPressed,
+            onPressed: widget.onCollectionsPressed,
           ),
         ),
       );
@@ -215,31 +213,47 @@ class _LibraryFloatingActionsState extends State<LibraryFloatingActions>
                 canRequestFocus: widget.canRequestSearchFocus,
                 scrollController: _searchScrollController,
                 onChanged: widget.onSearchChanged!,
-                onClose: widget.onSearchClosed!,
               )
             : LibrarySearchSnapshot(
                 text: _searchSnapshot,
                 scrollOffset: _searchSnapshotOffset,
               ),
       );
-      // Key the direct Stack children so transition cleanup retains the live
-      // editor and its native input connection.
-      final browsePosition = Positioned.fill(
-        key: const ValueKey('libraryBrowsePosition'),
-        child: browse,
-      );
-      final searchPosition = Positioned.fill(
-        key: const ValueKey('librarySearchPosition'),
-        child: search,
-      );
-      final contents = Stack(
-        fit: StackFit.expand,
-        alignment: AlignmentDirectional.centerEnd,
-        children: [
-          if (widget.searchActive && _mode.value < 1) browsePosition,
-          if (!widget.searchActive && _mode.value > 0) searchPosition,
-          widget.searchActive ? searchPosition : browsePosition,
-        ],
+      final contents = _CapsuleContents(
+        progress: _progress,
+        browse: browse,
+        search: search,
+        searchButton: IgnorePointer(
+          ignoring: widget.searchActive,
+          child: ExcludeFocus(
+            excluding: widget.searchActive,
+            child: ExcludeSemantics(
+              excluding: widget.searchActive,
+              child: AppPlainIconButton(
+                key: const ValueKey('librarySearchButton'),
+                tooltip: context.l10n.librarySearchHint,
+                icon: AppIcons.search,
+                onPressed: widget.onSearchPressed,
+              ),
+            ),
+          ),
+        ),
+        // Close must finish returning to "+" before another tap can import.
+        action: IgnorePointer(
+          ignoring: !widget.searchActive && !_mode.isDismissed,
+          child: ExcludeFocus(
+            excluding: !widget.searchActive && !_mode.isDismissed,
+            child: ExcludeSemantics(
+              excluding: !widget.searchActive && !_mode.isDismissed,
+              child: LibraryCapsuleActionButton(
+                progress: _progress,
+                searchActive: widget.searchActive,
+                onAddPressed: widget.onAddPressed,
+                onSearchClosed: widget.onSearchClosed,
+              ),
+            ),
+          ),
+        ),
       );
       final onPracticePressed = widget.onPracticePressed;
       return ConstrainedBox(
@@ -262,7 +276,9 @@ class _LibraryFloatingActionsState extends State<LibraryFloatingActions>
                 ),
               ),
             _AnimatedCapsuleWidth(
-              width: targetWidth,
+              browseWidth: math.min(browseWidth, naturalBrowseWidth),
+              searchWidth: searchWidth,
+              progress: _progress,
               reduceMotion: context.reduceMotion,
               child: AppFloatingCapsule(
                 key: const ValueKey('libraryFloatingActions'),
@@ -282,12 +298,16 @@ class _LibraryFloatingActionsState extends State<LibraryFloatingActions>
 
 class _AnimatedCapsuleWidth extends StatefulWidget {
   const _AnimatedCapsuleWidth({
-    required this.width,
+    required this.browseWidth,
+    required this.searchWidth,
+    required this.progress,
     required this.reduceMotion,
     required this.child,
   });
 
-  final double width;
+  final double browseWidth;
+  final double searchWidth;
+  final Animation<double> progress;
   final bool reduceMotion;
   final Widget child;
 
@@ -298,16 +318,22 @@ class _AnimatedCapsuleWidth extends StatefulWidget {
 class _AnimatedCapsuleWidthState extends State<_AnimatedCapsuleWidth>
     with SingleTickerProviderStateMixin {
   late final AnimationController _width;
-  late double _begin;
-  late double _end;
+  late double _browseBegin;
+  late double _browseEnd;
+  late double _searchBegin;
+  late double _searchEnd;
 
-  double get _current =>
-      _begin + (_end - _begin) * Curves.easeOutCubic.transform(_width.value);
+  double get _resizeProgress => Curves.easeOutCubic.transform(_width.value);
+  double get _browseWidth =>
+      _browseBegin + (_browseEnd - _browseBegin) * _resizeProgress;
+  double get _searchWidth =>
+      _searchBegin + (_searchEnd - _searchBegin) * _resizeProgress;
 
   @override
   void initState() {
     super.initState();
-    _begin = _end = widget.width;
+    _browseBegin = _browseEnd = widget.browseWidth;
+    _searchBegin = _searchEnd = widget.searchWidth;
     _width = AnimationController(vsync: this, duration: AppMotion.short)
       ..value = 1;
   }
@@ -315,9 +341,12 @@ class _AnimatedCapsuleWidthState extends State<_AnimatedCapsuleWidth>
   @override
   void didUpdateWidget(_AnimatedCapsuleWidth oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.width != oldWidget.width) {
-      _begin = _current;
-      _end = widget.width;
+    if (widget.browseWidth != oldWidget.browseWidth ||
+        widget.searchWidth != oldWidget.searchWidth) {
+      _browseBegin = _browseWidth;
+      _searchBegin = _searchWidth;
+      _browseEnd = widget.browseWidth;
+      _searchEnd = widget.searchWidth;
       if (widget.reduceMotion) {
         _width.value = 1;
       } else {
@@ -336,9 +365,13 @@ class _AnimatedCapsuleWidthState extends State<_AnimatedCapsuleWidth>
 
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _width,
+    animation: Listenable.merge([_width, widget.progress]),
     child: widget.child,
-    builder: (context, child) => SizedBox(width: _current, child: child),
+    builder: (context, child) => SizedBox(
+      width:
+          _browseWidth + (_searchWidth - _browseWidth) * widget.progress.value,
+      child: child,
+    ),
   );
 }
 
@@ -367,37 +400,112 @@ class _ModeLayer extends StatelessWidget {
   );
 }
 
-class _BrowseControls extends StatelessWidget {
-  const _BrowseControls({
-    required this.scope,
-    required this.onCollectionsPressed,
-    required this.onSearchPressed,
-    required this.onAddPressed,
+/// Only geometry changes per frame; controls and the live editor stay mounted.
+class _CapsuleContents extends StatelessWidget {
+  const _CapsuleContents({
+    required this.progress,
+    required this.browse,
+    required this.search,
+    required this.searchButton,
+    required this.action,
   });
 
-  final LibraryCollectionScope? scope;
-  final VoidCallback onCollectionsPressed;
-  final VoidCallback onSearchPressed;
-  final VoidCallback? onAddPressed;
+  final Animation<double> progress;
+  final Widget browse;
+  final Widget search;
+  final Widget searchButton;
+  final Widget action;
 
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Expanded(
-        child: LibraryCollectionsButton(
-          scope: scope,
-          onPressed: onCollectionsPressed,
-        ),
-      ),
-      AppPlainIconButton(
-        key: const ValueKey('librarySearchButton'),
-        tooltip: context.l10n.librarySearchHint,
-        icon: AppIcons.search,
-        onPressed: onSearchPressed,
-      ),
-      const SizedBox(width: _controlInset),
-      LibraryAddButton(onPressed: onAddPressed),
-    ],
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: progress,
+    builder: (context, _) => LayoutBuilder(
+      builder: (context, constraints) {
+        const fieldStart = AppSizes.buttonHeight;
+        const fieldEnd = AppSizes.buttonHeight + _controlInset;
+        final collectionWidth = math.max(
+          0.0,
+          constraints.maxWidth - fieldStart - fieldEnd,
+        );
+        final iconStart = collectionWidth * (1 - progress.value);
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            PositionedDirectional(
+              key: const ValueKey('libraryBrowsePosition'),
+              start: 0,
+              end: fieldStart + fieldEnd,
+              top: 0,
+              bottom: 0,
+              child: ClipRect(
+                clipper: _LeadingRevealClipper(
+                  extent: iconStart,
+                  direction: Directionality.of(context),
+                ),
+                child: browse,
+              ),
+            ),
+            PositionedDirectional(
+              key: const ValueKey('librarySearchPosition'),
+              start: fieldStart,
+              end: fieldEnd,
+              top: 0,
+              bottom: 0,
+              child: ClipRect(
+                clipper: _LeadingRevealClipper(
+                  extent: iconStart,
+                  direction: Directionality.of(context),
+                  revealTrailing: true,
+                ),
+                child: search,
+              ),
+            ),
+            PositionedDirectional(
+              start: iconStart,
+              top: 0,
+              bottom: 0,
+              width: AppSizes.buttonHeight,
+              child: searchButton,
+            ),
+            PositionedDirectional(
+              end: 0,
+              top: 0,
+              bottom: 0,
+              width: AppSizes.buttonHeight,
+              child: action,
+            ),
+          ],
+        );
+      },
+    ),
   );
+}
+
+/// The moving magnifier separates the collection and editor paint regions.
+class _LeadingRevealClipper extends CustomClipper<Rect> {
+  const _LeadingRevealClipper({
+    required this.extent,
+    required this.direction,
+    this.revealTrailing = false,
+  });
+
+  final double extent;
+  final TextDirection direction;
+  final bool revealTrailing;
+
+  @override
+  Rect getClip(Size size) {
+    final edge = extent.clamp(0.0, size.width);
+    final ltr = direction == TextDirection.ltr;
+    if (revealTrailing) {
+      return Rect.fromLTWH(ltr ? edge : 0, 0, size.width - edge, size.height);
+    }
+    return Rect.fromLTWH(ltr ? 0 : size.width - edge, 0, edge, size.height);
+  }
+
+  @override
+  bool shouldReclip(_LeadingRevealClipper oldClipper) =>
+      extent != oldClipper.extent ||
+      direction != oldClipper.direction ||
+      revealTrailing != oldClipper.revealTrailing;
 }

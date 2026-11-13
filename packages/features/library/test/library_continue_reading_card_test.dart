@@ -101,14 +101,17 @@ void main() {
         final material = tester.widget<AppSurface>(
           find.byKey(const ValueKey('libraryContinueReadingCard')),
         );
-        expect(material.color, theme.colorScheme.surfaceContainerLow);
-        final shape = material.shape! as RoundedRectangleBorder;
-        expect(shape.borderRadius, BorderRadius.circular(AppRadius.lg));
-        expect(shape.side.color, theme.colorScheme.outlineVariant);
+        final appearance = AppSurfaceAppearance.resolve(
+          tester.element(_card),
+          AppSurfaceRole.contentCard,
+        );
+        expect(material.role, AppSurfaceRole.contentCard);
+        expect(material.color, isNull);
+        expect(material.shape, appearance.shape);
         final ink = tester.widget<InkWell>(
           find.descendant(of: _card, matching: find.byType(InkWell)),
         );
-        expect(ink.borderRadius, BorderRadius.circular(AppRadius.lg));
+        expect(ink.customBorder, appearance.shape);
 
         final card = tester.getRect(_card);
         final cover = tester.getRect(
@@ -182,7 +185,7 @@ void main() {
       );
     });
 
-    testWidgets('wide windows give reading a larger cover and title', (
+    testWidgets('wide windows retain the compact cover and larger title', (
       tester,
     ) async {
       await pumpCard(tester, _article, width: 1032);
@@ -190,7 +193,7 @@ void main() {
         tester.getSize(
           find.byKey(const ValueKey('libraryContinueReadingCover')),
         ),
-        const Size(80, 120),
+        const Size(kLibraryListCoverWidth, kLibraryListCoverHeight),
       );
       final title = tester.widget<Text>(find.text(_article.title));
       expect(
@@ -199,7 +202,7 @@ void main() {
       );
       expect(
         tester.getSize(_card).height,
-        120 + AppSpacing.lg * 2,
+        kLibraryListCoverHeight + AppSpacing.lg * 2,
       );
       expect(tester.takeException(), isNull);
     });
@@ -943,7 +946,7 @@ void main() {
                   find.byKey(const ValueKey('libraryContinueReadingCard')),
                 )
                 .color,
-            colors.surfaceContainerLow,
+            isNull,
           );
           expect(check, findsNothing);
           expect(textColor('The Long Read'), colors.onSurface);

@@ -91,9 +91,23 @@ wrapping at 320dp/200% in LTR/phone RTL; sheet controls remain 48dp. Narrowing a
 tablet popup retains its body state. Header/route tests live in
 `cupertino_sheet_header_test.dart` and `cupertino_app_bottom_sheet_test.dart`
 in `component_library/test/`.
+`expanded_app_sheet_test.dart` checks purpose-based placement on real platform
+roots, guarded drafts, focused text/selection, keyboard/home-indicator insets,
+resize retention and early closure with reduced motion. Expanded settings and
+forms are centred; contextual Reader controls use a flush trailing panel.
 
-Narrow iOS Contents/Search panels, including comic Pages, share the routed
-sheet's card framing and header. Check them against Appearance/Display rather
+`integration_test/native_surface_style_test.dart` captures actual platform
+fonts, Library/Display/Search, Reader Appearance/Contents and a long Highlight
+before/after scrolling. It samples warmed search-transition build/raster times
+and records mode and viewport. Debug or emulator numbers are diagnostics, not
+physical-device frame-rate guarantees. Use the existing `test_driver/ui_driver.dart`
+with `READFLEX_NATIVE_DEVICE` for native screenshot transport.
+The separate profile harness below collects warmed frame data without taking
+screenshots or enabling coverage during the workload.
+
+iOS Contents/Search panels, including comic Pages, share the routed sheet's
+native header at every width. Narrow panels also share its card framing.
+Check them against Appearance/Display rather
 than only against another retained panel. Verify safe gaps and scrim in both
 themes, keyboard ownership, and retained text/focus/scroll state when switching
 between a bottom sheet and the expanded trailing panel. The latter remains a
@@ -224,6 +238,68 @@ after changing only the global setting. The iOS binding captures the Flutter
 surface, not the OS keyboard overlay; the test additionally asserts real nonzero
 keyboard insets.
 
+### Native UI frame profiling
+
+Connect and unlock a physical Android or iOS device, then use its exact ID:
+
+```sh
+fvm flutter devices
+make profile-ui DEVICE=<physical-device-id>
+# Emulator diagnostics only, where the platform supports profile mode:
+make profile-ui DEVICE=<emulator-id> ALLOW_EMULATOR=1
+```
+
+The host runner uses `.fvm/flutter_sdk/bin/flutter` and requires `fvm use` to
+have prepared that SDK. Before building, it reads `flutter devices --machine`
+and requires one exact ID match, a supported mobile target and an explicit
+emulator status. Desktop, unknown and incomplete device records are rejected.
+Emulators require the opt-in above and always produce `physicalDevice: false`.
+The runner forces profile mode and passes host-attested device metadata to
+`integration_test/native_ui_performance_test.dart`; hand-written Dart defines
+are not equivalent evidence of physical hardware.
+
+Physical runs require a dedicated test device/installation with no existing
+Readflex app. The harness currently uses the production application ID, and
+`flutter drive` can uninstall it both after testing and when retrying a failed
+Android update. Before creating artifacts or building, the runner checks for
+Android package records across all users, including retained uninstalled data,
+or queries iOS applications through `devicectl`. An existing app or an unknown
+probe result blocks the run; there is no override flag. Android SDK environment
+variables and `android/local.properties` are used to locate `adb`, with PATH as
+the fallback. iOS tools must confirm that default, removable and hidden apps
+were included; toolchains that cannot establish this are rejected. Use the
+preserve-existing-app workflow above for a personal installation; adding
+`--keep-app-running` alone cannot prevent Android's reinstall fallback.
+
+Each run writes minimal identity/status data to
+`.local/performance/native-ui/run-*/device.json`; the shared driver writes
+measurements to `.local/ui-device/run-*/results.json`, printing both paths.
+Keep those artifacts together when reviewing a run. Only the selected device's
+ID, name, platform and physical status are retained in the identity file;
+the complete device-discovery output is not saved. A failed run remains marked
+failed rather than becoming a completed measurement.
+
+The harness uses the production UI with isolated fixture storage. It warms
+Library search/keyboard transitions, Reader chrome, Appearance and long
+Highlight scrolling with two cycles, then measures twelve cycles per flow.
+`benchmarkLive` permits real-time animation frames without requesting extra
+benchmark frames. `FrameTiming` batches are drained before and after each
+workload; only frames whose `buildStart` falls inside its monotonic time window
+are included. Results retain raw frame timestamps/build/raster/span durations,
+p50/p95/max summaries, nominal refresh rate and budget counts. Screenshot
+transport and coverage instrumentation are disabled for this run.
+
+These are Flutter pipeline timings, not end-to-end FPS or input latency.
+Native keyboard rendering, the OS compositor and actual display presentation
+are outside `FrameTiming`. The nominal Flutter refresh rate does not establish
+variable-refresh behavior; reported budget overruns are diagnostic. Fixture
+storage also excludes production database, network and native I/O costs.
+Compare the same device, settings, viewport and build mode across revisions;
+repeat measurements when thermal or background load changes. No physical-device
+FPS result has been established by the current UI follow-up. VoiceOver/TalkBack
+checks are explicitly deferred for this pass; neither this harness nor widget
+semantics can substitute for those checks.
+
 ### Native tablets
 
 Use an iPad Simulator or Android tablet emulator whose actual logical viewport
@@ -311,6 +387,8 @@ same as for `test-device` above.
 | Comic area selection | Full Reader gestures on a 390dp phone in light/dark, Arabic phone at 200% and landscape tablet: popup waits for release, stays hidden during move/resize without resetting colour, dragging the triangular corner regions formed by diagonal cut lines resizes the crop even at page edges, tall crops keep a 48dp square around each corner clear of the popup, Cancel and Back clear selection without leaving Reader, and an immediate outside tap after a colour change clears both draft and app state. Optional full-screen review captures use `READFLEX_VISUAL_CAPTURE_DIR` and do not update baselines. The native flow keeps the device viewport, exercises gradual movement and held triangular-corner resizing (including at the page edge), and persists the exact normalized rectangle through Highlight/Skip | `comic_area_selection_test.dart`, `integration_test/comic_area_selection_test.dart` |
 | Reader selection tip | Waits for the painted page, a book page turn hides it for the session (a restore does not), a selection ends it for good, a returning reader never sees it; the inverse plate in light/dark and 200% text, where "Got it" moves below the message | `reader_selection_tip_test.dart`, reader `reader_selection_tip_test.dart` and `reader_selection_tip_cubit_test.dart` |
 | Reader progress row | The page slider spans the row right above the capsule; under it the book's chapter (one line, truncating first) and the page label (never loses digits), inset to the track's ends; at 2x text the chapter takes up to two lines with the page label below; capsule-width cap on landscape and tablet, in all visual profiles | `reader_progress_golden_test.dart`, reader `reader_bottom_chrome_test.dart` |
+| Constrained Reader chrome | At 568×320 and 200% text, brightness switches to a horizontal 184×48dp pill with three 48dp targets above the dock; title and article progress do not overlap it. Android/iOS roots cover German/LTR, Arabic/phone RTL, asymmetric safe insets, tap/drag/system-reset commands and retained controls across hide/show and rotation. Normal phone/tablet positions and document viewport remain unchanged | reader `reader_floating_chrome_layout_test.dart` |
+| Native UI frame profiling | Host validates exact supported mobile hardware before a forced profile build; warmed real-time `benchmarkLive` workloads retain raw and summarized Flutter frame timings. Emulator opt-in always records nonphysical status; no screenshot/coverage work enters samples. Does not establish compositor FPS, input latency or screen-reader behavior | `scripts/native_ui_performance.dart`, `test/tooling/native_ui_performance_test.dart`, `integration_test/native_ui_performance_test.dart` |
 | Reader page animations | Slide/Cover is global, selected in Library's Display sheet; Reader retains direction controls and Reset leaves the global effect unchanged. Legacy source animation keys cannot override it. Localized 48dp choices at 320dp/200% and phone RTL, persistence/reopening and stable Display/Language step heights. Both renderers share geometry/painting, keep the effect fixed during an active turn and preserve layout, selection, position and zoom when it changes | Library display/cubit tests and `library_golden_test.dart`; reader appearance/screen tests; pagecraft `text_pages_view_test.dart`, `fixed_pages_view_test.dart`, `pdf_pages_view_test.dart` |
 | Reader appearance | Portrait/landscape, 2x text and RTL; header/values readable, final control and font sample reachable, Appearance/Font retain equal height with manual return | `reader_appearance_golden_test.dart` |
 | Native book actions | Expand word to phrase, translate exact final range, copy result, Define fallback, dismiss selection menu | `integration_test/reader_flows_test.dart` |
@@ -428,9 +506,16 @@ requests through ADB reverse on device port 34179. It validates artifact names
 and PNG signatures, bounds waits, rejects overlapping captures and closes the
 forwarding on driver completion. Neither it nor its client is used by the app's
 normal entry point. Direct `flutter drive` invocations must also set
-`READFLEX_NATIVE_DEVICE=<device-id>`; iOS keeps the standard screenshot path.
+`READFLEX_NATIVE_DEVICE=<device-id>`.
 Do not use `convertFlutterSurfaceToImage()` with native Hybrid Composition:
 the SDK screenshot callback can wait indefinitely for an already-consumed frame.
+
+`native_surface_style_test.dart` also uses OS screenshots on iOS Simulator:
+the driver binds the same loopback transport directly on port 34179 and runs
+`xcrun simctl io <device-id> screenshot --type=png -`. These captures include
+OS-owned keyboard and status-bar layers. The scenario settles Flutter frames
+and waits 200ms in real time for compositor presentation before requesting
+each image. Other iOS scenarios retain the SDK screenshot path.
 
 The native scenarios write screenshots and `results.json` to a fresh
 `.local/ui-device/run-*/` directory, printed by the driver. Driver protocol
@@ -614,3 +699,12 @@ Tests use bounded readiness waits and wait for document content
 after bridge readiness. These checks detect specific regressions, not FPS or
 memory budgets. Use existing `benchmarks/` and profile-mode device measurements
 for performance claims.
+
+### Shadow rendering in visual tests
+
+The UI suite initializes its test binding with shadows enabled. This keeps
+Material elevation visible in captures; Flutter's default automated binding
+replaces those shadows with solid debug outlines. The policy applies centrally
+to every UI test, including comparison and review captures, without changing
+production rendering or bypassing baseline comparisons. Native device review
+remains necessary for platform rendering and animation performance.

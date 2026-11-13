@@ -38,6 +38,7 @@ Future<void> main() async {
 
   NativeScreenshotServer? nativeScreenshots;
   final device = Platform.environment['READFLEX_NATIVE_DEVICE'];
+  var androidPortForwarded = false;
   if (device != null && device.isNotEmpty) {
     var isAndroid = false;
     try {
@@ -62,6 +63,30 @@ Future<void> main() async {
         await nativeScreenshots.close();
         throw StateError('Cannot connect Android screenshot transport');
       }
+      androidPortForwarded = true;
+    } else if (Platform.isMacOS) {
+      final devices = await Process.run('xcrun', [
+        'simctl',
+        'list',
+        'devices',
+        'booted',
+        '--json',
+      ]);
+      if (devices.exitCode == 0) {
+        final data =
+            jsonDecode(devices.stdout as String) as Map<String, dynamic>;
+        final groups = data['devices'] as Map<String, dynamic>;
+        final isSimulator = groups.values
+            .expand((group) => (group as List).cast<Map<String, dynamic>>())
+            .any((simulator) => simulator['udid'] == device);
+        if (isSimulator) {
+          nativeScreenshots = await NativeScreenshotServer.start(
+            port: nativeScreenshotPort,
+            capture: () => captureSimulatorScreenshot(device),
+            save: saveScreenshot,
+          );
+        }
+      }
     }
   }
   Future<void> closeNativeScreenshots() async {
@@ -69,13 +94,16 @@ Future<void> main() async {
     nativeScreenshots = null;
     if (server == null) return;
     await server.close();
-    await Process.run('adb', [
-      '-s',
-      device!,
-      'reverse',
-      '--remove',
-      'tcp:$nativeScreenshotPort',
-    ]);
+    if (androidPortForwarded) {
+      androidPortForwarded = false;
+      await Process.run('adb', [
+        '-s',
+        device!,
+        'reverse',
+        '--remove',
+        'tcp:$nativeScreenshotPort',
+      ]);
+    }
   }
 
   try {

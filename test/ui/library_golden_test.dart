@@ -386,8 +386,8 @@ void main() {
       tester.element(find.byType(LibraryScreen)),
     )!;
     final clear = find.byTooltip(strings.commonClearSearch);
-    final prefix = find.byKey(const ValueKey('librarySearchCloseButton'));
-    expect(tester.getCenter(clear).dx, lessThan(tester.getCenter(prefix).dx));
+    final close = find.byKey(const ValueKey('libraryCapsuleActionButton'));
+    expect(tester.getCenter(clear).dx, greaterThan(tester.getCenter(close).dx));
     final gesture = await tester.startGesture(tester.getCenter(clear));
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pump(const Duration(milliseconds: 100));
@@ -399,7 +399,10 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle(const Duration(milliseconds: 400));
     expect(find.text(ReadingFixture.bookTitle), findsOneWidget);
-    await tapUi(tester, find.byKey(const ValueKey('librarySearchCloseButton')));
+    await tapUi(
+      tester,
+      find.byKey(const ValueKey('libraryCapsuleActionButton')),
+    );
     await tapUi(tester, find.byKey(const ValueKey('libraryCollectionsButton')));
     await expectUiGolden(
       tester,

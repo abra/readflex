@@ -7,8 +7,6 @@ import 'package:readflex_localizations/readflex_localizations.dart';
 import 'reader_appearance_cubit.dart';
 import 'reader_font_sheet.dart';
 import 'reader_layout_presets.dart';
-import 'reader_line_spacing_glyph.dart';
-import 'reader_margins_glyph.dart';
 import 'reader_theme_swatches.dart';
 
 const double _textScaleEpsilon = 0.001;
@@ -43,6 +41,7 @@ Future<void> showReaderAppearanceSheet(
   final cubit = context.read<ReaderAppearanceCubit>();
   return showAppBottomSheet<void>(
     context,
+    presentation: AppSheetPresentation.contextual,
     scrimClosesFlow: true,
     onFullyHidden: onFullyHidden,
     builder: (_) => BlocProvider.value(
@@ -181,6 +180,7 @@ class _AppearanceSettings extends StatelessWidget {
   Widget build(BuildContext context) {
     return ActionBottomSheetLayout.scrollable(
       title: context.l10n.readerAppearanceTitle,
+      expandBody: AppWindowSize.isWide(context),
       headerTrailing: const _ResetAppearanceButton(),
       headerCompactTrailing: const _ResetAppearanceButton(compact: true),
       closeLabel: context.l10n.commonClose,
@@ -227,9 +227,8 @@ class _ResetAppearanceButton extends StatelessWidget {
   }
 }
 
-/// Book and article controls: the theme, the compact rows (font, size,
-/// spacing, margins), then the labeled choices. Text columns join them in a
-/// wide window, the only place they change the page.
+/// Font and size share a grouped surface; layout choices keep their captions
+/// above full-width controls. Columns apply only in a wide reading window.
 class _LayeredAppearanceControls extends StatelessWidget {
   const _LayeredAppearanceControls({
     required this.showPageTurnControls,
@@ -257,8 +256,18 @@ class _LayeredAppearanceControls extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _TextSettingRows(onFont: onFont),
-              const SizedBox(height: AppSpacing.xl),
+              AppSheetSection(
+                key: const ValueKey('reader-typeface-settings'),
+                horizontalInset: 0,
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: _TextSettingRows(onFont: onFont),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              AppSettingsSection(
+                title: l10n.readerLineSpacing,
+                child: const _LineSpacingControl(),
+              ),
+              const SizedBox(height: AppSpacing.lg),
               AppSettingsSection(
                 title: l10n.readerTextAlignment,
                 child: const _AlignmentControl(),
@@ -454,16 +463,12 @@ class _FontSizeControl extends StatelessWidget {
           ),
         );
     final cubit = context.read<ReaderAppearanceCubit>();
-    final cs = context.colors;
     return SizedBox(
       key: const ValueKey('reader-text-scale-control'),
       height: AppSizes.buttonHeight,
       child: AppSurface(
-        color: cs.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          side: BorderSide(color: cs.outlineVariant),
-        ),
+        role: AppSurfaceRole.field,
+        clipBehavior: Clip.antiAlias,
         child: Row(
           children: [
             _TextSizeStepButton(
@@ -620,8 +625,8 @@ class _TextSizeValueButton extends StatelessWidget {
   }
 }
 
-/// Typeface and text size stay together. Controls share the end half of the
-/// column, moving below their labels together when the text needs more room.
+/// Typeface and size stay together; size moves below its caption when the
+/// two labels and full-size step buttons cannot share a row.
 class _TextSettingRows extends StatelessWidget {
   const _TextSettingRows({required this.onFont});
 
@@ -630,33 +635,24 @@ class _TextSettingRows extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final rows = [
-      (l10n.readerFontSize, const _FontSizeControl()),
-      (l10n.readerLineSpacing, const _LineSpacingControl()),
-    ];
     return LayoutBuilder(
       builder: (context, constraints) {
-        final stacked = _stacksCompactRows(
+        final stacked = _stacksFontSize(
           context,
           width: constraints.maxWidth,
-          labels: [for (final (label, _) in rows) label],
-        );
-        final gap = SizedBox(
-          height: stacked ? AppSpacing.lg : AppSpacing.sm,
+          label: l10n.readerFontSize,
         );
         return Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _FontPickerRow(onPressed: onFont),
-            for (final (label, control) in rows) ...[
-              gap,
-              _CompactSettingRow(
-                label: label,
-                stacked: stacked,
-                control: control,
-              ),
-            ],
+            SizedBox(height: stacked ? AppSpacing.lg : AppSpacing.sm),
+            _CompactSettingRow(
+              label: l10n.readerFontSize,
+              stacked: stacked,
+              control: const _FontSizeControl(),
+            ),
           ],
         );
       },
@@ -664,13 +660,13 @@ class _TextSettingRows extends StatelessWidget {
   }
 }
 
-/// Whether the compact rows put their controls below their labels: for large
+/// Whether the size stepper sits below its caption: for large
 /// text in a narrow sheet, when half the column cannot hold three 48dp
 /// segments, or when a label would need a third line beside its control.
-bool _stacksCompactRows(
+bool _stacksFontSize(
   BuildContext context, {
   required double width,
-  required List<String> labels,
+  required String label,
 }) {
   final textScaler = MediaQuery.textScalerOf(context);
   if (width < 360 && textScaler.scale(14) > 18) return true;
@@ -683,13 +679,10 @@ bool _stacksCompactRows(
     maxLines: _compactLabelMaxLines,
   );
   try {
-    for (final label in labels) {
-      painter
-        ..text = TextSpan(text: label, style: context.text.bodyMedium)
-        ..layout(maxWidth: half - AppSpacing.md);
-      if (painter.didExceedMaxLines) return true;
-    }
-    return false;
+    painter
+      ..text = TextSpan(text: label, style: context.text.bodyMedium)
+      ..layout(maxWidth: half - AppSpacing.md);
+    return painter.didExceedMaxLines;
   } finally {
     painter.dispose();
   }
@@ -838,7 +831,6 @@ class _LineSpacingControl extends StatelessWidget {
     final l10n = context.l10n;
     return AppChoiceControl<ReaderLineSpacingPreset>(
       key: const ValueKey('reader-line-height-control'),
-      iconOnly: true,
       // The nearest preset is shown selected; tapping it applies its value.
       reselectable: true,
       selected: ReaderLineSpacingPreset.nearest(lineHeight),
@@ -853,10 +845,7 @@ class _LineSpacingControl extends StatelessWidget {
           AppChoiceOption(
             value: preset,
             label: _lineSpacingLabel(l10n, preset),
-            glyph: ReaderLineSpacingGlyph(
-              preset,
-              key: ValueKey('reader-line-spacing-${preset.name}'),
-            ),
+            labelKey: ValueKey('reader-line-spacing-${preset.name}'),
           ),
       ],
     );
@@ -884,7 +873,6 @@ class _MarginControl extends StatelessWidget {
     final l10n = context.l10n;
     return AppChoiceControl<ReaderMarginPreset>(
       key: const ValueKey('reader-margin-control'),
-      iconOnly: true,
       // The nearest preset is shown selected; tapping it applies its value.
       reselectable: true,
       selected: ReaderMarginPreset.nearest(sideMargin),
@@ -899,10 +887,7 @@ class _MarginControl extends StatelessWidget {
           AppChoiceOption(
             value: preset,
             label: _marginLabel(l10n, preset),
-            glyph: ReaderMarginsGlyph(
-              preset,
-              key: ValueKey('reader-margin-${preset.name}'),
-            ),
+            labelKey: ValueKey('reader-margin-${preset.name}'),
           ),
       ],
     );

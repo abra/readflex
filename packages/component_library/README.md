@@ -250,7 +250,7 @@ Reusable presentation-only widgets used across features:
 | `AppButton` / `AppIconButton`       | Named platform action controls; filled/tonal/outlined/text intent maps to the platform's presentation |
 | `AppTextField`                      | Material/Cupertino editing field with one controller/IME connection; validation can tint a border without reserving a dummy error row |
 | `AppSwitch` / `AppSlider` / `AppCheckbox` | Platform settings inputs with unchanged values and callbacks |
-| `AppSurface` / `AppTappable`        | Shared surface and interaction primitives; Material ink or Cupertino press feedback |
+| `AppSurface` / `AppSurfaceAppearance` / `AppSurfaceRole` / `AppTappable` | Semantic surface roles with platform shape/fill/depth; Material ink or Cupertino press feedback |
 | `AppProgressIndicator` / `AppLinearProgressIndicator` | Platform loading presentation; determinate progress retains its value |
 | `ActionBottomSheetLayout`           | Bottom sheet shell; optional constrained scroll body and wrapping header actions |
 | `AppPlainIconButton`                | Labeled 48dp utility action with transparent background and circular press feedback; `icon` or a custom `iconWidget` |
@@ -272,11 +272,12 @@ Reusable presentation-only widgets used across features:
 | `AppStatusMessage`                  | Inline sheet status: start-aligned title/body, optional full-width filled action and progress |
 | `AppSettingsSection`                | Shared settings heading and label/control spacing |
 | `AppChoiceControl` / `AppChoiceOption` | Single-choice settings, with the same themed states for text, icons, painted `glyph`s and font previews; `reselectable` reports a tap on the selected option for nearest-match presets |
+| `AppConfirmationDialog` / `showAppConfirmationDialog` | Root-navigator confirmation: native Cupertino alert/actions or Material alert/text buttons, safe default Cancel, optional destructive command, caller-owned text and boolean result |
 | `AppContentFrame` | Centered bounded workspace with optional directional padding; preserves height constraints for Expanded lazy lists without intrinsic measurement |
 | `AppCopyButton`                     | 48px copy command with local success/error feedback |
 | `AppSaveToggleButton`               | Save / Saved bookmark toggle for a sheet row (Translation and Definition word headers); the tooltip names the next tap, a state change is announced through a live region, `failed` shows the error glyph until the next tap |
 | `AppFilterChip`                     | Compact visual body (32dp minimum) in a target of at least 48×48dp; labels use `labelSmall` on narrow windows and `labelLarge` on medium windows; bounded long labels wrap and large text can grow the control |
-| `AppFloatingCapsule`                | Stadium for compact floating controls (reader search navigation, Library collection switcher + "+"): `surface` at 92%, hairline `outlineVariant`, `AppShadows.popover`, radius from the caller's height; controls paint their own ink |
+| `AppFloatingCapsule`                | Stadium for compact floating controls: bounded Cupertino blur with restrained shadow, or Material semantic fill and native elevation; controls own their feedback |
 | `AppInlineSheet` / `AppInlineSheetGeometry` | Retained modal surface in a screen's Stack: narrow windows use a keyboard-aware 60%/full bottom sheet; expanded windows use a full-height trailing 420dp panel. RTL mirrors the panel, resizing preserves its body/focus, and list gestures stay scrolling gestures on wide windows. |
 | `BottomSheetHeader`                 | Android title/action row or centred Cupertino title with slotted Back/Close; adapts to long labels |
 | `ButtonLoadingIndicator`            | Compact circular progress for buttons; takes the button's own foreground via `IconTheme` |
@@ -297,6 +298,38 @@ Reusable presentation-only widgets used across features:
 `AppSurface` does not provide a Material ancestor on iOS. Decorations inside a
 Cupertino surface use core painting widgets; Android-only `Ink` remains under
 its Material surface. Theme compatibility is not an ink-painting ancestor.
+
+`showAppConfirmationDialog` is for a short explicit confirmation, including
+deletion, rather than a draft form or a menu of actions. The caller supplies
+localized title, message and action labels, then proceeds only on `== true`.
+Confirm returns true, Cancel returns false, and system Back returns null.
+Cupertino keeps its native non-dismissible barrier; Material scrim dismissal
+returns null. Both use the root navigator and preserve caller themes. Cancel
+receives keyboard focus and Cupertino's default-action emphasis; a destructive
+confirm uses the semantic error color. Alerts retain their native shapes and
+scrolling layout, with at least 48dp action targets and no forced app-card
+shape. Reduced motion removes their route transition. This contract carries no
+domain models or deletion/storage behavior.
+
+`AppSurface(role: ...)` resolves `contentCard`, `reviewCard`,
+`floatingToolbar`, `menu`, `modal`, `field` and `sidePanel` against the same
+semantic theme. `AppSurfaceAppearance.resolve` exposes the `OutlinedBorder`
+shape, fill, radius, elevation, shadows and blur for components that paint their
+own frame. Explicit `AppSurface` arguments still override role defaults, and
+callers without a role retain their existing presentation.
+
+Cupertino content/review cards are opaque `sheetColor`, with continuous 18dp
+corners and no shadow. Material cards use the semantic surface and a subtle
+outline with the existing 16dp corner token. Depth belongs to floating controls
+and menus, rather than every card. The capsule clips its 18-sigma backdrop blur
+to its stadium, retaining a 92% neutral fill so small captions stay readable
+over contrasting covers. Its one soft shadow is separate from Material's
+native elevation 2 and `surfaceContainerLow` fill. High contrast and accessible
+navigation use opaque Cupertino floating controls without blur. Flutter 3.50
+does not expose Reduce Transparency, so this is not a claim to detect that
+system setting. Switching accessibility appearance preserves focused fields,
+their selection and IME connection. No continuous animation or timer is added
+for the blur.
 
 ## What Belongs Here
 
@@ -374,12 +407,14 @@ so the measurement uses the same action gutter as the rendered row.
 
 `AppSheetSection` separates the parts of a sheet body that readers must tell
 apart (Translation and Definition results). Android paints an outline;
-iOS paints an opaque `secondarySystemGroupedBackground` with no border.
+iOS uses the `field` role's opaque grouped fill and continuous corners, with no
+border except under high contrast.
 The decoration sits behind content, 10dp from either sheet edge in narrow windows and 12dp in medium
 windows (`outlineInsetFor(context)`, the 24dp gutter less a 48dp target's
 outset), so content keeps the sheet's geometry: text stays on the gutter under
 the sheet title and an `AppSheetActionRow` target reaches exactly to the
-outline. The section pads its content 12dp above and below; content that keeps
+outline. `horizontalInset` can override this background inset without moving
+the section content. The section pads its content 12dp above and below; content that keeps
 its own room, such as an action row with `minTextRoom`, takes
 `EdgeInsets.zero` and puts the `AppSheetSectionTitle` in the row's lead so the
 action stays centered on the text.
@@ -541,12 +576,19 @@ state (a `TabBar` stays mounted when it switches to scrolling).
   Android retains `ModalBottomSheetRoute`. iOS uses a content-sized
   `CupertinoModalPopupRoute`, native spring motion and an opaque Cupertino
   surface without backdrop blur. Its internal `AppCupertinoSheetSurface` is
-  also used by retained bottom sheets: the SDK's 13dp superellipse corners,
+  also used by retained bottom sheets: the modal role's continuous 28dp corners,
   opaque semantic sheet color and resolved light/dark Cupertino scrim are
-  shared. It stays bottom-centred with an 8dp minimum
-  outer safe gap and a 540dp maximum width on tablets; it does not turn a short
-  settings sheet into a nearly full-screen page. Both paths use the root
+  shared. In narrow windows it stays bottom-centred with an 8dp minimum
+  outer safe gap and a 540dp maximum width. Both paths use the root
   navigator and capture inherited app/platform themes.
+  `AppSheetPresentation` keeps purpose separate from placement: `settings`
+  (default) and `form` centre a 540dp modal in expanded windows; `actions` uses
+  the trailing bottom edge; `contextual` fills a flush 420dp trailing panel.
+  Expanded presentations have no drag handle and use explicit Close/scrim.
+  Resizing keeps the same route and keyed content, including its draft/step
+  and focused editor. A multi-step flow keeps one presentation throughout.
+  `ActionBottomSheetLayout.scrollable(expandBody: true)` fills a contextual
+  panel; the default retains the phone's content-fit height cap.
   Cupertino drag movement follows the finger; its slow-drag dismissal threshold
   is half the visible card height. Keyboard/safe-area gaps do not increase it.
   Its opening and closing transitions settle in one frame for either Android's
@@ -594,9 +636,10 @@ state (a `TabBar` stays mounted when it switches to scrolling).
   Tests: `test/app_inline_sheet_test.dart`,
   `test/cupertino_inline_sheet_test.dart`.
   Expanded windows use a 420dp trailing panel with a physical-pixel outline,
-  24dp gutters and full available height above the keyboard. The panel has no
+  no outer gutter and full available height above the keyboard. Its content
+  keeps visual gutters and an inner bottom safe inset. The panel has no
   grip or vertical dismiss gesture; Close and the scrim remain available.
-  It slides fully beyond the trailing gutter in LTR/RTL, consumes its safe
+  It slides fully beyond the trailing edge in LTR/RTL, consumes its safe
   insets once, and keeps the same child slots while the window resizes.
 - `AppSheetDismissGuard` registers with the route's `AppSheetDismissRegistry`;
   holders are ordered and the latest wins, so a step change that mounts the
@@ -688,6 +731,10 @@ state (a `TabBar` stays mounted when it switches to scrolling).
   retain their typefaces; theme swatches retain their sample colors. When
   labels do not fit, text choices become two equal columns or a vertical list;
   they do not shrink or ellipsize. Icon-only choices have localized tooltips.
+  Label widths are cached by text, font, locale, direction and text scale;
+  changing the selected option or animating available width does not reshape
+  every label. Cupertino measurements reserve the selected weight, and its
+  wrapping buttons use the same text style as its segmented variant.
   Fallback buttons merge their selected/group semantics with the named action,
   preserving one accessible control per option like the segmented variant.
 - Custom selected rows use the semantic `selectedControlBackground` accent

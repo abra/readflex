@@ -9,6 +9,8 @@ import 'theme/tokens/app_icon_size.dart';
 import 'theme/tokens/app_sizes.dart';
 import 'theme/tokens/app_spacing.dart';
 
+part 'app_choice_control_measurements.dart';
+
 class AppChoiceOption<T> {
   const AppChoiceOption({
     required this.value,
@@ -36,7 +38,7 @@ class AppChoiceOption<T> {
 
 /// Single choice with shared selected states and accessible touch targets.
 /// Labels wrap into rows when a segmented control would truncate them.
-class AppChoiceControl<T> extends StatelessWidget {
+class AppChoiceControl<T> extends StatefulWidget {
   const AppChoiceControl({
     required this.selected,
     required this.options,
@@ -62,6 +64,20 @@ class AppChoiceControl<T> extends StatelessWidget {
   final bool reselectable;
 
   @override
+  State<AppChoiceControl<T>> createState() => _AppChoiceControlState<T>();
+}
+
+class _AppChoiceControlState<T> extends State<AppChoiceControl<T>> {
+  _AppChoiceMeasurements? _measurements;
+
+  T get selected => widget.selected;
+  List<AppChoiceOption<T>> get options => widget.options;
+  ValueChanged<T>? get onChanged => widget.onChanged;
+  bool get iconOnly => widget.iconOnly;
+  bool get reselectable => widget.reselectable;
+  bool get proportionalWidth => widget.proportionalWidth;
+
+  @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       assert(options.isNotEmpty);
@@ -70,43 +86,35 @@ class AppChoiceControl<T> extends StatelessWidget {
         'iconOnly options need an icon or a glyph.',
       );
       final style = context.text.bodyMedium.copyWith(letterSpacing: 0);
+      final boldText = MediaQuery.boldTextOf(context);
       final useProportionalWidth =
           context.isCupertino && proportionalWidth && !iconOnly;
-      var widest = AppSizes.buttonHeight;
-      var totalWidth = 0.0;
-      if (!iconOnly) {
-        final painter = TextPainter(
-          textDirection: Directionality.of(context),
-          textScaler: MediaQuery.textScalerOf(context),
-          locale: Localizations.maybeLocaleOf(context),
-        );
-        for (final option in options) {
-          final labelStyle = style.merge(option.labelStyle);
-          painter.text = TextSpan(
-            text: option.label,
-            style:
-                useProportionalWidth &&
-                    (labelStyle.fontWeight ?? FontWeight.w400).value <
-                        FontWeight.w600.value
-                ? labelStyle.copyWith(fontWeight: FontWeight.w600)
-                : labelStyle,
-          );
-          painter.layout();
-          final contentWidth =
-              painter.width +
-              (option.hasIcon ? AppIconSize.sm + AppSpacing.sm : 0);
-          final width = useProportionalWidth
-              ? math.max(AppSizes.buttonHeight, contentWidth) +
-                    AppSpacing.md * 2
-              : math.max(
-                  AppSizes.buttonHeight,
-                  contentWidth + AppSpacing.md * 2,
-                );
-          widest = math.max(widest, width);
-          totalWidth += width;
-        }
-        painter.dispose();
+      final measurementKey = _AppChoiceMeasurementKey(
+        labels: [
+          for (final option in options)
+            (
+              label: option.label,
+              style: boldText
+                  ? style
+                        .merge(option.labelStyle)
+                        .copyWith(fontWeight: FontWeight.bold)
+                  : style.merge(option.labelStyle),
+              hasIcon: option.hasIcon,
+            ),
+        ],
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        locale: Localizations.maybeLocaleOf(context),
+        cupertino: context.isCupertino,
+        proportionalWidth: useProportionalWidth,
+        iconOnly: iconOnly,
+      );
+      // Width and selection animations reuse the same label measurements.
+      if (_measurements?.key != measurementKey) {
+        _measurements = _AppChoiceMeasurements.measure(measurementKey);
       }
+      final widest = _measurements!.widest;
+      final totalWidth = _measurements!.totalWidth;
 
       final requiredWidth = useProportionalWidth
           ? totalWidth
@@ -157,7 +165,7 @@ class AppChoiceControl<T> extends StatelessWidget {
                                     ? FontWeight.w600
                                     : FontWeight.w400,
                               ),
-                              child: _AppCupertinoChoiceContent(
+                              child: _AppChoiceContent(
                                 option: options[i],
                                 iconOnly: iconOnly,
                               ),
@@ -183,26 +191,26 @@ class AppChoiceControl<T> extends StatelessWidget {
               for (final option in options)
                 ButtonSegment(
                   value: option.value,
-                  label: iconOnly
-                      ? null
-                      : ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            minHeight:
-                                AppSizes.buttonHeight - AppSpacing.sm * 2,
-                          ),
-                          child: Center(
-                            widthFactor: 1,
-                            heightFactor: 1,
-                            child: _AppChoiceLabel(option: option),
-                          ),
-                        ),
-                  icon: option.hasIcon
-                      ? SizedBox(
-                          width: AppIconSize.sm,
-                          height: AppSizes.buttonHeight - AppSpacing.sm * 2,
-                          child: _AppChoiceIcon(option: option),
-                        )
-                      : null,
+                  // Keep icon/label spacing inside the segment. Native
+                  // icon segments replace themed padding asymmetrically.
+                  label: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: AppSizes.buttonHeight - AppSpacing.sm * 2,
+                    ),
+                    child: Center(
+                      widthFactor: 1,
+                      heightFactor: 1,
+                      child: iconOnly
+                          ? SizedBox.square(
+                              dimension: AppIconSize.sm,
+                              child: _AppChoiceIcon(option: option),
+                            )
+                          : _AppChoiceContent(
+                              option: option,
+                              iconOnly: false,
+                            ),
+                    ),
+                  ),
                   tooltip: iconOnly ? option.label : null,
                 ),
             ],
@@ -239,9 +247,22 @@ class AppChoiceControl<T> extends StatelessWidget {
                     selected: selected == option.value,
                     inMutuallyExclusiveGroup: true,
                     child: AppButton.tonal(
+                      textStyle: style.copyWith(
+                        fontWeight: selected == option.value
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                      ),
                       onPressed: onChanged == null
                           ? null
-                          : () => onChanged!(option.value),
+                          : () {
+                              // Cupertino cannot segment one option; its
+                              // standalone command remains actionable.
+                              if (options.length == 1 ||
+                                  reselectable ||
+                                  selected != option.value) {
+                                onChanged!(option.value);
+                              }
+                            },
                       backgroundColor: selected == option.value
                           ? context.colors.selectedControlBackground
                           : cupertino.CupertinoColors.tertiarySystemFill
@@ -249,7 +270,11 @@ class AppChoiceControl<T> extends StatelessWidget {
                       foregroundColor: selected == option.value
                           ? context.actionForeground
                           : context.colors.onSurface,
-                      child: _AppCupertinoChoiceContent(
+                      disabledBackgroundColor: selected == option.value
+                          ? context.colors.selectedControlBackground
+                          : cupertino.CupertinoColors.tertiarySystemFill
+                                .resolveFrom(context),
+                      child: _AppChoiceContent(
                         option: option,
                         iconOnly: iconOnly,
                       ),
@@ -292,7 +317,11 @@ class AppChoiceControl<T> extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: onChanged == null
                         ? null
-                        : () => onChanged!(option.value),
+                        : () {
+                            if (reselectable || selected != option.value) {
+                              onChanged!(option.value);
+                            }
+                          },
                     style: optionStyle(option.value),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -317,8 +346,8 @@ class AppChoiceControl<T> extends StatelessWidget {
   );
 }
 
-class _AppCupertinoChoiceContent extends StatelessWidget {
-  const _AppCupertinoChoiceContent({
+class _AppChoiceContent extends StatelessWidget {
+  const _AppChoiceContent({
     required this.option,
     required this.iconOnly,
   });

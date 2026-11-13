@@ -1,9 +1,9 @@
 import 'dart:io';
 
-// Device-side port is forwarded to an ephemeral host port by the test driver.
+// Android forwards this to an ephemeral host port; iOS Simulator shares it.
 const nativeScreenshotPort = 34179;
 
-Future<void> captureAndroidScreenshot(String name) async {
+Future<void> captureNativeScreenshot(String name) async {
   final client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
   try {
     final request = await client.getUrl(
@@ -16,12 +16,16 @@ Future<void> captureAndroidScreenshot(String name) async {
     }
   } on SocketException {
     throw StateError(
-      'Android screenshots require make test-device DEVICE=<id>',
+      'Native screenshots require ui_driver.dart with READFLEX_NATIVE_DEVICE '
+      '(Android or iOS Simulator)',
     );
   } finally {
     client.close(force: true);
   }
 }
+
+Future<void> captureAndroidScreenshot(String name) =>
+    captureNativeScreenshot(name);
 
 /// Test-only screenshot transport. No Flutter surface conversion or app hooks.
 final class NativeScreenshotServer {
@@ -33,8 +37,9 @@ final class NativeScreenshotServer {
   static Future<NativeScreenshotServer> start({
     required Future<List<int>> Function() capture,
     required Future<bool> Function(String, List<int>) save,
+    int port = 0,
   }) async {
-    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
     var busy = false;
     server.listen((request) async {
       final path = request.uri.pathSegments;
@@ -89,6 +94,30 @@ Future<List<int>> captureAdbScreenshot(String device) async {
     final code = await process.exitCode.timeout(const Duration(seconds: 10));
     await errors;
     if (code != 0) throw StateError('ADB screenshot failed ($code)');
+    return await bytes;
+  } finally {
+    process.kill();
+  }
+}
+
+Future<List<int>> captureSimulatorScreenshot(String device) async {
+  final process = await Process.start('xcrun', [
+    'simctl',
+    'io',
+    device,
+    'screenshot',
+    '--type=png',
+    '-',
+  ]);
+  final bytes = process.stdout.fold<List<int>>(
+    [],
+    (data, chunk) => data..addAll(chunk),
+  );
+  final errors = process.stderr.drain<void>();
+  try {
+    final code = await process.exitCode.timeout(const Duration(seconds: 10));
+    await errors;
+    if (code != 0) throw StateError('iOS Simulator screenshot failed ($code)');
     return await bytes;
   } finally {
     process.kill();
