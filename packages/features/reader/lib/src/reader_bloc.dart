@@ -8,15 +8,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
+import 'reader_document.dart';
 import 'reader_document_features.dart';
 import 'reader_position.dart';
 import 'reader_progress_label.dart';
 import 'reader_toc_item.dart';
 
+export 'reader_document.dart';
+
 part 'reader_event.dart';
-
-part 'reader_document.dart';
-
 part 'reader_state.dart';
 part 'reader_bookmark_operations.dart';
 part 'reader_highlight_operations.dart';

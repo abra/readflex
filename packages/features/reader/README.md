@@ -17,10 +17,11 @@ selection-theme overrides; app actions remain custom.
 Start with the dependency injection in [app routing](../../../lib/app/routing.dart),
 then [ReaderScreen](lib/src/reader_screen.dart), the
 [state owners](#architecture--independent-units-of-state) and the format bodies
-below. `reader_screen.dart` and its `part` files form **one Dart library**:
-they share imports and private declarations. The split groups screen composition,
-lifecycle, five format bodies, chrome, drawers and context panels; these files
-are not independently importable modules.
+below. Screen composition, format hosts, chrome, drawers, selection actions and
+lifecycle are independent Dart libraries with explicit imports. Their private
+state is local to each library; format hosts do not import each other or the
+screen's UI. The package barrel exposes `ReaderScreen` and `CopyTextAction`,
+while implementation widgets remain under `src/`.
 
 | Step | Owner and contract |
 |---|---|
@@ -28,6 +29,36 @@ are not independently importable modules.
 | Open and draw | [Screen content](lib/src/reader_screen_content.dart) selects the text, article, comic, PDF or DjVu body. The body owns its Pagecraft source/controller, reports first-page readiness and releases them on disposal. |
 | Navigate and select | [ReaderSurface](lib/src/reader_surface.dart) receives commands from chrome/drawers; body callbacks report positions, search and selection to their state owners. Views receive state and UI callbacks, not repositories. |
 | Persist and leave | `ReaderBloc` updates live position immediately, debounces writes by 500ms and drains pending writes on `close`. [Lifecycle scopes](lib/src/reader_screen_lifecycle.dart) release temporary brightness and keep-awake requests on background/disposal. |
+
+### Internal module boundaries
+
+| Module | Responsibility |
+|---|---|
+| `reader_screen.dart` | Inject repositories/services into blocs and cubits, then mount `ReaderView`; no engine imports or format bodies. |
+| `reader_screen_content.dart` | Loading/error/ready composition, surface selection, panel callbacks and the existing overlay stack. |
+| `reader_screen_{text,article,comic,pdf,djvu}_body.dart` | Own one format's open generation, Pagecraft source, controller, caches and surface session; translate page events into bloc/cubit updates and detach/dispose on close. |
+| `reader_screen_chrome.dart`, `reader_screen_cupertino_actions.dart` | Read UI state and build platform controls. Both platform layouts use `reader_chrome_action_button.dart`, without importing each other's internals. |
+| `reader_screen_drawers.dart` | Contents, pages, bookmarks and highlights; thumbnail callbacks keep engine objects outside list widgets. |
+| `reader_screen_context_panel.dart` | Selection actions and saved-highlight popups through `TextAction` and `ReaderSurface`. |
+| `reader_screen_lifecycle.dart` | Source-open notification, foreground brightness and keep-awake scopes. |
+| `reader_document.dart` | Source-neutral immutable value contract, independent of Flutter and blocs. Re-exported by `reader_bloc.dart` for existing callers. |
+
+[ReaderSearchNavigator](lib/src/reader_search_navigator.dart) owns pending search jumps, their generation guards and
+the pre-keyboard return location. The ready-content host supplies the current
+`ReaderSurface`, source type, panel-close callback and end-of-frame wait. The
+navigator neither owns nor closes cubits/controllers. Disposal, search reset and
+surface reload invalidate pending navigation; query replacement also cancels a
+pending result selection. Returning to an article restores its fraction, while
+books restore the bookmark anchor.
+
+Shared page policies live in `reader_page_turn.dart`, `reader_page_input.dart`
+and `reader_page_location.dart`. Text and article hosts share
+`reader_text_style.dart` and `reader_text_annotations.dart`; DjVu does not reach
+into PDF implementation for page/selection helpers. These modules add no
+streams, per-frame storage work, controllers or rendering widgets.
+[reader_module_boundaries_test.dart](test/reader_module_boundaries_test.dart) checks the acyclic import/export graph,
+format isolation and source-contract boundaries. The remaining `ReaderBloc`
+parts belong to one state machine, rather than a shared screen library.
 
 For changes to opening, restoration or disposal, begin with
 [bloc tests](test/reader_bloc_test.dart) and the screen tests for

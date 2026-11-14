@@ -639,6 +639,29 @@ Reader-specific UI state is split by responsibility:
   driver in the content stack feeds it reader state and the content's
   position handler reports book page turns.
 
+Reader screen composition and presentation are independent Dart libraries:
+
+- `reader_screen.dart` injects repositories/services into blocs/cubits and
+  mounts `ReaderView`; it imports no Pagecraft engine or format body.
+- `reader_screen_content.dart` selects the format and composes the existing
+  page/overlay stack. Each format body owns its Pagecraft source, controller,
+  caches and attach/detach lifecycle, communicates through `ReaderSurface`,
+  and never imports another body or the screen/chrome/drawers.
+- Chrome, Cupertino action layout, Contents, selection panels and lifecycle
+  scopes have explicit imports and library-local private state. Shared action
+  data/buttons remove the platform layouts' former circular private coupling.
+- `ReaderSearchNavigator` coordinates search jumps and return locations through
+  the surface contract. Its host injects frame completion and panel callbacks;
+  generation/disposal guards drop obsolete jumps without rebuilding the page
+  or taking ownership of injected cubits/controllers.
+- `ReaderDocument` is a source-neutral value contract independent of Flutter
+  and blocs. Page input/location/turn policies and shared text style/annotation
+  policies live outside format hosts; PDF and DjVu share those contracts rather
+  than reaching into each other's implementation.
+
+Screen UI no longer uses `part` files. `ReaderBloc` retains parts for its events,
+state and annotation operations within that single state machine.
+
 The page is kept behind ready-state reader composition so routine UI changes
 do not recreate it. Every source is drawn by pagecraft; there is no WebView and
 no local reader server (the last revision with them is
@@ -804,9 +827,9 @@ every debounced reader-position write.
 
 Library loads book metadata and a lightweight SQL projection of article metadata,
 then caches its filtered/sorted visible items per state. Article body text and
-reader anchors are not read for the list. SQL pagination and further Reader
-controller decomposition remain separate work requiring behavioral/performance
-baselines; the current projection keeps existing search/filter semantics.
+reader anchors are not read for the list. SQL pagination remains separate work
+requiring behavioral/performance baselines; the current projection keeps existing
+search/filter semantics.
 
 ## Data, Models, and Mapping
 
@@ -1039,6 +1062,8 @@ These checks do not prove all dependency flow: dynamically typed objects,
 closure captures, method-local service access and UI classes without the
 `View` naming convention still need review. Pagecraft's
 `library_boundaries_test.dart` additionally checks its internal format graph.
+Reader's `reader_module_boundaries_test.dart` checks its acyclic import/export
+graph, screen/renderer isolation and the standalone document contract.
 There is no committed CI workflow in this checkout; the Make targets describe
 local checks, not evidence that a remote pipeline has run.
 

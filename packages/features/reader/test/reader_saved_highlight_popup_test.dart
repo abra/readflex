@@ -1,10 +1,10 @@
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:reader/src/reader_highlight_controls.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:reader/src/reader_highlight_color.dart';
-import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_highlight_controls.dart';
+import 'package:reader/src/reader_screen_context_panel.dart';
 import 'package:reader/src/reader_selection.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 

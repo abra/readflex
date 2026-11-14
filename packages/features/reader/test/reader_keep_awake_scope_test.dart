@@ -1,12 +1,12 @@
 import 'dart:async';
 
+import 'package:domain_models/domain_models.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:domain_models/domain_models.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_keep_awake_cubit.dart';
-import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_screen_lifecycle.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:screen_control_service/screen_control_service.dart';
 

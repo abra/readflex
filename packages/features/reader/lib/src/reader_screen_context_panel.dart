@@ -1,4 +1,29 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:pagecraft/pagecraft.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:shared/shared.dart';
+import 'package:toast_service/toast_service.dart';
+
+import 'reader_appearance_cubit.dart';
+import 'reader_bloc.dart';
+import 'reader_diagnostics.dart';
+import 'reader_highlight_color.dart';
+import 'reader_highlight_controls.dart';
+import 'reader_highlight_focus_cubit.dart';
+import 'reader_highlight_merge.dart';
+import 'reader_highlight_note_sheet.dart';
+import 'reader_image_highlight_cubit.dart';
+import 'reader_image_selection_cubit.dart';
+import 'reader_image_selection_popup_layout.dart';
+import 'reader_selection.dart';
+import 'reader_selection_cubit.dart';
+import 'reader_surface.dart';
 
 const _kHighlightPopupColorCount = 5;
 const _kHighlightSwatchTapSize = ReaderHighlightControls.tapTargetSize;
@@ -56,8 +81,12 @@ TextSelectionContext _withLiveReaderSelection(
 
 /// Reads selection from [ReaderSelectionCubit] and source info from
 /// [ReaderBloc] to show/hide the text-action context panel.
-class _ContextPanelDriver extends StatelessWidget {
-  const _ContextPanelDriver({required this.textActions, required this.surface});
+class ReaderContextPanelDriver extends StatelessWidget {
+  const ReaderContextPanelDriver({
+    super.key,
+    required this.textActions,
+    required this.surface,
+  });
 
   final List<TextAction> textActions;
   final ReaderSurface surface;
@@ -151,7 +180,7 @@ class _ContextPanelDriver extends StatelessWidget {
       );
     }
 
-    if (!_selectionActionsVisible(sel.hasSelection)) {
+    if (!sel.hasSelection) {
       if (imageSel.hasSelection &&
           imageSel.pageIndex != null &&
           imageSel.rect != null) {
@@ -928,11 +957,11 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
 
   @override
   void dispose() {
-    _debugTraceReaderHighlight(
+    debugTraceReaderHighlight(
       'popup-dispose '
       'source=${widget.selection.sourceId} '
-      'text="${_readerHighlightTraceText(widget.selection.selectedText)}" '
-      'anchor=${_readerHighlightTraceAnchor(widget.selection.cfiRange)}',
+      'text="${readerHighlightTraceText(widget.selection.selectedText)}" '
+      'anchor=${readerHighlightTraceAnchor(widget.selection.cfiRange)}',
     );
     widget.onPreviewCleared();
     super.dispose();
@@ -945,12 +974,12 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
     try {
       final selection = await _resolveSelectionForAction();
       if (!mounted) return;
-      _debugTraceReaderHighlight(
+      debugTraceReaderHighlight(
         'save-start '
         'op=$operationId '
         'source=${selection.sourceId} '
-        'text="${_readerHighlightTraceText(selection.selectedText)}" '
-        'anchor=${_readerHighlightTraceAnchor(selection.cfiRange)} '
+        'text="${readerHighlightTraceText(selection.selectedText)}" '
+        'anchor=${readerHighlightTraceAnchor(selection.cfiRange)} '
         'color=${_selectedColor.name} '
         'merge=${selection.highlightMerge?.highlightIds.length ?? 0}',
       );
@@ -959,11 +988,11 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
         selection,
         _selectedColor,
       );
-      _debugTraceReaderHighlight('save-action-success op=$operationId');
+      debugTraceReaderHighlight('save-action-success op=$operationId');
       if (!mounted) return;
       widget.onActionCompleted();
     } catch (error, stack) {
-      _debugTraceReaderHighlight(
+      debugTraceReaderHighlight(
         'save-failed '
         'op=$operationId '
         'error=${error.runtimeType} '
@@ -1030,11 +1059,11 @@ class _HighlightSelectionPopupState extends State<_HighlightSelectionPopup> {
                   if (_busy || (_hasColorPreview && _selectedColor == color)) {
                     return;
                   }
-                  _debugTraceReaderHighlight(
+                  debugTraceReaderHighlight(
                     'preview-color '
                     'source=${widget.selection.sourceId} '
-                    'text="${_readerHighlightTraceText(widget.selection.selectedText)}" '
-                    'anchor=${_readerHighlightTraceAnchor(widget.selection.cfiRange)} '
+                    'text="${readerHighlightTraceText(widget.selection.selectedText)}" '
+                    'anchor=${readerHighlightTraceAnchor(widget.selection.cfiRange)} '
                     'color=${color.name}',
                   );
                   setState(() {

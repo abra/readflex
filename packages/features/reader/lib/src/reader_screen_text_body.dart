@@ -1,12 +1,47 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pagecraft/all_formats.dart';
+import 'package:preferences_service/preferences_service.dart';
+
+import 'reader_bloc.dart';
+import 'reader_diagnostics.dart';
+import 'reader_document_features.dart';
+import 'reader_font_ink.dart';
+import 'reader_highlight_color.dart';
+import 'reader_highlight_focus_cubit.dart';
+import 'reader_highlight_merge.dart';
+import 'reader_image_selection_cubit.dart';
+import 'reader_page_input.dart';
+import 'reader_page_location.dart';
+import 'reader_page_turn.dart';
+import 'reader_position.dart';
+import 'reader_search_occlusion.dart';
+import 'reader_selection.dart';
+import 'reader_selection_cubit.dart';
+import 'reader_surface.dart';
+import 'reader_tap_action.dart';
+import 'reader_text_annotations.dart';
+import 'reader_text_columns.dart';
+import 'reader_text_selection_style.dart';
+import 'reader_text_style.dart';
+import 'reader_text_surface.dart';
+import 'reader_toc_item.dart';
+import 'reader_ui_cubit.dart';
 
 /// Hosts the text engine (`package:pagecraft`) for EPUB, FB2 and MOBI books
 /// and translates its events into the reader bloc and cubit updates every
 /// page body produces: position, table of contents, bookmarks,
 /// text selection with its context, saved highlights, search marks,
 /// links and notes.
-class _ReaderTextBody extends StatefulWidget {
-  const _ReaderTextBody({
+class ReaderTextBody extends StatefulWidget {
+  const ReaderTextBody({
     super.key,
     required this.document,
     required this.readerTheme,
@@ -33,10 +68,10 @@ class _ReaderTextBody extends StatefulWidget {
   final ValueChanged<String>? onExternalLink;
 
   @override
-  State<_ReaderTextBody> createState() => _ReaderTextBodyState();
+  State<ReaderTextBody> createState() => _ReaderTextBodyState();
 }
 
-class _ReaderTextBodyState extends State<_ReaderTextBody> {
+class _ReaderTextBodyState extends State<ReaderTextBody> {
   Object? _book;
   TextBookSource? _source;
   TextPagesController? _controller;
@@ -85,7 +120,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
   }
 
   @override
-  void didUpdateWidget(covariant _ReaderTextBody oldWidget) {
+  void didUpdateWidget(covariant ReaderTextBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.document.id != widget.document.id ||
         oldWidget.document.filePath != widget.document.filePath) {
@@ -120,7 +155,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       source = textBookSourceOf(book);
     } catch (error, stackTrace) {
       if (!mounted || generation != _openGeneration) return;
-      _debugTraceReader('_ReaderTextBody open failed: $error');
+      debugTraceReader('ReaderTextBody open failed: $error');
       context.read<ReaderBloc>().add(
         ReaderSurfaceFailed(
           sourceId: document.id,
@@ -135,7 +170,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       return;
     }
     // WebKit's line boxes need the reader's fonts' ink.
-    _fontInk = _webKitLines ? await readerFontInk() : const {};
+    _fontInk = readerUsesWebKitLines ? await readerFontInk() : const {};
     if (!mounted || generation != _openGeneration) {
       unawaited(source.close());
       return;
@@ -215,7 +250,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       ..settings = _pageSettings();
   }
 
-  BookStyle _bookStyle() => _pagecraftBookStyle(
+  BookStyle _bookStyle() => readerBookStyle(
     context,
     appearance: widget.appearance,
     theme: widget.readerTheme,
@@ -223,7 +258,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
 
   /// CSS generics resolve to the app's bundled faces; symbols come from the
   /// symbol font.
-  BookFonts _bookFonts() => _pagecraftBookFonts(_fontInk);
+  BookFonts _bookFonts() => readerBookFonts(_fontInk);
 
   /// The reader's fonts' ink, for WebKit's line boxes.
   Map<String, FontInk> _fontInk = const {};
@@ -238,7 +273,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       columns: appearance.columns,
     );
     final em = columns.maxLineWidthEm;
-    final fontSize = layout.fontSize * _pagecraftDeviceFontScale(context);
+    final fontSize = layout.fontSize * readerPageDeviceFontScale(context);
     return TextPageSettings(
       sideMarginPercent: appearance.sideMargin,
       topMargin: layout.topMargin,
@@ -278,7 +313,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
 
   String? _chapterTitleOf(int section) {
     final label = _controller?.tocItemOf(section)?.label;
-    return label == null ? null : _nativeChapterTitle(label);
+    return label == null ? null : readerChapterTitle(label);
   }
 
   // Position and bookmarks.
@@ -355,7 +390,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       fraction: atEnd ? 1 : position.fraction,
       chapterTitle: position.tocItem == null
           ? null
-          : _nativeChapterTitle(position.tocItem!.label),
+          : readerChapterTitle(position.tocItem!.label),
       chapterCurrentPage: position.spread + 1,
       chapterTotalPages: position.spreadCount,
       bookCurrentPage: progress.location,
@@ -389,8 +424,8 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
     if (position == null) return;
     _reportedPosition = _controller?.position;
     _reportedBookmark = position.bookmarkExists;
-    _debugTraceReader(
-      '_ReaderTextBody position '
+    debugTraceReader(
+      'ReaderTextBody position '
       'page=${position.chapterCurrentPage}/${position.chapterTotalPages} '
       'progress=${position.fraction.toStringAsFixed(3)} '
       'reason=${position.relocationReason}',
@@ -679,15 +714,15 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       ...cached.items,
       if (previewRange != null)
         TextHighlight(
-          id: _previewHighlightId,
+          id: readerSelectionPreviewId,
           range: previewRange,
           color: preview!.color,
         ),
       if (searchRange != null)
         TextHighlight(
-          id: _searchActiveHighlightId,
+          id: readerSearchActiveHighlightId,
           range: searchRange,
-          color: _searchMarkColor,
+          color: readerSearchMarkColor,
         ),
     ];
   }
@@ -705,7 +740,7 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
   }
 
   void _onHighlightTap(TextHighlight highlight, Rect rect) {
-    if (_tintIds.contains(highlight.id)) return;
+    if (readerTransientHighlightIds.contains(highlight.id)) return;
     context.read<ReaderUiCubit>().hideChrome();
     context.read<ReaderSelectionCubit>().deselect();
     context.read<ReaderImageSelectionCubit>().deselect();
@@ -814,19 +849,19 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
     final pageTurnStyle = widget.appearance.pageTurnStyle;
     final pages = TextPagesView(
       controller: controller,
-      axis: _nativePageAxis(pageTurnStyle),
-      pageTurnAnimation: _nativePageTurnAnimation(
+      axis: readerPageAxis(pageTurnStyle),
+      pageTurnAnimation: readerPageTurnAnimation(
         widget.appearance.pageAnimation,
       ),
       backgroundColor: theme.backgroundColor,
       highlightsOf: (section) => _highlightsOf(section, highlights),
-      onTap: (point) => _dispatchReaderTap(
+      onTap: (point) => dispatchReaderTap(
         context,
         x: point.dx,
         y: point.dy,
         surface: surface,
         isComic: false,
-        axis: _readerTapAxisForPageTurnStyle(pageTurnStyle),
+        axis: readerTapAxisForPageTurnStyle(pageTurnStyle),
       ),
       onLinkTap: (section, link) => unawaited(_onLinkTap(section, link)),
       onHighlightTap: _onHighlightTap,
@@ -834,12 +869,12 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
       onSelectionTap: (point) => _turnWithSelection(
         point,
         surface: surface,
-        axis: _readerTapAxisForPageTurnStyle(pageTurnStyle),
+        axis: readerTapAxisForPageTurnStyle(pageTurnStyle),
       ),
       onSelectionAdjusting: context.read<ReaderSelectionCubit>().setAdjusting,
       // The reader shows its own context panel for a selection.
       contextMenuBuilder: (context, state) => const SizedBox.shrink(),
-      trackedHighlight: _searchActiveHighlightId,
+      trackedHighlight: readerSearchActiveHighlightId,
       onHighlightRects: (rects) => _activeHitRects.value = rects,
     );
     return Stack(
@@ -855,111 +890,6 @@ class _ReaderTextBodyState extends State<_ReaderTextBody> {
     );
   }
 }
-
-/// The reader's style for text pagecraft lays out, on top of the book's own
-/// CSS.
-BookStyle _pagecraftBookStyle(
-  BuildContext context, {
-  required ReaderAppearancePreferences appearance,
-  required ReaderThemeData theme,
-}) {
-  final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
-  final font = ReaderFontPreset.fromId(appearance.fontId);
-  final fontScale = layout.fontSize * _pagecraftDeviceFontScale(context);
-  return BookStyle(
-    fontScale: fontScale,
-    fontFamily: font.fontFamily,
-    fontWeight: layout.fontWeight.round(),
-    letterSpacing: layout.letterSpacing,
-    lineHeight: appearance.lineHeight,
-    paragraphSpacing: layout.paragraphSpacing,
-    textIndent: layout.textIndent,
-    textColor: theme.primaryTextColor.toARGB32(),
-    backgroundColor: theme.backgroundColor.toARGB32(),
-    justify: appearance.textAlignment == ReaderTextAlignment.justify,
-    overrideFont: appearance.overrideFont,
-    overrideColor: appearance.overrideColor,
-    useBookLayout: appearance.useBookLayout,
-    // Pages hold as many lines as the WebView reader's did: on iOS it was
-    // WebKit, whose line heights are whole pixels and, under foliate-js's
-    // `-webkit-line-box-contain`, never shorter than the glyphs.
-    wholePixelLineHeights: _webKitLines,
-    glyphLineBoxes: _webKitLines,
-    // The WebView reader's limits: WebKit-only properties, so Android
-    // hyphenated with Chromium's defaults.
-    hyphenate: layout.hyphenate,
-    hyphenateLimitBefore: _webKitLines ? 3 : 2,
-    hyphenateLimitLines: _webKitLines ? 2 : null,
-    // Text size, headings, quotes, code and link colours.
-    readerStyleSheet: buildBookCustomCSS(
-      theme: theme,
-      sizes: BookCustomCssSizes(
-        rootFontSize: 16 * fontScale,
-        textScale: appearance.textScale,
-        lineHeight: appearance.lineHeight,
-      ),
-    ),
-    media: _pagecraftMedia(context),
-  );
-}
-
-/// The window the book's media queries and viewport units see: the
-/// reader's, on this screen, in the system's colour scheme.
-CssMediaEnvironment _pagecraftMedia(BuildContext context) {
-  final window = MediaQuery.sizeOf(context);
-  final display = View.maybeOf(context)?.display;
-  final screen = display == null || display.size.isEmpty
-      ? window
-      : display.size / display.devicePixelRatio;
-  return CssMediaEnvironment(
-    viewportWidth: window.width,
-    viewportHeight: window.height,
-    deviceWidth: screen.width,
-    deviceHeight: screen.height,
-    devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
-    darkColorScheme:
-        MediaQuery.platformBrightnessOf(context) == Brightness.dark,
-    reducedMotion: context.reduceMotion,
-  );
-}
-
-/// Whether the WebView reader on this platform was WebKit's, whose lines
-/// the pages keep.
-bool get _webKitLines =>
-    defaultTargetPlatform == TargetPlatform.iOS ||
-    defaultTargetPlatform == TargetPlatform.macOS;
-
-double _pagecraftDeviceFontScale(BuildContext context) => readerDeviceFontScale(
-  platform: defaultTargetPlatform,
-  viewportSize: MediaQuery.sizeOf(context),
-);
-
-/// CSS generics resolve to the app's bundled faces; symbols come from the
-/// symbol font; [ink] is the reader's fonts' ink, for WebKit's line
-/// boxes.
-BookFonts _pagecraftBookFonts(Map<String, FontInk> ink) => BookFonts(
-  serif: AppTypography.fontFamilySerif,
-  sansSerif: AppTypography.fontFamilyOpenSans,
-  monospace: defaultTargetPlatform == TargetPlatform.iOS
-      ? 'Menlo'
-      : 'monospace',
-  fallback: const [AppTypography.fontFamilySymbols],
-  ink: ink,
-);
-
-const _previewHighlightId = 'readflex-selection-preview';
-const _searchHighlightId = 'readflex-search-mark';
-const _searchActiveHighlightId = 'readflex-search-active';
-
-/// Tints that are not saved highlights: taps on them fall through.
-const _tintIds = {
-  _previewHighlightId,
-  _searchHighlightId,
-  _searchActiveHighlightId,
-};
-
-/// The active search hit's tint.
-const _searchMarkColor = Color(0x66FFB300);
 
 /// Opens a reflowable book file with pagecraft by its format.
 Future<Object> _openTextBook(ReaderDocument document) async {

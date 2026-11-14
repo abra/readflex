@@ -14,7 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
-import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_screen_chrome.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';

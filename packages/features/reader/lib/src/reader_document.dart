@@ -1,4 +1,5 @@
-part of 'reader_bloc.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:equatable/equatable.dart';
 
 /// Source-neutral document shape used by the reader UI.
 ///

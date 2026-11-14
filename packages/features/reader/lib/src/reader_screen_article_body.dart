@@ -1,4 +1,35 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pagecraft/article.dart';
+import 'package:preferences_service/preferences_service.dart';
+
+import 'reader_article_progress_cubit.dart';
+import 'reader_article_surface.dart';
+import 'reader_bloc.dart';
+import 'reader_diagnostics.dart';
+import 'reader_document_features.dart';
+import 'reader_font_ink.dart';
+import 'reader_highlight_color.dart';
+import 'reader_highlight_focus_cubit.dart';
+import 'reader_highlight_merge.dart';
+import 'reader_image_selection_cubit.dart';
+import 'reader_position.dart';
+import 'reader_search_occlusion.dart';
+import 'reader_selection.dart';
+import 'reader_selection_cubit.dart';
+import 'reader_text_annotations.dart';
+import 'reader_text_columns.dart';
+import 'reader_text_selection_style.dart';
+import 'reader_text_style.dart';
+import 'reader_toc_item.dart';
+import 'reader_ui_cubit.dart';
 
 /// Hosts a saved article on the text engine (`package:pagecraft`) as one
 /// scrolling column and translates its events into the reader bloc and
@@ -6,8 +37,8 @@ part of 'reader_screen.dart';
 /// (the sentence at the middle of the view, its heading, minutes left),
 /// contents, sentence bookmarks, selections with their anchors and
 /// context, saved highlights, search tints and links.
-class _ReaderArticleBody extends StatefulWidget {
-  const _ReaderArticleBody({
+class ReaderArticleBody extends StatefulWidget {
+  const ReaderArticleBody({
     super.key,
     required this.document,
     required this.readerTheme,
@@ -34,10 +65,10 @@ class _ReaderArticleBody extends StatefulWidget {
   final ValueChanged<String>? onExternalLink;
 
   @override
-  State<_ReaderArticleBody> createState() => _ReaderArticleBodyState();
+  State<ReaderArticleBody> createState() => _ReaderArticleBodyState();
 }
 
-class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
+class _ReaderArticleBodyState extends State<ReaderArticleBody> {
   late final ReaderArticleProgressCubit _progressCubit;
   ArticleTextSource? _source;
   TextScrollController? _controller;
@@ -107,7 +138,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
   }
 
   @override
-  void didUpdateWidget(covariant _ReaderArticleBody oldWidget) {
+  void didUpdateWidget(covariant ReaderArticleBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.document.id != widget.document.id ||
         oldWidget.document.filePath != widget.document.filePath) {
@@ -144,7 +175,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
       );
     } catch (error, stackTrace) {
       if (!mounted || generation != _openGeneration) return;
-      _debugTraceReader('_ReaderArticleBody open failed: $error');
+      debugTraceReader('ReaderArticleBody open failed: $error');
       context.read<ReaderBloc>().add(
         ReaderSurfaceFailed(
           sourceId: document.id,
@@ -159,7 +190,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
       return;
     }
     // WebKit's line boxes need the reader's fonts' ink.
-    _fontInk = _webKitLines ? await readerFontInk() : const {};
+    _fontInk = readerUsesWebKitLines ? await readerFontInk() : const {};
     if (!mounted || generation != _openGeneration) {
       unawaited(source.close());
       return;
@@ -169,7 +200,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
     final controller = TextScrollController(
       source: source,
       style: _bookStyle(),
-      fonts: _pagecraftBookFonts(_fontInk),
+      fonts: readerBookFonts(_fontInk),
       images: images,
       settings: _pageSettings(),
       initialPoint: opening.anchor == null
@@ -257,7 +288,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
     if (controller == null) return;
     controller
       ..style = _bookStyle()
-      ..fonts = _pagecraftBookFonts(_fontInk)
+      ..fonts = readerBookFonts(_fontInk)
       ..settings = _pageSettings();
   }
 
@@ -266,7 +297,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
   /// article shell, whose softer captions, quotes and table rules come
   /// before the reader's sheet (its dark theme sets its own).
   BookStyle _bookStyle() {
-    final style = _pagecraftBookStyle(
+    final style = readerBookStyle(
       context,
       appearance: widget.appearance,
       theme: widget.readerTheme,
@@ -307,7 +338,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
       columns: null,
     );
     final em = columns.maxLineWidthEm;
-    final fontSize = layout.fontSize * _pagecraftDeviceFontScale(context);
+    final fontSize = layout.fontSize * readerPageDeviceFontScale(context);
     final side = appearance.sideMargin;
     return TextPageSettings(
       sideMarginPercent: side >= 0 && side < 100
@@ -455,8 +486,8 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
       ..reset()
       ..start();
     final position = next.position;
-    _debugTraceReader(
-      '_ReaderArticleBody position '
+    debugTraceReader(
+      'ReaderArticleBody position '
       'progress=${position.fraction.toStringAsFixed(3)} '
       'chapter=${position.chapterTitle} '
       'reason=${position.relocationReason}',
@@ -767,19 +798,19 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
         for (final hit in hits)
           if (hit.range case final range? when hit.cfi != active)
             TextHighlight(
-              id: _searchHighlightId,
+              id: readerSearchHighlightId,
               range: range,
               color: _searchMatchColor,
             ),
       if (activeRange != null)
         TextHighlight(
-          id: _searchActiveHighlightId,
+          id: readerSearchActiveHighlightId,
           range: activeRange,
-          color: _searchMarkColor,
+          color: readerSearchMarkColor,
         ),
       if (previewRange != null)
         TextHighlight(
-          id: _previewHighlightId,
+          id: readerSelectionPreviewId,
           range: previewRange,
           color: preview!.color,
         ),
@@ -787,7 +818,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
   }
 
   void _onHighlightTap(TextHighlight highlight, Rect rect) {
-    if (_tintIds.contains(highlight.id)) return;
+    if (readerTransientHighlightIds.contains(highlight.id)) return;
     context.read<ReaderUiCubit>().hideChrome();
     context.read<ReaderSelectionCubit>().deselect();
     context.read<ReaderImageSelectionCubit>().deselect();
@@ -857,7 +888,7 @@ class _ReaderArticleBodyState extends State<_ReaderArticleBody> {
                   .setAdjusting,
               // The reader shows its own context panel for a selection.
               contextMenuBuilder: (context, state) => const SizedBox.shrink(),
-              trackedHighlight: _searchActiveHighlightId,
+              trackedHighlight: readerSearchActiveHighlightId,
               onHighlightRects: (rects) => _activeHitRects.value = rects,
             ),
           ),
@@ -910,3 +941,33 @@ const _articleEndThreshold = 0.999;
 
 /// The tint for every search hit but the active one.
 const _searchMatchColor = Color(0x2900D4D8);
+
+const _kArticleReaderTopMargin = 32.0;
+const _kArticleReaderBottomMargin = 40.0;
+
+/// Paints only the unsafe top inset so article text stays readable without
+/// adding decorative fades or bottom overlays over the content.
+class _ArticleSystemBarBackground extends StatelessWidget {
+  const _ArticleSystemBarBackground({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = MediaQuery.paddingOf(context);
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          if (padding.top > 0)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: padding.top,
+              child: ColoredBox(color: color),
+            ),
+        ],
+      ),
+    );
+  }
+}

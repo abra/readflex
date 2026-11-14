@@ -3,15 +3,15 @@ import 'dart:ui' show FontFeature, Tristate;
 import 'package:component_library/component_library.dart';
 import 'package:component_library/src/search_field_hint.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_document_features.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
 import 'package:reader/src/reader_highlight_quote_background.dart';
-import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_screen_drawers.dart';
 import 'package:reader/src/reader_toc_item.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 

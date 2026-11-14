@@ -1,11 +1,37 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pagecraft/djvu.dart';
+import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
+
+import 'reader_bloc.dart';
+import 'reader_diagnostics.dart';
+import 'reader_djvu_surface.dart';
+import 'reader_document_features.dart';
+import 'reader_highlight_color.dart';
+import 'reader_highlight_focus_cubit.dart';
+import 'reader_image_selection_cubit.dart';
+import 'reader_page_input.dart';
+import 'reader_page_location.dart';
+import 'reader_page_turn.dart';
+import 'reader_position.dart';
+import 'reader_selection.dart';
+import 'reader_selection_cubit.dart';
+import 'reader_text_selection_style.dart';
+import 'reader_toc_item.dart';
+import 'reader_ui_cubit.dart';
 
 /// Hosts the DjVu engine (`package:pagecraft`) and translates its events into
 /// the reader bloc and cubit updates every page body produces: pages,
 /// position, bookmarks, outline, text selection, saved highlights, search
 /// marks and image-area annotations on pages without hidden text.
-class _ReaderDjvuBody extends StatefulWidget {
-  const _ReaderDjvuBody({
+class ReaderDjvuBody extends StatefulWidget {
+  const ReaderDjvuBody({
     super.key,
     required this.document,
     required this.readerTheme,
@@ -27,10 +53,10 @@ class _ReaderDjvuBody extends StatefulWidget {
   final VoidCallback? onLoading;
 
   @override
-  State<_ReaderDjvuBody> createState() => _ReaderDjvuBodyState();
+  State<ReaderDjvuBody> createState() => _ReaderDjvuBodyState();
 }
 
-class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
+class _ReaderDjvuBodyState extends State<ReaderDjvuBody> {
   DjvuBook? _book;
   FixedPagesController? _controller;
   DjvuTextLayerCache? _layers;
@@ -69,7 +95,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
   }
 
   @override
-  void didUpdateWidget(covariant _ReaderDjvuBody oldWidget) {
+  void didUpdateWidget(covariant ReaderDjvuBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.document.id != widget.document.id ||
         oldWidget.document.filePath != widget.document.filePath) {
@@ -103,7 +129,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
       book = await DjvuBook.open(document.filePath);
     } catch (error, stackTrace) {
       if (!mounted || generation != _openGeneration) return;
-      _debugTraceReader('_ReaderDjvuBody open failed: $error');
+      debugTraceReader('ReaderDjvuBody open failed: $error');
       context.read<ReaderBloc>().add(
         ReaderSurfaceFailed(
           sourceId: document.id,
@@ -121,7 +147,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
     final controller = FixedPagesController(
       pageCount: book.pageCount,
       rtl: false,
-      initialPage: _nativeInitialPage(document, book.pageCount),
+      initialPage: initialReaderPage(document, book.pageCount),
     );
     final layers = DjvuTextLayerCache(book);
     final session = ReaderDjvuSession(
@@ -213,7 +239,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
     final titles = <int, String>{};
     for (final entry in _tocItems(book)) {
       final page = book.resolveHref(entry.href);
-      final title = _nativeChapterTitle(entry.label);
+      final title = readerChapterTitle(entry.label);
       if (page != null && title != null) titles.putIfAbsent(page, () => title);
     }
     return titles;
@@ -231,7 +257,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
     final controller = _controller;
     if (controller == null) return null;
     final position = controller.position;
-    final bookmark = _nativeBookmarkOnPage(
+    final bookmark = readerBookmarkOnPage(
       context.read<ReaderBloc>().state.bookmarks,
       position.page,
     );
@@ -263,8 +289,8 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
     _reportedBookmarkedPage = position.bookmarkExists
         ? _controller!.page
         : null;
-    _debugTraceReader(
-      '_ReaderDjvuBody position '
+    debugTraceReader(
+      'ReaderDjvuBody position '
       'page=${position.chapterCurrentPage}/${position.chapterTotalPages} '
       'progress=${position.fraction.toStringAsFixed(3)} '
       'reason=${position.relocationReason}',
@@ -278,8 +304,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
   void _onBookmarksChanged(List<SourceBookmark> bookmarks) {
     final controller = _controller;
     if (controller == null) return;
-    final bookmarked =
-        _nativeBookmarkOnPage(bookmarks, controller.page) != null;
+    final bookmarked = readerBookmarkOnPage(bookmarks, controller.page) != null;
     final reported = _reportedBookmarkedPage == controller.page;
     if (bookmarked != reported) _reportPosition();
   }
@@ -289,7 +314,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
     if (controller == null) return;
     final bloc = context.read<ReaderBloc>();
     final page = controller.page;
-    final existing = _nativeBookmarkOnPage(bloc.state.bookmarks, page);
+    final existing = readerBookmarkOnPage(bloc.state.bookmarks, page);
     final position = controller.position;
     bloc.add(
       ReaderBookmarkChanged(
@@ -306,7 +331,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
 
   void _onPageShown(int page) {
     if (_ready || !mounted) return;
-    _debugTraceReader('_ReaderDjvuBody first page shown page=$page');
+    debugTraceReader('ReaderDjvuBody first page shown page=$page');
     setState(() => _ready = true);
     widget.onReady?.call();
   }
@@ -400,7 +425,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
         width: rect.width,
         height: rect.height,
       ),
-      position: _nativeSelectionPosition(viewport),
+      position: readerSelectionPositionForViewport(viewport),
       progress: bloc.state.document?.readingProgress,
       chapterTitle: null,
     );
@@ -420,7 +445,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
     context.read<ReaderHighlightFocusCubit>().focus(
       ReaderHighlightTap(
         highlightId: area.id,
-        position: _nativeSelectionPosition(viewport),
+        position: readerSelectionPositionForViewport(viewport),
         contextText: '',
       ),
     );
@@ -440,7 +465,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
     final selection = readerSelectionFromDjvuLayer(
       layer,
       range,
-      position: _nativeSelectionPosition(viewport),
+      position: readerSelectionPositionForViewport(viewport),
     );
     selectionCubit.select(
       text: selection.text,
@@ -470,7 +495,7 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
     context.read<ReaderHighlightFocusCubit>().focus(
       ReaderHighlightTap(
         highlightId: highlight.id,
-        position: _nativeSelectionPosition(viewport),
+        position: readerSelectionPositionForViewport(viewport),
         contextText: layer?.contextOf(highlight.range).contextText ?? '',
       ),
     );
@@ -549,15 +574,15 @@ class _ReaderDjvuBodyState extends State<_ReaderDjvuBody> {
       pages: DjvuPages(book),
       controller: controller,
       backgroundColor: widget.readerTheme.backgroundColor,
-      axis: _nativePageAxis(widget.pageTurnStyle),
-      pageTurnAnimation: _nativePageTurnAnimation(widget.pageAnimation),
-      onTap: (point) => _dispatchReaderTap(
+      axis: readerPageAxis(widget.pageTurnStyle),
+      pageTurnAnimation: readerPageTurnAnimation(widget.pageAnimation),
+      onTap: (point) => dispatchReaderTap(
         context,
         x: point.dx,
         y: point.dy,
         surface: surface,
         isComic: true,
-        axis: _readerTapAxisForPageTurnStyle(widget.pageTurnStyle),
+        axis: readerTapAxisForPageTurnStyle(widget.pageTurnStyle),
       ),
       onPageShown: _onPageShown,
       pageSemanticsLabel: (page, count) =>

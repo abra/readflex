@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('article body forwards onExternalLink to the reader view', () {
     final source = _readSource('lib/src/reader_screen_content.dart');
-    final start = source.indexOf('_PageKind.article => _ReaderArticleBody(');
+    final start = source.indexOf('_PageKind.article => ReaderArticleBody(');
     final construction = source.substring(
       start,
       source.indexOf('_PageKind.pdf =>', start),
@@ -28,7 +28,7 @@ void main() {
   test('page links reach the host only through the link sheet', () {
     final source = _readSource('lib/src/reader_screen_content.dart');
     final view = source.substring(
-      source.indexOf('class _ReaderView extends StatelessWidget'),
+      source.indexOf('class ReaderView extends StatelessWidget'),
       source.indexOf('class _ReaderScaffold extends StatelessWidget'),
     );
     expect(view, contains('ReaderExternalLinkPrompt('));

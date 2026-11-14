@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('article system background avoids fades over article content', () {
     final contentSource = _readSource(
-      packagePath: 'lib/src/reader_screen_content.dart',
+      packagePath: 'lib/src/reader_screen_article_body.dart',
     );
 
     expect(contentSource, contains('_ArticleSystemBarBackground'));
@@ -26,13 +26,12 @@ void main() {
   });
 
   test('article reader uses compact vertical margins', () {
-    final screenSource = _readSource(packagePath: 'lib/src/reader_screen.dart');
     final bodySource = _readSource(
       packagePath: 'lib/src/reader_screen_article_body.dart',
     );
 
-    expect(screenSource, contains('_kArticleReaderTopMargin = 32.0'));
-    expect(screenSource, contains('_kArticleReaderBottomMargin = 40.0'));
+    expect(bodySource, contains('_kArticleReaderTopMargin = 32.0'));
+    expect(bodySource, contains('_kArticleReaderBottomMargin = 40.0'));
     expect(
       bodySource,
       contains('topMargin: _kArticleReaderTopMargin + padding.top'),

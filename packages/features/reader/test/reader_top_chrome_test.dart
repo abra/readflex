@@ -3,17 +3,17 @@ import 'dart:ui' show Tristate;
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:reader/src/reader_article_progress_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_chrome_colors.dart';
-import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_screen_chrome.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'helpers/fake_article_repository.dart';
 import 'helpers/fake_book_repository.dart';

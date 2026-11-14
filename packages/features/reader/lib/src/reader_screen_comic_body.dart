@@ -1,10 +1,34 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pagecraft/comic.dart';
+import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
+
+import 'reader_bloc.dart';
+import 'reader_comic_surface.dart';
+import 'reader_diagnostics.dart';
+import 'reader_highlight_color.dart';
+import 'reader_highlight_focus_cubit.dart';
+import 'reader_image_selection_cubit.dart';
+import 'reader_page_input.dart';
+import 'reader_page_turn.dart';
+import 'reader_position.dart';
+import 'reader_selection.dart';
+import 'reader_selection_cubit.dart';
+import 'reader_toc_item.dart';
+import 'reader_ui_cubit.dart';
 
 /// Hosts the comic engine (`package:pagecraft`) and translates its events into
 /// the reader bloc and cubit updates every page body produces, so the
 /// chrome, drawers and context panel do not know what draws the pages.
-class _ReaderComicBody extends StatefulWidget {
-  const _ReaderComicBody({
+class ReaderComicBody extends StatefulWidget {
+  const ReaderComicBody({
     super.key,
     required this.document,
     required this.readerTheme,
@@ -26,10 +50,10 @@ class _ReaderComicBody extends StatefulWidget {
   final VoidCallback? onLoading;
 
   @override
-  State<_ReaderComicBody> createState() => _ReaderComicBodyState();
+  State<ReaderComicBody> createState() => _ReaderComicBodyState();
 }
 
-class _ReaderComicBodyState extends State<_ReaderComicBody> {
+class _ReaderComicBodyState extends State<ReaderComicBody> {
   ComicBook? _book;
   FixedPagesController? _controller;
   ReaderComicSession? _session;
@@ -58,7 +82,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
   }
 
   @override
-  void didUpdateWidget(covariant _ReaderComicBody oldWidget) {
+  void didUpdateWidget(covariant ReaderComicBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.document.id != widget.document.id ||
         oldWidget.document.filePath != widget.document.filePath) {
@@ -94,7 +118,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
       );
     } catch (error, stackTrace) {
       if (!mounted || generation != _openGeneration) return;
-      _debugTraceReader('_ReaderComicBody open failed: $error');
+      debugTraceReader('ReaderComicBody open failed: $error');
       context.read<ReaderBloc>().add(
         ReaderSurfaceFailed(
           sourceId: document.id,
@@ -232,8 +256,8 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
     _reportedBookmarkedPage = position.bookmarkExists
         ? _controller!.page
         : null;
-    _debugTraceReader(
-      '_ReaderComicBody position '
+    debugTraceReader(
+      'ReaderComicBody position '
       'page=${position.chapterCurrentPage}/${position.chapterTotalPages} '
       'progress=${position.fraction.toStringAsFixed(3)} '
       'reason=${position.relocationReason}',
@@ -276,7 +300,7 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
 
   void _onPageShown(int page) {
     if (_ready || !mounted) return;
-    _debugTraceReader('_ReaderComicBody first page shown page=$page');
+    debugTraceReader('ReaderComicBody first page shown page=$page');
     setState(() => _ready = true);
     widget.onReady?.call();
   }
@@ -389,15 +413,15 @@ class _ReaderComicBodyState extends State<_ReaderComicBody> {
       pages: ComicPages(book),
       controller: controller,
       backgroundColor: widget.readerTheme.backgroundColor,
-      axis: _nativePageAxis(widget.pageTurnStyle),
-      pageTurnAnimation: _nativePageTurnAnimation(widget.pageAnimation),
-      onTap: (point) => _dispatchReaderTap(
+      axis: readerPageAxis(widget.pageTurnStyle),
+      pageTurnAnimation: readerPageTurnAnimation(widget.pageAnimation),
+      onTap: (point) => dispatchReaderTap(
         context,
         x: point.dx,
         y: point.dy,
         surface: surface,
         isComic: true,
-        axis: _readerTapAxisForPageTurnStyle(widget.pageTurnStyle),
+        axis: readerTapAxisForPageTurnStyle(widget.pageTurnStyle),
       ),
       onPageShown: _onPageShown,
       pageSemanticsLabel: (page, count) =>

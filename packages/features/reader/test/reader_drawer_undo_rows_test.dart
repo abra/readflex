@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_highlight_list_tile.dart';
-import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_screen_drawers.dart';
 import 'package:reader/src/reader_swipe_to_delete.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import 'helpers/fake_book_repository.dart';
 import 'helpers/fake_highlight_repository.dart';

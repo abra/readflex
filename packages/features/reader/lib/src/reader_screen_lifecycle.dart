@@ -1,8 +1,17 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import 'reader_bloc.dart';
+import 'reader_brightness_cubit.dart';
+import 'reader_keep_awake_cubit.dart';
+import 'reader_ui_cubit.dart';
 
 /// Calls [onSourceOpened] once after the reader records a real open timestamp.
-class _ReaderSourceOpenedNotifier extends StatefulWidget {
-  const _ReaderSourceOpenedNotifier({
+class ReaderSourceOpenedNotifier extends StatefulWidget {
+  const ReaderSourceOpenedNotifier({
+    super.key,
     required this.onSourceOpened,
     required this.child,
   });
@@ -11,12 +20,12 @@ class _ReaderSourceOpenedNotifier extends StatefulWidget {
   final Widget child;
 
   @override
-  State<_ReaderSourceOpenedNotifier> createState() =>
+  State<ReaderSourceOpenedNotifier> createState() =>
       _ReaderSourceOpenedNotifierState();
 }
 
 class _ReaderSourceOpenedNotifierState
-    extends State<_ReaderSourceOpenedNotifier> {
+    extends State<ReaderSourceOpenedNotifier> {
   bool _notified = false;
 
   @override

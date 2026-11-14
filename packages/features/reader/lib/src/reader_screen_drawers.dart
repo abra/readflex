@@ -1,4 +1,31 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
+
+import 'reader_bloc.dart';
+import 'reader_bookmark_filter.dart';
+import 'reader_contents_tab_bar.dart';
+import 'reader_contents_tabs.dart';
+import 'reader_directional_layout.dart';
+import 'reader_drawer_layout.dart';
+import 'reader_drawer_messages.dart';
+import 'reader_drawer_title_fit.dart';
+import 'reader_highlight_controls.dart';
+import 'reader_highlight_filter.dart';
+import 'reader_highlight_list_tile.dart';
+import 'reader_image_highlight_preview.dart';
+import 'reader_navigation_tile.dart';
+import 'reader_page_grid.dart';
+import 'reader_page_thumbnail_cubit.dart';
+import 'reader_swipe_to_delete.dart';
+import 'reader_text_line_height.dart';
+import 'reader_toc_active_index.dart';
+import 'reader_toc_item.dart';
+import 'reader_toc_progress.dart';
 
 /// Collects TOC/bookmark state from [ReaderBloc] and feeds the drawer UI.
 @visibleForTesting
@@ -97,6 +124,8 @@ class _ReaderTocDrawerDriverState extends State<ReaderTocDrawerDriver> {
     );
   }
 }
+
+const _kReaderTocTileEstimatedHeight = 60.0;
 
 /// Contents sheet: chapters, pages, bookmarks and highlights, as
 /// [readerContentsTabs] decides for the format.

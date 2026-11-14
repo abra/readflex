@@ -1,12 +1,12 @@
 import 'package:component_library/component_library.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:reader/src/reader_appearance_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_chrome_progress_layout.dart';
-import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_screen_chrome.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
 

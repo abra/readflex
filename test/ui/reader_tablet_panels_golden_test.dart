@@ -1,14 +1,15 @@
 import 'package:component_library/component_library.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:pagecraft/all_formats.dart' show TextColumnPage, TextPagesView;
-import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/reader.dart';
 import 'package:reader/src/reader_bloc.dart';
+import 'package:reader/src/reader_screen_drawers.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_panel.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
 
 import '../support/ui_test_app.dart';
 import '../support/ui_test_driver.dart';

@@ -12,7 +12,7 @@ import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_contents_tab_bar.dart';
 import 'package:reader/src/reader_drawer_layout.dart';
 import 'package:reader/src/reader_page_grid.dart';
-import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_screen_drawers.dart';
 import 'package:reader/src/reader_search_cubit.dart';
 import 'package:reader/src/reader_search_event.dart';
 import 'package:reader/src/reader_search_panel.dart';

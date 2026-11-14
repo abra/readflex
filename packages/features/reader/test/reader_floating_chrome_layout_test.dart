@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:component_library/component_library.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +13,7 @@ import 'package:reader/src/reader_article_progress_cubit.dart';
 import 'package:reader/src/reader_bloc.dart';
 import 'package:reader/src/reader_brightness_cubit.dart';
 import 'package:reader/src/reader_floating_chrome_layout.dart';
-import 'package:reader/src/reader_screen.dart';
+import 'package:reader/src/reader_screen_chrome.dart';
 import 'package:reader/src/reader_selection_cubit.dart';
 import 'package:reader/src/reader_ui_cubit.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';

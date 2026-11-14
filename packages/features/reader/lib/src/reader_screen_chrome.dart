@@ -1,4 +1,66 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+import 'dart:math' as math;
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:toast_service/toast_service.dart';
+
+import 'reader_appearance_cubit.dart';
+import 'reader_article_progress_cubit.dart';
+import 'reader_bloc.dart';
+import 'reader_brightness_cubit.dart';
+import 'reader_chrome_action_button.dart';
+import 'reader_chrome_actions.dart';
+import 'reader_chrome_colors.dart';
+import 'reader_chrome_labels.dart';
+import 'reader_chrome_progress_layout.dart';
+import 'reader_control_styles.dart';
+import 'reader_diagnostics.dart';
+import 'reader_document_features.dart';
+import 'reader_drawer_messages.dart';
+import 'reader_floating_chrome_layout.dart';
+import 'reader_image_page_progress_overlay.dart';
+import 'reader_progress_label.dart';
+import 'reader_screen_cupertino_actions.dart';
+import 'reader_selection_cubit.dart';
+import 'reader_tap_action.dart';
+import 'reader_ui_cubit.dart';
+
+/// Curves for the reader chrome slide animation; durations come from
+/// `context.motion(AppMotion.short)` so reduced motion settles in one frame.
+const _kChromeAnimCurve = Curves.easeOutCubic;
+const _kChromeHideAnimCurve = Curves.easeInCubic;
+const _kReaderPageBookmarkIndicatorLift = 28.0;
+const _kReaderPageBookmarkIndicatorSize = AppIconSize.md;
+const _kReaderBrightnessStep = 0.05;
+const _kReaderBrightnessEpsilon = 0.0001;
+// Three 48dp controls stacked inside the pill's horizontal/vertical padding.
+const _kReaderBrightnessChromeWidth = AppSizes.buttonHeight + AppSpacing.xs * 2;
+const _kReaderBrightnessChromeHeight = readerBrightnessChromeLength;
+const _kReaderBrightnessChromeDragHeight =
+    _kReaderBrightnessChromeHeight - AppSpacing.sm * 2;
+typedef _ReaderChromeOverlaySnapshot = ({
+  bool chromeVisible,
+  ReaderOverlay overlay,
+});
+
+String _readerBrightnessDebugValue(double? value) {
+  if (value == null) return 'null';
+  return '${(value * 100).round()}% (${value.toStringAsFixed(3)})';
+}
+
+String _readerBrightnessLabel(
+  ReaderBrightnessState state, {
+  required String systemLabel,
+}) {
+  if (!state.usesSystemBrightness) return '${state.percent}%';
+  return systemLabel;
+}
 
 class _ReaderBookmarkGlyph extends StatelessWidget {
   const _ReaderBookmarkGlyph({
@@ -84,8 +146,8 @@ class _ReaderBookmarkGlyphPainter extends CustomPainter {
 /// panels; any pointer on the page hides chrome and is not forwarded to the
 /// page.
 /// Comics keep page gestures available; their edge taps also hide chrome.
-class _ReaderChromeDismissBarrierDriver extends StatelessWidget {
-  const _ReaderChromeDismissBarrierDriver();
+class ReaderChromeDismissBarrierDriver extends StatelessWidget {
+  const ReaderChromeDismissBarrierDriver({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -105,7 +167,7 @@ class _ReaderChromeDismissBarrierDriver extends StatelessWidget {
       ),
       chromeVisible: chromeOverlay.chromeVisible,
       overlayVisible: chromeOverlay.overlay != ReaderOverlay.none,
-      hasSelection: _selectionActionsVisible(hasSelection),
+      hasSelection: hasSelection,
     );
 
     return Positioned.fill(
@@ -151,7 +213,7 @@ class ReaderBrightnessChromeDriver extends StatelessWidget {
     final visible =
         chromeOverlay.chromeVisible &&
         chromeOverlay.overlay == ReaderOverlay.none &&
-        !_selectionActionsVisible(hasSelection);
+        !hasSelection;
     final controlValue = brightnessState.controlValue;
     final waitingForSystemBrightness =
         brightnessState.usesSystemBrightness &&
@@ -551,7 +613,7 @@ class ReaderPageBookmarkIndicatorDriver extends StatelessWidget {
         bookmarked &&
         !chromeOverlay.chromeVisible &&
         chromeOverlay.overlay == ReaderOverlay.none &&
-        !_selectionActionsVisible(hasSelection);
+        !hasSelection;
     final topOffset =
         BookLayoutPreset.fromId(layoutId).data.topMargin -
         _kReaderPageBookmarkIndicatorLift;
@@ -607,8 +669,6 @@ const _kReaderTopChromeLineHeight = AppSizes.buttonHeight;
 /// Fade between the page and the page-coloured band under chrome text, so
 /// scrolled text never runs behind a label.
 const _kReaderChromeBackdropFade = AppSpacing.lg;
-
-const _kReaderActionStripHeight = 60.0;
 
 /// Progress has a little more inset than the action targets below it.
 const _kReaderProgressRowInset = AppSpacing.md;
@@ -735,7 +795,7 @@ class ReaderTopChromeDriver extends StatelessWidget {
 
     return _ReaderTopChrome(
       inChromeLayout: inChromeLayout,
-      visible: chromeVisible && !_selectionActionsVisible(hasSelection),
+      visible: chromeVisible && !hasSelection,
       line: readerTopChromeLine(title: title, chapterTitle: chapterTitle),
       title: title,
       onTitlePressed: onTitlePressed,
@@ -956,7 +1016,7 @@ class ReaderBottomChromeDriver extends StatelessWidget {
     final hasSelection = context.select<ReaderSelectionCubit, bool>(
       (c) => c.state.hasSelection,
     );
-    final visible = chromeVisible && !_selectionActionsVisible(hasSelection);
+    final visible = chromeVisible && !hasSelection;
     final pageTurnStyle = context
         .select<ReaderAppearanceCubit, ReaderPageTurnStyle>(
           (c) => c.state.effectiveAppearance.pageTurnStyle,
@@ -970,7 +1030,7 @@ class ReaderBottomChromeDriver extends StatelessWidget {
         pageTurnStyle: pageTurnStyle,
       ),
       builder: (context, snapshot) {
-        _debugTraceReader(
+        debugTraceReader(
           'ReaderBottomChromeDriver build '
           'visible=${snapshot.visible} '
           'progress=${snapshot.progress.toStringAsFixed(3)} '
@@ -1291,8 +1351,8 @@ class _ReaderChromeActionStrip extends StatelessWidget {
     final l10n = context.l10n;
     final verticalPageTurn = pageTurnStyle == ReaderPageTurnStyle.vertical;
     final bookmarkColor = bookmarkActive ? actionColor : foregroundColor;
-    final slots = <_ReaderChromeActionData>[
-      _ReaderChromeActionData(
+    final slots = <ReaderChromeActionData>[
+      ReaderChromeActionData(
         label: l10n.readerBack,
         icon: AppIcons.back,
         iconSize: AppIconSize.lg,
@@ -1301,7 +1361,7 @@ class _ReaderChromeActionStrip extends StatelessWidget {
         onPressed: onBack,
       ),
       if (showTocAction)
-        _ReaderChromeActionData(
+        ReaderChromeActionData(
           label: l10n.readerContents,
           icon: AppIcons.toc,
           tooltip: l10n.readerContents,
@@ -1309,7 +1369,7 @@ class _ReaderChromeActionStrip extends StatelessWidget {
           onPressed: onTocPressed,
         ),
       if (showFontAction)
-        _ReaderChromeActionData(
+        ReaderChromeActionData(
           label: l10n.readerAppearanceTitle,
           icon: AppIcons.font,
           tooltip: fontActionTooltip,
@@ -1317,7 +1377,7 @@ class _ReaderChromeActionStrip extends StatelessWidget {
           onPressed: onFontPressed,
         ),
       if (showPageTurnAction)
-        _ReaderChromeActionData(
+        ReaderChromeActionData(
           label: verticalPageTurn
               ? l10n.readerPageTurnVerticalShort
               : l10n.readerPageTurnHorizontalShort,
@@ -1331,7 +1391,7 @@ class _ReaderChromeActionStrip extends StatelessWidget {
           onPressed: onPageTurnPressed,
         ),
       if (showBookmarkAction)
-        _ReaderChromeActionData(
+        ReaderChromeActionData(
           label: l10n.readerBookmark,
           glyph: _ReaderBookmarkGlyph(
             filled: bookmarkActive,
@@ -1347,7 +1407,7 @@ class _ReaderChromeActionStrip extends StatelessWidget {
           onPressed: onBookmarkPressed,
         ),
       if (showSearchAction)
-        _ReaderChromeActionData(
+        ReaderChromeActionData(
           label: l10n.readerSearchAction,
           icon: AppIcons.search,
           tooltip: searchActionTooltip,
@@ -1363,7 +1423,7 @@ class _ReaderChromeActionStrip extends StatelessWidget {
         AppWindowSize.isWide(context) &&
         scaledLabelSize <= labelStyle.fontSize! * 1.3;
     if (context.isCupertino && AppWindowSize.isWide(context)) {
-      return _ReaderCupertinoChromeActions(
+      return ReaderCupertinoChromeActions(
         actions: slots,
         labelStyle: labelStyle,
         showLabels: showLabels,
@@ -1383,132 +1443,17 @@ class _ReaderChromeActionStrip extends StatelessWidget {
     );
     return SizedBox(
       key: const ValueKey('readerChromeCapsule'),
-      height: showLabels ? labeledHeight : _kReaderActionStripHeight,
+      height: showLabels ? labeledHeight : readerChromeActionStripHeight,
       child: Row(
         children: [
           for (final action in slots)
             Expanded(
-              child: _ReaderChromeAction(
+              child: ReaderChromeActionButton(
                 action: action,
                 showLabel: showLabels,
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-@immutable
-class _ReaderChromeActionData {
-  const _ReaderChromeActionData({
-    required this.label,
-    required this.tooltip,
-    required this.color,
-    required this.onPressed,
-    this.icon,
-    this.glyph,
-    this.iconSize = AppIconSize.md,
-  }) : assert((icon == null) != (glyph == null));
-
-  final String label;
-  final String tooltip;
-  final Color color;
-  final VoidCallback? onPressed;
-  final IconData? icon;
-  final Widget? glyph;
-  final double iconSize;
-}
-
-class _ReaderChromeAction extends StatelessWidget {
-  const _ReaderChromeAction({
-    required this.action,
-    required this.showLabel,
-    this.glyphHeight,
-    this.captionHeight,
-    this.captionBaseline,
-  });
-
-  final _ReaderChromeActionData action;
-  final bool showLabel;
-  final double? glyphHeight;
-  final double? captionHeight;
-  final double? captionBaseline;
-
-  @override
-  Widget build(BuildContext context) {
-    if (!showLabel) {
-      return Center(
-        child: AppPlainIconButton(
-          icon: action.icon,
-          iconWidget: action.glyph,
-          iconSize: action.iconSize,
-          tooltip: action.tooltip,
-          color: action.color,
-          onPressed: action.onPressed,
-        ),
-      );
-    }
-    final caption = Text(
-      action.label,
-      maxLines: captionHeight == null ? 2 : 1,
-      softWrap: captionHeight == null,
-      overflow: TextOverflow.ellipsis,
-      textAlign: TextAlign.center,
-      style: readerControlCaptionStyle(context).copyWith(
-        color: action.onPressed == null
-            ? action.color.withValues(alpha: 0.38)
-            : action.color,
-      ),
-    );
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.xs),
-      child: AppTooltip(
-        message: action.tooltip,
-        child: AppButton.text(
-          onPressed: action.onPressed,
-
-          foregroundColor: action.color,
-          disabledForegroundColor: action.color.withValues(alpha: 0.38),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-          ),
-
-          child: SizedBox(
-            width: double.infinity,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                  key: glyphHeight == null
-                      ? null
-                      : ValueKey('readerChromeActionGlyph-${action.tooltip}'),
-                  height: glyphHeight,
-                  child: Center(
-                    child:
-                        action.glyph ??
-                        Icon(action.icon, size: action.iconSize),
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                SizedBox(
-                  key: captionHeight == null
-                      ? null
-                      : ValueKey('readerChromeActionCaption-${action.tooltip}'),
-                  height: captionHeight,
-                  child: captionBaseline == null
-                      ? caption
-                      : Baseline(
-                          baseline: captionBaseline!,
-                          baselineType: TextBaseline.alphabetic,
-                          child: caption,
-                        ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1777,8 +1722,8 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
 }
 
 /// Feeds image-page progress metrics into the transient CBZ page overlay.
-class _ReaderImagePageProgressOverlayDriver extends StatelessWidget {
-  const _ReaderImagePageProgressOverlayDriver();
+class ReaderImagePageProgressOverlayDriver extends StatelessWidget {
+  const ReaderImagePageProgressOverlayDriver({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1803,7 +1748,7 @@ class _ReaderImagePageProgressOverlayDriver extends StatelessWidget {
     return ReaderImagePageProgressOverlay(
       format: format,
       chromeVisible: chromeVisible,
-      selectionActionsVisible: _selectionActionsVisible(hasSelection),
+      selectionActionsVisible: hasSelection,
       currentPage: current,
       totalPages: total,
     );

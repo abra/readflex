@@ -1,14 +1,20 @@
-part of 'reader_screen.dart';
+import 'dart:math' as math;
+
+import 'package:component_library/component_library.dart';
+import 'package:flutter/widgets.dart';
+
+import 'reader_chrome_action_button.dart';
 
 /// Gives native captions their natural widths without splitting words.
-class _ReaderCupertinoChromeActions extends StatelessWidget {
-  const _ReaderCupertinoChromeActions({
+class ReaderCupertinoChromeActions extends StatelessWidget {
+  const ReaderCupertinoChromeActions({
+    super.key,
     required this.actions,
     required this.labelStyle,
     required this.showLabels,
   });
 
-  final List<_ReaderChromeActionData> actions;
+  final List<ReaderChromeActionData> actions;
   final TextStyle labelStyle;
   final bool showLabels;
 
@@ -61,7 +67,7 @@ class _ReaderCupertinoChromeActions extends StatelessWidget {
               AppSizes.buttonHeight + AppSpacing.xl + AppSpacing.sm,
               glyphHeight + AppSpacing.xs + captionHeight + AppSpacing.xs * 2,
             )
-          : _kReaderActionStripHeight;
+          : readerChromeActionStripHeight;
       return SizedBox(
         key: const ValueKey('readerChromeCapsule'),
         height: height,
@@ -72,7 +78,7 @@ class _ReaderCupertinoChromeActions extends StatelessWidget {
                 SizedBox(
                   width: widths[index] + extraWidth,
                   height: height,
-                  child: _ReaderChromeAction(
+                  child: ReaderChromeActionButton(
                     action: action,
                     showLabel: true,
                     glyphHeight: glyphHeight,
@@ -82,7 +88,10 @@ class _ReaderCupertinoChromeActions extends StatelessWidget {
                 )
               else
                 Expanded(
-                  child: _ReaderChromeAction(action: action, showLabel: false),
+                  child: ReaderChromeActionButton(
+                    action: action,
+                    showLabel: false,
+                  ),
                 ),
           ],
         ),

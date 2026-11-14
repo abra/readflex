@@ -1,11 +1,37 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pagecraft/pdf.dart';
+import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
+
+import 'reader_bloc.dart';
+import 'reader_diagnostics.dart';
+import 'reader_document_features.dart';
+import 'reader_highlight_color.dart';
+import 'reader_highlight_focus_cubit.dart';
+import 'reader_image_selection_cubit.dart';
+import 'reader_page_input.dart';
+import 'reader_page_location.dart';
+import 'reader_page_turn.dart';
+import 'reader_pdf_surface.dart';
+import 'reader_position.dart';
+import 'reader_selection.dart';
+import 'reader_selection_cubit.dart';
+import 'reader_text_selection_style.dart';
+import 'reader_toc_item.dart';
+import 'reader_ui_cubit.dart';
 
 /// Hosts the PDF engine (`package:pagecraft`) and translates its events into
 /// the reader bloc and cubit updates every page body produces: pages,
 /// position, bookmarks, outline, text selection, saved highlights, search
 /// marks, margin crops and page colours.
-class _ReaderPdfBody extends StatefulWidget {
-  const _ReaderPdfBody({
+class ReaderPdfBody extends StatefulWidget {
+  const ReaderPdfBody({
     super.key,
     required this.document,
     required this.readerTheme,
@@ -31,10 +57,10 @@ class _ReaderPdfBody extends StatefulWidget {
   final VoidCallback? onLoading;
 
   @override
-  State<_ReaderPdfBody> createState() => _ReaderPdfBodyState();
+  State<ReaderPdfBody> createState() => _ReaderPdfBodyState();
 }
 
-class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
+class _ReaderPdfBodyState extends State<ReaderPdfBody> {
   PdfBook? _book;
   FixedPagesController? _controller;
   PdfTextLayerCache? _layers;
@@ -75,7 +101,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
   }
 
   @override
-  void didUpdateWidget(covariant _ReaderPdfBody oldWidget) {
+  void didUpdateWidget(covariant ReaderPdfBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.document.id != widget.document.id ||
         oldWidget.document.filePath != widget.document.filePath) {
@@ -104,7 +130,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
       book = await PdfBook.open(document.filePath);
     } catch (error, stackTrace) {
       if (!mounted || generation != _openGeneration) return;
-      _debugTraceReader('_ReaderPdfBody open failed: $error');
+      debugTraceReader('ReaderPdfBody open failed: $error');
       context.read<ReaderBloc>().add(
         ReaderSurfaceFailed(
           sourceId: document.id,
@@ -122,7 +148,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     final controller = FixedPagesController(
       pageCount: book.pageCount,
       rtl: false,
-      initialPage: _nativeInitialPage(document, book.pageCount),
+      initialPage: initialReaderPage(document, book.pageCount),
     );
     final layers = PdfTextLayerCache(book);
     final session = ReaderPdfSession(
@@ -214,7 +240,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
       for (final entry in entries) {
         final page = entry.pageIndex;
         if (page != null && !titles.containsKey(page)) {
-          final title = _nativeChapterTitle(entry.title);
+          final title = readerChapterTitle(entry.title);
           if (title != null) titles[page] = title;
         }
         walk(entry.children);
@@ -238,7 +264,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     final controller = _controller;
     if (controller == null) return null;
     final position = controller.position;
-    final bookmark = _nativeBookmarkOnPage(
+    final bookmark = readerBookmarkOnPage(
       context.read<ReaderBloc>().state.bookmarks,
       position.page,
     );
@@ -270,8 +296,8 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     _reportedBookmarkedPage = position.bookmarkExists
         ? _controller!.page
         : null;
-    _debugTraceReader(
-      '_ReaderPdfBody position '
+    debugTraceReader(
+      'ReaderPdfBody position '
       'page=${position.chapterCurrentPage}/${position.chapterTotalPages} '
       'progress=${position.fraction.toStringAsFixed(3)} '
       'reason=${position.relocationReason}',
@@ -285,8 +311,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
   void _onBookmarksChanged(List<SourceBookmark> bookmarks) {
     final controller = _controller;
     if (controller == null) return;
-    final bookmarked =
-        _nativeBookmarkOnPage(bookmarks, controller.page) != null;
+    final bookmarked = readerBookmarkOnPage(bookmarks, controller.page) != null;
     final reported = _reportedBookmarkedPage == controller.page;
     if (bookmarked != reported) _reportPosition();
   }
@@ -296,7 +321,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     if (controller == null) return;
     final bloc = context.read<ReaderBloc>();
     final page = controller.page;
-    final existing = _nativeBookmarkOnPage(bloc.state.bookmarks, page);
+    final existing = readerBookmarkOnPage(bloc.state.bookmarks, page);
     final position = controller.position;
     bloc.add(
       ReaderBookmarkChanged(
@@ -313,7 +338,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
 
   void _onPageShown(int page) {
     if (_ready || !mounted) return;
-    _debugTraceReader('_ReaderPdfBody first page shown page=$page');
+    debugTraceReader('ReaderPdfBody first page shown page=$page');
     setState(() => _ready = true);
     widget.onReady?.call();
   }
@@ -444,7 +469,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     final selection = readerSelectionFromLayer(
       layer,
       range,
-      position: _nativeSelectionPosition(viewport),
+      position: readerSelectionPositionForViewport(viewport),
     );
     selectionCubit.select(
       text: selection.text,
@@ -474,7 +499,7 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     context.read<ReaderHighlightFocusCubit>().focus(
       ReaderHighlightTap(
         highlightId: highlight.id,
-        position: _nativeSelectionPosition(viewport),
+        position: readerSelectionPositionForViewport(viewport),
         contextText: layer?.contextOf(highlight.range).contextText ?? '',
       ),
     );
@@ -565,16 +590,16 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
           controller: controller,
           backgroundColor: theme.backgroundColor,
           pageColors: pageColors,
-          axis: _nativePageAxis(widget.pageTurnStyle),
-          pageTurnAnimation: _nativePageTurnAnimation(widget.pageAnimation),
+          axis: readerPageAxis(widget.pageTurnStyle),
+          pageTurnAnimation: readerPageTurnAnimation(widget.pageAnimation),
           visibleRectOf: widget.trimPageMargins ? _visibleRectOf : null,
-          onTap: (point) => _dispatchReaderTap(
+          onTap: (point) => dispatchReaderTap(
             context,
             x: point.dx,
             y: point.dy,
             surface: surface,
             isComic: false,
-            axis: _readerTapAxisForPageTurnStyle(widget.pageTurnStyle),
+            axis: readerTapAxisForPageTurnStyle(widget.pageTurnStyle),
           ),
           onPageShown: _onPageShown,
           pageSemanticsLabel: (page, count) =>
@@ -611,49 +636,3 @@ class _ReaderPdfBodyState extends State<_ReaderPdfBody> {
     );
   }
 }
-
-/// The saved page of a native fixed-layout book: the CFI either reader
-/// wrote, or the fraction for rows saved without one.
-int _nativeInitialPage(ReaderDocument document, int pageCount) {
-  final cfi = document.currentCfi;
-  if (cfi != null) {
-    final page = fakeCfiToIndex(cfi);
-    if (page != null && page < pageCount) return page;
-  }
-  final fraction = document.readingProgress;
-  if (fraction <= 0) return 0;
-  if (fraction >= 1) return pageCount - 1;
-  return math.min(pageCount - 1, (fraction * pageCount).floor());
-}
-
-SourceBookmark? _nativeBookmarkOnPage(
-  List<SourceBookmark> bookmarks,
-  int page,
-) {
-  for (final bookmark in bookmarks) {
-    if (bookmark.anchorSectionIndex == page ||
-        fakeCfiToIndex(bookmark.cfi) == page) {
-      return bookmark;
-    }
-  }
-  return null;
-}
-
-/// Longer titles are not chapter names; the chrome drops them.
-const _nativeChapterTitleMaxLength = 512;
-
-String? _nativeChapterTitle(String label) {
-  final title = label.replaceAll(RegExp(r'\s+'), ' ').trim();
-  if (title.isEmpty || title.length > _nativeChapterTitleMaxLength) return null;
-  return title;
-}
-
-ReaderSelectionPosition? _nativeSelectionPosition(Rect? viewport) =>
-    viewport == null
-    ? null
-    : ReaderSelectionPosition(
-        left: viewport.left,
-        top: viewport.top,
-        right: viewport.right,
-        bottom: viewport.bottom,
-      );

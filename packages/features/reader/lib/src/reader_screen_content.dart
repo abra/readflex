@@ -1,8 +1,62 @@
-part of 'reader_screen.dart';
+import 'dart:async';
+
+import 'package:component_library/component_library.dart';
+import 'package:domain_models/domain_models.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:preferences_service/preferences_service.dart';
+import 'package:readflex_localizations/readflex_localizations.dart';
+import 'package:shared/shared.dart';
+import 'package:toast_service/toast_service.dart';
+
+import 'reader_appearance_cubit.dart';
+import 'reader_appearance_sheet.dart';
+import 'reader_article_surface.dart';
+import 'reader_back_guard.dart';
+import 'reader_bloc.dart';
+import 'reader_brightness_cubit.dart';
+import 'reader_comic_surface.dart';
+import 'reader_diagnostics.dart';
+import 'reader_djvu_surface.dart';
+import 'reader_drawer_messages.dart';
+import 'reader_external_link_prompt.dart';
+import 'reader_floating_chrome_layout.dart';
+import 'reader_highlight_focus_cubit.dart';
+import 'reader_image_selection_cubit.dart';
+import 'reader_page_thumbnail_cubit.dart';
+import 'reader_page_turn.dart';
+import 'reader_pdf_surface.dart';
+import 'reader_position.dart';
+import 'reader_progress_label.dart';
+import 'reader_screen_article_body.dart';
+import 'reader_screen_chrome.dart';
+import 'reader_screen_comic_body.dart';
+import 'reader_screen_context_panel.dart';
+import 'reader_screen_djvu_body.dart';
+import 'reader_screen_drawers.dart';
+import 'reader_screen_pdf_body.dart';
+import 'reader_screen_text_body.dart';
+import 'reader_search_cubit.dart';
+import 'reader_search_event.dart';
+import 'reader_search_navigation_bar.dart';
+import 'reader_search_navigator.dart';
+import 'reader_search_panel.dart';
+import 'reader_selection_tip.dart';
+import 'reader_selection_tip_cubit.dart';
+import 'reader_surface.dart';
+import 'reader_system_ui_overlay.dart';
+import 'reader_tap_zone_hint.dart';
+import 'reader_text_surface.dart';
+import 'reader_toc_item.dart';
+import 'reader_ui_cubit.dart';
+
+const _kReaderLoadingIndicatorSize = AppIconSize.lg;
 
 /// The reader scaffold behind the link sheet that external links pass.
-class _ReaderView extends StatelessWidget {
-  const _ReaderView({
+class ReaderView extends StatelessWidget {
+  const ReaderView({
+    super.key,
     required this.textActions,
     required this.onRetry,
     this.initialCfi,
@@ -211,9 +265,29 @@ class _ReadyContentState extends State<_ReadyContent> {
   };
   String? _readySourceId;
   bool _initialCfiApplied = false;
-  ReaderSearchLocation? _latestLocation;
-  ReaderSearchLocation? _searchStartLocation;
-  int _searchNavigationGeneration = 0;
+  late final ReaderSearchNavigator _searchNavigator;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchNavigator = ReaderSearchNavigator(
+      searchCubit: context.read<ReaderSearchCubit>(),
+      uiCubit: context.read<ReaderUiCubit>(),
+      surface: () => _surface,
+      sourceType: () => context.read<ReaderBloc>().state.sourceType,
+      closeSearchPanel: () => _closeSearchDrawer(
+        restoreChrome: false,
+        clearSearch: false,
+      ),
+      waitForLayout: () => WidgetsBinding.instance.endOfFrame,
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchNavigator.dispose();
+    super.dispose();
+  }
 
   /// Jumps to [_ReadyContent.initialCfi] on the first ready document.
   void _applyInitialCfi() {
@@ -226,8 +300,7 @@ class _ReadyContentState extends State<_ReadyContent> {
   /// The page surface starts loading its document.
   void _onSurfaceLoading() {
     if (!mounted) return;
-    _latestLocation = null;
-    _endSearch();
+    _searchNavigator.surfaceLoading();
     setState(() => _readySourceId = null);
     widget.onSurfaceReady(null);
   }
@@ -259,11 +332,7 @@ class _ReadyContentState extends State<_ReadyContent> {
   }
 
   void _openSearchDrawer() {
-    // Capture before the software keyboard can resize the native viewport.
-    if (!context.read<ReaderSearchCubit>().state.isNavigating) {
-      _searchStartLocation = _latestLocation;
-    }
-    context.read<ReaderUiCubit>().openSearchDrawer();
+    _searchNavigator.openSearch();
   }
 
   void _toggleBookmark() {
@@ -302,7 +371,7 @@ class _ReadyContentState extends State<_ReadyContent> {
         uiCubit.appearanceSheetHidden();
         if (showPageTurnControls && nextPageTurnStyle != initialPageTurnStyle) {
           uiCubit.showTapZoneHint(
-            _readerTapAxisForPageTurnStyle(nextPageTurnStyle),
+            readerTapAxisForPageTurnStyle(nextPageTurnStyle),
           );
         }
       },
@@ -318,7 +387,7 @@ class _ReadyContentState extends State<_ReadyContent> {
         : ReaderPageTurnStyle.vertical;
     await appearanceCubit.setPageTurnStyle(next);
     if (!mounted) return;
-    uiCubit.showTapZoneHint(_readerTapAxisForPageTurnStyle(next));
+    uiCubit.showTapZoneHint(readerTapAxisForPageTurnStyle(next));
   }
 
   void _closeSearchDrawer({
@@ -339,12 +408,10 @@ class _ReadyContentState extends State<_ReadyContent> {
   }
 
   void _handleReaderPositionChanged(BookPosition position) {
-    if (position.cfi.isNotEmpty && position.fraction.isFinite) {
-      _latestLocation = ReaderSearchLocation(
-        cfi: position.cfi,
-        fraction: position.fraction.clamp(0, 1),
-      );
-    }
+    _searchNavigator.rememberLocation(
+      cfi: position.cfi,
+      fraction: position.fraction,
+    );
     if (isReaderPageTurn(
       sourceType: context.read<ReaderBloc>().state.sourceType,
       relocationReason: position.relocationReason,
@@ -400,55 +467,14 @@ class _ReadyContentState extends State<_ReadyContent> {
     );
   }
 
-  Future<void> _goToSearchResult(int index) async {
-    final search = context.read<ReaderSearchCubit>();
-    if (index < 0 || index >= search.state.results.length) return;
-    final result = search.state.results[index];
-    final query = search.state.query;
-    if (result.cfi.isEmpty) return;
-    search.resultSelected(
-      index: index,
-      returnLocation: _searchStartLocation ?? _latestLocation,
-    );
-    _closeSearchDrawer(restoreChrome: false, clearSearch: false);
-    final generation = ++_searchNavigationGeneration;
-    // Let the drawer/keyboard close before navigating; the search bar itself
-    // overlays the unchanged viewport.
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted ||
-        generation != _searchNavigationGeneration ||
-        search.state.query != query ||
-        search.state.activeResultIndex != index) {
-      return;
-    }
-    context.read<ReaderUiCubit>().searchResultHighlightActivated();
-    _surface.goToSearchResult(result.cfi);
-  }
+  Future<void> _goToSearchResult(int index) =>
+      _searchNavigator.selectResult(index);
 
   void _endSearch() {
-    _searchNavigationGeneration++;
-    _searchStartLocation = null;
-    context.read<ReaderSearchCubit>().reset();
+    _searchNavigator.endSearch();
   }
 
-  Future<void> _returnToReading() async {
-    final origin = context.read<ReaderSearchCubit>().state.returnLocation;
-    if (origin == null) return;
-    _endSearch();
-    final generation = _searchNavigationGeneration;
-    await WidgetsBinding.instance.endOfFrame;
-    if (!mounted || generation != _searchNavigationGeneration) return;
-    if (context.read<ReaderBloc>().state.sourceType == SourceType.article) {
-      // Article CFIs center a sentence, which can shift the original viewport.
-      // The same scroll document is still mounted; restore its exact progress.
-      _surface.goToFraction(origin.fraction);
-    } else {
-      _surface.goToBookmark(
-        cfi: origin.cfi,
-        progress: origin.fraction,
-      );
-    }
-  }
+  Future<void> _returnToReading() => _searchNavigator.returnToReading();
 
   Stream<ReaderSearchEvent> _searchBook(String query) {
     final readerState = context.read<ReaderBloc>().state;
@@ -523,7 +549,7 @@ class _ReadyContentState extends State<_ReadyContent> {
     // style sheet — and chrome text drawn straight on the page. Chrome
     // surfaces (capsule, drawers, popups) keep the app theme.
     final readerTheme = ReaderThemePreset.fromId(appearance.themeId).data;
-    _debugTraceReader(
+    debugTraceReader(
       '_ReadyContent build '
       'sourceId=$sourceId '
       'surfaceReady=$surfaceReady '
@@ -574,7 +600,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                         ColoredBox(
                           color: readerTheme.backgroundColor,
                           child: switch (_pageKind) {
-                            _PageKind.article => _ReaderArticleBody(
+                            _PageKind.article => ReaderArticleBody(
                               key: ValueKey('article:$sourceId'),
                               searchOverlayBottomFraction:
                                   searchOverlayBottomFraction,
@@ -590,7 +616,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                               onPositionChanged: _handleReaderPositionChanged,
                               onReady: _onSurfaceReady,
                             ),
-                            _PageKind.pdf => _ReaderPdfBody(
+                            _PageKind.pdf => ReaderPdfBody(
                               key: ValueKey('pdf:$sourceId'),
                               document: context
                                   .read<ReaderBloc>()
@@ -606,7 +632,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                               onPositionChanged: _handleReaderPositionChanged,
                               onReady: _onSurfaceReady,
                             ),
-                            _PageKind.text => _ReaderTextBody(
+                            _PageKind.text => ReaderTextBody(
                               key: ValueKey('text:$sourceId'),
                               searchOverlayBottomFraction:
                                   searchOverlayBottomFraction,
@@ -622,7 +648,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                               onPositionChanged: _handleReaderPositionChanged,
                               onReady: _onSurfaceReady,
                             ),
-                            _PageKind.djvu => _ReaderDjvuBody(
+                            _PageKind.djvu => ReaderDjvuBody(
                               key: ValueKey('djvu:$sourceId'),
                               document: context
                                   .read<ReaderBloc>()
@@ -636,7 +662,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                               onPositionChanged: _handleReaderPositionChanged,
                               onReady: _onSurfaceReady,
                             ),
-                            _PageKind.comic => _ReaderComicBody(
+                            _PageKind.comic => ReaderComicBody(
                               key: ValueKey('comic:$sourceId'),
                               document: context
                                   .read<ReaderBloc>()
@@ -654,7 +680,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                         ),
                         const _ReaderBrightnessDimmingOverlayDriver(),
                         ReaderTapZoneHintDriver(readerTheme: readerTheme),
-                        const _ReaderChromeDismissBarrierDriver(),
+                        const ReaderChromeDismissBarrierDriver(),
                         _ReaderTapEdgeIndicatorDriver(
                           readerTheme: readerTheme,
                           appearance: appearance,
@@ -690,9 +716,9 @@ class _ReadyContentState extends State<_ReadyContent> {
                                   onSeekFraction: _seekFraction,
                                 ),
                         ),
-                        const _ReaderImagePageProgressOverlayDriver(),
+                        const ReaderImagePageProgressOverlayDriver(),
                         ReaderSelectionTipDriver(surfaceReady: surfaceReady),
-                        _ContextPanelDriver(
+                        ReaderContextPanelDriver(
                           textActions: widget.textActions,
                           surface: _surface,
                         ),
@@ -920,7 +946,7 @@ class _ReaderTapEdgeIndicatorDriver extends StatelessWidget {
       (b) => !b.state.atEnd,
     );
     final layout = BookLayoutPreset.fromId(appearance.layoutId).data;
-    _debugTraceReader(
+    debugTraceReader(
       '_ReaderTapEdgeIndicatorDriver build '
       'visible=$visible '
       'rtl=$pageProgressionRtl '
@@ -931,7 +957,7 @@ class _ReaderTapEdgeIndicatorDriver extends StatelessWidget {
 
     return ReaderTapEdgeIndicator(
       readerTheme: readerTheme,
-      axis: _readerTapAxisForPageTurnStyle(appearance.pageTurnStyle),
+      axis: readerTapAxisForPageTurnStyle(appearance.pageTurnStyle),
       pageProgressionRtl: pageProgressionRtl,
       canGoPrevious: canGoPrevious,
       canGoNext: canGoNext,
@@ -939,67 +965,6 @@ class _ReaderTapEdgeIndicatorDriver extends StatelessWidget {
       contentBottomMargin: layout.bottomMargin,
       contentSideMargin: appearance.sideMargin,
       visible: visible,
-    );
-  }
-}
-
-/// Turns a tap at ([x], [y]), as fractions of the page surface, into a page
-/// turn or a chrome toggle, for any book surface.
-void _dispatchReaderTap(
-  BuildContext context, {
-  required double x,
-  required double y,
-  required ReaderSurface surface,
-  required bool isComic,
-  required ReaderTapAxis axis,
-}) {
-  final uiCubit = context.read<ReaderUiCubit>();
-  context.read<ReaderHighlightFocusCubit>().clear();
-  final command = readerTapCommandFor(
-    x: x,
-    y: y,
-    chromeVisible: uiCubit.state.chromeVisible,
-    isComic: isComic,
-    axis: axis,
-  );
-  if (command != ReaderTapCommand.toggleChrome) uiCubit.hideChrome();
-  switch (command) {
-    case ReaderTapCommand.physicalLeftPage:
-      surface.pageLeft();
-    case ReaderTapCommand.physicalRightPage:
-      surface.pageRight();
-    case ReaderTapCommand.previousPage:
-      surface.prevPage();
-    case ReaderTapCommand.nextPage:
-      surface.nextPage();
-    case ReaderTapCommand.toggleChrome:
-      uiCubit.toggleChrome();
-  }
-}
-
-/// Paints only the unsafe top inset so article text stays readable without
-/// adding decorative fades or bottom overlays over the content.
-class _ArticleSystemBarBackground extends StatelessWidget {
-  const _ArticleSystemBarBackground({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final padding = MediaQuery.paddingOf(context);
-    return IgnorePointer(
-      child: Stack(
-        children: [
-          if (padding.top > 0)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: padding.top,
-              child: ColoredBox(color: color),
-            ),
-        ],
-      ),
     );
   }
 }
