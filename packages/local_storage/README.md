@@ -7,8 +7,9 @@ from the DI container and extract the DAO they need.
 File on disk: `readflex.db` in the application documents directory, opened in
 a background isolate with write-ahead logging and `synchronous = NORMAL`
 (`configureAppDatabaseConnection`): a commit, such as a reading position
-save, appends to `readflex.db-wal` without an fsync. A power loss can drop the
-last commits but cannot corrupt the file. Anything that ever copies the
+save, appends to `readflex.db-wal` without a per-commit fsync. A power loss can
+drop recent commits; this setting does not provide full commit durability.
+Anything that copies the
 database must checkpoint first or copy the `-wal` file too.
 
 ---

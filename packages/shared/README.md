@@ -67,7 +67,7 @@ abstract class TextAction {
 ```dart
 // packages/features/highlight/lib/src/highlight_action.dart
 class HighlightAction extends ColorHighlightTextAction {
-  const HighlightAction({
+  HighlightAction({
     required this.highlightRepository,
   });
 

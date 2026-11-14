@@ -37,7 +37,7 @@ Dart code:
 | `package:pagecraft/djvu.dart` | the core and DjVu: `DjvuBook`, `DjvuPages`, hidden-text search/selection and `readDjvuMetadata` |
 | `package:pagecraft/article.dart` | the core and saved articles: `ArticleTextSource`, anchors, search |
 | `package:pagecraft/all_formats.dart` | all of them and `textBookSourceOf`, which picks a reflowable book's source by its type |
-| `package:pagecraft/testing.dart` | fixtures for tests: archives, comics, MOBI files, PDFs built in memory |
+| `package:pagecraft/testing.dart` | in-memory archives, images, comics and MOBI fixtures, plus `preparePdfEngineForTests` for the native PDF engine |
 
 Each format lives in one folder (`src/formats/<format>/`, articles in
 `src/article/`) with its parser, its `TextBookSource` or page source and
@@ -1081,7 +1081,7 @@ spreads can be planned before the bytes are decoded.
 
 ## PDF (`src/formats/pdf/`)
 
-pdfium is the one third-party engine in pagecraft, for PDF only, through
+PDF decoding uses PDFium through
 `pdfrx_engine` (the Dart API of pdfrx, no widgets) and `pdfium_flutter`
 (the library itself: an XCFramework on iOS and macOS, a bundled native
 asset on Android). `PdfBook.open(path, password:)` reads every page's
@@ -1095,8 +1095,9 @@ one pass in the worker isolate; the cost grows with page count and does not
 include rendering every page.
 An encrypted file without the right password throws
 `PdfPasswordRequiredException`; anything pdfium cannot read throws
-`PagecraftException` with pdfium's reason. The app calls
-`initializePdfEngine()` once before the first open.
+`PagecraftException` with pdfium's reason. File opening initializes the engine
+lazily; a Flutter host can call `initializePdfEngine()` to warm it earlier.
+Readflex does not currently call that optional warm-up API at startup.
 
 Pages are drawn through `ImageProvider`s, as comic pages are, so the
 framework's image cache holds the budget and `Image`, `precacheImage` and
@@ -1297,8 +1298,10 @@ within the spread first, then enters the next spread from the side the
 reader came from; `goToCfi` takes the fake CFIs the WebView reader saves
 (`epubcfi(/6/N)`), `goToFraction` the slider's fraction; `position`
 reports the numbers the app shows (`fraction = (page + 1) / pageCount`,
-chapter counter = page counter, one byte-based location). Every turn,
-jump or rotation resets zoom (`zoomEpoch`).
+chapter counter = page counter, one byte-based location). Turns, navigation
+jumps and `resetZoom()` reset zoom (`zoomEpoch`). `attachViewport` also resets
+it when the viewport switches between single-page and spread mode; a resize
+that retains the same mode does not reset zoom.
 
 Both paginated views use `src/page_turn/`: `PageTurnFrame` describes normalized
 motion, entry side and axis; its strategies resolve offsets and visible regions.

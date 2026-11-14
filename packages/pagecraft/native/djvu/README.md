@@ -44,7 +44,7 @@ Android/Linux link libm and libdl explicitly, with undefined-symbol link errors
 enabled. The hook skips C++ setup when no code assets were requested, as in
 Flutter's non-native hook passes.
 
-For an independent host decoder check:
+For an independent host decoder check, run from the repository root:
 
 ```sh
 cmake -S packages/pagecraft/native/djvu -B .local/djvu-native-build \

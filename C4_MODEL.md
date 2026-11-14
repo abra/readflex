@@ -110,7 +110,8 @@ flowchart TB
   composition["composition.dart"]
   container["DependenciesContainer"]
   scopes["AppScopes\ndependencies, preferences, connectivity, lifecycle"]
-  app["ReadflexApp\nMaterial app, theme, locale"]
+  app["ReadflexApp\nretained router, theme preference, locale"]
+  platformApp["ReadflexPlatformApp\nCupertino / Material app root"]
   router["routing.dart"]
 
   main --> starter
@@ -119,7 +120,9 @@ flowchart TB
   composition --> container
   starter --> scopes
   scopes --> app
+  app --> platformApp
   app --> router
+  platformApp -->|"hosts router config"| router
   router -->|"Injects dependencies into Screen/Sheet entry points"| features["Feature entry points"]
 ```
 
@@ -129,7 +132,8 @@ flowchart TB
 | `app_bootstrap.dart` | Configuration validation, monitoring initialization/reuse, dependency creation and failed-attempt cleanup. |
 | `composition.dart` | Creates database, repositories, services and document directories. |
 | `dependency_container.dart` / `resource_disposer.dart` | Explicit dependency holder and reverse-order, idempotent cleanup; rollback retains monitoring for retry. |
-| `app_scopes.dart` / `readflex_app.dart` / `app_lifecycle.dart` | Root scopes, Material app, retained router, service lifecycle handling. |
+| `app_scopes.dart` / `readflex_app.dart` / `app_lifecycle.dart` | Root scopes, retained router, theme/locale preferences and service lifecycle handling. |
+| `readflex_platform_app.dart` | Chooses the Cupertino app root on iOS/macOS and Material elsewhere; installs semantic/platform themes and compatibility context. |
 | `routing.dart` | Navigation table, entry redirects, feature wiring, app-level callbacks. |
 
 ### Feature Components
@@ -167,8 +171,8 @@ flowchart TB
   readerBloc["ReaderBloc\nsource, position, bookmarks, highlights"]
   uiCubit["ReaderUiCubit\nchrome, drawers, overlays"]
   appearance["ReaderAppearanceCubit"]
-  brightness["ReaderBrightnessCubit / KeepAwakeCubit"]
-  pageBody["Page body\ntext, comic, PDF or article"]
+  brightness["ReaderBrightnessCubit / ReaderKeepAwakeCubit"]
+  pageBody["Page body\ntext, comic, PDF, DjVu or article"]
   surface["ReaderSurface\ncommands to the page"]
   pagecraft["pagecraft package"]
   repos["Book / Article / Highlight repositories"]

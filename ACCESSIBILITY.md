@@ -74,8 +74,9 @@ Reader brightness retains three 48dp targets in constrained windows. When the
 vertical pill cannot fit above the dock, including 568×320 at 200% text, it uses
 a horizontal 184×48dp arrangement. The title shares the top row without painting
 behind the pill, and article progress remains visible below it. Safe-area
-gutters and RTL placement apply to the whole arrangement; increasing,
-decreasing, dragging and returning to system brightness remain available.
+gutters and RTL placement apply to the whole arrangement. Increasing,
+decreasing, dragging and returning to system brightness keep the vertical
+control's enabled/disabled states; the compact layout does not remove commands.
 The layout changes chrome only and retains control state through rotation and
 hide/show. `reader_floating_chrome_layout_test.dart` covers Android/iOS roots,
 German and Arabic phone RTL, enlarged text and constrained asymmetric insets;
@@ -115,8 +116,9 @@ it does not reduce the touch targets of standalone buttons or the checkbox row.
 `AppInlineSheet` (reader Contents and Search) behaves like a modal sheet for
 assistive technology without being a route: it names itself like a route
 (`scopesRoute`/`namesRoute` with the panel title), its scrim is a dismissible
-`ModalBarrier` labelled with Material's scrim strings and blocks the page
-behind it, and a hidden sheet is offstage, so it has no semantics or focus.
+`ModalBarrier` labelled with Cupertino's modal-dismiss string on iOS or
+Material's scrim strings on Android and blocks the page behind it. A hidden
+sheet is offstage, so it has no semantics or focus.
 Explicit Close stays in the header: drag, fling and pull-to-close are
 shortcuts, never the only way out. With large text the sheet opens at full
 height, and on a screen too short for its content the content scrolls as a

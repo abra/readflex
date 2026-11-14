@@ -49,10 +49,11 @@ own caller context, which outlives the sheet. `routing.dart` passes the reader's
 `DictionaryAction.onExecute`, so this package never imports the dictionary
 feature. Longer text, or no `onDefine`, gets Select language, which opens the
 target menu.
-Language selection remains an anchored menu in the fixed direction header,
-not another bottom sheet. Ten autonyms use two columns only when measured text
-and checkmark slots fit. Larger text falls back to a bounded scrollable list;
-targets remain at least 48dp. Auto is a separate full-width source-only option.
+Language triggers remain in the fixed direction header. Android opens an
+anchored menu: ten autonyms use two columns only when measured text and
+checkmark slots fit, otherwise a bounded scrollable list. iOS opens a
+Cupertino language sheet with one option per row. Targets remain at least
+48dp. Auto is a separate full-width source-only option.
 Selection closes the menu and retains the existing translation request contract.
 Menu layout does not change the result's scroll offset or issue extra lookups.
 Request construction rejects a stale normalized single-word snapshot when the

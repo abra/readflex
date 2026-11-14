@@ -17,7 +17,7 @@ selection-theme overrides; app actions remain custom.
 Start with the dependency injection in [app routing](../../../lib/app/routing.dart),
 then [ReaderScreen](lib/src/reader_screen.dart), the
 [state owners](#architecture--independent-units-of-state) and the format bodies
-below. `reader_screen.dart` and its ten `part` files form **one Dart library**:
+below. `reader_screen.dart` and its `part` files form **one Dart library**:
 they share imports and private declarations. The split groups screen composition,
 lifecycle, five format bodies, chrome, drawers and context panels; these files
 are not independently importable modules.
@@ -249,10 +249,9 @@ EPUB, FB2 and MOBI/AZW3 on
 (`BookPosition`, `ReaderTocItem`, `ReaderDocumentFeatures`, search events,
 `ReaderSelection` and its parts) live in this package. A body that cannot
 open or lay out its document adds `ReaderSurfaceFailed` with the error.
-There is no WebView: before its removal on 2026-10-30, the WebView reader with
-foliate-js drew books behind the same contract; the last revision with it
-is `fb4b4e5c`. Saved positions, highlights and bookmarks keep the forms it
-wrote.
+There is no WebView. The former foliate-js reader drew books behind the same
+contract; the last revision with it is `fb4b4e5c`, and `33df227a` removed it.
+Saved positions, highlights and bookmarks keep the forms it wrote.
 
 Paginated books, PDFs and comics observe the global `ReaderPageAnimation`
 through appearance state and map it to Pagecraft's `PageTurnAnimation`.
@@ -262,12 +261,19 @@ CFI, text layout, selection and fixed-page zoom; it does not reopen the book.
 An animation already in progress finishes with its original effect. The
 engine owns presentation; preferences and Cubit remain outside Pagecraft.
 
+PDF, CBZ and DjVu share `FixedPagesView`: pinching scales from 1× to 4×.
+At fit, edge taps turn pages immediately; a centre double tap within 280ms
+zooms to 2.5× or back to fit. While zoomed, all taps use the centre behavior
+and swipes pan. An active text or image-area selection locks this page input.
+PDF's visible chrome also consumes page input until a tap hides it; CBZ and
+DjVu keep page gestures available while their chrome is open.
+
 ### Comics (`_ReaderComicBody`, `ReaderComicSurface`)
 
 For a CBZ the content body mounts `_ReaderComicBody`: it opens the archive with `ComicBook` (the stored `comicPageOrderVersion`
 keeps the page order of saved positions), restores the page from the
 saved fake CFI or the fraction, and shows `FixedPagesView`. The
-Appearance sheet's page turn sets the view's `axis` (vertical turns pages
+page-direction action in the dock sets the view's `axis` (vertical turns pages
 up and down; taps keep their left and right zones as previous and next).
 Its events feed the blocs and cubits: positions become
 `ReaderBookPositionUpdated` (`fraction = (page + 1) / pageCount`, chapter
@@ -363,7 +369,7 @@ and text colour through `pageColorsFor`. `ReaderPdfSurface` implements
 the commands: navigation over the controller, `searchBookStream` through
 `searchPdfBook` with excerpts around the match, `goToSearchResult`
 opening the hit's page and marking its range, selection preview colour
-and retention on the `PdfTextSelection`, previews as `PdfPageImage`
+and restoration on the `PdfTextSelection`, previews as `PdfPageImage`
 providers; image-area commands are inert.
 
 ### DjVu (`_ReaderDjvuBody`, `ReaderDjvuSurface`)
@@ -569,7 +575,7 @@ tablet in portrait centre one column of it instead of running ~85 characters
 across the page. A phone page in portrait is narrower than the measure, even
 at the smallest reader size, and lays out as before.
 
-A wide window (`AppWindowSize.isWide`: at least 840 × 480, never a phone)
+A wide window (`AppWindowSize.isWide`: at least 840 × 480 logical pixels)
 also gets the reader's Columns choice:
 
 - **Auto** (default, `maxColumnCount` 0): one column in portrait; in
@@ -603,14 +609,16 @@ font size of the book style. The reader's own text size
 two independent corrections:
 
 - A tablet-sized window, at least 600 on its shortest side like Android's
-  `sw600dp`, gets 12.5% larger text on every platform: 18px instead of 16px.
+  `sw600dp`, applies a 1.125 window multiplier on every platform: a 16px base
+  becomes 18px before the independent Android correction below.
   A tablet is held further away, and the 32em measure grows with the text, so
   lines keep their length in characters. The shortest side ignores
   orientation: rotation never resizes the text, phones stay phones in
   landscape, and a narrow Split View or Slide Over window reads like a phone.
-- Android adds up to 12% on phones and 4% on tablets: the sizes the WebView
-  reader gave it, whose Chromium drew text smaller than iOS, kept so books
-  read as they did.
+- Android applies 1.12 through a 360dp shortest side, tapering linearly to
+  1.04 at 600dp and retaining 1.04 above it. This preserves the WebView
+  reader's platform correction. The two factors multiply: Android's total
+  at 600dp is 1.125 × 1.04 = 1.17, not 1.125 relative to a phone.
 
 The platform is `defaultTargetPlatform`, not the `Theme`'s: the correction
 follows the device the app runs on. Books and articles share the multiplier; PDF and comic pages are images
@@ -979,10 +987,10 @@ their existing 15sp `bodyMedium` role. Medium utility glyphs use 24dp;
 phone roles stay unchanged, including short landscape windows. Measurement
 uses the same role and scaler as rendering, and progress numbers retain
 tabular figures. This only changes controls, not the page layout or location.
-The page-turn toggle is not in the dock for books or
-articles (the setting lives in Appearance). Comics have no Appearance action,
-so their dock keeps the page-turn toggle as their only route to that
-setting. Page-turn and active-bookmark glyphs, the page-bookmark indicator and
+Reflowable books and PDF keep Page turn in Appearance. Articles scroll and
+have no page-turn control. CBZ and DjVu have no Appearance action, so their dock
+keeps the page-turn toggle as their route to that setting.
+Page-turn and active-bookmark glyphs, the page-bookmark indicator and
 other action accents use `context.actionForeground`.
 
 Status sits above the seek track, inset 12dp inside the dock, and follows the
@@ -1054,11 +1062,14 @@ The 568×320, 200% text contracts cover both platform roots, phone RTL, landscap
 safe insets (including 24dp top and 34dp bottom), commands and rotation without
 replacing the brightness or seek control elements.
 The temporary overlay preserves the reading canvas. The top line shares the
-capsule's 16dp content gutter. The transient CBZ page pill sits
-`appBottomSafeInset` (minimum 16dp) plus 12dp above the bottom edge. Its step buttons are
-`AppPlainIconButton`s; the value button is a 48dp selected control
+capsule's 16dp content gutter. The passive CBZ/DjVu page-counter pill sits
+`appBottomSafeInset` (minimum 16dp) plus 12dp above the bottom edge.
+Brightness step buttons are `AppPlainIconButton`s;
+the centre value button is a 48dp selected control
 (`selectedControlBackground/Foreground` while a custom level is active) whose
-"System" label comes from `readerBrightnessSystem`.
+percentage returns to system brightness when tapped. System mode shows a device
+icon with a localized `readerUsingSystemBrightness` announcement using
+`readerBrightnessSystem`.
 Brightness diagnostic formatting/logging runs only in debug builds.
 Brightness input queues its platform target before awaiting preference storage.
 Intent and lifecycle checks discard stale reads and adjustments, so a pending

@@ -63,9 +63,10 @@ ties; reuse the frozen `dataset.json` and inputs for matched comparisons.
 Preparation freezes inputs and expected output fingerprints using production
 Dart. EPUB workloads read up to 24 entries and parse the two largest chapters.
 MOBI workloads read every text record and, for pre-KF8 files, parse the two largest
-HTML sections. FB2 workloads build the existing XML DOM. Separately labelled
-synthetic CBZ files contain up to 24 unchanged PNG/JPEG images extracted from the
-selected EPUBs, stored and deflated. Image decoding and rendering are not timed.
+HTML sections. Plain FB2 workloads build the existing XML DOM; zipped FB2 inputs
+exercise ZIP open/read. Separately labelled synthetic CBZ files contain up to
+24 unchanged PNG/JPEG images extracted from the selected archives, stored and
+deflated. Image decoding and rendering are not timed.
 
 ## Measurement and correctness
 

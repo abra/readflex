@@ -4,6 +4,9 @@
 the team handoff PDF. Architecture and package references remain in English.
 Update the source when core flows, package responsibilities, build requirements
 or production gaps change; export a new PDF for each handoff.
+The root README is a quick start. The handoff source keeps the detailed setup,
+configuration, signing and verification procedures; package READMEs and
+`test/ui/README.md` own their implementation and native-test contracts.
 
 ## PDF export
 

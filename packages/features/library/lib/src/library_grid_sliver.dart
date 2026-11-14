@@ -39,8 +39,8 @@ int libraryGridColumnCount(double width, {required double textScale}) {
 }
 
 /// The Library's covers as a sliver of [LibraryContentScrollView]: a lazy
-/// grid with up to three columns on phones, leaving room for scaled cover
-/// text; wider windows add columns (see [libraryGridColumnCount]). The
+/// grid whose columns follow the available width and scaled cover text;
+/// wider windows add columns (see [libraryGridColumnCount]). The
 /// columns follow the width in layout, so a height change, such as the
 /// keyboard resizing the body, rebuilds no tiles.
 ///

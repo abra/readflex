@@ -31,8 +31,8 @@ import '../test/support/ui_test_driver.dart';
 /// checked on.
 ///
 /// The iOS simulator reads host paths; on Android pass paths pushed with
-/// `adb push`. The tool splits `--dart-define` at commas: link files with
-/// commas in their names under plain names first.
+/// `adb push`. Quote each complete dart-define argument. Paths may contain
+/// commas, but not the `|` separator used by this harness.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   const books = String.fromEnvironment('PAGECRAFT_BOOKS');

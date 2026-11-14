@@ -3,291 +3,69 @@
   <br/>Readflex
 </h1>
 
-<p align="center">Mobile reading app for books, articles, and highlights.</p>
+<p align="center">Read books, comics, and saved articles. Review words and highlights.</p>
 
-## Overview
+## Getting started
 
-Readflex is a Flutter reading app for books, articles, and highlights. The
-codebase is split into small local packages instead of one large `lib/` tree.
-
-Start here:
-
-- [Team handoff guide (Russian)](docs/team-handoff.ru.md) — onboarding route,
-  runtime flows, operational handover, and PDF source.
-- [ARCHITECTURE.md](ARCHITECTURE.md) — project shape, package boundaries, and
-  handoff rules.
-- [C4_MODEL.md](C4_MODEL.md) — system context, container, component, and
-  code-level architecture views.
-- `packages/*/README.md` — public APIs and implementation notes for each
-  package.
-- [benchmarks/README.md](benchmarks/README.md) — opt-in performance checks.
-
-## Project Layout
-
-| Path | Purpose |
-|------|---------|
-| `lib/app` | App bootstrap, dependency composition, GoRouter routes, root scopes |
-| `packages/features/*` | Feature UI surfaces and feature state management |
-| `packages/*_repository` | Domain repositories over storage and files |
-| `packages/*_service` | Platform, backend, and infrastructure contracts |
-| `packages/local_storage` | Drift database, DAOs, migrations, storage mappers |
-| `packages/domain_models` | Pure domain models, enums, and exceptions |
-| `packages/component_library` | Theme, design tokens, and reusable widgets |
-| `packages/pagecraft` | The reader engine: book formats, layout, pages, CFIs, search, internal Rust MOBI/KF8 and C++ DjVu backends |
-| `android`, `ios` | App runners and native platform integrations |
-| `test/ui`, `integration_test` | Root UI flows, visual comparisons and device checks |
-| `scripts`, `test/tooling` | Dart development tools and their isolated tests; optional Python handoff-PDF exporter |
-| `benchmarks` | Opt-in performance comparisons, separate from the app graph |
-
-Create source subdirectories when they contain code or maintained fixtures,
-rather than keeping empty placeholders for future models, exceptions or helpers.
-Localization belongs to `packages/readflex_localizations`, not empty per-feature
-`l10n` folders. Build tools recreate their cache/output directories as needed;
-local diagnostics belong under ignored `.local/`.
-
-Backend implementations are deployed separately and are not part of this
-checkout. The service packages here contain client contracts and adapters.
-
-## Development
-
-Use Flutter 3.50.0 / Dart 3.14, pinned in `.fvmrc`, through FVM. Install dependencies:
+Use Flutter **3.50.0 / Dart 3.14**, pinned in `.fvmrc`, through FVM.
+Install Rust through rustup; the native toolchain is pinned in
+`packages/pagecraft/rust/rust-toolchain.toml`. Android needs its SDK/NDK and
+the JDK configured for Flutter; iOS needs Xcode and CocoaPods.
+Pagecraft's build hooks compile and bundle native libraries automatically.
 
 ```sh
 fvm install
 make get
-```
-
-Owned UI uses the standalone `material_ui` and `cupertino_ui` libraries while
-`component_library` remains the single Readflex design system. Core layout,
-preferences and the native selection bridge use Flutter core APIs where
-possible. See [architecture](ARCHITECTURE.md#platform-ui-libraries) for boundaries.
-
-The test harness, coverage reports and benchmark orchestration use the pinned
-Dart SDK. Node.js is optional maintenance tooling for regenerating committed
-ICU sentence references, Unicode search-fold data and hyphenation patterns in
-Pagecraft. Normal builds, tests and benchmarks use the committed generated data;
-see [Pagecraft's README](packages/pagecraft/README.md) for the generators.
-Android builds use AGP 9.3.1, Gradle 9.5.0 and Kotlin 2.4.20, with Java 17 source
-compatibility. Current plugins still apply the standalone Kotlin plugin, so
-`android.builtInKotlin=false` and `android.newDsl=false` retain AGP 9's supported
-[compatibility path](https://developer.android.com/build/migrate-to-built-in-kotlin#opt-out-of-built-in-kotlin).
-The root Gradle configuration also applies Kotlin to `file_picker` 11 while
-built-in Kotlin is disabled, working around its
-[upstream AGP 9 bug](https://github.com/vicajilau/flutter_file_picker/issues/2200).
-The app's ProGuard rules preserve ML Kit registrar constructors used through
-reflection under AGP 9's stricter shrinking; other code remains optimized.
-Run Gradle with the JDK configured for Flutter (Java 21 is supported), including
-when reproducing a build directly with `gradlew`.
-iOS builds need Xcode and CocoaPods.
-MOBI text processing uses Rust through FRB. Install rustup; the compiler and
-targets are pinned in `packages/pagecraft/rust/rust-toolchain.toml`.
-Pagecraft's Flutter/Dart build hook compiles and bundles the library automatically,
-including for consumers importing another format. See the
-[native backend notes](packages/pagecraft/doc/mobi_native.md) for setup and checks.
-DjVu uses the vendored DjVuLibre C++ decoder through Dart FFI. The build hook
-compiles it with the target platform's native toolchain; no system DjVuLibre
-installation is needed. Its GPLv2-or-later license is separate from the
-surrounding project notices; review it before distributing linked builds. See
-[Pagecraft's DjVu notes](packages/pagecraft/README.md#djvu-srcformatsdjvu).
-
-### Versioned Configuration
-
-Keep `.fvmrc`, the application `pubspec.lock`, `ios/Podfile.lock`, the existing
-SwiftPM `Package.resolved` files in version
-control. They pin the SDK and resolved dependencies; update them deliberately
-and review their diffs. Use `pod install`, not `pod update`, when restoring iOS
-dependencies. Root and platform `.gitignore` files are shared too, so a fresh
-checkout does not depend on a developer's global ignore settings.
-
-The independent library packages under `packages/` and `third_party/` keep
-their own test-environment `pubspec.lock` files local, except the pinned
-`pagecraft` bridge/build environment. Its `rust/Cargo.lock` is tracked too.
-The root lockfile pins
-the application graph, not every library's standalone dev dependencies.
-
-Do not commit `.local/run-defines.json`, `.env` files, `android/key.properties`,
-keystores, machine-specific SDK paths, or generated caches/builds. Configure
-private defines and release signing separately on each computer. Keep a secure
-backup of the signing key; rebuilding dependencies does not recreate that key.
-
-This follows the [Dart lockfile guidance](https://dart.dev/tools/pub/private-files),
-[CocoaPods guidance](https://guides.cocoapods.org/using/pod-install-vs-update.html),
-and [FVM configuration guidance](https://fvm.app/documentation/getting-started/configuration).
-
-### Verification
-
-Analyze:
-
-```sh
-make analyze
-```
-
-This includes package dependency checks and the widget/View boundary checks.
-Run those separately with `make check-architecture`; see the scope and limits
-in [Architecture](ARCHITECTURE.md#testing-and-verification).
-
-Test:
-
-```sh
-make test
-```
-
-`make test` includes Dart development-tool tests in `test/tooling/`. Run that
-subset with `make test-tools` when changing architecture checks, coverage or
-benchmark orchestration. Resolved widget/View checker tests live in
-`test/scripts/` and run with `fvm flutter test test/scripts`.
-
-UI flows and committed visual comparisons run without API keys:
-
-```sh
-make test-ui-contracts
-make test-ui
-make test-device DEVICE=<device-id>
-make coverage
-make test-performance
-```
-
-See [UI verification](test/ui/README.md) for coverage, native prerequisites,
-baseline updates, and remaining manual checks. Native screenshots and failure
-diagnostics go under `.local/`; `make verify` never updates visual baselines.
-Coverage reports enumerate unmeasured files and uncovered executable lines and
-branches instead of treating test counts as full coverage. For native Dart line
-coverage, add `COVERAGE=1` to `make test-device`; see the UI guide for combining
-matching runs. Benchmarks record elapsed time plus structural work counters,
-not release-device FPS.
-
-Run the app:
-
-```sh
 ./run.sh
-# Or: make run
 ```
 
-On the first run the script creates `.local/run-defines.json` from
-`config/run-defines.example.json` with owner-only permissions and exits without
-launching Flutter. Set `READFLEX_API_KEY` and, optionally, `GLITCHTIP_DSN` in that
-local file once; subsequent runs require no `export` commands. `.local/` is
-ignored by version control. Do not commit or share this file.
+The first launch creates `.local/run-defines.json` and exits. Set
+`READFLEX_API_KEY` and, optionally, `GLITCHTIP_DSN` there, then run `./run.sh`
+again. Keep this local DEV configuration private.
+The template uses `ENVIRONMENT=DEV` even in release mode. Production backend
+authentication is still incomplete; static API credentials are DEV-only.
 
-The script uses the FVM-pinned SDK and passes the file to Flutter with
-`--dart-define-from-file`, without printing its contents. Arguments are forwarded
-unchanged, and the script also works when invoked from another directory:
+To choose a device or run mode:
 
 ```sh
 ./run.sh -d <device-id>
 ./run.sh --release -d <device-id>
-make run ARGS='--profile'
 ```
 
-For Android, native libraries follow the requested target architecture, including
-device-targeted `--release` runs. `flutter run --release` retains full icon fonts;
-use `make build-apk` below to measure an optimized release artifact.
+Keep the committed SDK and dependency lockfiles; restore iOS dependencies with
+`pod install`. Private defines, signing keys and build outputs stay untracked.
 
-The template explicitly selects `ENVIRONMENT=DEV`, including for `--release`:
-this is a local device-testing setup, not a store-distribution configuration.
-Build-time credentials are still embedded in the app and build artifacts. Do
-not distribute builds made with this private file. Individual
-`--dart-define=NAME=value` arguments override values from the file.
-
-Common dart-defines:
-
-| Flag | Purpose |
-|------|---------|
-| `ENVIRONMENT` | `DEV`, `STAGING`, or `PROD`; defaults to DEV in debug and PROD in release |
-| `ARTICLE_CLEANER_BASE_URL` | Article extraction backend base URL; defaults to localhost in DEV and `https://api.readflex.app` in PROD |
-| `READFLEX_API_KEY` | Development-only shared backend credential; rejected in STAGING/PROD builds |
-| `ARTICLE_CLEANER_API_KEY` | Legacy development alias for `READFLEX_API_KEY` |
-| `CONTEXTUAL_TRANSLATION_BASE_URL` | Contextual translation backend base URL; defaults to `ARTICLE_CLEANER_BASE_URL` |
-| `DICTIONARY_BASE_URL` | Readflex Dictionary backend base URL; defaults to `ARTICLE_CLEANER_BASE_URL` |
-| `GLITCHTIP_DSN` | Optional GlitchTip DSN for Sentry-compatible error reporting |
-| `GLITCHTIP_TRACES_SAMPLE_RATE` | Sampling rate for explicitly created Sentry transactions; defaults to `0`, does not add instrumentation |
-
-Static API credentials are allowed only in DEV. Production requests must use a
-short-lived server-issued credential; implementing that backend authentication
-contract remains a release blocker.
-
-Android release builds require an upload keystore. Copy
-`android/key.properties.example` to the ignored `android/key.properties`, or
-provide the documented `READFLEX_ANDROID_*` variables in CI. `make build`
-produces the signed AAB used by Google Play, which delivers the libraries for
-each device's architecture. `make build-apk` produces separate signed APKs with
-icon-font subsetting enabled instead of one APK containing every architecture:
+## Checks
 
 ```sh
-make build
-make build-apk
-# Build only the ARM64 APK for a compatible physical device:
-make build-apk ARGS='--target-platform android-arm64'
+make analyze
+make test
+make test-ui-contracts
+make test-ui
 ```
 
-The APK outputs are under `build/app/outputs/flutter-apk/`:
+## Android builds
 
-- `app-armeabi-v7a-release.apk`
-- `app-arm64-v8a-release.apk`
-- `app-x86_64-release.apk`
-
-Only requested architectures are built. Inspect a result and fail if it contains
-unexpected native architectures:
+Configure release signing using `android/key.properties.example` and save the
+values in the ignored `android/key.properties` file.
 
 ```sh
-make analyze-apk APK=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-  ARGS='--expect-abi arm64-v8a --output .local/reports/apk-arm64.json'
+make build                                                # Signed AAB
+make build-apk                                            # APKs split by ABI
+make build-apk ARGS='--target-platform android-arm64'       # ARM64 only
 ```
 
-Both release targets separate Dart debug information into a timestamped
-`.local/symbols/android/<UTC timestamp>/` directory. Archive that directory with
-its matching APK/AAB for crash symbolication; `.local/` is ignored and is not a
-durable release archive. CI can choose an artifact directory with
-`ANDROID_SYMBOLS_DIR=<path>`. These targets do not enable obfuscation.
+Build targets do not load `.local/run-defines.json` automatically. For a local
+DEV build, pass `--dart-define-from-file=.local/run-defines.json` in `ARGS`.
+APKs go to `build/app/outputs/flutter-apk/`; archive the matching debug symbols
+from `.local/symbols/android/` with each release artifact.
+DjVu uses DjVuLibre (GPLv2-or-later); its license is documented in Pagecraft.
 
-See [the signing template](android/key.properties.example) and
-[`android/app/build.gradle.kts`](android/app/build.gradle.kts) for the accepted
-signing properties/environment variables. `make build` and `make build-apk` do
-not load `.local/run-defines.json`; that private DEV file belongs to `run.sh`.
-For an optimized local device-test APK with the same DEV configuration, pass it
-explicitly:
+## Documentation
 
-```sh
-make build-apk \
-  ARGS='--target-platform android-arm64 --dart-define-from-file=.local/run-defines.json'
-./run.sh --release -d <device-id> \
-  --use-application-binary=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-```
+- [Architecture](ARCHITECTURE.md) · [C4 diagrams](C4_MODEL.md) — structure and package boundaries.
+- [Pagecraft](packages/pagecraft/README.md) — reader engine, formats and native backends.
+- [UI verification](test/ui/README.md) · [Accessibility](ACCESSIBILITY.md) — checks and review guidelines.
+- [Benchmarks](benchmarks/README.md) — performance measurements.
 
-`--use-application-binary` installs and launches that APK without rebuilding it;
-its environment and dart-defines are those used when it was built.
-
-GlitchTip uses the Sentry-compatible Dart SDK. Prefer `GLITCHTIP_DSN` for
-Readflex builds; `SENTRY_DSN` is accepted as a fallback for compatibility with
-GlitchTip's SDK docs.
-
-Feature wiring follows `routing.dart -> Screen/Sheet -> Bloc/Cubit -> View`.
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full convention.
-
-## Current Production Gaps
-
-Some contracts are intentionally incomplete while the app is still being built:
-
-- Error reporting sends to GlitchTip when `GLITCHTIP_DSN` or `SENTRY_DSN` is
-  provided. Without a DSN it intentionally falls back to `NoopErrorReporter`.
-- Flashcard, profile, subscription, auth, AI, and notification surfaces remain frozen
-  outside the active package graph; their last legacy revision is `189e2cc1`.
-- Production backend authentication/attestation and short-lived access tokens
-  are not implemented; static build-time API credentials are limited to DEV.
-- Practice word cards have no Listen (TTS) action or daily reminder.
-
-Dictionary lookup and Practice are active. The reader tries the platform
-dictionary before the Readflex Dictionary API; saved words and highlights
-share FSRS scheduling through `fsrs_repository`.
-
-## Team Handoff
-
-The [handoff guide](docs/team-handoff.ru.md) explains how to navigate the code,
-trace core flows, restore a development environment, and assess release gaps.
-It complements the architecture and package references rather than replacing
-them. Keep it current when those flows or operational requirements change.
-See [PDF export instructions](docs/README.md) to rebuild the deliverable locally.
-
-Backend repositories/deployments, signing access, store accounts and monitoring
-access must be transferred separately through the team's secure channels. This
-checkout does not establish their owners or a production authentication flow.
+Package READMEs document their APIs and implementation details.

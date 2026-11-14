@@ -334,18 +334,22 @@ or scale the reading engine's text. Resizing is driven by the window's
   This geometry stays in presentation, outside Reader services and pagecraft.
   See the reader and pagecraft READMEs.
 
-Reading text size is not a layout, so it has its own rule: a tablet-sized
-window, at least 600 on its shortest side (Android's `sw600dp`), renders book
-and article text 12.5% larger (`readerDeviceFontScale` in the reader). The
-shortest side ignores orientation, so rotation never resizes the text, phones
+Reading text size has a separate renderer rule: a tablet-sized window, at least
+600dp on its shortest side, adds a 1.125 multiplier to book and article text
+(`readerDeviceFontScale`). Android also applies a platform correction, ranging
+from 1.12 at 360dp or less to 1.04 at 600dp or more, interpolated between them.
+These multipliers compose; the tablet multiplier alone is a 12.5% increase.
+The shortest side ignores orientation, so rotation never resizes the text, phones
 stay phones in landscape, and a narrow Split View window reads like a phone.
 The reader's own text size stays at 100%; the multiplier only reaches the
 book style pagecraft lays out with.
 
-Modal utility sheets keep Material's 640dp width on Android and use a
-bottom-centred 540dp maximum Cupertino popup on iOS. Reader
+In narrow windows, modal utility sheets use a 640dp Material width cap on
+Android and a 540dp Cupertino popup cap on iOS. Expanded settings/forms use
+the shared centred 540dp modal on both platforms. Reader
 Contents and Search use the same `AppInlineSheet` instance as narrow windows,
-presented as a 420dp panel at the trailing edge with safe-area gutters. Its
+presented as a flush 420dp panel at the trailing edge, with safe insets consumed
+inside its content. Its
 body, search query, focus and scroll state survive resizing between panel and
 bottom sheet. Expanded panels have an explicit Close action and do not turn
 vertical scrolling into sheet expansion or dismissal. Anchored popovers are
@@ -873,7 +877,10 @@ call GoRouter to navigate to sibling features directly.
 ## Runtime Configuration
 
 Configuration is read through `ApplicationConfig` and compile-time environment
-values. Important development flags are documented in `README.md`.
+values. Flag names, defaults and validation live in
+[`lib/app/config/application_config.dart`](lib/app/config/application_config.dart);
+`config/run-defines.example.json` supplies the local DEV template used by `run.sh`.
+The root README keeps the minimal launch instructions.
 
 Security boundary: static Readflex API credentials are development-only and
 configuration validation rejects them in staging/production. Production must

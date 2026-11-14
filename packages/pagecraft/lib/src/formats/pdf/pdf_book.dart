@@ -14,9 +14,9 @@ import 'pdf_native_task.dart';
 ///
 /// Opening reads the size of every page in the engine's worker isolate;
 /// this cost grows with page count. Nothing is rendered
-/// until a page is asked for. The engine must be loaded first:
-/// `initializePdfEngine()` in the app, `preparePdfEngineForTests()` in
-/// tests.
+/// until a page is asked for. File opening initializes the engine lazily;
+/// `initializePdfEngine()` can warm it earlier in a Flutter app. Host tests
+/// use `preparePdfEngineForTests()` to configure native library lookup.
 class PdfBook {
   PdfBook._(
     this._document,

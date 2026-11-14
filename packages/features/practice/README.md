@@ -114,8 +114,9 @@ follows the same setting.
   disabled. Close remains available; accepted writes drain on close and ignore
   cancelled emitters. Failed writes clear the saving state and keep the card in
   the queue rather than silently advancing.
-- Removing the final unreviewed card completes the session; already rated cards
-  are not shown again. Review again retains the newly committed FSRS state, so
+- Removing the final queued card completes the session when at least one card
+  was rated; otherwise the session becomes empty. Already rated cards are not
+  shown again. Review again retains the newly committed FSRS state, so
   repeated-pass interval previews match the stored schedule.
 
 - The queue honours Practice settings: highlights only when

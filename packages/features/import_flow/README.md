@@ -33,12 +33,14 @@ Future<ImportFlowResult?> showImportFlowSheet(
 - `onImportBook` — called after a file is picked; returns the persisted
   `Book?`. The default helper is `importBookFile(...)`, which reads the
   metadata with `pagecraft` and persists via `BookRepository`: the title,
-  author and a 480×720 JPEG cover from `readComicMetadata` (file name,
+  author and a JPEG cover from `readComicMetadata` (file name,
   first page), `readPdfMetadata` (Info title, or the file name; the first
   page), `readDjvuMetadata` (document metadata and first-page cover),
   `readEpubMetadata`, `readFb2Metadata` and `readMobiMetadata` (the
   book's own metadata, authors joined with `, `, the declared cover image,
-  the file name when there is no title). A file the
+  the file name when there is no title). Cover dimensions follow the metadata
+  reader and source aspect ratio; the PDF fixture produces 480×621 rather than
+  a fixed 480×720 image. A file the
   engine rejects, including a password-protected PDF, fails with
   `BookImportException` carrying the engine's reason. The routing adapter
   then calls `deletePickedBookFile(...)` in a `finally`, after success and
@@ -90,7 +92,7 @@ touched. It does not use `FilePicker.clearTemporaryFiles`, which empties all of
 iOS `tmp/`. Failures are logged as warnings and never fail the import.
 
 DjVu accepts both `.djvu` and `.djv`; both resolve to `BookFormat.djvu` and
-are copied into the repository as a managed `.djvu` source. Import reads
+keep their lowercased original extension in the repository's managed copy. Import reads
 metadata/cover through Pagecraft's native adapter; it does not pre-render or
 convert the whole document to PDF or images.
 
@@ -148,10 +150,10 @@ between the reserved validation area and the hints, with a minimum 8dp gap.
 When a keyboard or large text leaves too little height for that layout, the
 complete form scrolls instead.
 Validation errors and the offline hint render 8dp below the field on the 24dp
-gutter, in line with the hint bullets, not through the decorator's helper/error
-slot; an error still turns the field border red through an empty
-`InputDecoration.error`, which adds no subtext row, so the field height is the
-same with and without an error. The area reserves space for every localized
+gutter, in line with the hint bullets, not through the field's helper/error
+slot. `AppTextField.hasError` applies the platform error treatment without
+adding a subtext row, so the field height is the same with and without an error.
+The area reserves space for every localized
 message so showing or clearing one does not move the hints or buttons. It
 follows the available width and text scale, is excluded from accessibility
 until a message is shown, and announces errors (not the offline hint) as a

@@ -1,7 +1,7 @@
 # book_repository
 
 Domain repository for reading sources. Wraps `BooksDao` from `local_storage`,
-owns on-disk storage of book/comic files (epub, fb2, mobi, pdf, azw3, cbz)
+owns on-disk storage of book/comic files (epub, fb2, mobi, pdf, azw3, cbz, djvu)
 and cover images, and stores source-scoped bookmarks.
 
 Follows the standard repository pattern: receives `AppDatabase` via its
@@ -23,13 +23,15 @@ Reading an old comic does not migrate or repair its page order.
 
 ```
 books/<uuid>/
-  book.<ext>    — the source file (epub, fb2, mobi, pdf, azw3, cbz)
+  book.<ext>    — the source file (epub, fb2, mobi, pdf, azw3, cbz, djvu/djv)
   cover.<ext>   — extracted cover image (if available)
 ```
 
 Read paths returned on domain `Book` objects are absolute (resolved against
 the current `booksDirectory`). On update, paths are stripped back to
 filenames before being written to the DB.
+The managed source keeps its lowercased original extension: `.djv` and `.djvu`
+both represent `BookFormat.djvu`, without renaming `.djv` to `.djvu`.
 
 ## Public API
 

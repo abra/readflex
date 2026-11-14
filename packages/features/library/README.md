@@ -195,8 +195,9 @@ cover-only grid geometry, normal import/filter capsule height and source actions
 are unchanged;
 the Display action measures the same glyph/text sizes it paints.
 
-Continue reading is an inset rounded, outlined tonal panel with a compact
-60×90 phone cover, native progress fill and the full-title fitting behavior. Selection
+Continue reading is an inset `AppSurfaceRole.contentCard` panel with a compact
+60×90 cover, progress fill and the full-title fitting behavior. The shared role
+resolves its Cupertino or Material shape and outline. Selection
 keeps the panel in place and uses the shared selected color pair.
 
 Grid sources use the original cover-only 2:3 tiles (`BookLibraryGridTile`),
@@ -452,15 +453,19 @@ not the titles.
 
 Collections -> Manage is one guarded sheet flow. Back returns to the
 same query and scroll offset; Save/Delete refreshes that list in place. Close
-exits the whole flow after the existing draft guard. Like other guarded forms,
-this flow disables scrim/drag dismissal, reserving the normal handle height.
+exits the whole flow after the existing draft guard. While a draft,
+confirmation or write needs protection, `AppSheetDismissGuard` sends scrim/drag
+attempts through the Close guard and replaces the handle with a same-height
+spacer. An unchanged idle form retains normal modal dismissal.
 The selector stays mounted offstage during editing; toggling staged removals
 does not read storage or rebuild its search. Standalone management remains
 available with its existing dismissal result. Both entry paths retain the
 route-owned bottom safe area across manage/delete/discard steps.
 The header reserves only the compact offline icon, not a hidden localized word.
-The lazy grid uses up to three columns, reducing the count on narrow viewports
-and with enlarged text. Its delegate takes the count from the width in layout,
+The lazy grid derives its columns from `libraryGridColumnCount`: up to six
+fitting columns, with additional columns when needed to bound wide-window cover
+sizes. Narrower viewports and enlarged text reduce the count. Its delegate takes
+the count from the width in layout,
 so the keyboard resizing the body relayouts the grid without rebuilding its
 tiles or the Continue reading card.
 Covers sit directly on the 16dp gutter with no tile
@@ -622,7 +627,7 @@ source; the close icon is reserved for dismissing the sheet.
 The adaptive 20/24dp trash glyph aligns with the header close glyph at the 24dp content
 gutter. Its 48dp target extends into that gutter without changing text insets;
 the geometry mirrors in RTL. Source-row hairlines span 24…24.
-"Delete collection" is a compact destructive `TextButton` (no icon,
+"Delete collection" is a compact destructive `AppButton.text` (no icon,
 `foregroundColor: error`, `AppButtonLabel`, 48dp target, muted while busy) at
 the end of the source-count row directly under the name field:
 `Row[Expanded(count), button]`, the count centred in the 48dp row. The row
@@ -631,10 +636,9 @@ gutter while the ink bleeds into it; it mirrors in RTL. When the label and
 the count cannot share the line (large text, long translations, measured with
 `TextPainter` like the sibling sites), the row stacks: count on its own line,
 button below aligned to the end. The step-height estimate uses the same rule.
-The estimate also measures the name field (one `bodyLarge` line inside the
-input theme's padding) instead of assuming 56dp: Geist sets 17pt × 1.45 on a
-25dp line, and a fixed guess left a one- or two-item list scrolling by 1dp
-with its edge fade showing.
+The estimate also measures the name field (one platform `bodyLarge` line inside
+`AppTextField.contentPaddingOf(context)`) instead of assuming 56dp. This keeps
+short lists from acquiring false overflow because of rounded font metrics.
 There is no separate delete entry, hairline or gap above the footer any more.
 Both the fixed and the scrolling layout keep one rhythm: the source list's
 own 16dp bottom after the last row, then the shared footer padding
@@ -646,8 +650,8 @@ stable geometry while Save, Close and the row actions are disabled. The delete
 confirmation body is start-aligned `bodyMedium` on the 24dp gutter like the
 the sibling Discard decision.
 Collection edits remain staged until Save. At the root, Close and system Back
-prompt only when there are actual edits. Drag/scrim dismissal is disabled for
-this form so it cannot bypass the guard. Delete is secondary and has its own
+prompt only when there are actual edits. Scrim/drag attempts use the same Close
+guard while edits, confirmations or writes are active. Delete is secondary and has its own
 confirmation. Discard and delete confirmations are steps in the same sheet,
 not nested dialogs. Both use the safe-default pairing: Keep editing / Keep
 collection (`commonKeepEditing` / `commonKeep`) is filled, Discard /

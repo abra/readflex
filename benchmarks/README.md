@@ -22,6 +22,8 @@ make test-performance
   microseconds, state emissions, and cumulative result entries published.
 - `library_benchmark_test.dart`: 1k/5k/20k books through the production Library
   state projection/search; one warmup and five samples, plus 10k cached reads.
+  A separate case compares metadata-only and full-body reads for 1k articles
+  in an in-memory SQLite database, with one warmup and five samples.
 - `pagecraft_document_benchmark_test.dart`: synthetic XHTML chapters of 100/400/1600
   paragraphs (about 100 KB to 1.7 MB) through `ContentDocument.parseXml`; one
   warmup and three samples. Records source bytes, node count, median parse,
@@ -30,8 +32,8 @@ make test-performance
   on English prose (soft hyphens inserted, the first run building the
   per-isolate hyphenator) and the column laid out at 360 px with and without
   them (the test font, so relative cost, not device time).
-- Results: `.local/performance/reader-search.json`, `library.json` and
-  `pagecraft-document.json`. Preserve
+- Results: `.local/performance/reader-search.json`, `library.json`,
+  `library-sqlite.json` and `pagecraft-document.json`. Preserve
   before/after artifacts locally before rerunning, since these paths are replaced.
 
 Normal tests enforce structural budgets, without flaky stopwatch thresholds:
@@ -40,9 +42,10 @@ cancellation and completion; `test/ui/library_scaling_test.dart` bounds mounted
 tiles during scrolling and verifies cached projection identity at 20k books.
 
 These are host/JIT measurements, not release-device frame, peak-memory or import
-benchmarks. The Library workload starts from loaded models; it does not include
-SQLite reads or cover decoding. The search workload measures burst handling, not
-pagecraft's search through a book or every continuous-stream pattern.
+benchmarks. The Library projection workload starts from loaded models; its
+separate SQLite case excludes durable writes and neither case decodes covers.
+The search workload measures burst handling, not pagecraft's search through a
+book or every continuous-stream pattern.
 
 Run database query/index measurements:
 
@@ -58,9 +61,11 @@ a strict pass/fail test without platform-specific thresholds.
 The native app harness imports real EPUB, FB2, MOBI, AZW3, CBZ and PDF files,
 opens them from the Library, mounts the first page and turns a page. Pass plain
 FB2 files: the current import entry determines format from the final extension,
-so archived FB2 is not an equivalent import workload. Use plain paths without
-commas; on Android first push the files to a device-readable directory. The iOS
-simulator can read host paths.
+so archived FB2 is not an equivalent import workload. `PAGECRAFT_BOOKS` separates
+paths with `|`, so input filenames must not contain that delimiter. Quote the
+whole define in the shell; commas and spaces are preserved by the pinned
+Flutter CLI. On Android first push files to a device-readable directory. The
+iOS simulator can read host paths.
 
 ```sh
 READFLEX_NATIVE_DEVICE=<android-device-id> fvm flutter drive --profile \
@@ -131,6 +136,16 @@ the first built frame from the first rasterized frame. They include application
 dependency initialization, but do not measure the OS launch before engine entry
 or establish that Library data is ready. A profile APK's size also differs from
 release APK/AAB delivery size; keep its ABI list with any size measurements.
+
+For warmed application controls, use `make profile-ui DEVICE=<physical-device-id>`.
+This separate profile-only harness measures Library search/keyboard transitions,
+Reader chrome, Appearance and long Highlight scrolling. The host runner validates
+the device and rejects an existing or unknown physical Readflex installation
+before building. Use a dedicated test device; see the
+[UI verification workflow](../test/ui/README.md#native-ui-frame-profiling) for
+installation safety, artifacts and emulator opt-in. Flutter build/raster samples
+exclude native keyboard rendering and compositor presentation; they are not
+end-to-end FPS or proof of physical performance from an emulator.
 
 ## MOBI Dart/Rust experiment
 
@@ -254,6 +269,10 @@ mode. Evaluate added app binary size and build complexity alongside latency and
 memory; host AOT kernel results alone do not select a mobile backend.
 
 ### Host measurements, 2026-11-01
+
+These are archived measurements from the SDK below, not a rerun with the current
+Flutter 3.50.0 pin. Preserve their artifacts or repeat both backends on the same
+current environment before making a new comparison.
 
 Apple M1, macOS arm64, 16 GiB RAM, Dart 3.12.2 from Flutter 3.44.9, Rust 1.99.1.
 Two reference Dart → Rust → Rust → Dart series used the same frozen dataset, with three

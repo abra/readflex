@@ -49,7 +49,9 @@
 
 ### Карта документации
 
-- [README](../README.md): установка, запуск, конфигурация и сборка.
+- [README](../README.md): краткий старт, основные проверки и команды сборки Android.
+  Подробное восстановление окружения описано в разделе 3 этого руководства,
+  конфигурация, подпись и ограничения выпуска — в разделе 15.
 - [ARCHITECTURE](../ARCHITECTURE.md): правила, границы и технические детали.
 - [C4_MODEL](../C4_MODEL.md): контекст системы и схемы основных сценариев.
 - [Reader](../packages/features/reader/README.md): UI, владельцы состояния,
@@ -135,8 +137,9 @@ Android пока сохраняет `android.builtInKotlin=false` и `android.ne
 Node.js не нужен для стандартной сборки, тестов или benchmark-оркестрации.
 Он остаётся optional maintenance tool для регенерации committed данных:
 ICU sentence reference, Unicode search-fold table и hyphenation patterns.
-Генераторы находятся в Pagecraft: `test/fixtures/icu_sentence_breaks.mjs`,
-`tool/search_fold_table.mjs`, `tool/hyphenation_patterns.mjs`.
+Генераторы находятся в `packages/pagecraft/`:
+`test/fixtures/icu_sentence_breaks.mjs`, `tool/search_fold_table.mjs`,
+`tool/hyphenation_patterns.mjs` (пути относительно пакета).
 Обычный runtime и tests используют уже сохранённые результаты.
 
 ### Последовательность восстановления
@@ -539,8 +542,8 @@ ReaderScreen создаёт state owners. Внутренний `_ReaderView` и 
 работают через state, events и callbacks. ReaderSurface передаёт команды
 документной поверхности; page body переводит engine callbacks в события UI.
 
-`reader_screen.dart` и десять `part`-файлов образуют **одну Dart library**
-с общим private namespace. Это организация исходников, а не десять независимых
+`reader_screen.dart` и его `part`-файлы образуют **одну Dart library**
+с общим private namespace. Это организация исходников, а не набор независимых
 модулей. Читайте lifecycle/content раньше chrome/drawers/context panel.
 Отдельные format bodies отвечают за text, article, comic, PDF и DjVu.
 
@@ -748,8 +751,9 @@ ZIP CRC verification остаётся описанным ограничение�
 
 ### Native build и standalone использование
 
-`hook/build.dart` собирает locked Rust crate в release mode и включает native
-library через Native Assets. PDFium подключается как platform native library:
+`packages/pagecraft/hook/build.dart` собирает locked Rust crate в release mode
+и включает native library через Native Assets. PDFium подключается как platform
+native library:
 через native assets на Android и XCFramework на Apple. Hook также компилирует
 vendored C++ DjVuLibre и включает её через native assets.
 Эти зависимости собираются/пакуются даже у потребителя, который импортирует
@@ -985,6 +989,7 @@ Widget tests проверяют semantic tree, но не запускают Voic
 | `make test-ui-contracts` | Shared UI contracts и representative flows |
 | `make test-ui` | Root flows и exact golden comparisons |
 | `make test-performance` | Repeatable host workloads |
+| `make profile-ui DEVICE=<id>` | Profile-only UI timings с проверкой устройства и отсутствия личной установки |
 
 Для focused изменения сначала допустим package-level flutter test;
 shared contract, schema, composition и reader changes требуют более широкого
@@ -1043,6 +1048,9 @@ system dictionary; model downloads; airplane mode; backend authentication
 и качество provider; physical-device release performance. Synthetic lifecycle
 и widget semantics не доказывают эти свойства.
 
+VoiceOver/TalkBack в текущей UI-проверке отложены; успешные widget и emulator
+сценарии не означают, что эти ручные проверки выполнены.
+
 ## 14. Производительность и измерения
 
 ### Сначала определите измеряемый этап
@@ -1087,6 +1095,24 @@ Readiness polling и caches влияют на результат; mounted не �
 recorded build mode, viewport и raw rows. На физическом устройстве используйте
 profile mode. iOS Simulator поддерживает debug, поэтому его timings
 не предсказывают physical release latency.
+
+Для UI есть отдельный `make profile-ui DEVICE=<id>`: host проверяет точный ID
+и physical/emulator status через закреплённый Flutter, затем запускает
+`native_ui_performance_test.dart` в profile mode. На физическом устройстве
+наличие Readflex или неопределённый результат проверки установки блокирует
+запуск до сборки: обычный `flutter drive` может заменить и удалить приложение.
+Используйте выделенное тестовое устройство; сохранение существующей личной
+установки — отдельный workflow из [UI verification](../test/ui/README.md).
+
+Harness прогревает Search с системной клавиатурой, Reader chrome, Appearance
+и прокрутку длинного Highlight, затем измеряет по 12 циклов. Он сохраняет
+raw `FrameTiming`, временные окна и nominal display refresh rate. Метаданные
+устройства — `.local/performance/native-ui/run-*/device.json`, измерения —
+`.local/ui-device/run-*/results.json`; храните их вместе. `ALLOW_EMULATOR=1`
+разрешает только диагностический emulator run с `physicalDevice: false`.
+Flutter build/raster durations не включают отрисовку системной клавиатуры
+и compositor; это не end-to-end FPS. Физический FPS текущей UI-проверкой
+не установлен.
 
 Полный process startup текущие специальные harnesses не измеряют. Для engine
 startup есть Flutter trace; сохраняйте файлы до повторного запуска:

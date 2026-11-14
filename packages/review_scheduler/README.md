@@ -21,9 +21,9 @@ shared by every reviewable item type (saved words, highlights).
 - The scheduler runs one learning step and one relearning step (10 minutes)
   because Readflex does not persist the FSRS learning step: a card rated
   Good graduates to review immediately. Hard on a new card waits 15 minutes.
-- Day-level intervals are at least one day, grow with the rating (Hard below
-  Good below Easy) and never pass `maximumIntervalDays` (365; the model's
-  own cap is 100 years). Fuzzing is off.
+- Day-level intervals are at least one day and increase with the rating until
+  they reach `maximumIntervalDays` (365; the model's own cap is 100 years).
+  Ratings can share that maximum interval. Fuzzing is off.
 - `clock` is injectable for tests; every stored timestamp is UTC.
 
 ## Tests

@@ -135,7 +135,9 @@ updates and drains pending writes before closing the stream.
 Registered on `DependenciesContainer.preferencesService` in
 `lib/app/composition.dart` and exposed via `PreferencesScope` in
 `AppScopes`. `ReadflexApp` reads `themeModeOf(context)` to drive
-`MaterialApp.themeMode` through an app-layer mapping. The package has no
+the brightness supplied to `ReadflexPlatformApp`: system follows the platform,
+while light and dark select an explicit brightness. That app-layer host chooses
+the Cupertino or Material root. The preferences package has no
 Material/Cupertino dependency; stored enum names remain `system`, `light` and
 `dark`. The reader applies per-source overrides through
 `ReaderAppearanceCubit`.

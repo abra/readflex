@@ -183,8 +183,9 @@ source quote and translated sentence for native screenshot inspection.
   UI code.
 - **Use context extensions** -- `context.text.bodyMedium`, not
   `Theme.of(context).textTheme.bodyMedium`.
-- **Platform differences are centralized** -- iOS/Android adjustments belong in
-  theme/component helpers, not in feature widgets.
+- **Platform differences have UI owners** -- shared iOS/Android presentation
+  belongs in themes and `App*` components. A feature-specific interaction can
+  live in its own UI component; Screens/Views retain the same state and callbacks.
 - **Primitives feed semantics** -- `PrimitiveColors` / `PrimitiveSpacing` are raw values;
   `AppColorPalette` / `AppSpacing` assign meaning.
 - **Semantic context roles** for app colors and text; `ColorScheme` and
@@ -490,13 +491,13 @@ download.
 ### Confirmations
 
 `AppSheetActions` follows a safe-default model: the filled primary is the
-non-destructive choice (Keep editing, Keep) and the destructive
-command is the outlined secondary in the error color
-(`destructiveSecondary: true`). Delete collection, delete items and
-discard-changes confirmations all use this pairing, so the most prominent
-button never destroys data. The safe action is named for what it keeps
-("Keep", "Keep editing"), never "Cancel": that word is reserved
-for leaving a surface, so one label never has two meanings.
+non-destructive choice (Keep editing, Keep) and the destructive command is
+the platform secondary in the error color (`destructiveSecondary: true`).
+Delete-collection and discard-changes steps use this pairing inside their
+existing draft flow. Library item deletion instead uses
+`showAppConfirmationDialog` with native alert actions and cancellation as the
+default action; it does not use the sheet-button pairing. Labels are supplied
+by each caller (Library's non-destructive action is Keep).
 
 ### Command Footers
 

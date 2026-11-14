@@ -195,8 +195,9 @@ changed image as a baseline or suppress a failed comparison.
   included) and root UI/goldens. Native device tests are separate.
 - `coverage`: the same test suites with owned Dart line/branch reports and
   per-test outcomes in a fresh `.local/coverage/run-*/` directory.
-- `test-performance`: repeated 1k/5k/20k Library/search workloads, with diagnostic
-  JSON results in `.local/performance/`; no hard machine-dependent time limit.
+- `test-performance`: repeated 1k/5k/20k Library/search workloads, a separate
+  in-memory SQLite article-read comparison and XHTML parse/style/layout cases,
+  with diagnostic JSON in `.local/performance/`; no machine-dependent time limit.
 
 For native reader flows, boot a simulator/emulator or connect an authorized device:
 
@@ -234,9 +235,10 @@ avoiding uninstall, data clearing and production database migrations.
 On iOS Simulator, disable I/O > Keyboard > Connect Hardware Keyboard for the
 native keyboard scenario. Check both the global preference and the selected
 device's override; a per-device value can keep the hardware keyboard connected
-after changing only the global setting. The iOS binding captures the Flutter
-surface, not the OS keyboard overlay; the test additionally asserts real nonzero
-keyboard insets.
+after changing only the global setting. Most iOS scenarios use the SDK screenshot
+path, which captures the Flutter surface without the OS keyboard overlay; they
+additionally assert real nonzero keyboard insets. `native_surface_style_test.dart`
+uses the separate Simulator OS screenshot transport described below.
 
 ### Native UI frame profiling
 
@@ -282,6 +284,8 @@ failed rather than becoming a completed measurement.
 The harness uses the production UI with isolated fixture storage. It warms
 Library search/keyboard transitions, Reader chrome, Appearance and long
 Highlight scrolling with two cycles, then measures twelve cycles per flow.
+Before the first search tap it waits for a stable resumed native window;
+fixture mounting/unmounting uses `fullyLive` outside the timed workloads.
 `benchmarkLive` permits real-time animation frames without requesting extra
 benchmark frames. `FrameTiming` batches are drained before and after each
 workload; only frames whose `buildStart` falls inside its monotonic time window
@@ -315,9 +319,11 @@ make test-tablet-layout DEVICE=<tablet-id>
 make test-tablet-layout DEVICE=<tablet-id> ROTATION=1
 ```
 
-`test-tablet` runs the 21-case native regression batch: tablet viewport, Library
+`test-tablet` runs the native regression batch: tablet viewport, Library
 controls/collections, text-book and article actions, EPUB/FB2/MOBI import, CBZ
-zoom, PDF, the native MOBI backend, notes and toasts. `test-tablet-layout` runs
+zoom, PDF, platform navigation, the native MOBI backend, notes and toasts.
+Its registered suites are listed in `integration_test/tablet_regression_test.dart`.
+`test-tablet-layout` runs
 four tests covering Library grid/list and RTL selection, book columns and reading
 position, Arabic EPUB page direction, and completion of a Practice session.
 Both targets use the normal test app with isolated storage and deterministic
@@ -336,7 +342,7 @@ full screen" prompt. Such a window can take focus, intercept taps and prevent a
 clipboard read even while Flutter still finds the underlying widget. Inspect the
 native screenshot and focused window before treating this as an app regression.
 
-`test-phone` runs the corresponding native phone batch with 23 cases, including
+`test-phone` runs the corresponding native phone batch, including
 the same reader/Library actions plus Arabic reading and a full Practice session.
 It requires an actual window below 600dp on its shortest side; the tablet batch
 requires at least 600dp. Neither substitutes a synthetic tester viewport.
@@ -365,7 +371,7 @@ same as for `test-device` above.
 | Collection recovery | Retain last loaded scopes on partial failure; Retry replaces the error inside the same sheet, including phone/landscape, 200% text and RTL | Library bloc and `collection_scope_recovery_test.dart` |
 | Library floating actions | One `AppFloatingCapsule`: collection switcher (icon, name, chevron; reads as Choose collection + name), Search, then the filled "+" at the outer end in LTR/RTL. Search changes the same surface to one live field with separate Back/exit and Clear/query commands; geometry and content transitions keep the directional end/bottom anchor and make exiting controls inert. Practice appears only with a destination and a positive due count outside search, separately 8dp above "+": 32dp card silhouettes with an opaque surface fill, popover shadow and soft static primary-colour aura, transparent surrounding button area, 48dp target and due badge contained in it. Showing or hiding Practice preserves the capsule's bottom anchor and adjusts content clearance. 4.5:1 collection label contrast over black and white covers, tinted inside a collection; browsing caps at 320dp with captions clamped at 200%, search at 480dp with normal field text scaling; reduced motion settles directly; hidden in selection and an empty library, kept in an empty collection; 16dp above the safe inset or keyboard, following its movement without dipping into the inset. The last row clears the visible floating group | Library screen/bottom-control tests, `library_search_golden_test.dart`, Practice and Library goldens |
 | Library review deadline | One foreground timer refreshes only the eligible review queue at its next deadline, so a due reminder can appear without a gesture. Background cancels the timer; resume refreshes immediately; disposal cancels pending work. No periodic polling or source-list reload; failed reads preserve counts and retry after one minute while active | Library bloc and Practice-entry tests |
-| Continue reading | Full-width band with 12dp above and below its unchanged 60×90 cover (cover on the grid's first column, mirrored in RTL); full titles wrap and fit both width and height with adaptive font size and no ellipsis, all visible text stays within the cover's vertical bounds, including 320dp phone RTL/200%; the book is not repeated below it and returns to its place while searching or in a collection; long-press selects it in place, the card stays while selecting so covers do not move, and a selected card keeps its progress bar visible in light/dark; five visual profiles | `library_home_golden_test.dart`, Library screen and card tests |
+| Continue reading | Inset reading panel with a 60×90 cover and 16dp internal padding, mirrored in RTL. At normal text scale its content stays within the cover height; full titles fit adaptively without ellipsis. Above 130% text the panel grows to keep the full title and context at their scaled text roles, including 320dp phone RTL/200%. The source is not repeated below it and returns to its place while searching or in a collection; long-press selects it in place, the card stays while selecting so covers do not move, and a selected card retains its progress bar in light/dark | `library_home_golden_test.dart`, Library screen and card tests |
 | Built-in collections | Favourites as the first row directly under the picker search (with or without built-ins, inside a built-in), then Library, then Books, Comics and New rows of a mixed library, no manage menu, localized search, the title naming the chosen scope, rows that would repeat Library left out, in all visual profiles | Library state/bloc/screen tests, `library_home_golden_test.dart` |
 | Collections | Create with selected book, rename, cancel/confirm deletion; preserve book and clean membership | `app_flows_test.dart` |
 | Sheet navigation | Header/system Back vs whole-flow dismissal, URL draft retention, guarded collection Close; delete/discard headers across visual profiles | Feature widget tests, `collection_management_golden_test.dart`, `integration_test/library_controls_test.dart` |
@@ -386,7 +392,7 @@ same as for `test-device` above.
 | Shared text tools | Search clear control and highlight palette in all profiles; import menu layout | `surfaces_golden_test.dart` |
 | Comic area selection | Full Reader gestures on a 390dp phone in light/dark, Arabic phone at 200% and landscape tablet: popup waits for release, stays hidden during move/resize without resetting colour, dragging the triangular corner regions formed by diagonal cut lines resizes the crop even at page edges, tall crops keep a 48dp square around each corner clear of the popup, Cancel and Back clear selection without leaving Reader, and an immediate outside tap after a colour change clears both draft and app state. Optional full-screen review captures use `READFLEX_VISUAL_CAPTURE_DIR` and do not update baselines. The native flow keeps the device viewport, exercises gradual movement and held triangular-corner resizing (including at the page edge), and persists the exact normalized rectangle through Highlight/Skip | `comic_area_selection_test.dart`, `integration_test/comic_area_selection_test.dart` |
 | Reader selection tip | Waits for the painted page, a book page turn hides it for the session (a restore does not), a selection ends it for good, a returning reader never sees it; the inverse plate in light/dark and 200% text, where "Got it" moves below the message | `reader_selection_tip_test.dart`, reader `reader_selection_tip_test.dart` and `reader_selection_tip_cubit_test.dart` |
-| Reader progress row | The page slider spans the row right above the capsule; under it the book's chapter (one line, truncating first) and the page label (never loses digits), inset to the track's ends; at 2x text the chapter takes up to two lines with the page label below; capsule-width cap on landscape and tablet, in all visual profiles | `reader_progress_golden_test.dart`, reader `reader_bottom_chrome_test.dart` |
+| Reader progress row | Inside the shared floating dock, chapter and page labels sit above the slider, followed by the action strip. Labels align to the track's ends; the chapter truncates first and the numeric page label retains its width. At 2x text the chapter takes up to two lines with the page label below when height permits; constrained height puts both labels in one row. The dock stays width-capped in landscape and on tablets | `reader_progress_golden_test.dart`, reader `reader_bottom_chrome_test.dart`, `reader_floating_chrome_layout_test.dart` |
 | Constrained Reader chrome | At 568×320 and 200% text, brightness switches to a horizontal 184×48dp pill with three 48dp targets above the dock; title and article progress do not overlap it. Android/iOS roots cover German/LTR, Arabic/phone RTL, asymmetric safe insets, tap/drag/system-reset commands and retained controls across hide/show and rotation. Normal phone/tablet positions and document viewport remain unchanged | reader `reader_floating_chrome_layout_test.dart` |
 | Native UI frame profiling | Host validates exact supported mobile hardware before a forced profile build; warmed real-time `benchmarkLive` workloads retain raw and summarized Flutter frame timings. Emulator opt-in always records nonphysical status; no screenshot/coverage work enters samples. Does not establish compositor FPS, input latency or screen-reader behavior | `scripts/native_ui_performance.dart`, `test/tooling/native_ui_performance_test.dart`, `integration_test/native_ui_performance_test.dart` |
 | Reader page animations | Slide/Cover is global, selected in Library's Display sheet; Reader retains direction controls and Reset leaves the global effect unchanged. Legacy source animation keys cannot override it. Localized 48dp choices at 320dp/200% and phone RTL, persistence/reopening and stable Display/Language step heights. Both renderers share geometry/painting, keep the effect fixed during an active turn and preserve layout, selection, position and zoom when it changes | Library display/cubit tests and `library_golden_test.dart`; reader appearance/screen tests; pagecraft `text_pages_view_test.dart`, `fixed_pages_view_test.dart`, `pdf_pages_view_test.dart` |
@@ -471,10 +477,10 @@ progress animation.
 
 Pixel equality is exact, not a permissive percentage threshold. Use the same
 Flutter/engine and host platform for comparisons; changes of engine or host
-rasterizer can require a reviewed baseline migration. The current baselines
-were reviewed on macOS arm64 with Flutter 3.50.0 against 568 matched captures
-from 3.44.9. Keep the pinned SDK and host for automated comparisons until another
-environment has been explicitly validated.
+rasterizer can require a reviewed baseline migration. The Flutter 3.50.0 migration
+reviewed 568 matched captures from 3.44.9 on macOS arm64; subsequent intentional
+UI changes need their own baseline review. Keep the pinned SDK and host for
+automated comparisons until another environment has been explicitly validated.
 
 When the design intentionally changes:
 
@@ -513,9 +519,10 @@ the SDK screenshot callback can wait indefinitely for an already-consumed frame.
 `native_surface_style_test.dart` also uses OS screenshots on iOS Simulator:
 the driver binds the same loopback transport directly on port 34179 and runs
 `xcrun simctl io <device-id> screenshot --type=png -`. These captures include
-OS-owned keyboard and status-bar layers. The scenario settles Flutter frames
-and waits 200ms in real time for compositor presentation before requesting
-each image. Other iOS scenarios retain the SDK screenshot path.
+OS-owned keyboard and status-bar layers. The scenario settles Flutter frames,
+waits 200ms in real time, then settles again to apply late keyboard metrics
+before a final presentation pause and the image request. Other iOS scenarios
+retain the SDK screenshot path.
 
 The native scenarios write screenshots and `results.json` to a fresh
 `.local/ui-device/run-*/` directory, printed by the driver. Driver protocol

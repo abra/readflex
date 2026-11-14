@@ -20,8 +20,8 @@ file or cache decoded text. Pagecraft retains its existing KF8 range caches.
 
 ## Ownership and errors
 
-All file I/O and decoding use asynchronous FRB calls to its worker pool. Reads
-on one reader are serialized. `close` stops accepting new reads, drains accepted
+Text-record file I/O and decoding use asynchronous FRB calls to its worker pool.
+Reads on one reader are serialized. `close` stops accepting new reads, drains accepted
 reads, releases the file/dictionary and disposes the opaque handle once. Call it
 even after a failed read. Failed construction releases its resources through
 Rust ownership. Each Dart isolate initializes one bridge lazily.
@@ -67,8 +67,9 @@ The first build may download the pinned compiler, standard libraries and Cargo
 dependencies. Android requires its SDK/NDK and iOS requires Xcode. Android,
 iOS/device/simulator, macOS, Linux and Windows targets are declared. Web is not
 supported. Supported-target declarations are not evidence of device testing;
-record the platforms actually checked in change reports. Rust and PDFium native
-assets are built/bundled even when a consumer imports another Pagecraft format.
+record the platforms actually checked in change reports. The Rust backend,
+PDFium and DjVuLibre native assets are built/bundled even when a consumer imports
+another Pagecraft format.
 
 FRB's normal loader handles packaged Flutter libraries. Host Flutter tests and
 Dart CLI runs resolve Pagecraft's asset ID from the generated native-assets
@@ -78,7 +79,8 @@ is isolated in `lib/src/formats/mobi/native/native_library.dart`.
 The Dart runtime, Rust runtime, build-hook adapter and generator are pinned to
 `flutter_rust_bridge` **2.13.0**. Generated bindings are checked in. Pagecraft's
 `flutter_rust_bridge.yaml` owns their paths. After changing Rust API signatures,
-regenerate from the repository root:
+regenerate from the repository root with `flutter_rust_bridge_codegen` 2.13.0
+available in PATH (the Makefile checks its exact version):
 
 ```sh
 make generate-pagecraft-mobi-native
