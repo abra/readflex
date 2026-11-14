@@ -1213,11 +1213,6 @@ by path code units, independent of the host locale, so a newly selected corpus
 can differ from an older locale-collated selection. Preserve frozen datasets
 for comparisons.
 
-The optional `scripts/render_handoff.py` exporter uses separate Python
-documentation dependencies pinned in `docs/pdf-requirements.txt`. It is not
-part of the application build or normal test toolchain. Its maintained source
-and export instructions live under `docs/`; generated PDFs stay in `.local/`.
-
 Node.js is optional maintenance tooling for Pagecraft's committed data:
 `test/fixtures/icu_sentence_breaks.mjs`, `tool/search_fold_table.mjs` and
 `tool/hyphenation_patterns.mjs`. Normal builds and tests use their committed
@@ -1249,20 +1244,3 @@ Documentation should explain contracts, responsibilities, and boundaries:
 - Create source subdirectories when code or maintained fixtures need them;
   do not retain empty placeholders. Generated caches and build outputs are
   owned by their tools, and local diagnostics belong under `.local/`.
-
-## Handoff Checklist
-
-Before handing the project to another maintainer:
-
-- Follow the onboarding route and operational transfer checklist in the
-  [team handoff guide](docs/team-handoff.ru.md). Keep the PDF and its source
-  revision together; an exported PDF is a snapshot, not a live code reference.
-- Read `README.md`, `ARCHITECTURE.md`, and the README for each changed package.
-- Confirm feature dependencies still flow through `routing.dart` -> `Screen` or
-  `Sheet` -> `Bloc`/`Cubit` -> `View`.
-- Confirm no feature package imports a sibling feature package.
-- Confirm new shared code has a specialized package name and is not dumped into
-  `shared`.
-- Confirm generated files, vendor JS, and native bindings are not manually
-  refactored unless the task is specifically about those assets.
-- Run the appropriate checks and record any checks that could not be run.

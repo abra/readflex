@@ -7,8 +7,6 @@ lower levels of abstraction.
 
 The implementation is the source of truth. Update this model when package
 boundaries, runtime containers, storage ownership, or integration points change.
-For a guided onboarding route and operational transfer checklist, see the
-[team handoff guide](docs/team-handoff.ru.md).
 
 ## Level 1: System Context
 
