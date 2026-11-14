@@ -9,6 +9,7 @@ class FakeCollectionRepository implements CollectionRepository {
 
   final List<LibraryCollection> _collections = [];
   final Map<String, Set<String>> addedSourceIdsByCollection = {};
+  int _collectionSequence = 0;
   bool shouldThrow = false;
 
   /// When set, membership writes wait for it, so a test can observe the
@@ -33,7 +34,19 @@ class FakeCollectionRepository implements CollectionRepository {
   @override
   Future<List<LibraryCollection>> getCollections() async {
     if (shouldThrow) throw StorageException(cause: 'fake error');
-    return List.unmodifiable(_collections);
+    return [
+      for (final collection in _collections)
+        if (collection.id != CollectionRepository.favouritesCollectionId)
+          LibraryCollection(
+            id: collection.id,
+            name: collection.name,
+            sourceCount:
+                addedSourceIdsByCollection[collection.id]?.length ??
+                collection.sourceCount,
+            createdAt: collection.createdAt,
+            updatedAt: collection.updatedAt,
+          ),
+    ];
   }
 
   @override
@@ -50,8 +63,12 @@ class FakeCollectionRepository implements CollectionRepository {
     if (name.trim().isEmpty) {
       throw ArgumentError.value(name, 'name', 'Collection name is empty');
     }
+    String id;
+    do {
+      id = 'collection-${++_collectionSequence}';
+    } while (_collections.any((collection) => collection.id == id));
     final collection = LibraryCollection(
-      id: 'collection-${_collections.length + 1}',
+      id: id,
       name: name.trim(),
       sourceCount: sourceIds.toSet().length,
       createdAt: DateTime(2026),
@@ -70,7 +87,16 @@ class FakeCollectionRepository implements CollectionRepository {
     await writeGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     final ids = sourceIds.toSet();
-    for (final collectionId in collectionIds.toSet()) {
+    final destinations = collectionIds.toSet();
+    if (ids.isEmpty || destinations.isEmpty) return;
+    if (destinations.any(
+      (id) =>
+          id != CollectionRepository.favouritesCollectionId &&
+          !_collections.any((collection) => collection.id == id),
+    )) {
+      throw const StorageException(cause: 'Collection no longer exists');
+    }
+    for (final collectionId in destinations) {
       addedSourceIdsByCollection
           .putIfAbsent(collectionId, () => <String>{})
           .addAll(ids);
@@ -82,6 +108,7 @@ class FakeCollectionRepository implements CollectionRepository {
     required String collectionId,
     required Iterable<String> sourceIds,
   }) async {
+    _checkManualCollectionId(collectionId);
     await writeGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     addedSourceIdsByCollection
@@ -124,9 +151,10 @@ class FakeCollectionRepository implements CollectionRepository {
   @override
   Future<Map<String, Set<String>>> getCollectionSourceIds() async {
     if (shouldThrow) throw StorageException(cause: 'fake error');
-    return addedSourceIdsByCollection.map(
-      (key, value) => MapEntry(key, value.toSet()),
-    );
+    return {
+      for (final entry in addedSourceIdsByCollection.entries)
+        if (entry.value.isNotEmpty) entry.key: entry.value.toSet(),
+    };
   }
 
   @override
@@ -134,6 +162,10 @@ class FakeCollectionRepository implements CollectionRepository {
     required String collectionId,
     required String name,
   }) async {
+    _checkManualCollectionId(collectionId);
+    if (name.trim().isEmpty) {
+      throw ArgumentError.value(name, 'name', 'Collection name is empty');
+    }
     if (shouldThrow) throw StorageException(cause: 'fake error');
     final index = _collections.indexWhere(
       (collection) => collection.id == collectionId,
@@ -151,6 +183,7 @@ class FakeCollectionRepository implements CollectionRepository {
 
   @override
   Future<void> deleteCollection(String collectionId) async {
+    _checkManualCollectionId(collectionId);
     if (shouldThrow) throw StorageException(cause: 'fake error');
     _collections.removeWhere((collection) => collection.id == collectionId);
     addedSourceIdsByCollection.remove(collectionId);
@@ -162,6 +195,10 @@ class FakeCollectionRepository implements CollectionRepository {
     String? name,
     Iterable<String> removedSourceIds = const [],
   }) async {
+    _checkManualCollectionId(collectionId);
+    if (name != null && name.trim().isEmpty) {
+      throw ArgumentError.value(name, 'name', 'Collection name is empty');
+    }
     await writeGate?.future;
     if (shouldThrow) throw StorageException(cause: 'fake error');
     if (name != null) {
@@ -178,6 +215,7 @@ class FakeCollectionRepository implements CollectionRepository {
     required String collectionId,
     required Iterable<String> sourceIds,
   }) async {
+    _checkManualCollectionId(collectionId);
     if (shouldThrow) throw StorageException(cause: 'fake error');
     addedSourceIdsByCollection[collectionId]?.removeAll(sourceIds.toSet());
   }
@@ -194,9 +232,20 @@ class FakeCollectionRepository implements CollectionRepository {
 
   @override
   Future<void> removeSourcesFromCollections(Iterable<String> sourceIds) async {
+    if (shouldThrow) throw const StorageException(cause: 'fake error');
     final ids = sourceIds.toSet();
     for (final sourceIds in addedSourceIdsByCollection.values) {
       sourceIds.removeAll(ids);
+    }
+  }
+
+  void _checkManualCollectionId(String collectionId) {
+    if (collectionId == CollectionRepository.favouritesCollectionId) {
+      throw ArgumentError.value(
+        collectionId,
+        'collectionId',
+        'Permanent collection',
+      );
     }
   }
 }

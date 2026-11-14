@@ -14,6 +14,7 @@ import 'reader_directional_layout.dart';
 import 'reader_drawer_layout.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_drawer_title_fit.dart';
+import 'reader_format_capabilities.dart';
 import 'reader_highlight_controls.dart';
 import 'reader_highlight_filter.dart';
 import 'reader_highlight_list_tile.dart';
@@ -101,6 +102,9 @@ class _ReaderTocDrawerDriverState extends State<ReaderTocDrawerDriver> {
     final pageCount = context.select<ReaderBloc, int?>(
       (b) => b.state.documentFeatures?.pageCount,
     );
+    final sourceType = context.select<ReaderBloc, SourceType>(
+      (b) => b.state.sourceType,
+    );
 
     return _ReaderTocDrawer(
       loadThumbnail: widget.loadThumbnail,
@@ -109,6 +113,7 @@ class _ReaderTocDrawerDriverState extends State<ReaderTocDrawerDriver> {
       onPageSelected: widget.onPageSelected,
       visible: visible,
       format: widget.format,
+      sourceType: sourceType,
       pageProgressionRtl: widget.pageProgressionRtl,
       readerTheme: widget.readerTheme,
       tocItems: tocItems,
@@ -140,6 +145,7 @@ class _ReaderTocDrawer extends StatelessWidget {
     required this.onPageSelected,
     required this.visible,
     required this.format,
+    required this.sourceType,
     required this.pageProgressionRtl,
     required this.readerTheme,
     required this.tocItems,
@@ -160,6 +166,7 @@ class _ReaderTocDrawer extends StatelessWidget {
   final ValueChanged<int> onPageSelected;
   final bool visible;
   final BookFormat? format;
+  final SourceType sourceType;
   final bool pageProgressionRtl;
   final ReaderThemeData readerTheme;
   final List<ReaderTocItem> tocItems;
@@ -182,6 +189,7 @@ class _ReaderTocDrawer extends StatelessWidget {
         currentPageIndex: currentPageIndex,
         onPageSelected: onPageSelected,
         format: format,
+        sourceType: sourceType,
         visible: visible,
         pageProgressionRtl: pageProgressionRtl,
         readerTheme: readerTheme,
@@ -209,6 +217,7 @@ class _ReaderTocDrawerContent extends StatefulWidget {
     required this.currentPageIndex,
     required this.onPageSelected,
     required this.format,
+    required this.sourceType,
     required this.visible,
     required this.pageProgressionRtl,
     required this.readerTheme,
@@ -231,6 +240,7 @@ class _ReaderTocDrawerContent extends StatefulWidget {
   final int? currentPageIndex;
   final ValueChanged<int> onPageSelected;
   final BookFormat? format;
+  final SourceType sourceType;
   final bool visible;
   final bool pageProgressionRtl;
   final ReaderThemeData readerTheme;
@@ -269,18 +279,26 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final comic = widget.format == BookFormat.cbz;
+    final capabilities = readerFormatCapabilitiesFor(
+      sourceType: widget.sourceType,
+      format: widget.format,
+    );
+    final pagesAreContents =
+        capabilities.contentsMode == ReaderContentsMode.pages;
     final tabs = readerContentsTabs(
+      sourceType: widget.sourceType,
       format: widget.format,
       hasPageGrid: widget.pageCount != null,
     );
     // Comic pages are their table of contents; PDF pages are separate.
-    final pageCount = comic ? widget.tocItems.length : widget.pageCount ?? 0;
+    final pageCount = pagesAreContents
+        ? widget.tocItems.length
+        : widget.pageCount ?? 0;
     // A hidden sheet still rebuilds when highlights or bookmarks change; skip
     // the comic scan of every TOC entry until the grid can be seen.
     final currentPage = !widget.visible
         ? 0
-        : comic
+        : pagesAreContents
         ? readerActiveTocIndex(
                 items: widget.tocItems,
                 readingProgress: widget.currentProgress,
@@ -357,7 +375,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                   currentIndex: currentPage,
                   pageProgressionRtl: widget.pageProgressionRtl,
                   loadThumbnail: widget.loadThumbnail,
-                  onSelected: comic
+                  onSelected: pagesAreContents
                       ? (page) => widget.onItemSelected(widget.tocItems[page])
                       : widget.onPageSelected,
                 ),
@@ -387,7 +405,7 @@ class _ReaderTocDrawerContentState extends State<_ReaderTocDrawerContent> {
                         previewsEnabled:
                             widget.visible &&
                             tabController.index == index &&
-                            comic,
+                            capabilities.supportsImageHighlightPreviews,
                         loadThumbnail: widget.loadThumbnail,
                         onQueryChanged: (value) {
                           setState(() => _highlightsQuery = value);

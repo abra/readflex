@@ -4,9 +4,11 @@
 .PHONY: test-phone test-tablet test-tablet-layout
 .PHONY: test-native-selection
 .PHONY: profile-ui
+.PHONY: test-contracts
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
+ROOT_PUB_GET_FLAGS ?=
 MOBI_RUST_ENV = PATH="$$(dirname "$$(rustup which rustc)"):$$PATH"
 
 ifndef ANDROID_SYMBOLS_DIR
@@ -69,7 +71,7 @@ test-pagecraft-mobi-rust:
 
 ## Install dependencies for root and all packages
 get:
-	$(FLUTTER) pub get
+	$(FLUTTER) pub get $(ROOT_PUB_GET_FLAGS)
 	@set -e; for pkg in $(PACKAGES); do \
 		echo "▶ pub get $$pkg"; \
 		(cd $$pkg && $(FLUTTER) pub get); \
@@ -104,6 +106,10 @@ test: test-pagecraft-mobi-rust
 ## Check development tools without running the app test suites
 test-tools:
 	$(DART) test test/tooling --reporter expanded
+
+## Check shared real/fake repository contracts and reading/review workflows
+test-contracts:
+	$(FLUTTER) test test/contracts test/review_content_integrity_test.dart test/source_deletion_transaction_test.dart test/reader_highlight_review_undo_test.dart test/reader_highlight_persistence_test.dart
 
 ## Run root UI flows and visual comparisons without a device or API keys
 test-ui:

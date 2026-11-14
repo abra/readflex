@@ -598,7 +598,6 @@ class _ReaderPdfBodyState extends State<ReaderPdfBody> {
             x: point.dx,
             y: point.dy,
             surface: surface,
-            isComic: false,
             axis: readerTapAxisForPageTurnStyle(widget.pageTurnStyle),
           ),
           onPageShown: _onPageShown,

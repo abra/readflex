@@ -15,7 +15,6 @@ import 'reader_article_progress_cubit.dart';
 import 'reader_bloc.dart';
 import 'reader_brightness_cubit.dart';
 import 'reader_chrome_action_button.dart';
-import 'reader_chrome_actions.dart';
 import 'reader_chrome_colors.dart';
 import 'reader_chrome_labels.dart';
 import 'reader_chrome_progress_layout.dart';
@@ -24,6 +23,7 @@ import 'reader_diagnostics.dart';
 import 'reader_document_features.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_floating_chrome_layout.dart';
+import 'reader_format_capabilities.dart';
 import 'reader_image_page_progress_overlay.dart';
 import 'reader_progress_label.dart';
 import 'reader_screen_cupertino_actions.dart';
@@ -163,7 +163,7 @@ class ReaderChromeDismissBarrierDriver extends StatelessWidget {
     );
     final shouldBlockPage = shouldBlockReaderPageInput(
       isComic: context.select<ReaderBloc, bool>(
-        (bloc) => isImagePageFormat(bloc.state.document?.format),
+        (bloc) => bloc.state.formatCapabilities.allowsPageGesturesWithChrome,
       ),
       chromeVisible: chromeOverlay.chromeVisible,
       overlayVisible: chromeOverlay.overlay != ReaderOverlay.none,
@@ -691,7 +691,8 @@ class ReaderArticleProgressDriver extends StatelessWidget {
   Widget build(BuildContext context) {
     final document = context.select<ReaderBloc, (bool, bool)>(
       (b) => (
-        b.state.sourceType == SourceType.article,
+        b.state.formatCapabilities.progressMode ==
+            ReaderProgressMode.articleSections,
         b.state.pageProgressionRtl,
       ),
     );
@@ -777,9 +778,9 @@ class ReaderTopChromeDriver extends StatelessWidget {
     );
     // Comic "chapters" are archive file names.
     final chapterTitle = context.select<ReaderBloc, String?>(
-      (b) => isImagePageFormat(b.state.document?.format)
-          ? null
-          : b.state.chapterTitle,
+      (b) => b.state.formatCapabilities.showsChapterTitles
+          ? b.state.chapterTitle
+          : null,
     );
     final articleUrl = context.select<ReaderBloc, String?>(
       (b) =>
@@ -1039,13 +1040,15 @@ class ReaderBottomChromeDriver extends StatelessWidget {
           'minutesLeft=${snapshot.minutesLeft}',
         );
         final l10n = context.l10n;
-        final actions = readerChromeActionsFor(
+        final capabilities = readerFormatCapabilitiesFor(
           sourceType: snapshot.sourceType,
           format: snapshot.format,
         );
+        final actions = capabilities.chromeActions;
         // Books name the current chapter; articles have none to name, so
         // they show the time left in the whole article.
-        final timeLeft = snapshot.sourceType == SourceType.article
+        final timeLeft =
+            capabilities.progressMode == ReaderProgressMode.articleSections
             ? readerChromeArticleTimeLeftLabel(
                 l10n,
                 minutes: snapshot.minutesLeft,
@@ -1075,7 +1078,9 @@ class ReaderBottomChromeDriver extends StatelessWidget {
             showTocAction: actions.contains(ReaderChromeAction.contents),
             showFontAction: actions.contains(ReaderChromeAction.textAppearance),
             // PDF pages have no font: the sheet holds page appearance.
-            fontActionTooltip: snapshot.format == BookFormat.pdf
+            fontActionTooltip:
+                capabilities.appearanceControls ==
+                    ReaderAppearanceControls.pages
                 ? l10n.readerAppearanceTitle
                 : l10n.readerFontAction,
             showPageTurnAction: actions.contains(ReaderChromeAction.pageTurn),
@@ -1132,12 +1137,12 @@ class _ReaderBottomChromeSnapshot {
     final format = state.document?.format;
     // Comic "chapters" are archive file names and their section estimate is
     // image bytes; only the page counter is meaningful there.
-    final imagePages = isImagePageFormat(format);
+    final showChapterTitles = state.formatCapabilities.showsChapterTitles;
     return _ReaderBottomChromeSnapshot(
       visible: visible,
       progress: state.document?.readingProgress ?? 0,
-      chapterTitle: imagePages ? null : state.chapterTitle,
-      minutesLeft: imagePages ? null : state.minutesLeft,
+      chapterTitle: showChapterTitles ? state.chapterTitle : null,
+      minutesLeft: showChapterTitles ? state.minutesLeft : null,
       chapterCurrentPage: state.chapterCurrentPage,
       chapterTotalPages: state.chapterTotalPages,
       sourceType: state.sourceType,
@@ -1570,7 +1575,10 @@ class _ReaderProgressRowState extends State<_ReaderProgressRow> {
     widget.onSeekFraction(seekValue);
     _dragReleaseTimer?.cancel();
     _dragReleaseTimer = Timer(
-      readerSeekSettleTimeout(format: widget.format),
+      readerSeekSettleTimeout(
+        sourceType: widget.sourceType,
+        format: widget.format,
+      ),
       () {
         if (!mounted) return;
         _dragReleaseTimer = null;
@@ -1737,7 +1745,9 @@ class ReaderImagePageProgressOverlayDriver extends StatelessWidget {
       (c) => c.state.hasSelection,
     );
     // Text pages change these on every turn, for a pill they never show.
-    final imagePages = isImagePageFormat(format);
+    final imagePages = context.select<ReaderBloc, bool>(
+      (b) => b.state.formatCapabilities.progressMode.showsPageOverlay,
+    );
     final current = context.select<ReaderBloc, int?>(
       (b) => imagePages ? b.state.chapterCurrentPage : null,
     );

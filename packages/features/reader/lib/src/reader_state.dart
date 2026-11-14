@@ -130,6 +130,12 @@ class ReaderState extends Equatable {
 
   String? get sourceId => document?.id;
 
+  ReaderFormatCapabilities get formatCapabilities =>
+      readerFormatCapabilitiesFor(
+        sourceType: sourceType,
+        format: document?.format,
+      );
+
   static const _absent = Object();
 
   ReaderState copyWith({

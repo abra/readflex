@@ -163,6 +163,7 @@ already prepared dependency graph; it can retain the previous mode's registrant.
 ```sh
 make get
 make test-tools
+make test-contracts
 make test-ui-contracts
 make test-ui
 make test-goldens
@@ -191,6 +192,9 @@ changed image as a baseline or suppress a failed comparison.
   alone does not include them. `test-ui` also runs untagged UI cases.
 - `test-tools`: Dart coverage/benchmark tool tests in `test/tooling/`, also
   included in `make test`; these run without the app UI suites or Node.js.
+- `test-contracts`: shared real/fake bookmark and collection scenarios, plus
+  real-repository import, Reader/Practice/Undo and transaction regressions.
+  These tests are also included in `make test`; no device or API key is needed.
 - `verify`: formatting, analysis, all active package tests (pagecraft's
   included) and root UI/goldens. Native device tests are separate.
 - `coverage`: the same test suites with owned Dart line/branch reports and
@@ -481,6 +485,22 @@ rasterizer can require a reviewed baseline migration. The Flutter 3.50.0 migrati
 reviewed 568 matched captures from 3.44.9 on macOS arm64; subsequent intentional
 UI changes need their own baseline review. Keep the pinned SDK and host for
 automated comparisons until another environment has been explicitly validated.
+
+The `Quality` GitHub Actions workflow uses `macos-15` arm64, the exact SDK from
+`.fvmrc`, UTC and `en_US.UTF-8`. The root `pubspec.lock` is enforced and the
+tracked Pagecraft lockfile must stay unchanged; fonts come from the repository.
+The same host settings can be used locally:
+
+```sh
+TZ=UTC LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 make test-goldens
+```
+
+CI runs the full `make test`, including visual comparisons. It retains toolchain
+and test logs plus `.local/ui-goldens/` differences for seven days, and never
+passes `--update-goldens`. The macOS label fixes the major OS/CPU family, not
+an immutable VM image: inspect the recorded environment if a runner update
+changes rendering. Device gestures, VoiceOver/TalkBack and FPS remain separate
+checks.
 
 When the design intentionally changes:
 

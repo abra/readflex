@@ -2,6 +2,7 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:readflex_localizations/readflex_localizations.dart';
 import 'package:reader/src/reader_drawer_messages.dart';
+import 'package:reader/src/reader_document_features.dart';
 
 final _l10n = lookupReadflexLocalizations(
   ReadflexSupportedLocales.locales.first,
@@ -39,6 +40,26 @@ void main() {
   });
 
   group('readerSearchActionEnabled', () {
+    test(
+      'PDF and DjVu search stay available during incremental text discovery',
+      () {
+        for (final format in [BookFormat.pdf, BookFormat.djvu]) {
+          for (final text in [null, false, true]) {
+            expect(
+              readerSearchActionEnabled(
+                format: format,
+                documentFeatures: ReaderDocumentFeatures(
+                  format: format.name,
+                  hasSearchableText: text,
+                  pageCount: 10,
+                ),
+              ),
+              isTrue,
+            );
+          }
+        }
+      },
+    );
     test('keeps regular text formats searchable without feature probing', () {
       expect(
         readerSearchActionEnabled(

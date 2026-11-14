@@ -1,0 +1,86 @@
+name: Quality
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    # Golden baselines are reviewed on macOS 15 / Apple Silicon.
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      FLUTTER: flutter
+      DART: dart
+      TZ: UTC
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+
+      - name: Read Flutter pin
+        id: sdk
+        run: |
+          version=$(python3 -c 'import json; print(json.load(open(".fvmrc"))["flutter"])')
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@0ca7a949e71ae44c8e688a51c5e7e93b2c87e295 # v2.22.0
+        with:
+          flutter-version: ${{ steps.sdk.outputs.version }}
+          channel: stable
+          architecture: arm64
+
+      - name: Record environment
+        run: |
+          mkdir -p .local/ci
+          test "$(uname -m)" = arm64
+          {
+            sw_vers
+            uname -m
+            locale
+            flutter --version
+            cd packages/pagecraft/rust
+            rustup show active-toolchain
+            rust_compiler=$(rustup which rustc)
+            "$rust_compiler" --version
+          } 2>&1 | tee .local/ci/environment.log
+
+      - name: Resolve dependencies
+        run: |
+          make get ROOT_PUB_GET_FLAGS=--enforce-lockfile 2>&1 | tee .local/ci/dependencies.log
+          git diff --exit-code -- pubspec.lock packages/pagecraft/pubspec.lock
+
+      - name: Check formatting
+        run: make format-check 2>&1 | tee .local/ci/format.log
+
+      - name: Analyze Dart, Rust and architecture
+        run: make analyze 2>&1 | tee .local/ci/analyze.log
+
+      - name: Test Rust, packages, component interactions and goldens
+        run: make test 2>&1 | tee .local/ci/tests.log
+
+      - name: Keep verification logs and golden differences
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: quality-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            .local/ci/
+            .local/ui-goldens/
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 7

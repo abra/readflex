@@ -22,13 +22,13 @@ import 'reader_djvu_surface.dart';
 import 'reader_drawer_messages.dart';
 import 'reader_external_link_prompt.dart';
 import 'reader_floating_chrome_layout.dart';
+import 'reader_format_capabilities.dart';
 import 'reader_highlight_focus_cubit.dart';
 import 'reader_image_selection_cubit.dart';
 import 'reader_page_thumbnail_cubit.dart';
 import 'reader_page_turn.dart';
 import 'reader_pdf_surface.dart';
 import 'reader_position.dart';
-import 'reader_progress_label.dart';
 import 'reader_screen_article_body.dart';
 import 'reader_screen_chrome.dart';
 import 'reader_screen_comic_body.dart';
@@ -219,9 +219,6 @@ class _ReaderBodyState extends State<_ReaderBody> {
   }
 }
 
-/// What draws the page of the open source.
-enum _PageKind { article, comic, pdf, djvu, text }
-
 /// Ready reader content: the page surface, its chrome, drawers and panels,
 /// and the commands between them.
 class _ReadyContent extends StatefulWidget {
@@ -253,15 +250,15 @@ class _ReadyContentState extends State<_ReadyContent> {
   final ReaderArticleSurface _articleSurface = ReaderArticleSurface();
 
   /// Set in build from the source type and the format.
-  _PageKind _pageKind = _PageKind.text;
+  ReaderContentKind _pageKind = ReaderContentKind.text;
 
   /// Commands to the page go through the contract, never a key.
   ReaderSurface get _surface => switch (_pageKind) {
-    _PageKind.article => _articleSurface,
-    _PageKind.comic => _comicSurface,
-    _PageKind.pdf => _pdfSurface,
-    _PageKind.djvu => _djvuSurface,
-    _PageKind.text => _textSurface,
+    ReaderContentKind.article => _articleSurface,
+    ReaderContentKind.comic => _comicSurface,
+    ReaderContentKind.pdf => _pdfSurface,
+    ReaderContentKind.djvu => _djvuSurface,
+    ReaderContentKind.text => _textSurface,
   };
   String? _readySourceId;
   bool _initialCfiApplied = false;
@@ -344,11 +341,11 @@ class _ReadyContentState extends State<_ReadyContent> {
     final uiCubit = context.read<ReaderUiCubit>();
     final appearanceCubit = context.read<ReaderAppearanceCubit>();
     final readerState = context.read<ReaderBloc>().state;
-    final showPageTurnControls = readerState.sourceType != SourceType.article;
-    final pdfControls = readerState.document?.format == BookFormat.pdf;
-    final showColumnControls =
-        showPageTurnControls &&
-        !readerHasZoomablePages(readerState.document?.format);
+    final capabilities = readerState.formatCapabilities;
+    final showPageTurnControls = capabilities.supportsPageTurns;
+    final pdfControls =
+        capabilities.appearanceControls == ReaderAppearanceControls.pages;
+    final showColumnControls = capabilities.supportsColumns;
     final initialPageTurnStyle =
         appearanceCubit.state.effectiveAppearance.pageTurnStyle;
     final wasChromeVisible = uiCubit.state.chromeVisible;
@@ -531,19 +528,13 @@ class _ReadyContentState extends State<_ReadyContent> {
     final format = context.select<ReaderBloc, BookFormat?>(
       (b) => b.state.document?.format,
     );
-    final sourceType = context.select<ReaderBloc, SourceType>(
-      (b) => b.state.sourceType,
+    final capabilities = context.select<ReaderBloc, ReaderFormatCapabilities>(
+      (b) => b.state.formatCapabilities,
     );
     final sourceId = context.select<ReaderBloc, String?>(
       (b) => b.state.sourceId,
     );
-    _pageKind = switch ((sourceType, format)) {
-      (SourceType.article, _) => _PageKind.article,
-      (_, BookFormat.cbz) => _PageKind.comic,
-      (_, BookFormat.pdf) => _PageKind.pdf,
-      (_, BookFormat.djvu) => _PageKind.djvu,
-      _ => _PageKind.text,
-    };
+    _pageKind = capabilities.contentKind;
     final surfaceReady = sourceId != null && _readySourceId == sourceId;
     // Reader theme drives the book *page* — its background and the reader
     // style sheet — and chrome text drawn straight on the page. Chrome
@@ -600,7 +591,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                         ColoredBox(
                           color: readerTheme.backgroundColor,
                           child: switch (_pageKind) {
-                            _PageKind.article => ReaderArticleBody(
+                            ReaderContentKind.article => ReaderArticleBody(
                               key: ValueKey('article:$sourceId'),
                               searchOverlayBottomFraction:
                                   searchOverlayBottomFraction,
@@ -616,7 +607,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                               onPositionChanged: _handleReaderPositionChanged,
                               onReady: _onSurfaceReady,
                             ),
-                            _PageKind.pdf => ReaderPdfBody(
+                            ReaderContentKind.pdf => ReaderPdfBody(
                               key: ValueKey('pdf:$sourceId'),
                               document: context
                                   .read<ReaderBloc>()
@@ -632,7 +623,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                               onPositionChanged: _handleReaderPositionChanged,
                               onReady: _onSurfaceReady,
                             ),
-                            _PageKind.text => ReaderTextBody(
+                            ReaderContentKind.text => ReaderTextBody(
                               key: ValueKey('text:$sourceId'),
                               searchOverlayBottomFraction:
                                   searchOverlayBottomFraction,
@@ -648,7 +639,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                               onPositionChanged: _handleReaderPositionChanged,
                               onReady: _onSurfaceReady,
                             ),
-                            _PageKind.djvu => ReaderDjvuBody(
+                            ReaderContentKind.djvu => ReaderDjvuBody(
                               key: ValueKey('djvu:$sourceId'),
                               document: context
                                   .read<ReaderBloc>()
@@ -662,7 +653,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                               onPositionChanged: _handleReaderPositionChanged,
                               onReady: _onSurfaceReady,
                             ),
-                            _PageKind.comic => ReaderComicBody(
+                            ReaderContentKind.comic => ReaderComicBody(
                               key: ValueKey('comic:$sourceId'),
                               document: context
                                   .read<ReaderBloc>()
@@ -685,7 +676,7 @@ class _ReadyContentState extends State<_ReadyContent> {
                           readerTheme: readerTheme,
                           appearance: appearance,
                           visible:
-                              surfaceReady && sourceType != SourceType.article,
+                              surfaceReady && capabilities.supportsPageTurns,
                         ),
                         const ReaderPageBookmarkIndicatorDriver(),
                         ReaderFloatingChromeLayout(

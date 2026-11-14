@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'reader_bloc.dart';
 import 'reader_highlight_focus_cubit.dart';
 import 'reader_surface.dart';
 import 'reader_tap_action.dart';
@@ -13,16 +14,16 @@ void dispatchReaderTap(
   required double x,
   required double y,
   required ReaderSurface surface,
-  required bool isComic,
   required ReaderTapAxis axis,
 }) {
   final uiCubit = context.read<ReaderUiCubit>();
+  final capabilities = context.read<ReaderBloc>().state.formatCapabilities;
   context.read<ReaderHighlightFocusCubit>().clear();
   final command = readerTapCommandFor(
     x: x,
     y: y,
     chromeVisible: uiCubit.state.chromeVisible,
-    isComic: isComic,
+    isComic: capabilities.allowsPageGesturesWithChrome,
     axis: axis,
   );
   if (command != ReaderTapCommand.toggleChrome) uiCubit.hideChrome();

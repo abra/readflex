@@ -80,6 +80,33 @@ void main() {
     expect(sources['reader_document.dart'], isNot(matches(r'\bpart\s')));
   });
 
+  test(
+    'format policy is pure data independent of engines and state owners',
+    () {
+      expect(dependencies['reader_format_capabilities.dart'], [
+        'package:domain_models/domain_models.dart',
+      ]);
+    },
+  );
+
+  test(
+    'format classification stays outside presentation and progress helpers',
+    () {
+      for (final file in [
+        'reader_chrome_actions.dart',
+        'reader_contents_tabs.dart',
+        'reader_progress_label.dart',
+        'reader_selection_tip_cubit.dart',
+        'reader_screen_chrome.dart',
+        'reader_screen_content.dart',
+        'reader_screen_drawers.dart',
+        'reader_image_page_progress_overlay.dart',
+      ]) {
+        expect(sources[file], isNot(matches(r'BookFormat\.\w+')), reason: file);
+      }
+    },
+  );
+
   test('shared page policies do not depend on renderer hosts or screen UI', () {
     for (final helper in [
       'reader_page_input.dart',

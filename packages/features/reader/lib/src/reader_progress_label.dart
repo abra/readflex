@@ -1,5 +1,10 @@
 import 'package:domain_models/domain_models.dart';
 
+import 'reader_format_capabilities.dart';
+
+export 'reader_format_capabilities.dart'
+    show readerDefaultSeekSettleTimeout, readerImagePageSeekSettleTimeout;
+
 /// Localized "{page} / {total}" formatter supplied by the View
 /// (`l10n.readerPageOfTotal`); these helpers stay context-free.
 typedef ReaderPageOfTotalFormatter = String Function(int page, int total);
@@ -13,7 +18,11 @@ String readerProgressLabel({
   required bool isDragging,
   required ReaderPageOfTotalFormatter formatPageOfTotal,
 }) {
-  if (isImagePageFormat(format)) {
+  final mode = readerFormatCapabilitiesFor(
+    sourceType: sourceType,
+    format: format,
+  ).progressMode;
+  if (mode == ReaderProgressMode.imagePages) {
     return comicPageLabel(
           currentPage: isDragging
               ? _zeroIndexedPageFromProgress(progress, chapterTotalPages)
@@ -24,7 +33,7 @@ String readerProgressLabel({
         '';
   }
 
-  if (sourceType == SourceType.article) {
+  if (mode == ReaderProgressMode.articleSections) {
     return visualSectionPageLabel(
           currentPage: isDragging
               ? _oneIndexedPageFromProgress(progress, chapterTotalPages)
@@ -40,7 +49,7 @@ String readerProgressLabel({
 
   // PDF is fixed layout: its chapter page is the zero-based page of the
   // document, like a comic page, not a one-based page within a section.
-  final sectionPage = format == BookFormat.pdf
+  final sectionPage = mode.usesZeroBasedPages
       ? comicPageLabel(
           currentPage: chapterCurrentPage,
           totalPages: chapterTotalPages,
@@ -54,24 +63,22 @@ String readerProgressLabel({
   return sectionPage == null ? percent : '$percent · $sectionPage';
 }
 
-bool isImagePageFormat(BookFormat? format) {
-  return format == BookFormat.cbz || format == BookFormat.djvu;
-}
+bool isImagePageFormat(BookFormat? format) =>
+    readerFormatCapabilitiesFor(format: format).progressMode.showsPageOverlay;
 
 /// Comic, DjVu and PDF pages are images: they pinch and double-tap zoom and
 /// have page previews. Unlike [isImagePageFormat], PDF
 /// keeps text-book progress, selection and chrome taps.
-bool readerHasZoomablePages(BookFormat? format) {
-  return isImagePageFormat(format) || format == BookFormat.pdf;
-}
+bool readerHasZoomablePages(BookFormat? format) =>
+    readerFormatCapabilitiesFor(format: format).supportsZoom;
 
-const readerDefaultSeekSettleTimeout = Duration(milliseconds: 600);
-const readerImagePageSeekSettleTimeout = Duration(seconds: 3);
-
-Duration readerSeekSettleTimeout({required BookFormat? format}) {
-  if (isImagePageFormat(format)) return readerImagePageSeekSettleTimeout;
-  return readerDefaultSeekSettleTimeout;
-}
+Duration readerSeekSettleTimeout({
+  SourceType sourceType = SourceType.book,
+  required BookFormat? format,
+}) => readerFormatCapabilitiesFor(
+  sourceType: sourceType,
+  format: format,
+).progressMode.seekSettleTimeout;
 
 String readingPercentLabel(double progress) {
   final clamped = _clampProgress(progress);
@@ -83,8 +90,10 @@ int? readerSliderDivisions({
   required BookFormat? format,
   required int? totalPages,
 }) {
-  final hasDiscretePages =
-      sourceType == SourceType.article || isImagePageFormat(format);
+  final hasDiscretePages = readerFormatCapabilitiesFor(
+    sourceType: sourceType,
+    format: format,
+  ).progressMode.usesDiscretePages;
   if (!hasDiscretePages || totalPages == null || totalPages <= 1) {
     return null;
   }
@@ -96,8 +105,10 @@ bool shouldShowReaderProgressSlider({
   required BookFormat? format,
   required int? totalPages,
 }) {
-  final isPageOnlyProgress =
-      sourceType == SourceType.article || isImagePageFormat(format);
+  final isPageOnlyProgress = readerFormatCapabilitiesFor(
+    sourceType: sourceType,
+    format: format,
+  ).progressMode.usesDiscretePages;
   if (isPageOnlyProgress && totalPages != null && totalPages <= 1) {
     return false;
   }
@@ -111,8 +122,10 @@ double snappedReaderSeekProgress({
   required int? totalPages,
 }) {
   final clamped = _clampProgress(progress);
-  final hasDiscretePages =
-      sourceType == SourceType.article || isImagePageFormat(format);
+  final hasDiscretePages = readerFormatCapabilitiesFor(
+    sourceType: sourceType,
+    format: format,
+  ).progressMode.usesDiscretePages;
   if (!hasDiscretePages || totalPages == null || totalPages <= 1) {
     return clamped;
   }
@@ -127,8 +140,11 @@ double readerSliderValue({
   required int? currentPage,
   required int? totalPages,
 }) {
-  final usesPagePosition =
-      sourceType == SourceType.article || isImagePageFormat(format);
+  final mode = readerFormatCapabilitiesFor(
+    sourceType: sourceType,
+    format: format,
+  ).progressMode;
+  final usesPagePosition = mode.usesDiscretePages;
   if (!usesPagePosition) {
     return _clampProgress(progress);
   }
@@ -142,7 +158,7 @@ double readerSliderValue({
   }
   if (totalPages == 1) return 0;
 
-  final page = isImagePageFormat(format)
+  final page = mode.usesZeroBasedPages
       ? displayZeroIndexedPage(currentPage, totalPages)
       : _displayVisualSectionPage(currentPage, totalPages);
   return _clampProgress((page - 1) / (totalPages - 1));

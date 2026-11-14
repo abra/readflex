@@ -1,6 +1,9 @@
 /// Document-level capabilities the page surface reports once it reads the
 /// document.
 ///
+/// Static format policy lives in `ReaderFormatCapabilities`; these values
+/// describe only the opened document and may arrive incrementally.
+///
 /// Some formats expose optional structures such as a table of contents.
 /// Null means "not detected yet".
 class ReaderDocumentFeatures {

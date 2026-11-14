@@ -521,11 +521,25 @@ const documentation = "import 'package:b/b.dart';";
     () async {
       final root = Directory.current.absolute.path;
       final command = dartCommand(root: root);
+      final snapshot = p.join(repository.root.path, 'check_architecture.dill');
+      // Compile once: these cases check exit codes, not repeated SDK startup.
+      await runCommand(
+        [
+          ...command,
+          'compile',
+          'kernel',
+          p.join(root, 'scripts/check_architecture.dart'),
+          '-o',
+          snapshot,
+        ],
+        workingDirectory: root,
+        timeout: const Duration(minutes: 1),
+      );
       Future<ProcessResult> run(List<String> arguments) => Process.run(
         command.first,
         [
           ...command.skip(1),
-          p.join(root, 'scripts/check_architecture.dart'),
+          snapshot,
           ...arguments,
         ],
         workingDirectory: root,
@@ -549,6 +563,7 @@ const documentation = "import 'package:b/b.dart';";
       expect(malformedYaml.exitCode, 64);
       expect(malformedYaml.stderr, contains('configuration error'));
     },
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 }
 

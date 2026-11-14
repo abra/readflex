@@ -662,6 +662,22 @@ Reader screen composition and presentation are independent Dart libraries:
 Screen UI no longer uses `part` files. `ReaderBloc` retains parts for its events,
 state and annotation operations within that single state machine.
 
+`reader_format_capabilities.dart` owns the static format policy for content
+selection, actions, appearance, zoom/columns, progress, Contents, page gestures
+and text-selection support. Its exhaustive `BookFormat` resolver returns shared
+const profiles; `ReaderState.formatCapabilities` derives the profile without
+new state emissions or per-frame collection allocation. Article source type
+takes precedence over legacy format metadata. UI helpers consume this policy
+instead of independently classifying PDF, DjVu or comics.
+
+`ReaderDocumentFeatures` separately reports discovered outline, page count and
+text. Page-count discovery adds PDF/DjVu page grids; positive text discovery
+allows selection guidance. Search remains available during lazy probing, and
+format lookup performs no I/O. The matrix preserves PDF's continuous percentage
+progress alongside zoom, while CBZ/DjVu use discrete page progress. Controls,
+progress indexing and page interaction are covered by the Reader matrix and
+platform tests; renderer/controller lifetimes remain unchanged.
+
 The page is kept behind ready-state reader composition so routine UI changes
 do not recreate it. Every source is drawn by pagecraft; there is no WebView and
 no local reader server (the last revision with them is
@@ -1064,8 +1080,30 @@ closure captures, method-local service access and UI classes without the
 `library_boundaries_test.dart` additionally checks its internal format graph.
 Reader's `reader_module_boundaries_test.dart` checks its acyclic import/export
 graph, screen/renderer isolation and the standalone document contract.
-There is no committed CI workflow in this checkout; the Make targets describe
-local checks, not evidence that a remote pipeline has run.
+`.github/workflows/quality.yml` runs formatting, `make analyze` and `make test`
+for pull requests and pushes to `main`, with manual dispatch available. Actions
+are pinned by commit, credentials are not retained in the checkout, and the job
+needs only repository-read permission. Local success is separate from a remote
+workflow result.
+
+`make test-contracts` focuses on component interactions and shared repository
+contracts. The same bookmark scenarios run against `BookRepository` over real
+SQLite and the Reader fake; collection scenarios run against
+`CollectionRepository` and the Library fake. They cover identities, reading
+order, scoped deletion, idempotent Undo, membership counts, validation and
+atomic bulk-add failure. These contracts cover the methods the feature fakes
+implement, not the entire repository API. Partial doubles must still fail on
+unexpected method access. Run these scenarios when changing either a covered
+repository method or its fake.
+
+Root workflow tests compose real repositories with Library, Reader, Practice
+and review-session blocs. They check that a failing import observer leaves a
+readable book, then exercise saved highlight → cached review card → Reader
+deletion → rejected late rating → Undo → refreshed counts/session. Books and
+articles run with highlight reviews enabled and disabled; image-area highlights
+stay outside the text-review queue. Existing transaction-failure and controlled
+delete/rating overlap tests remain part of this target and the full suite.
+Synchronization uses committed operations and bloc states, not timing sleeps.
 
 `make test-ui-contracts` is a focused subset for shared components, accessibility,
 theme contrast, import/Display navigation and representative root layouts. It
@@ -1100,6 +1138,16 @@ is opt-in and preserves the device's real viewport. It records screenshots under
 `.local/ui-device/`, but does not replace on-device handle, OS lifecycle, GPU,
 screen-reader, or live-backend checks. Coverage and limitations live in
 [`test/ui/README.md`](test/ui/README.md).
+
+CI keeps the golden host on `macos-15` arm64, installs the exact Flutter version
+from `.fvmrc`, and uses UTC/`en_US.UTF-8` with the committed test fonts. The root
+application lockfile is enforced during dependency resolution; the tracked
+Pagecraft lockfile must also remain unchanged. Independent package test contexts
+still resolve their own ignored lockfiles; this is not a Pub Workspaces migration.
+Rust uses Pagecraft's existing `rust-toolchain.toml` and locked Cargo commands.
+GitHub can update its macOS image within that label, so each run records the OS,
+SDK and compiler versions and retains verification logs and golden differences
+for seven days. CI never updates expected PNGs or runs native device/FPS checks.
 
 `make coverage` runs the same suites with Dart VM line/branch instrumentation
 and creates a fresh `.local/coverage/run-*/` report. The collector unions hits

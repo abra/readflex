@@ -860,7 +860,6 @@ class _ReaderTextBodyState extends State<ReaderTextBody> {
         x: point.dx,
         y: point.dy,
         surface: surface,
-        isComic: false,
         axis: readerTapAxisForPageTurnStyle(pageTurnStyle),
       ),
       onLinkTap: (section, link) => unawaited(_onLinkTap(section, link)),

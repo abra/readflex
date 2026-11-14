@@ -9,10 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('article body forwards onExternalLink to the reader view', () {
     final source = _readSource('lib/src/reader_screen_content.dart');
-    final start = source.indexOf('_PageKind.article => ReaderArticleBody(');
+    final start = source.indexOf(
+      'ReaderContentKind.article => ReaderArticleBody(',
+    );
     final construction = source.substring(
       start,
-      source.indexOf('_PageKind.pdf =>', start),
+      source.indexOf('ReaderContentKind.pdf =>', start),
     );
     expect(construction, contains('onExternalLink: widget.onExternalLink,'));
   });

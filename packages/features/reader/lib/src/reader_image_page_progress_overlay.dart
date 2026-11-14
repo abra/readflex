@@ -8,6 +8,7 @@ import 'reader_control_styles.dart';
 
 import 'package:readflex_localizations/readflex_localizations.dart';
 
+import 'reader_format_capabilities.dart';
 import 'reader_progress_label.dart';
 
 const _kOverlayVisibleDuration = Duration(seconds: 3);
@@ -89,7 +90,9 @@ class _ReaderImagePageProgressOverlayState
     final format = widget.format;
     final currentPage = widget.currentPage;
     final totalPages = widget.totalPages;
-    if (!isImagePageFormat(format) ||
+    if (!readerFormatCapabilitiesFor(format: format)
+            .progressMode
+            .showsPageOverlay ||
         currentPage == null ||
         totalPages == null ||
         totalPages <= 0) {

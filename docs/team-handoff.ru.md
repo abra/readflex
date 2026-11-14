@@ -274,9 +274,27 @@ production-зависимости и Dart directives пакетов, циклы,
 допустимы. Динамические типы, захваты замыканий, локальное получение сервисов и
 UI-классы без суффикса `View` всё ещё требуют review. Pagecraft дополнительно
 проверяет внутренние границы format-библиотек тестом
-`library_boundaries_test.dart`. В checkout нет committed CI workflow, поэтому
-успешный локальный Make target не означает существования или успешности
-удалённого CI.
+`library_boundaries_test.dart`. Workflow `.github/workflows/quality.yml`
+запускает форматирование, `make analyze` и `make test` для pull request и push
+в `main`; доступен ручной запуск. Локальный успех не доказывает успешность
+удалённого запуска.
+
+`make test-contracts` запускает одинаковые сценарии закладок и коллекций на
+реальных SQLite-репозиториях и их частичных feature-fakes, а также проверки
+взаимодействия Library, Reader, Practice и review session. Проверяются в том
+числе ошибка observer после импорта, удаление уже показанного highlight,
+поздняя оценка, Undo и согласованность счётчиков для книг/статей при обоих
+значениях настройки повторения highlights. Эти тесты входят и в `make test`.
+
+Среда goldens в CI: `macos-15` arm64, точная версия SDK из `.fvmrc`, UTC,
+`en_US.UTF-8` и шрифты из репозитория. Application lockfile проверяется через
+`--enforce-lockfile`; tracked Pagecraft lockfile не должен изменяться. Остальные
+package test contexts по-прежнему имеют собственное разрешение зависимостей.
+Rust использует существующий pin Pagecraft. Версии среды и логи сохраняются
+вместе с golden differences на семь дней; expected PNG автоматически не
+обновляются. GitHub может обновлять образ внутри `macos-15`, поэтому при
+расхождении надо сопоставлять записанные версии. Device/FPS и screen reader
+проверки в этот workflow не входят.
 
 ## 5. Запуск, владение ресурсами и навигация
 
@@ -1222,7 +1240,7 @@ model consent/offline scenarios и review текущих продуктовых 
 | Practice | Нет TTS/daily reminder | Не обещать эти сценарии |
 | Review Remove | Text highlight может backfill-иться | Нет постоянного suspend semantics |
 | Preferences | Disk failures логируются | In-memory выбор может не пережить restart |
-| CI | Нет workflow в checkout | Make commands требуют запуска/интеграции |
+| CI | Quality workflow: форматирование, анализ, тесты и goldens | Remote результат проверяется отдельно; device/FPS вне CI |
 
 Legacy flashcard/profile/subscription/auth/AI/notification surfaces находятся
 вне активного графа. Последняя legacy revision — `189e2cc1`.

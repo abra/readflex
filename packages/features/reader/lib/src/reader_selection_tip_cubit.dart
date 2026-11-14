@@ -4,6 +4,8 @@ import 'package:domain_models/domain_models.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:preferences_service/preferences_service.dart';
 
+import 'reader_format_capabilities.dart';
+
 /// Where the one-time "Press and hold a word" tip is in this reader session.
 enum ReaderSelectionTipPhase {
   /// Not shown yet; it appears once a text page is on screen.
@@ -100,15 +102,13 @@ bool readerSupportsSelectionTip({
   required BookFormat? format,
   required bool? hasSearchableText,
 }) {
-  if (sourceType == SourceType.article) return true;
-  return switch (format) {
-    BookFormat.cbz => false,
-    BookFormat.pdf || BookFormat.djvu => hasSearchableText == true,
-    BookFormat.epub ||
-    BookFormat.fb2 ||
-    BookFormat.mobi ||
-    BookFormat.azw3 ||
-    null => true,
+  return switch (readerFormatCapabilitiesFor(
+    sourceType: sourceType,
+    format: format,
+  ).textSelection) {
+    ReaderTextSelectionSupport.none => false,
+    ReaderTextSelectionSupport.textLayer => hasSearchableText == true,
+    ReaderTextSelectionSupport.always => true,
   };
 }
 

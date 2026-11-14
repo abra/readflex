@@ -10,8 +10,8 @@ import 'package:highlight_repository/highlight_repository.dart';
 
 import 'reader_document.dart';
 import 'reader_document_features.dart';
+import 'reader_format_capabilities.dart';
 import 'reader_position.dart';
-import 'reader_progress_label.dart';
 import 'reader_toc_item.dart';
 
 export 'reader_document.dart';
@@ -598,9 +598,13 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         cfi: event.cfi,
         content: event.content,
         progress: event.progress,
-        chapterTitle: isImagePageFormat(document.format)
-            ? null
-            : state.chapterTitle,
+        chapterTitle:
+            readerFormatCapabilitiesFor(
+              sourceType: document.sourceType,
+              format: document.format,
+            ).showsChapterTitles
+            ? state.chapterTitle
+            : null,
         anchorExact: event.anchorExact,
         anchorPrefix: event.anchorPrefix,
         anchorSuffix: event.anchorSuffix,

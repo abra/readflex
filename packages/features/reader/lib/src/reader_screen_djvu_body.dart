@@ -581,7 +581,6 @@ class _ReaderDjvuBodyState extends State<ReaderDjvuBody> {
         x: point.dx,
         y: point.dy,
         surface: surface,
-        isComic: true,
         axis: readerTapAxisForPageTurnStyle(widget.pageTurnStyle),
       ),
       onPageShown: _onPageShown,

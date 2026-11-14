@@ -23,6 +23,8 @@ bool readerSearchActionEnabled({
   required BookFormat? format,
   required ReaderDocumentFeatures? documentFeatures,
 }) {
+  // Search discovers text lazily; static action visibility belongs to the
+  // format policy, not to the first page's optional text-layer report.
   return true;
 }
 

@@ -60,6 +60,39 @@ streams, per-frame storage work, controllers or rendering widgets.
 format isolation and source-contract boundaries. The remaining `ReaderBloc`
 parts belong to one state machine, rather than a shared screen library.
 
+### Format policy
+
+`reader_format_capabilities.dart` is the single static description of content
+kind, chrome actions, appearance controls, progress/Contents modes, zoom,
+columns, page-turn interaction and selection support. The exhaustive
+`BookFormat` resolver returns canonical const profiles; articles override legacy
+book-format metadata, and an unknown book format keeps the text-reader fallback.
+`ReaderState.formatCapabilities` exposes the derived profile without storing or
+emitting another state. Existing action/progress helpers delegate to this policy.
+
+| Source | Extra chrome actions | Zoom | Appearance / columns | Progress | Contents |
+|---|---|---|---|---|---|
+| EPUB / FB2 / MOBI / AZW3 | Appearance, Search | No | Text / wide-window columns | Continuous percent + one-based section page | Chapters |
+| Saved article | Appearance, Search | No | Text / no columns or page turns | Discrete one-based visual section pages | Chapters |
+| PDF | Appearance, Search | Yes | Page colors and margin crop / no columns | Continuous percent + zero-based document page displayed from 1 | Chapters; Pages after page-count discovery |
+| CBZ | Page-turn toggle | Yes | No Appearance action | Discrete zero-based pages displayed from 1 | Pages from the archive TOC |
+| DjVu | Page-turn toggle, Search | Yes | No Appearance action | Discrete zero-based pages displayed from 1 | Chapters; Pages after page-count discovery |
+
+Contents and Bookmark are shared actions; Back remains route navigation. Text
+books and PDF expose page-turn settings inside Appearance. Image-page progress
+keeps its transient page overlay and longer seek-settle window. CBZ/DjVu keep
+page gestures available under chrome; other formats first dismiss chrome.
+Image-highlight previews in Contents remain enabled only for CBZ.
+
+`ReaderDocumentFeatures` remains a separate incremental report: outline presence,
+page count and discovered text are properties of an opened document, not of its
+format. PDF/DjVu search stays available while pages are probed lazily; selection
+guidance waits for confirmed text. Registry lookup never opens a document or
+probes a text layer. Renderers retain their controllers, caches and lifecycle.
+`reader_format_capabilities_test.dart` covers the profile matrix and immutable
+lookups; `reader_format_policy_widgets_test.dart` checks actual Cupertino and
+Material roots at phone RTL/200%, including incremental PDF/DjVu reports.
+
 For changes to opening, restoration or disposal, begin with
 [bloc tests](test/reader_bloc_test.dart) and the screen tests for
 [text](test/reader_screen_text_test.dart),

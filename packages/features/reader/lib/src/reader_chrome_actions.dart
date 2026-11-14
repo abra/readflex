@@ -1,50 +1,16 @@
 import 'package:domain_models/domain_models.dart';
 
-enum ReaderChromeAction {
-  contents,
-  textAppearance,
-  pageTurn,
-  bookmark,
-  textSearch,
-}
+import 'reader_format_capabilities.dart';
 
-const _textReaderActions = {
-  ReaderChromeAction.contents,
-  ReaderChromeAction.textAppearance,
-  ReaderChromeAction.bookmark,
-  ReaderChromeAction.textSearch,
-};
+export 'reader_format_capabilities.dart' show ReaderChromeAction;
 
-const _imagePageReaderActions = {
-  ReaderChromeAction.contents,
-  ReaderChromeAction.pageTurn,
-  ReaderChromeAction.bookmark,
-};
-
-const _articleHtmlReaderActions = {
-  ReaderChromeAction.contents,
-  ReaderChromeAction.textAppearance,
-  ReaderChromeAction.bookmark,
-  ReaderChromeAction.textSearch,
-};
-
-const _searchableImagePageReaderActions = {
-  ..._imagePageReaderActions,
-  ReaderChromeAction.textSearch,
-};
-
-Set<ReaderChromeAction> readerChromeActionsForFormat(BookFormat? format) {
-  return switch (format) {
-    BookFormat.cbz => _imagePageReaderActions,
-    BookFormat.djvu => _searchableImagePageReaderActions,
-    _ => _textReaderActions,
-  };
-}
+Set<ReaderChromeAction> readerChromeActionsForFormat(BookFormat? format) =>
+    readerFormatCapabilitiesFor(format: format).chromeActions;
 
 Set<ReaderChromeAction> readerChromeActionsFor({
   required SourceType sourceType,
   required BookFormat? format,
-}) {
-  if (sourceType == SourceType.article) return _articleHtmlReaderActions;
-  return readerChromeActionsForFormat(format);
-}
+}) => readerFormatCapabilitiesFor(
+  sourceType: sourceType,
+  format: format,
+).chromeActions;
