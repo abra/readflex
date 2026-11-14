@@ -76,16 +76,51 @@ void main() {
   });
 
   test(
-    'resolves pinned FVM Dart before running in an external directory',
+    'resolves pinned FVM Dart from an isolated project',
     () async {
+      final project = Directory(p.join(temporary.path, 'FVM project'));
+      final sdk = File(
+        p.join(
+          project.path,
+          '.fvm',
+          'flutter_sdk',
+          'bin',
+          'cache',
+          'dart-sdk',
+          'bin',
+          Platform.isWindows ? 'dart.exe' : 'dart',
+        ),
+      );
+      await sdk.parent.create(recursive: true);
+      await sdk.writeAsString('SDK path fixture; never executed');
       final pinned = dartCommand(
         environment: {'DART': 'fvm dart --enable-asserts'},
-        root: root,
+        root: project.path,
       );
-      expect(p.isAbsolute(pinned.first), isTrue);
-      expect(pinned.skip(1), ['--enable-asserts']);
+      expect(pinned, [await sdk.resolveSymbolicLinks(), '--enable-asserts']);
+    },
+  );
+
+  test('explicit FVM requests require a configured project SDK', () {
+    expect(
+      () => dartCommand(
+        environment: {'DART': 'fvm dart'},
+        root: temporary.path,
+      ),
+      throwsStateError,
+    );
+  });
+
+  test(
+    'configured Dart runs outside a project without FVM',
+    () async {
+      final configured = dartCommand(
+        environment: {'DART': 'dart --enable-asserts'},
+        root: temporary.path,
+      );
+      expect(configured, ['dart', '--enable-asserts']);
       final result = await runCommand(
-        [...pinned, child, 'echo'],
+        [...configured, child, 'echo'],
         workingDirectory: temporary.path,
       );
       final output =
@@ -93,13 +128,6 @@ void main() {
       expect(
         await Directory(output['cwd'] as String).resolveSymbolicLinks(),
         await temporary.resolveSymbolicLinks(),
-      );
-      expect(
-        () => dartCommand(
-          environment: {'DART': 'fvm dart'},
-          root: temporary.path,
-        ),
-        throwsStateError,
       );
     },
   );
