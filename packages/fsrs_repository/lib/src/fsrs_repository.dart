@@ -65,6 +65,16 @@ class FsrsRepository {
     }
   }
 
+  /// Repairs missing legacy text-highlight tracking during app initialization.
+  /// Performs one missing-only SQL insert, without loading highlight content.
+  Future<void> backfillTextHighlights() async {
+    try {
+      await _dao.backfillTextHighlights();
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
   /// Removes review tracking for an item (e.g. when item is deleted).
   Future<void> deleteReviewItem(String itemId) async {
     try {
@@ -127,16 +137,25 @@ class FsrsRepository {
     }
   }
 
-  /// Returns all due review items, optionally filtered by type.
+  /// Returns due items, filtering [type] or [types] and [states] before pagination.
+  /// Null sets include all values; empty sets include none. [type] and [types]
+  /// are mutually exclusive.
   Future<List<ReviewItem>> getDueItems({
     ReviewableType? type,
+    Set<ReviewableType>? types,
+    Set<FsrsState>? states,
     int? limit,
     int? offset,
   }) async {
+    if (type != null && types != null) {
+      throw ArgumentError('Provide either type or types, not both.');
+    }
     try {
       final rows = await _dao.dueItems(
         _nowIso,
         type: type?.toStorageString(),
+        types: types?.map((type) => type.toStorageString()).toSet(),
+        states: states?.map((state) => state.toStorageString()).toSet(),
         limit: limit,
         offset: offset,
       );
@@ -176,18 +195,25 @@ class FsrsRepository {
     }
   }
 
-  /// Returns due review items for a specific source.
+  /// Due items for a source, with the same type filters as [getDueItems].
   Future<List<ReviewItem>> getDueItemsBySource(
     String sourceId, {
     ReviewableType? type,
+    Set<ReviewableType>? types,
+    Set<FsrsState>? states,
     int? limit,
     int? offset,
   }) async {
+    if (type != null && types != null) {
+      throw ArgumentError('Provide either type or types, not both.');
+    }
     try {
       final rows = await _dao.dueItemsBySource(
         sourceId,
         _nowIso,
         type: type?.toStorageString(),
+        types: types?.map((type) => type.toStorageString()).toSet(),
+        states: states?.map((state) => state.toStorageString()).toSet(),
         limit: limit,
         offset: offset,
       );
@@ -278,10 +304,10 @@ class FsrsRepository {
 
   /// Records a review for an item. Returns the updated FSRS state.
   ///
-  /// Creates a review tracking row if it is missing. Normal feature flows
-  /// register items when content is saved so it enters the due queue
-  /// immediately; this fallback protects old data, tests, and future import
-  /// paths that may not pre-register reviewable items.
+  /// Creates missing tracking only while the saved word or text highlight
+  /// still exists. Throws [NotFoundException] for unavailable content so a
+  /// late rating cannot recreate tracking after deletion. Legacy flashcard
+  /// rows retain their compatibility behavior outside active Practice flows.
   Future<FsrsCardData> recordReview({
     required String itemId,
     required ReviewableType itemType,
@@ -294,6 +320,18 @@ class FsrsRepository {
       // Read → compute → upsert + log all live inside one transaction so two
       // concurrent calls on the same itemId cannot overwrite each other.
       return await _db.transaction(() async {
+        final exists = switch (itemType) {
+          ReviewableType.dictionary => await _db.dictionaryDao.entryExists(
+            itemId,
+          ),
+          ReviewableType.highlight =>
+            await _db.highlightsDao.textHighlightExists(
+              itemId,
+            ),
+          ReviewableType.flashcard => true,
+        };
+        if (!exists) throw NotFoundException(itemId, itemType.name);
+
         final row = await _dao.byItemId(itemId);
         final currentFsrs = row?.toDomainModel().fsrs ?? const FsrsCardData();
 
@@ -318,6 +356,8 @@ class FsrsRepository {
         await _dao.insertReviewLog(result.log.toStorageModel());
         return result.fsrs;
       });
+    } on NotFoundException {
+      rethrow;
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }

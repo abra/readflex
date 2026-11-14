@@ -82,8 +82,15 @@ follows the same setting.
 ## Architecture
 
 - `PracticeScreen` → `PracticeBloc`: review stats, the per-source summaries
-  and the highlights setting. Every load first backfills review rows for text
-  highlights saved before review tracking existed, so counts include them.
+  and the highlights setting. Loading the hub reads content and schedules;
+  compatibility repair for older text highlights runs during app initialization,
+  outside this feature's screen loads.
+- `PracticeReviewEligibility` keeps the hub's due count, By book due counts
+  and session types consistent. Disabling Highlight review leaves the saved
+  content collections visible; inactive legacy flashcards never enter active
+  Practice counts or queues. Type filtering happens before queue limits. Due
+  counts describe all due items of enabled types; session size and daily
+  new-card allowances restrict the subset loaded for an individual session.
 - `PracticeWordsScreen` → `PracticeWordsCubit`: every saved word newest
   first, search, All / Learning / Mastered, remove. First source anchors use
   bounded batch queries; stale or closed loads stop before further lookups.
@@ -113,7 +120,10 @@ follows the same setting.
   mounted, its progress line shows activity, and rating/reveal/menu actions are
   disabled. Close remains available; accepted writes drain on close and ignore
   cancelled emitters. Failed writes clear the saving state and keep the card in
-  the queue rather than silently advancing.
+  the queue rather than silently advancing. The expected `NotFoundException`
+  from a rating whose content disappeared is handled separately: discard that
+  cached card without inventing a rating, review log or completed-card count,
+  then show the next card or finish with the earlier committed results.
 - Removing the final queued card completes the session when at least one card
   was rated; otherwise the session becomes empty. Already rated cards are not
   shown again. Review again retains the newly committed FSRS state, so
@@ -125,18 +135,25 @@ follows the same setting.
   preview and rating in a session schedules at the memory target
   (`practiceDesiredRetention`) read when the session starts.
 - At most 50 cards per session. A caught-up reader can review `ahead`: the
-  20 cards due soonest across both types, never-reviewed cards last.
+  20 cards due soonest across enabled types, never-reviewed cards last.
+  Normal sessions read at most 50 new and 50 already-reviewed due rows in
+  parallel, filtered by enabled types/source/state before pagination. A stable
+  merge keeps the existing null-first/next-review order, then the daily new-card
+  allowance is applied. More than 100 new cards therefore cannot hide an
+  already-reviewed due card when the allowance is exhausted or partly used.
+  This bounds returned/hydrated metadata, not SQLite rows scanned or latency.
 - Each rating is recorded through `FsrsRepository.recordReview` as it is
-  given; a failed write ends the session in the failure state.
+  given; storage failures end the session in the failure state. Content deleted
+  since the queue was loaded is skipped without being counted as reviewed.
 - Words are rated Again / Hard / Good with the interval each would give,
   from `previewIntervals`. Highlights are Keep (recorded as Good) or Show
   less (recorded as Easy), available as soon as the highlight appears, without
   a Show answer step. There is no Easy for words.
 - Remove deletes the card's review row and drops it from the queue; the saved
   word or highlight remains. A session emptied by removals ends as empty when
-  nothing was rated. The legacy-highlight backfill currently registers text
-  highlights without a review row again on a later load; removal is not a
-  persistent opt-out for highlights.
+  nothing was rated. Initialization repair can register a text highlight without
+  a review row on a later app start; ordinary hub loads do not recreate it.
+  Removal is still not a persistent opt-out for highlights.
 - Cards rated Again are collected; the summary offers a second pass over
   them.
 

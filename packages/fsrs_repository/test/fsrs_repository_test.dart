@@ -15,6 +15,17 @@ void main() {
 
   tearDown(() => db.close());
 
+  Future<void> saveHighlight(String id, String sourceId) =>
+      db.highlightsDao.insertHighlight(
+        HighlightsTableCompanion.insert(
+          id: id,
+          sourceId: sourceId,
+          sourceType: 'book',
+          highlightText: 'A saved passage',
+          createdAt: DateTime.utc(2026).toIso8601String(),
+        ),
+      );
+
   group('FsrsRepository — create/delete', () {
     test('createReviewItem stores a new tracked item', () async {
       await repo.createReviewItem(
@@ -205,6 +216,7 @@ void main() {
     });
 
     test('preserves sourceId across recordReview', () async {
+      await saveHighlight('hl-1', 'book-7');
       await repo.createReviewItem(
         itemId: 'hl-1',
         itemType: ReviewableType.highlight,
@@ -221,10 +233,7 @@ void main() {
     });
 
     test('implicit creation preserves sourceId when provided', () async {
-      // Per the recordReview docstring, callers may rely on implicit creation
-      // — the first review registers the item in FSRS tracking. sourceId must
-      // be preserved on that implicit path, otherwise source-scoped queries
-      // (review-by-book, review-by-article) silently miss the card forever.
+      await saveHighlight('hl-new', 'book-42');
       await repo.recordReview(
         itemId: 'hl-new',
         itemType: ReviewableType.highlight,

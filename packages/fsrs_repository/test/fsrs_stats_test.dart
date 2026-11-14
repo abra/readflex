@@ -17,8 +17,19 @@ void main() {
 
   tearDown(() => db.close());
 
-  Future<void> track(String id, ReviewableType type, {String? sourceId}) =>
-      repo.createReviewItem(itemId: id, itemType: type, sourceId: sourceId);
+  Future<void> track(String id, ReviewableType type, {String? sourceId}) async {
+    if (type == ReviewableType.dictionary) {
+      await db.dictionaryDao.insertEntry(
+        DictionaryTableCompanion.insert(
+          id: id,
+          word: id,
+          translation: 'Meaning',
+          addedAt: now.toUtc().toIso8601String(),
+        ),
+      );
+    }
+    await repo.createReviewItem(itemId: id, itemType: type, sourceId: sourceId);
+  }
 
   group('ensureReviewItems', () {
     test('adds missing rows and keeps existing scheduling', () async {

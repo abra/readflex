@@ -60,18 +60,22 @@ void main() {
     expect(state.sources.last.due, 1);
   });
 
-  test('backfills review rows for highlights saved without them', () async {
-    await h.addBook('b1');
-    final highlight = await h.addHighlight('b1', 'Old');
-    await h.database.reviewItemsDao.deleteItemsByIds([highlight.id]);
-    final b = bloc();
-    addTearDown(b.close);
+  test(
+    'loading the hub does not recreate a removed highlight review row',
+    () async {
+      await h.addBook('b1');
+      final highlight = await h.addHighlight('b1', 'Old');
+      await h.database.reviewItemsDao.deleteItemsByIds([highlight.id]);
+      final b = bloc();
+      addTearDown(b.close);
 
-    final state = await load(b);
+      final state = await load(b);
 
-    expect(state.stats.totalOf(ReviewableType.highlight), 1);
-    expect(await h.fsrs.getReviewState(highlight.id), isNotNull);
-  });
+      expect(state.stats.totalOf(ReviewableType.highlight), 0);
+      expect(state.sources.single.highlights, 1);
+      expect(await h.fsrs.getReviewState(highlight.id), isNull);
+    },
+  );
 
   test('highlights leave the due count when the setting is off', () async {
     await h.addBook('b1');
@@ -88,5 +92,45 @@ void main() {
     expect(state.reviewHighlights, isFalse);
     expect(state.due, 1);
     expect(state.total, 2);
+    expect(state.sources.single.due, 1);
   });
+
+  for (final reviewHighlights in [false, true]) {
+    test('hub and By book use the same active review types: '
+        'highlights=$reviewHighlights', () async {
+      await h.addBook('mixed', title: 'Mixed');
+      await h.addBook('quotes', title: 'Quotes');
+      await h.addWord('word', sourceId: 'mixed');
+      await h.addHighlight('mixed', 'Mixed quote');
+      await h.addHighlight('quotes', 'Only quote');
+      await h.fsrs.createReviewItem(
+        itemId: 'legacy-card',
+        itemType: ReviewableType.flashcard,
+        sourceId: 'mixed',
+      );
+      await h.preferences.update(
+        (preferences) => preferences.copyWith(
+          practiceReviewHighlights: reviewHighlights,
+        ),
+      );
+      final b = bloc();
+      addTearDown(b.close);
+
+      final state = await load(b);
+      final mixed = state.sources.singleWhere((s) => s.source.id == 'mixed');
+      final quotes = state.sources.singleWhere((s) => s.source.id == 'quotes');
+
+      expect(state.due, reviewHighlights ? 3 : 1);
+      expect(mixed.due, reviewHighlights ? 2 : 1);
+      expect(quotes.due, reviewHighlights ? 1 : 0);
+      expect(
+        state.sources.fold(0, (sum, source) => sum + source.due),
+        state.due,
+      );
+      // Disabling review leaves the saved-content collections available.
+      expect(state.total, 3);
+      expect(mixed.highlights, 1);
+      expect(quotes.highlights, 1);
+    });
+  }
 }

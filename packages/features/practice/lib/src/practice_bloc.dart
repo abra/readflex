@@ -9,7 +9,7 @@ import 'package:highlight_repository/highlight_repository.dart';
 import 'package:preferences_service/preferences_service.dart';
 import 'package:stream_transform/stream_transform.dart';
 
-import 'practice_item_loader.dart';
+import 'practice_review_eligibility.dart';
 import 'practice_source_index.dart';
 import 'practice_source_summary.dart';
 
@@ -17,26 +17,15 @@ part 'practice_event.dart';
 part 'practice_state.dart';
 
 /// The Practice hub: counts for today, totals per collection and per source.
-///
-/// Each load first registers review rows for highlights that predate review
-/// tracking, so the counts include them.
 class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
   PracticeBloc({
-    required FsrsRepository fsrsRepository,
-    required DictionaryRepository dictionaryRepository,
-    required HighlightRepository highlightRepository,
+    required this._fsrsRepository,
+    required this._dictionaryRepository,
+    required this._highlightRepository,
     required this._bookRepository,
     required this._preferencesService,
     this._articleRepository,
-  }) : _fsrsRepository = fsrsRepository,
-       _dictionaryRepository = dictionaryRepository,
-       _highlightRepository = highlightRepository,
-       _loader = PracticeItemLoader(
-         dictionaryRepository: dictionaryRepository,
-         highlightRepository: highlightRepository,
-         fsrsRepository: fsrsRepository,
-       ),
-       super(const PracticeState()) {
+  }) : super(const PracticeState()) {
     on<PracticeLoadRequested>(
       _onLoadRequested,
       transformer: (events, mapper) => events.switchMap(mapper),
@@ -49,7 +38,6 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
   final BookRepository _bookRepository;
   final ArticleRepository? _articleRepository;
   final PreferencesService _preferencesService;
-  final PracticeItemLoader _loader;
 
   Future<void> _onLoadRequested(
     PracticeLoadRequested event,
@@ -59,7 +47,9 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
       emit(state.copyWith(status: PracticeStatus.loading));
     }
     try {
-      await _loader.backfillHighlights();
+      final eligibility = PracticeReviewEligibility(
+        reviewHighlights: _preferencesService.current.practiceReviewHighlights,
+      );
       final (stats, sources, entries, highlights, due) = await (
         _fsrsRepository.getStats(),
         PracticeSourceIndex.load(
@@ -68,19 +58,20 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
         ),
         _dictionaryRepository.getEntries(),
         _highlightRepository.getHighlights(),
-        _fsrsRepository.getDueItems(),
+        _fsrsRepository.getDueItems(types: eligibility.types),
       ).wait;
+      if (emit.isDone) return;
       emit(
         state.copyWith(
           status: PracticeStatus.ready,
           stats: stats,
-          sources: _summaries(sources, entries, highlights, due),
-          reviewHighlights:
-              _preferencesService.current.practiceReviewHighlights,
+          sources: _summaries(sources, entries, highlights, due, eligibility),
+          reviewHighlights: eligibility.reviewHighlights,
         ),
       );
     } catch (e, st) {
       addError(e, st);
+      if (emit.isDone) return;
       emit(state.copyWith(status: PracticeStatus.failure));
     }
   }
@@ -90,6 +81,7 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
     List<DictionaryEntry> entries,
     List<Highlight> highlights,
     List<ReviewItem> due,
+    PracticeReviewEligibility eligibility,
   ) {
     final words = <String, int>{};
     final quotes = <String, int>{};
@@ -103,6 +95,7 @@ class PracticeBloc extends Bloc<PracticeEvent, PracticeState> {
       quotes[highlight.sourceId] = (quotes[highlight.sourceId] ?? 0) + 1;
     }
     for (final item in due) {
+      if (!eligibility.includes(item.itemType)) continue;
       final id = item.sourceId;
       if (id != null) dueBySource[id] = (dueBySource[id] ?? 0) + 1;
     }

@@ -43,6 +43,17 @@ class HighlightsDao extends DatabaseAccessor<AppDatabase>
     highlightsTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Checks review eligibility without loading a potentially long quotation.
+  Future<bool> textHighlightExists(String id) async =>
+      await (selectOnly(highlightsTable)
+            ..addColumns([highlightsTable.id])
+            ..where(
+              highlightsTable.id.equals(id) &
+                  highlightsTable.kind.equals('text'),
+            ))
+          .getSingleOrNull() !=
+      null;
+
   Future<List<HighlightsTableData>> highlightsByIds(List<String> ids) =>
       (select(highlightsTable)..where((t) => t.id.isIn(ids))).get();
 

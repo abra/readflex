@@ -251,6 +251,114 @@ void main() {
     expect(state.items.single.sourceId, 'b2');
   });
 
+  for (final sourceId in [null, 'book']) {
+    for (final inactiveType in [
+      ReviewableType.highlight,
+      ReviewableType.flashcard,
+    ]) {
+      test('inactive $inactiveType rows cannot consume the due queue limit: '
+          'source=$sourceId', () async {
+        await h.addBook('book');
+        final word = await h.addWord('eligible', sourceId: 'book');
+        await h.review(word.id, ReviewableType.dictionary, Rating.hard);
+        for (
+          var index = 0;
+          index < ReviewSessionBloc.sessionLimit * 2 + 1;
+          index++
+        ) {
+          await h.fsrs.createReviewItem(
+            itemId: 'inactive-$index',
+            itemType: inactiveType,
+            sourceId: 'book',
+          );
+        }
+        h.now = h.now.add(const Duration(hours: 1));
+        await h.preferences.update(
+          (preferences) => preferences.copyWith(
+            practiceReviewHighlights: inactiveType != ReviewableType.highlight,
+          ),
+        );
+        final b = bloc(sourceId: sourceId);
+        addTearDown(b.close);
+
+        final state = await start(b);
+
+        expect(state.status, ReviewSessionStatus.reviewing);
+        expect(state.items.single.itemId, word.id);
+      });
+    }
+  }
+
+  test('Review ahead excludes disabled highlights before its limit', () async {
+    await h.addBook('book');
+    final word = await h.addWord('eligible', sourceId: 'book');
+    await h.review(word.id, ReviewableType.dictionary, Rating.easy);
+    for (var index = 0; index < ReviewSessionBloc.aheadLimit + 1; index++) {
+      final highlight = await h.addHighlight('book', 'Earlier quote $index');
+      await h.review(highlight.id, ReviewableType.highlight, Rating.hard);
+    }
+    await h.preferences.update(
+      (preferences) => preferences.copyWith(practiceReviewHighlights: false),
+    );
+    final b = bloc(sourceId: 'book', ahead: true);
+    addTearDown(b.close);
+
+    final state = await start(b);
+
+    expect(state.status, ReviewSessionStatus.reviewing);
+    expect(state.items.single.itemId, word.id);
+  });
+
+  for (final sourceId in [null, 'book']) {
+    for (final remainingNewBudget in [0, 2]) {
+      test('due reviews survive a large new-card prefix: '
+          'source=$sourceId remainingNew=$remainingNewBudget', () async {
+        await h.addBook('book');
+        await h.addBook('other');
+        final mature = await h.addWord('mature', sourceId: 'book');
+        await h.review(mature.id, ReviewableType.dictionary, Rating.good);
+        final scheduled = await h.fsrs.getReviewState(mature.id);
+        h.now = scheduled!.nextReviewAt!.add(const Duration(minutes: 1));
+        const dailyLimit = 3;
+        for (var index = 0; index < dailyLimit - remainingNewBudget; index++) {
+          final reviewed = await h.addWord(
+            'reviewed-$index',
+            sourceId: 'other',
+          );
+          await h.review(reviewed.id, ReviewableType.dictionary, Rating.easy);
+        }
+        for (
+          var index = 0;
+          index < ReviewSessionBloc.sessionLimit * 2 + 1;
+          index++
+        ) {
+          await h.addWord('new-$index', sourceId: 'book');
+        }
+        await h.preferences.update(
+          (preferences) =>
+              preferences.copyWith(practiceNewCardsPerDay: dailyLimit),
+        );
+        expect(
+          (await h.fsrs.getStats()).newReviewedToday,
+          dailyLimit - remainingNewBudget,
+        );
+        final b = bloc(sourceId: sourceId);
+        addTearDown(b.close);
+
+        final state = await start(b);
+
+        expect(state.status, ReviewSessionStatus.reviewing);
+        expect(state.items, hasLength(remainingNewBudget + 1));
+        expect(
+          state.items.where((item) => item.isNew),
+          hasLength(remainingNewBudget),
+        );
+        expect(state.items.last.itemId, mature.id);
+        expect(state.items.every((item) => item.sourceId == 'book'), isTrue);
+      });
+    }
+  }
+
   test('ahead reviews the cards due soonest when nothing is due', () async {
     await h.addBook('b1');
     final soon = await h.addWord('soon', sourceId: 'b1');
@@ -280,6 +388,93 @@ void main() {
     expect(b.state.current!.itemId, word.id);
     expect(b.state.ratings, isEmpty);
   });
+
+  for (final type in [ReviewableType.dictionary, ReviewableType.highlight]) {
+    test(
+      'a deleted $type card is skipped without a rating and review continues',
+      () async {
+        if (type == ReviewableType.dictionary) {
+          await h.addWord('first');
+          await h.addWord('second');
+        } else {
+          await h.addHighlight('source', 'First');
+          await h.addHighlight('source', 'Second');
+        }
+        final b = bloc();
+        addTearDown(b.close);
+        await start(b);
+        final unavailable = b.state.current!;
+        if (type == ReviewableType.dictionary) {
+          await h.dictionary.deleteEntry(unavailable.itemId);
+        } else {
+          await h.highlights.deleteHighlight(unavailable.itemId);
+        }
+
+        final skipped = await rate(b, Rating.again);
+
+        expect(skipped.status, ReviewSessionStatus.reviewing);
+        expect(skipped.items, hasLength(1));
+        expect(skipped.current!.itemId, isNot(unavailable.itemId));
+        expect(skipped.reviewed, 0);
+        expect(skipped.known, 0);
+        expect(skipped.again, isEmpty);
+        expect(skipped.revealed, isFalse);
+        expect(await h.fsrs.getReviewState(unavailable.itemId), isNull);
+        expect((await h.fsrs.getStats()).totalReviews, 0);
+
+        final remainingId = skipped.current!.itemId;
+        final completed = await rate(b, Rating.good);
+        expect(completed.status, ReviewSessionStatus.completed);
+        expect(completed.ratings, {remainingId: Rating.good});
+        expect((await h.fsrs.getStats()).totalReviews, 1);
+      },
+    );
+  }
+
+  test(
+    'a deleted only card leaves an empty session without a fake review',
+    () async {
+      final highlight = await h.addHighlight('source', 'No longer available');
+      final b = bloc();
+      addTearDown(b.close);
+      await start(b);
+      await h.highlights.deleteHighlight(highlight.id);
+
+      final state = await rate(b, Rating.good);
+
+      expect(state.status, ReviewSessionStatus.empty);
+      expect(state.current, isNull);
+      expect(state.ratings, isEmpty);
+      expect(state.again, isEmpty);
+      expect(state.intervals, isEmpty);
+      expect((await h.fsrs.getStats()).totalReviews, 0);
+    },
+  );
+
+  test(
+    'a deleted final card preserves earlier committed session results',
+    () async {
+      await h.addWord('first');
+      await h.addWord('last');
+      final b = bloc();
+      addTearDown(b.close);
+      await start(b);
+      final reviewedId = b.state.current!.itemId;
+      await rate(b, Rating.good);
+      final unavailableId = b.state.current!.itemId;
+      await h.dictionary.deleteEntry(unavailableId);
+
+      final state = await rate(b, Rating.good);
+
+      expect(state.status, ReviewSessionStatus.completed);
+      expect(state.current, isNull);
+      expect(state.reviewed, 1);
+      expect(state.known, 1);
+      expect(state.ratings, {reviewedId: Rating.good});
+      expect(await h.fsrs.getReviewState(unavailableId), isNull);
+      expect((await h.fsrs.getStats()).totalReviews, 1);
+    },
+  );
 
   for (final removeFirst in [false, true]) {
     test(

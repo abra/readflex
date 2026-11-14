@@ -1,6 +1,5 @@
 import 'package:dictionary_repository/dictionary_repository.dart';
 import 'package:domain_models/domain_models.dart';
-import 'package:fsrs_repository/fsrs_repository.dart';
 import 'package:highlight_repository/highlight_repository.dart';
 
 import 'practice_item.dart';
@@ -13,12 +12,10 @@ class PracticeItemLoader {
   const PracticeItemLoader({
     required this._dictionaryRepository,
     required this._highlightRepository,
-    required this._fsrsRepository,
   });
 
   final DictionaryRepository _dictionaryRepository;
   final HighlightRepository _highlightRepository;
-  final FsrsRepository _fsrsRepository;
 
   Future<List<PracticeItem>> resolve(
     List<ReviewItem> rows,
@@ -66,21 +63,5 @@ class PracticeItemLoader {
           _ => null,
         },
     ].nonNulls.toList();
-  }
-
-  /// Registers review rows for text highlights saved before review tracking
-  /// existed, so they can come up for review.
-  Future<void> backfillHighlights() async {
-    final highlights = await _highlightRepository.getHighlights();
-    await _fsrsRepository.ensureReviewItems([
-      for (final h in highlights)
-        if (h.kind == HighlightKind.text)
-          ReviewItem(
-            itemId: h.id,
-            itemType: ReviewableType.highlight,
-            sourceId: h.sourceId,
-            fsrs: const FsrsCardData(),
-          ),
-    ]);
   }
 }

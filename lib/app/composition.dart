@@ -191,6 +191,7 @@ Future<DependenciesContainer> _createDependenciesContainer(
     final dictionaryRepository = DictionaryRepository(database: database);
     resources.add('dictionaryRepository.dispose', dictionaryRepository.dispose);
     final fsrsRepository = FsrsRepository(database: database);
+    await fsrsRepository.backfillTextHighlights();
 
     // ─── Preferences ───
     final preferencesService = await PreferencesService.create(

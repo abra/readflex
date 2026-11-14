@@ -145,6 +145,29 @@ void main() {
   });
 
   group('hub', () {
+    testWidgets('By book offers ahead when Highlight review is disabled', (
+      tester,
+    ) async {
+      await h.addBook('quotes', title: 'Saved quotes');
+      await h.addHighlight('quotes', 'A saved passage');
+      await h.preferences.update(
+        (preferences) => preferences.copyWith(practiceReviewHighlights: false),
+      );
+      await tester.pumpWidget(hub());
+      await settle(tester);
+
+      final sourceDue = find.byKey(const ValueKey('practiceSourceDue-quotes'));
+      expect(
+        tester.widget<Text>(sourceDue).data,
+        tester.element(sourceDue).l10n.practiceCaughtUpShort,
+      );
+      expect(find.text('1 due'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('practiceSource-quotes')));
+      await tester.pump();
+
+      expect(started.single, (sourceId: 'quotes', ahead: true));
+    });
+
     testWidgets('empty: nothing to practice, no command, back only', (
       tester,
     ) async {

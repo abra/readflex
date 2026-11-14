@@ -36,6 +36,14 @@ class DictionaryDao extends DatabaseAccessor<AppDatabase>
     dictionaryTable,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Checks existence without reading the word's translations or context.
+  Future<bool> entryExists(String id) async =>
+      await (selectOnly(dictionaryTable)
+            ..addColumns([dictionaryTable.id])
+            ..where(dictionaryTable.id.equals(id)))
+          .getSingleOrNull() !=
+      null;
+
   /// The newest saved entry for [word] (case-insensitive), optionally only
   /// one saved from [sourceId].
   Future<DictionaryTableData?> entryByWord(String word, {String? sourceId}) =>

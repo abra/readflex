@@ -44,6 +44,15 @@ subqueries let the existing type/deadline index restrict each lookup. An
 explicit set of types filters both values; an empty set returns an empty
 queue. It reads no review history and requires no schema change.
 
+`ReviewItemsDao.dueItems` and `dueItemsBySource` also accept sets of types and
+FSRS states, applied before SQL pagination. `backfillTextHighlights` inserts only
+missing text-highlight review rows in one SQL statement using the review table's item-ID
+primary key. App composition awaits this compatibility repair once at startup;
+screen loading performs no repair writes. Existing schedules remain unchanged.
+`DictionaryDao.entryExists` and `HighlightsDao.textHighlightExists` select only
+the ID so transactional review validation never loads translation or quotation
+bodies.
+
 `DictionaryDao.firstAnchorsByEntries` selects only the oldest anchor for each
 requested entry, with insertion order breaking equal timestamps. It deduplicates
 IDs and binds at most 500 per statement, below SQLite's 999-parameter baseline.

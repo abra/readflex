@@ -74,6 +74,12 @@ its source-owned learning content; it has no corresponding preserve option.
 Filesystem cleanup runs only after commit.
 Progress-reporting imports use `IOSink.addStream` to propagate backpressure;
 imports without a progress callback retain the native `File.copy` path.
+Progress is a synchronous observer, independent of persistence. If it throws,
+the repository disables it for that import and logs one warning; diagnostic
+logging failures are isolated too. A successfully persisted import still returns
+its book and keeps its files. Copy/cover/database failures remain
+`StorageException`s and clean the incomplete directory; completion (`1.0`) is
+reported only after the database insertion succeeds, outside that cleanup path.
 
 ## Dependencies
 

@@ -19,10 +19,10 @@ class PracticeState extends Equatable {
   /// The Profile setting: whether highlights take part in reviews.
   final bool reviewHighlights;
 
-  /// Due cards a session would show, honouring [reviewHighlights].
-  int get due =>
-      stats.dueOf(ReviewableType.dictionary) +
-      (reviewHighlights ? stats.dueOf(ReviewableType.highlight) : 0);
+  /// Due cards of enabled types, before session and daily new-card limits.
+  int get due => PracticeReviewEligibility(
+    reviewHighlights: reviewHighlights,
+  ).dueCount(stats);
 
   int get total =>
       stats.totalOf(ReviewableType.dictionary) +

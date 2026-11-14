@@ -832,6 +832,29 @@ and optional review state transactionally with the original ID; review logs
 remain connected, absent review rows stay absent, and deleted sources cannot
 be recreated by Undo.
 
+Book import progress is a synchronous observer, separate from persistence. A
+throwing callback is disabled and logged once; it cannot fail the import or
+delete committed files. Completion is reported outside the file-cleanup boundary
+after the book row is inserted. Actual copy/cover/database failures still clean
+the incomplete directory and return a storage error.
+
+`FsrsRepository.recordReview` checks saved-word/text-highlight existence inside
+the transaction that reads the schedule, updates it and appends the log. Deleted
+content produces `NotFoundException` without recreating tracking; Practice drops
+the unavailable item without counting a rating. Legacy flashcard storage remains
+compatible and is excluded from active Practice queues.
+
+Composition awaits a missing-only SQL repair of legacy text-highlight review
+rows once during initialization. Practice hub and session loads do not backfill
+or load all highlights for this repair. The feature's review-eligibility policy
+keeps global and per-source due counts consistent with its session queues;
+repository queries apply type/state selection before pagination. Sessions load
+bounded new and already-reviewed candidates separately, so daily new-card limits
+cannot hide due learning/review/relearning items. Saved-content totals
+still include highlights when highlight review is disabled. Removing highlight
+tracking is not a persistent opt-out: startup repair can register saved text
+again until participation has its own stored flag.
+
 When adding a new persistence-backed domain concept, prefer:
 
 ```text

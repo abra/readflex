@@ -22,7 +22,7 @@ const _uuid = Uuid();
 ///
 /// ```
 /// books/<uuid>/
-///   book.<ext>    — the book file (epub, fb2, mobi, pdf, cbz, azw3)
+///   book.<ext>    — the book file (epub, fb2, mobi, pdf, cbz, azw3, djvu/djv)
 ///   cover.<ext>   — extracted cover image (if available)
 /// ```
 ///
@@ -71,7 +71,8 @@ class BookRepository {
   /// the caller can show a real progress bar. Progress values are mapped
   /// `0.0..0.95` for the byte-copy phase and reach `1.0` after cover and
   /// DB rows are written. When `null` the function uses [File.copy] for
-  /// the fast path.
+  /// the fast path. Progress callbacks are synchronous observers; a throwing
+  /// observer is disabled and logged once without changing the import result.
   Future<Book> addBook({
     required File sourceFile,
     required String title,
@@ -83,6 +84,27 @@ class BookRepository {
   }) async {
     final id = _uuid.v4();
     final bookDir = Directory(p.join(_booksDir.path, id));
+    var progressObserver = onProgress;
+    void reportProgress(double value) {
+      final observer = progressObserver;
+      if (observer == null) return;
+      try {
+        observer(value);
+      } catch (error, stackTrace) {
+        progressObserver = null;
+        try {
+          _logger?.warn(
+            'BookRepository: import progress observer failed',
+            error: error,
+            stackTrace: stackTrace,
+          );
+        } catch (_) {
+          // Diagnostics cannot turn a progress failure into a storage failure.
+        }
+      }
+    }
+
+    late final Book importedBook;
     try {
       final now = DateTime.now();
 
@@ -95,7 +117,7 @@ class BookRepository {
       final destPath = p.join(bookDir.path, bookFileName);
 
       if (onProgress != null) {
-        onProgress(0);
+        reportProgress(0);
         final total = await sourceFile.length();
         final sink = File(destPath).openWrite();
         var copied = 0;
@@ -105,7 +127,7 @@ class BookRepository {
               copied += chunk.length;
               // Reserve last 5% of the bar for cover + DB insert below.
               final scaled = total == 0 ? 0.95 : (copied / total) * 0.95;
-              onProgress(scaled.clamp(0.0, 0.95));
+              reportProgress(scaled.clamp(0.0, 0.95));
               return chunk;
             }),
           );
@@ -140,7 +162,7 @@ class BookRepository {
           ).writeAsBytes(coverData);
         }
       }
-      onProgress?.call(0.98);
+      reportProgress(0.98);
 
       final book = Book(
         id: id,
@@ -152,9 +174,8 @@ class BookRepository {
         coverImagePath: coverFileName,
         comicPageOrderVersion: format == BookFormat.cbz ? 1 : 0,
       );
+      importedBook = _resolve(book);
       await _dao.insertBook(book.toStorageModel());
-      onProgress?.call(1.0);
-      return _resolve(book);
     } catch (e, st) {
       // Best-effort cleanup of the partially-written directory so a
       // long sequence of failed imports doesn't accumulate orphan
@@ -167,6 +188,9 @@ class BookRepository {
       } catch (_) {}
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
+    // The row is committed: observer work must stay outside file rollback.
+    reportProgress(1.0);
+    return importedBook;
   }
 
   Future<Book> updateBook(Book book) async {

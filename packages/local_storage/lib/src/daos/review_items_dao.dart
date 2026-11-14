@@ -34,11 +34,15 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
   Future<List<ReviewItemsTableData>> dueItems(
     String now, {
     String? type,
+    Set<String>? types,
+    Set<String>? states,
     int? limit,
     int? offset,
   }) {
     final query = select(reviewItemsTable)
-      ..where((_) => _duePredicate(now, type: type))
+      ..where(
+        (_) => _duePredicate(now, type: type, types: types, states: states),
+      )
       ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]);
     if (limit != null) query.limit(limit, offset: offset);
     return query.get();
@@ -103,20 +107,17 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
     String sourceId,
     String now, {
     String? type,
+    Set<String>? types,
+    Set<String>? states,
     int? limit,
     int? offset,
   }) {
     final query = select(reviewItemsTable)
-      ..where((t) {
-        final dueCondition =
+      ..where(
+        (t) =>
             t.sourceId.equals(sourceId) &
-            (t.nextReviewAt.isNull() |
-                t.nextReviewAt.isSmallerOrEqual(Variable(now)));
-        if (type != null) {
-          return t.itemType.equals(type) & dueCondition;
-        }
-        return dueCondition;
-      })
+            _duePredicate(now, type: type, types: types, states: states),
+      )
       ..orderBy([(t) => OrderingTerm.asc(t.nextReviewAt)]);
     if (limit != null) query.limit(limit, offset: offset);
     return query.get();
@@ -154,6 +155,22 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
     return batch((b) {
       b.insertAll(reviewItemsTable, items, mode: InsertMode.insertOrIgnore);
     });
+  }
+
+  /// Repairs legacy text-highlight tracking without loading quotation bodies
+  /// or changing the schedule of an already tracked item.
+  Future<void> backfillTextHighlights() async {
+    await customInsert(
+      '''
+      INSERT INTO review_items_table (item_id, item_type, source_id)
+      SELECT h.id, 'highlight', h.source_id
+      FROM highlights_table AS h
+      WHERE h.kind = 'text' AND NOT EXISTS (
+        SELECT 1 FROM review_items_table AS r WHERE r.item_id = h.id
+      )
+      ''',
+      updates: {reviewItemsTable},
+    );
   }
 
   Future<int> itemCount({String? type}) {
@@ -239,12 +256,23 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
             ..orderBy([(t) => OrderingTerm.desc(t.reviewedAt)]))
           .get();
 
-  Expression<bool> _duePredicate(String now, {String? type}) {
-    final dueCondition =
+  Expression<bool> _duePredicate(
+    String now, {
+    String? type,
+    Set<String>? types,
+    Set<String>? states,
+  }) {
+    var dueCondition =
         reviewItemsTable.nextReviewAt.isNull() |
         reviewItemsTable.nextReviewAt.isSmallerOrEqual(Variable(now));
     if (type != null) {
-      return reviewItemsTable.itemType.equals(type) & dueCondition;
+      dueCondition = reviewItemsTable.itemType.equals(type) & dueCondition;
+    }
+    if (types != null) {
+      dueCondition = reviewItemsTable.itemType.isIn(types) & dueCondition;
+    }
+    if (states != null) {
+      dueCondition = reviewItemsTable.fsrsState.isIn(states) & dueCondition;
     }
     return dueCondition;
   }

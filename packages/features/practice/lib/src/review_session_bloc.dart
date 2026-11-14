@@ -10,6 +10,7 @@ import 'package:preferences_service/preferences_service.dart';
 
 import 'practice_item.dart';
 import 'practice_item_loader.dart';
+import 'practice_review_eligibility.dart';
 import 'practice_source_index.dart';
 
 part 'review_session_event.dart';
@@ -24,7 +25,7 @@ part 'review_session_state.dart';
 /// a caught-up reader review the cards due soonest instead.
 class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
   ReviewSessionBloc({
-    required FsrsRepository fsrsRepository,
+    required this._fsrsRepository,
     required DictionaryRepository dictionaryRepository,
     required HighlightRepository highlightRepository,
     required this._bookRepository,
@@ -32,11 +33,9 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     this._articleRepository,
     this.sourceId,
     this.ahead = false,
-  }) : _fsrsRepository = fsrsRepository,
-       _loader = PracticeItemLoader(
+  }) : _loader = PracticeItemLoader(
          dictionaryRepository: dictionaryRepository,
          highlightRepository: highlightRepository,
-         fsrsRepository: fsrsRepository,
        ),
        super(const ReviewSessionState()) {
     // Related writes and restarts share one queue, regardless of the app's
@@ -91,9 +90,12 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     emit(const ReviewSessionState());
     try {
       final prefs = _preferencesService.current;
+      final eligibility = PracticeReviewEligibility(
+        reviewHighlights: prefs.practiceReviewHighlights,
+      );
       _desiredRetention = prefs.practiceDesiredRetention;
       final (rows, sources, stats) = await (
-        _dueRows(),
+        _dueRows(eligibility),
         PracticeSourceIndex.load(
           bookRepository: _bookRepository,
           articleRepository: _articleRepository,
@@ -104,10 +106,7 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
       var newBudget = prefs.practiceNewCardsPerDay - stats.newReviewedToday;
       final queue = <ReviewItem>[];
       for (final row in rows) {
-        if (!prefs.practiceReviewHighlights &&
-            row.itemType == ReviewableType.highlight) {
-          continue;
-        }
+        if (!eligibility.includes(row.itemType)) continue;
         if (row.fsrs.state == FsrsState.newCard) {
           if (newBudget <= 0) continue;
           newBudget--;
@@ -125,14 +124,13 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     }
   }
 
-  Future<List<ReviewItem>> _dueRows() async {
+  Future<List<ReviewItem>> _dueRows(
+    PracticeReviewEligibility eligibility,
+  ) async {
     final source = sourceId;
     if (ahead) {
       final all = [
-        for (final type in [
-          ReviewableType.dictionary,
-          ReviewableType.highlight,
-        ])
+        for (final type in eligibility.types)
           ...await _fsrsRepository.getReviewItems(type),
       ];
       final scoped = source == null
@@ -152,9 +150,59 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
       });
       return scoped.take(aheadLimit).toList();
     }
+    final (newRows, reviewedRows) = await (
+      _dueRowsWithStates(eligibility, const {FsrsState.newCard}),
+      _dueRowsWithStates(eligibility, const {
+        FsrsState.learning,
+        FsrsState.review,
+        FsrsState.relearning,
+      }),
+    ).wait;
+    // A full prefix of new cards must not hide due reviews after the daily
+    // allowance is exhausted. Both reads remain bounded by the session size.
+    return _mergeDueRows(newRows, reviewedRows);
+  }
+
+  Future<List<ReviewItem>> _dueRowsWithStates(
+    PracticeReviewEligibility eligibility,
+    Set<FsrsState> states,
+  ) {
+    final source = sourceId;
     return source == null
-        ? _fsrsRepository.getDueItems(limit: sessionLimit * 2)
-        : _fsrsRepository.getDueItemsBySource(source, limit: sessionLimit * 2);
+        ? _fsrsRepository.getDueItems(
+            types: eligibility.types,
+            states: states,
+            limit: sessionLimit,
+          )
+        : _fsrsRepository.getDueItemsBySource(
+            source,
+            types: eligibility.types,
+            states: states,
+            limit: sessionLimit,
+          );
+  }
+
+  static List<ReviewItem> _mergeDueRows(
+    List<ReviewItem> newRows,
+    List<ReviewItem> reviewedRows,
+  ) {
+    final merged = <ReviewItem>[];
+    var newIndex = 0;
+    var reviewedIndex = 0;
+    // Each SQL result is already ordered by nextReviewAt, nulls first.
+    while (newIndex < newRows.length && reviewedIndex < reviewedRows.length) {
+      final newDate = newRows[newIndex].fsrs.nextReviewAt;
+      final reviewedDate = reviewedRows[reviewedIndex].fsrs.nextReviewAt;
+      if (newDate == null ||
+          reviewedDate != null && !newDate.isAfter(reviewedDate)) {
+        merged.add(newRows[newIndex++]);
+      } else {
+        merged.add(reviewedRows[reviewedIndex++]);
+      }
+    }
+    return merged
+      ..addAll(newRows.skip(newIndex))
+      ..addAll(reviewedRows.skip(reviewedIndex));
   }
 
   ReviewSessionState _begin(List<PracticeItem> items) {
@@ -202,6 +250,10 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
         sourceId: item.sourceId,
         desiredRetention: _desiredRetention,
       );
+    } on NotFoundException {
+      // Content can disappear while the cached card remains on screen.
+      if (!emit.isDone) _dropCurrentCard(emit);
+      return;
     } catch (e, st) {
       addError(e, st);
       if (emit.isDone) return;
@@ -238,6 +290,10 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
       return;
     }
     if (emit.isDone) return;
+    _dropCurrentCard(emit);
+  }
+
+  void _dropCurrentCard(Emitter<ReviewSessionState> emit) {
     final items = [...state.items]..removeAt(state.index);
     if (state.index >= items.length) {
       emit(
@@ -247,6 +303,8 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
               : ReviewSessionStatus.completed,
           items: items,
           isSaving: false,
+          revealed: false,
+          intervals: const {},
         ),
       );
       return;
