@@ -12,13 +12,13 @@ class ControlledReviewRepository extends FsrsRepository {
 
   final gate = Completer<void>();
   final recordStarted = Completer<void>();
-  final deleteStarted = Completer<void>();
+  final excludeStarted = Completer<void>();
   Completer<void>? recordGate;
-  Completer<void>? deleteGate;
+  Completer<void>? excludeGate;
   final persistedRatings = <(String, Rating)>[];
-  final deletedIds = <String>[];
+  final excludedIds = <String>[];
   bool failRecord = false;
-  bool failDelete = false;
+  bool failExclude = false;
 
   void release() {
     if (!gate.isCompleted) gate.complete();
@@ -49,11 +49,11 @@ class ControlledReviewRepository extends FsrsRepository {
   }
 
   @override
-  Future<void> deleteReviewItem(String itemId) async {
-    if (!deleteStarted.isCompleted) deleteStarted.complete();
-    await deleteGate?.future;
-    if (failDelete) throw const StorageException(cause: 'delete failed');
-    await super.deleteReviewItem(itemId);
-    deletedIds.add(itemId);
+  Future<void> excludeReviewItem(String itemId) async {
+    if (!excludeStarted.isCompleted) excludeStarted.complete();
+    await excludeGate?.future;
+    if (failExclude) throw const StorageException(cause: 'exclusion failed');
+    await super.excludeReviewItem(itemId);
+    excludedIds.add(itemId);
   }
 }

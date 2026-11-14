@@ -9,6 +9,8 @@ class ReviewItemsTable extends Table {
   TextColumn get sourceId =>
       text().nullable()(); // denormalized for due-by-source queries
 
+  BoolColumn get isExcluded => boolean().withDefault(const Constant(false))();
+
   // FSRS card data
   TextColumn get fsrsState => text().withDefault(const Constant('new'))();
 

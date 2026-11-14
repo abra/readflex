@@ -38,15 +38,138 @@ void main() {
     return result;
   }
 
-  Future<AppDatabase> createV26Database() async {
+  Future<AppDatabase> createV27Database() async {
     final current = AppDatabase.forTesting(NativeDatabase(databaseFile));
     await current.customSelect('SELECT 1').getSingle();
+    for (final index in [
+      'idx_review_items_source_next',
+      'idx_review_items_type_next',
+      'idx_review_items_active_next',
+    ]) {
+      await current.customStatement('DROP INDEX $index');
+    }
+    await current.customStatement(
+      'ALTER TABLE review_items_table DROP COLUMN is_excluded',
+    );
+    await current.customStatement('''
+      CREATE INDEX idx_review_items_source_next
+      ON review_items_table (source_id, next_review_at)
+    ''');
+    await current.customStatement('''
+      CREATE INDEX idx_review_items_type_next
+      ON review_items_table (item_type, next_review_at)
+    ''');
+    return current;
+  }
+
+  Future<AppDatabase> createV26Database() async {
+    final current = await createV27Database();
     await current.customStatement('DROP INDEX idx_dictionary_word_source');
     await current.customStatement(
       'ALTER TABLE dictionary_table DROP COLUMN word_key',
     );
     return current;
   }
+
+  test(
+    'v27 reviews stay active with scheduling, history and content intact',
+    () async {
+      final current = await createV27Database();
+      await current.booksDao.insertBook(
+        BooksTableCompanion.insert(
+          id: 'book',
+          title: 'Saved book',
+          filePath: 'book.epub',
+          format: 'epub',
+          addedAt: '2026-01-01',
+        ),
+      );
+      await current.highlightsDao.insertHighlight(
+        HighlightsTableCompanion.insert(
+          id: 'highlight',
+          sourceId: 'book',
+          sourceType: 'book',
+          highlightText: 'Keep this passage',
+          createdAt: '2026-01-01',
+        ),
+      );
+      await current.customStatement('''
+      INSERT INTO review_items_table
+        (item_id, item_type, source_id, fsrs_state, stability, difficulty,
+         retrievability, reps, lapses, last_review_at, next_review_at,
+         scheduled_days, elapsed_days)
+      VALUES ('highlight', 'highlight', 'book', 'review', 12.3, 4.5,
+              0.8, 8, 2, '2026-01-01T12:00:00.000Z',
+              '2026-01-15T12:00:00.000Z', 14, 10)
+    ''');
+      await current.reviewItemsDao.insertReviewLog(
+        ReviewLogsTableCompanion.insert(
+          id: 'log',
+          itemId: 'highlight',
+          itemType: 'highlight',
+          rating: 'good',
+          stateBefore: 'learning',
+          stabilityBefore: 1,
+          difficultyBefore: 4.5,
+          retrievabilityAtReview: .8,
+          scheduledDays: 14,
+          elapsedDays: 10,
+          reviewedAt: '2026-01-01T12:00:00.000Z',
+        ),
+      );
+      final savedReview =
+          (await current
+                  .customSelect('SELECT * FROM review_items_table')
+                  .getSingle())
+              .data;
+      final savedHighlight = await current.highlightsDao.highlightById(
+        'highlight',
+      );
+      final savedLogs = await current.reviewItemsDao.reviewLogsByItem(
+        'highlight',
+      );
+      await current.customStatement('PRAGMA user_version = 27');
+      await current.close();
+
+      final migrated = await openMigratedDatabase();
+      final row = (await migrated.reviewItemsDao.byItemId('highlight'))!;
+      expect(row.isExcluded, isFalse);
+      final migratedReview =
+          (await migrated
+                  .customSelect('SELECT * FROM review_items_table')
+                  .getSingle())
+              .data;
+      expect({...migratedReview}..remove('is_excluded'), savedReview);
+      expect(
+        await migrated.highlightsDao.highlightById('highlight'),
+        savedHighlight,
+      );
+      expect(
+        await migrated.reviewItemsDao.reviewLogsByItem('highlight'),
+        savedLogs,
+      );
+      expect(await migrated.reviewItemsDao.itemCount(), 1);
+      expect(await migrated.reviewItemsDao.dueItemCount('2026-02-01'), 1);
+      expect((await migrated.booksDao.bookById('book'))!.title, 'Saved book');
+
+      for (final (index, columns) in [
+        (
+          'idx_review_items_source_next',
+          ['source_id', 'is_excluded', 'next_review_at'],
+        ),
+        (
+          'idx_review_items_type_next',
+          ['item_type', 'is_excluded', 'next_review_at'],
+        ),
+        ('idx_review_items_active_next', ['is_excluded', 'next_review_at']),
+      ]) {
+        final fields = await migrated
+            .customSelect('PRAGMA index_info($index)')
+            .get();
+        expect(fields.map((field) => field.read<String>('name')), columns);
+      }
+    },
+  );
 
   test('v26 words gain Unicode lookup keys without losing saved data', () async {
     final current = await createV26Database();

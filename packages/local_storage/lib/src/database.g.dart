@@ -5035,6 +5035,21 @@ class $ReviewItemsTableTable extends ReviewItemsTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isExcludedMeta = const VerificationMeta(
+    'isExcluded',
+  );
+  @override
+  late final GeneratedColumn<bool> isExcluded = GeneratedColumn<bool>(
+    'is_excluded',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_excluded" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _fsrsStateMeta = const VerificationMeta(
     'fsrsState',
   );
@@ -5154,6 +5169,7 @@ class $ReviewItemsTableTable extends ReviewItemsTable
     itemId,
     itemType,
     sourceId,
+    isExcluded,
     fsrsState,
     stability,
     difficulty,
@@ -5197,6 +5213,12 @@ class $ReviewItemsTableTable extends ReviewItemsTable
       context.handle(
         _sourceIdMeta,
         sourceId.isAcceptableOrUnknown(data['source_id']!, _sourceIdMeta),
+      );
+    }
+    if (data.containsKey('is_excluded')) {
+      context.handle(
+        _isExcludedMeta,
+        isExcluded.isAcceptableOrUnknown(data['is_excluded']!, _isExcludedMeta),
       );
     }
     if (data.containsKey('fsrs_state')) {
@@ -5295,6 +5317,10 @@ class $ReviewItemsTableTable extends ReviewItemsTable
         DriftSqlType.string,
         data['${effectivePrefix}source_id'],
       ),
+      isExcluded: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_excluded'],
+      )!,
       fsrsState: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}fsrs_state'],
@@ -5349,6 +5375,7 @@ class ReviewItemsTableData extends DataClass
   final String itemId;
   final String itemType;
   final String? sourceId;
+  final bool isExcluded;
   final String fsrsState;
   final double stability;
   final double difficulty;
@@ -5363,6 +5390,7 @@ class ReviewItemsTableData extends DataClass
     required this.itemId,
     required this.itemType,
     this.sourceId,
+    required this.isExcluded,
     required this.fsrsState,
     required this.stability,
     required this.difficulty,
@@ -5382,6 +5410,7 @@ class ReviewItemsTableData extends DataClass
     if (!nullToAbsent || sourceId != null) {
       map['source_id'] = Variable<String>(sourceId);
     }
+    map['is_excluded'] = Variable<bool>(isExcluded);
     map['fsrs_state'] = Variable<String>(fsrsState);
     map['stability'] = Variable<double>(stability);
     map['difficulty'] = Variable<double>(difficulty);
@@ -5406,6 +5435,7 @@ class ReviewItemsTableData extends DataClass
       sourceId: sourceId == null && nullToAbsent
           ? const Value.absent()
           : Value(sourceId),
+      isExcluded: Value(isExcluded),
       fsrsState: Value(fsrsState),
       stability: Value(stability),
       difficulty: Value(difficulty),
@@ -5432,6 +5462,7 @@ class ReviewItemsTableData extends DataClass
       itemId: serializer.fromJson<String>(json['itemId']),
       itemType: serializer.fromJson<String>(json['itemType']),
       sourceId: serializer.fromJson<String?>(json['sourceId']),
+      isExcluded: serializer.fromJson<bool>(json['isExcluded']),
       fsrsState: serializer.fromJson<String>(json['fsrsState']),
       stability: serializer.fromJson<double>(json['stability']),
       difficulty: serializer.fromJson<double>(json['difficulty']),
@@ -5451,6 +5482,7 @@ class ReviewItemsTableData extends DataClass
       'itemId': serializer.toJson<String>(itemId),
       'itemType': serializer.toJson<String>(itemType),
       'sourceId': serializer.toJson<String?>(sourceId),
+      'isExcluded': serializer.toJson<bool>(isExcluded),
       'fsrsState': serializer.toJson<String>(fsrsState),
       'stability': serializer.toJson<double>(stability),
       'difficulty': serializer.toJson<double>(difficulty),
@@ -5468,6 +5500,7 @@ class ReviewItemsTableData extends DataClass
     String? itemId,
     String? itemType,
     Value<String?> sourceId = const Value.absent(),
+    bool? isExcluded,
     String? fsrsState,
     double? stability,
     double? difficulty,
@@ -5482,6 +5515,7 @@ class ReviewItemsTableData extends DataClass
     itemId: itemId ?? this.itemId,
     itemType: itemType ?? this.itemType,
     sourceId: sourceId.present ? sourceId.value : this.sourceId,
+    isExcluded: isExcluded ?? this.isExcluded,
     fsrsState: fsrsState ?? this.fsrsState,
     stability: stability ?? this.stability,
     difficulty: difficulty ?? this.difficulty,
@@ -5498,6 +5532,9 @@ class ReviewItemsTableData extends DataClass
       itemId: data.itemId.present ? data.itemId.value : this.itemId,
       itemType: data.itemType.present ? data.itemType.value : this.itemType,
       sourceId: data.sourceId.present ? data.sourceId.value : this.sourceId,
+      isExcluded: data.isExcluded.present
+          ? data.isExcluded.value
+          : this.isExcluded,
       fsrsState: data.fsrsState.present ? data.fsrsState.value : this.fsrsState,
       stability: data.stability.present ? data.stability.value : this.stability,
       difficulty: data.difficulty.present
@@ -5529,6 +5566,7 @@ class ReviewItemsTableData extends DataClass
           ..write('itemId: $itemId, ')
           ..write('itemType: $itemType, ')
           ..write('sourceId: $sourceId, ')
+          ..write('isExcluded: $isExcluded, ')
           ..write('fsrsState: $fsrsState, ')
           ..write('stability: $stability, ')
           ..write('difficulty: $difficulty, ')
@@ -5548,6 +5586,7 @@ class ReviewItemsTableData extends DataClass
     itemId,
     itemType,
     sourceId,
+    isExcluded,
     fsrsState,
     stability,
     difficulty,
@@ -5566,6 +5605,7 @@ class ReviewItemsTableData extends DataClass
           other.itemId == this.itemId &&
           other.itemType == this.itemType &&
           other.sourceId == this.sourceId &&
+          other.isExcluded == this.isExcluded &&
           other.fsrsState == this.fsrsState &&
           other.stability == this.stability &&
           other.difficulty == this.difficulty &&
@@ -5582,6 +5622,7 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
   final Value<String> itemId;
   final Value<String> itemType;
   final Value<String?> sourceId;
+  final Value<bool> isExcluded;
   final Value<String> fsrsState;
   final Value<double> stability;
   final Value<double> difficulty;
@@ -5597,6 +5638,7 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
     this.itemId = const Value.absent(),
     this.itemType = const Value.absent(),
     this.sourceId = const Value.absent(),
+    this.isExcluded = const Value.absent(),
     this.fsrsState = const Value.absent(),
     this.stability = const Value.absent(),
     this.difficulty = const Value.absent(),
@@ -5613,6 +5655,7 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
     required String itemId,
     required String itemType,
     this.sourceId = const Value.absent(),
+    this.isExcluded = const Value.absent(),
     this.fsrsState = const Value.absent(),
     this.stability = const Value.absent(),
     this.difficulty = const Value.absent(),
@@ -5630,6 +5673,7 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
     Expression<String>? itemId,
     Expression<String>? itemType,
     Expression<String>? sourceId,
+    Expression<bool>? isExcluded,
     Expression<String>? fsrsState,
     Expression<double>? stability,
     Expression<double>? difficulty,
@@ -5646,6 +5690,7 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
       if (itemId != null) 'item_id': itemId,
       if (itemType != null) 'item_type': itemType,
       if (sourceId != null) 'source_id': sourceId,
+      if (isExcluded != null) 'is_excluded': isExcluded,
       if (fsrsState != null) 'fsrs_state': fsrsState,
       if (stability != null) 'stability': stability,
       if (difficulty != null) 'difficulty': difficulty,
@@ -5664,6 +5709,7 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
     Value<String>? itemId,
     Value<String>? itemType,
     Value<String?>? sourceId,
+    Value<bool>? isExcluded,
     Value<String>? fsrsState,
     Value<double>? stability,
     Value<double>? difficulty,
@@ -5680,6 +5726,7 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
       itemId: itemId ?? this.itemId,
       itemType: itemType ?? this.itemType,
       sourceId: sourceId ?? this.sourceId,
+      isExcluded: isExcluded ?? this.isExcluded,
       fsrsState: fsrsState ?? this.fsrsState,
       stability: stability ?? this.stability,
       difficulty: difficulty ?? this.difficulty,
@@ -5705,6 +5752,9 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
     }
     if (sourceId.present) {
       map['source_id'] = Variable<String>(sourceId.value);
+    }
+    if (isExcluded.present) {
+      map['is_excluded'] = Variable<bool>(isExcluded.value);
     }
     if (fsrsState.present) {
       map['fsrs_state'] = Variable<String>(fsrsState.value);
@@ -5748,6 +5798,7 @@ class ReviewItemsTableCompanion extends UpdateCompanion<ReviewItemsTableData> {
           ..write('itemId: $itemId, ')
           ..write('itemType: $itemType, ')
           ..write('sourceId: $sourceId, ')
+          ..write('isExcluded: $isExcluded, ')
           ..write('fsrsState: $fsrsState, ')
           ..write('stability: $stability, ')
           ..write('difficulty: $difficulty, ')
@@ -9602,6 +9653,7 @@ typedef $$ReviewItemsTableTableCreateCompanionBuilder =
       required String itemId,
       required String itemType,
       Value<String?> sourceId,
+      Value<bool> isExcluded,
       Value<String> fsrsState,
       Value<double> stability,
       Value<double> difficulty,
@@ -9619,6 +9671,7 @@ typedef $$ReviewItemsTableTableUpdateCompanionBuilder =
       Value<String> itemId,
       Value<String> itemType,
       Value<String?> sourceId,
+      Value<bool> isExcluded,
       Value<String> fsrsState,
       Value<double> stability,
       Value<double> difficulty,
@@ -9653,6 +9706,11 @@ class $$ReviewItemsTableTableFilterComposer
 
   ColumnFilters<String> get sourceId => $composableBuilder(
     column: $table.sourceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isExcluded => $composableBuilder(
+    column: $table.isExcluded,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -9731,6 +9789,11 @@ class $$ReviewItemsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isExcluded => $composableBuilder(
+    column: $table.isExcluded,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get fsrsState => $composableBuilder(
     column: $table.fsrsState,
     builder: (column) => ColumnOrderings(column),
@@ -9799,6 +9862,11 @@ class $$ReviewItemsTableTableAnnotationComposer
 
   GeneratedColumn<String> get sourceId =>
       $composableBuilder(column: $table.sourceId, builder: (column) => column);
+
+  GeneratedColumn<bool> get isExcluded => $composableBuilder(
+    column: $table.isExcluded,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get fsrsState =>
       $composableBuilder(column: $table.fsrsState, builder: (column) => column);
@@ -9883,6 +9951,7 @@ class $$ReviewItemsTableTableTableManager
                 Value<String> itemId = const Value.absent(),
                 Value<String> itemType = const Value.absent(),
                 Value<String?> sourceId = const Value.absent(),
+                Value<bool> isExcluded = const Value.absent(),
                 Value<String> fsrsState = const Value.absent(),
                 Value<double> stability = const Value.absent(),
                 Value<double> difficulty = const Value.absent(),
@@ -9898,6 +9967,7 @@ class $$ReviewItemsTableTableTableManager
                 itemId: itemId,
                 itemType: itemType,
                 sourceId: sourceId,
+                isExcluded: isExcluded,
                 fsrsState: fsrsState,
                 stability: stability,
                 difficulty: difficulty,
@@ -9915,6 +9985,7 @@ class $$ReviewItemsTableTableTableManager
                 required String itemId,
                 required String itemType,
                 Value<String?> sourceId = const Value.absent(),
+                Value<bool> isExcluded = const Value.absent(),
                 Value<String> fsrsState = const Value.absent(),
                 Value<double> stability = const Value.absent(),
                 Value<double> difficulty = const Value.absent(),
@@ -9930,6 +10001,7 @@ class $$ReviewItemsTableTableTableManager
                 itemId: itemId,
                 itemType: itemType,
                 sourceId: sourceId,
+                isExcluded: isExcluded,
                 fsrsState: fsrsState,
                 stability: stability,
                 difficulty: difficulty,

@@ -7,6 +7,7 @@ extension ReviewItemSnapshot on ReviewItemsTableData {
     itemId: itemId,
     itemType: ReviewableType.from(itemType),
     sourceId: sourceId,
+    isExcluded: isExcluded,
     fsrs: FsrsCardData(
       state: FsrsState.from(fsrsState),
       stability: stability,
@@ -31,6 +32,7 @@ extension ReviewItemRestore on ReviewItem {
     itemId: Value(itemId),
     itemType: Value(itemType.toStorageString()),
     sourceId: Value(sourceId),
+    isExcluded: Value(isExcluded),
     fsrsState: Value(fsrs.state.toStorageString()),
     stability: Value(fsrs.stability),
     difficulty: Value(fsrs.difficulty),

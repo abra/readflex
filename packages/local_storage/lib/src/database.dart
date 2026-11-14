@@ -73,7 +73,7 @@ class AppDatabase extends _$AppDatabase {
   final Future<Directory> Function() _documentsDirectoryProvider;
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -82,6 +82,7 @@ class AppDatabase extends _$AppDatabase {
       await _createBookmarksTable();
       await _createArticlesIndexes();
       await _createIndexes();
+      await _createReviewEligibilityIndexes();
       await _createDictionaryAnchorIndexes();
       await _createDictionaryWordIndex();
       await _createCollectionIndexes();
@@ -388,6 +389,10 @@ class AppDatabase extends _$AppDatabase {
           }
         });
         await _createDictionaryWordIndex();
+      }
+      if (from < 28) {
+        await migrator.addColumn(reviewItemsTable, reviewItemsTable.isExcluded);
+        await _createReviewEligibilityIndexes();
       }
     },
   );
@@ -753,6 +758,24 @@ class AppDatabase extends _$AppDatabase {
     await customStatement('''
       CREATE INDEX IF NOT EXISTS idx_dictionary_source
       ON dictionary_table (source_id)
+    ''');
+  }
+
+  /// Replaces historical indexes only after the exclusion column exists.
+  Future<void> _createReviewEligibilityIndexes() async {
+    await customStatement('DROP INDEX IF EXISTS idx_review_items_source_next');
+    await customStatement('DROP INDEX IF EXISTS idx_review_items_type_next');
+    await customStatement('''
+      CREATE INDEX idx_review_items_source_next
+      ON review_items_table (source_id, is_excluded, next_review_at)
+    ''');
+    await customStatement('''
+      CREATE INDEX idx_review_items_type_next
+      ON review_items_table (item_type, is_excluded, next_review_at)
+    ''');
+    await customStatement('''
+      CREATE INDEX IF NOT EXISTS idx_review_items_active_next
+      ON review_items_table (is_excluded, next_review_at)
     ''');
   }
 

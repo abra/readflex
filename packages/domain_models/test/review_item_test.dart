@@ -14,6 +14,21 @@ void main() {
   );
 
   group('ReviewItem copyWith()', () {
+    test('keeps exclusion while changing scheduling state', () {
+      const excluded = ReviewItem(
+        itemId: 'excluded',
+        itemType: ReviewableType.highlight,
+        fsrs: FsrsCardData(),
+        isExcluded: true,
+      );
+      final copy = excluded.copyWith(
+        fsrs: const FsrsCardData(state: FsrsState.review, reps: 1),
+      );
+      expect(copy.isExcluded, isTrue);
+      expect(copy.fsrs.reps, 1);
+      expect(item().isExcluded, isFalse);
+    });
+
     test('preserves id and type', () {
       final updated = item().copyWith(
         fsrs: const FsrsCardData(state: FsrsState.learning),

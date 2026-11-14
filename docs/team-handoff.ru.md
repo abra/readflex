@@ -398,7 +398,7 @@ AppDatabase — одна Drift/SQLite database `readflex.db` в app documents.
 последние commits могут потеряться; WAL не означает гарантию сохранения
 последнего действия на физическом носителе.
 
-Текущая schemaVersion — 27. В базе находятся books, articles, highlights,
+Текущая schemaVersion — 28. В базе находятся books, articles, highlights,
 dictionary, dictionary anchors, collections и memberships, bookmarks,
 review items и logs. Legacy flashcard table остаётся ради совместимости
 миграций и не означает активного старого flashcard feature.
@@ -923,7 +923,7 @@ Practice floating icon показывается только при наличи
 полное число остаётся в semantics и текстовых областях. Review highlights
 preference влияет и на очередь, и на Library count.
 
-### Сессии и известное ограничение Remove
+### Сессии и исключение из повторения
 
 Practice имеет due sessions, Review ahead и source-scoped sessions. FSRS
 интервалы и подписи ratings зависят от desired retention. Статистика использует
@@ -934,11 +934,13 @@ Reveal и restart обрабатываются одной последовате
 tap не оценивает следующую карточку. На время записи controls отключены,
 а для word rating требуется раскрытый ответ.
 
-Команда Remove в review session удаляет review row, сохраняя content.
-Для text highlights существует legacy backfill при последующей загрузке:
-он может снова зарегистрировать такой highlight. Это существующее поведение,
-а не полноценный persistent suspend workflow. Решение о его изменении
-требует отдельной продуктовой задачи и тестов, а не правки документации.
+Команда Remove в review session сохраняет `isExcluded` в review row,
+оставляя content, расписание и историю. Исключённые карточки не входят в
+очереди, Review ahead, активные счётчики и ближайшие deadlines. Startup backfill
+не включает их обратно, а запоздалая оценка отклоняется внутри транзакции.
+Удаление highlight с Undo сохраняет этот признак вместе с FSRS snapshot.
+Физическое удаление tracking остаётся отдельной операцией. Старые удаления,
+которые уже стёрли review row, неотличимы от legacy content без регистрации.
 
 Practice settings обновляются в памяти через PreferencesService.
 Disk-write failure сервис логирует, сохраняя и публикуя in-memory snapshot;
@@ -1250,7 +1252,6 @@ model consent/offline scenarios и review текущих продуктовых 
 | FB2 | Полное чтение файла | Нельзя обещать offset-based I/O для всех formats |
 | ZIP integrity | CRC verification не реализована | Ограничение контейнерной проверки |
 | Practice | Нет TTS/daily reminder | Не обещать эти сценарии |
-| Review Remove | Text highlight может backfill-иться | Нет постоянного suspend semantics |
 | Preferences | Disk failures логируются | In-memory выбор может не пережить restart |
 | CI | Quality workflow: форматирование, анализ, тесты и goldens | Remote результат проверяется отдельно; device/FPS вне CI |
 

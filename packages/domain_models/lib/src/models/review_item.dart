@@ -10,6 +10,7 @@ class ReviewItem extends Equatable {
     required this.itemType,
     required this.fsrs,
     this.sourceId,
+    this.isExcluded = false,
   });
 
   final String itemId;
@@ -17,13 +18,17 @@ class ReviewItem extends Equatable {
   final String? sourceId;
   final FsrsCardData fsrs;
 
+  /// Explicit user exclusion, retained with the schedule and deletion snapshots.
+  final bool isExcluded;
+
   ReviewItem copyWith({FsrsCardData? fsrs}) => ReviewItem(
     itemId: itemId,
     itemType: itemType,
     sourceId: sourceId,
     fsrs: fsrs ?? this.fsrs,
+    isExcluded: isExcluded,
   );
 
   @override
-  List<Object?> get props => [itemId, itemType, sourceId, fsrs];
+  List<Object?> get props => [itemId, itemType, sourceId, fsrs, isExcluded];
 }

@@ -7,6 +7,7 @@ extension ReviewItemToStorage on ReviewItem {
     itemId: Value(itemId),
     itemType: Value(itemType.toStorageString()),
     sourceId: Value(sourceId),
+    isExcluded: Value(isExcluded),
     fsrsState: Value(fsrs.state.toStorageString()),
     stability: Value(fsrs.stability),
     difficulty: Value(fsrs.difficulty),

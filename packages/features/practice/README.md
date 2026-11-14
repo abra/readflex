@@ -149,11 +149,11 @@ follows the same setting.
   from `previewIntervals`. Highlights are Keep (recorded as Good) or Show
   less (recorded as Easy), available as soon as the highlight appears, without
   a Show answer step. There is no Easy for words.
-- Remove deletes the card's review row and drops it from the queue; the saved
-  word or highlight remains. A session emptied by removals ends as empty when
-  nothing was rated. Initialization repair can register a text highlight without
-  a review row on a later app start; ordinary hub loads do not recreate it.
-  Removal is still not a persistent opt-out for highlights.
+- Remove persists the card's exclusion and drops it from the queue; the saved
+  word or highlight, schedule and review history remain. Exclusion survives app
+  restart, legacy-highlight repair and highlight delete/Undo, and also applies
+  to Review ahead. A late rating cannot reactivate an excluded card. A session
+  emptied by removals ends as empty when nothing was rated.
 - Cards rated Again are collected; the summary offers a second pass over
   them.
 

@@ -280,7 +280,7 @@ class ReviewSessionBloc extends Bloc<ReviewSessionEvent, ReviewSessionState> {
     if (item == null || !_isCurrentCard(event.card)) return;
     emit(state.copyWith(isSaving: true));
     try {
-      await _fsrsRepository.deleteReviewItem(item.itemId);
+      await _fsrsRepository.excludeReviewItem(item.itemId);
     } catch (e, st) {
       addError(e, st);
       if (emit.isDone) return;

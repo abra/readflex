@@ -194,6 +194,142 @@ void main() {
     });
   });
 
+  group('ReviewItemsDao exclusions', () {
+    const now = '2026-11-04T07:00:00.000Z';
+    const soon = '2026-11-04T07:05:00.000Z';
+    const later = '2026-11-04T08:00:00.000Z';
+
+    test(
+      'exclusion keeps the complete row and survives registration',
+      () async {
+        final original = makeItem(
+          itemId: 'highlight',
+          itemType: 'highlight',
+          fsrsState: 'review',
+          nextReviewAt: later,
+        );
+        await dao.insertItem(original);
+        final saved = (await dao.byItemId('highlight'))!;
+        await dao.excludeItem('highlight');
+        await dao.excludeItem('highlight');
+        await dao.ensureItem(original);
+        await dao.ensureItems([original]);
+
+        final excluded = (await dao.byItemId('highlight'))!;
+        expect(excluded, saved.copyWith(isExcluded: true));
+        expect(await dao.byItemIds(['highlight']), [excluded]);
+        expect(await dao.byType('highlight'), isEmpty);
+        expect(await dao.itemCount(), 0);
+        expect(await dao.itemCount(type: 'highlight'), 0);
+        await dao.deleteItem('highlight');
+        expect(await dao.byItemId('highlight'), isNull);
+      },
+    );
+
+    test('excluding a missing item never creates tracking', () async {
+      await dao.excludeItem('missing');
+      expect(await dao.byItemId('missing'), isNull);
+    });
+
+    test('due filtering happens before type/source pagination', () async {
+      for (final (id, type, source, due) in [
+        ('excluded-new', 'highlight', 'book-1', null),
+        ('excluded-due', 'highlight', 'book-1', '2026-11-03T07:00:00.000Z'),
+        ('word', 'dictionary', 'book-1', null),
+        ('other-source', 'highlight', 'book-2', null),
+        ('active', 'highlight', 'book-1', now),
+      ]) {
+        await dao.insertItem(
+          makeItem(
+            itemId: id,
+            itemType: type,
+            sourceId: source,
+            nextReviewAt: due,
+          ),
+        );
+        if (id.startsWith('excluded')) await dao.excludeItem(id);
+      }
+
+      expect(
+        (await dao.dueItemsBySource(
+          'book-1',
+          now,
+          types: {'highlight'},
+          states: {'new'},
+          limit: 1,
+        )).single.itemId,
+        'active',
+      );
+      expect(
+        (await dao.dueItems(now, type: 'highlight', limit: 1)).single.itemId,
+        'other-source',
+      );
+      expect(await dao.dueItemCount(now), 3);
+      expect(await dao.dueItemCount(now, type: 'highlight'), 2);
+    });
+
+    test(
+      'excluded cards affect neither due counts nor future deadlines',
+      () async {
+        for (final (id, type, due) in [
+          ('excluded-new', 'highlight', null),
+          ('excluded-due', 'highlight', now),
+          ('excluded-soon', 'highlight', soon),
+          ('word', 'dictionary', null),
+          ('word-later', 'dictionary', later),
+        ]) {
+          await dao.insertItem(
+            makeItem(itemId: id, itemType: type, nextReviewAt: due),
+          );
+          if (id.startsWith('excluded')) await dao.excludeItem(id);
+        }
+
+        expect(await dao.reviewQueueStatus(now), (
+          dueCount: 1,
+          nextReviewAt: later,
+        ));
+        expect(
+          await dao.reviewQueueStatus(now, types: {'highlight'}),
+          (dueCount: 0, nextReviewAt: null),
+        );
+        await dao.excludeItem('word');
+        await dao.excludeItem('word-later');
+        expect(await dao.reviewQueueStatus(now), (
+          dueCount: 0,
+          nextReviewAt: null,
+        ));
+      },
+    );
+
+    test('mastered queries filter excluded rows before pagination', () async {
+      for (final id in ['excluded', 'active']) {
+        await dao.insertItem(
+          makeItem(itemId: id, itemType: 'highlight', fsrsState: 'review'),
+        );
+      }
+      await dao.excludeItem('excluded');
+      expect((await dao.masteredItems(limit: 1)).single.itemId, 'active');
+      expect(
+        (await dao.masteredItems(type: 'highlight', limit: 1)).single.itemId,
+        'active',
+      );
+      expect(await dao.masteredItemCount(), 1);
+      expect(await dao.masteredItemCount(type: 'highlight'), 1);
+    });
+
+    test('hard source cleanup also removes excluded tracking', () async {
+      for (final (id, source) in [('remove', 'book-1'), ('keep', 'book-2')]) {
+        await dao.insertItem(makeItem(itemId: id, sourceId: source));
+        await dao.excludeItem(id);
+      }
+      await dao.deleteItemsBySource('book-1');
+      expect(await dao.byItemId('remove'), isNull);
+      expect((await dao.byItemId('keep'))!.isExcluded, isTrue);
+      await dao.deleteItemsByIds(['keep']);
+      expect(await dao.byItemId('keep'), isNull);
+    });
+  });
+
   group('ReviewItemsDao queue status', () {
     const now = '2026-11-04T07:00:00.000Z';
     const soon = '2026-11-04T07:05:00.000Z';

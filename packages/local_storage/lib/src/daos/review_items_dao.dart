@@ -9,8 +9,8 @@ part 'review_items_dao.g.dart';
 /// CRUD + due-queue queries over [ReviewItemsTable] and append-only writes
 /// to [ReviewLogsTable].
 ///
-/// Hot paths ([dueItems], [dueItemsBySource]) are served by composite indexes
-/// created in `AppDatabase._createIndexes`.
+/// Active queries exclude removed cards; identity lookups retain complete rows
+/// for transactional validation and deletion/Undo snapshots.
 @DriftAccessor(tables: [ReviewItemsTable, ReviewLogsTable])
 class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
     with _$ReviewItemsDaoMixin {
@@ -25,9 +25,13 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
   Future<List<ReviewItemsTableData>> byItemIds(List<String> itemIds) =>
       (select(reviewItemsTable)..where((t) => t.itemId.isIn(itemIds))).get();
 
-  Future<List<ReviewItemsTableData>> byType(String itemType) => (select(
-    reviewItemsTable,
-  )..where((t) => t.itemType.equals(itemType))).get();
+  Future<List<ReviewItemsTableData>> byType(String itemType) =>
+      (select(
+            reviewItemsTable,
+          )..where(
+            (t) => t.itemType.equals(itemType) & t.isExcluded.equals(false),
+          ))
+          .get();
 
   /// Items that are due for review: never reviewed (nextReviewAt IS NULL)
   /// or nextReviewAt <= now.
@@ -73,15 +77,15 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
       '''
       SELECT (
         SELECT COUNT(*) FROM review_items_table
-        WHERE next_review_at IS NULL
+        WHERE is_excluded = 0 AND next_review_at IS NULL
         $typeFilter
       ) + (
         SELECT COUNT(*) FROM review_items_table
-        WHERE next_review_at <= ?
+        WHERE is_excluded = 0 AND next_review_at <= ?
         $typeFilter
       ) AS due_count, (
         SELECT MIN(next_review_at) FROM review_items_table
-        WHERE next_review_at > ?
+        WHERE is_excluded = 0 AND next_review_at > ?
         $typeFilter
       ) AS next_review_at
       ''',
@@ -131,7 +135,8 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
   }) {
     final query = select(reviewItemsTable)
       ..where((t) {
-        final mastered = t.fsrsState.equals('review');
+        final mastered =
+            t.isExcluded.equals(false) & t.fsrsState.equals('review');
         if (type != null) {
           return t.itemType.equals(type) & mastered;
         }
@@ -175,14 +180,18 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
 
   Future<int> itemCount({String? type}) {
     final count = reviewItemsTable.itemId.count();
-    final query = selectOnly(reviewItemsTable)..addColumns([count]);
+    final query = selectOnly(reviewItemsTable)
+      ..addColumns([count])
+      ..where(reviewItemsTable.isExcluded.equals(false));
     if (type != null) query.where(reviewItemsTable.itemType.equals(type));
     return query.map((row) => row.read(count) ?? 0).getSingle();
   }
 
   Future<int> masteredItemCount({String? type}) {
     final count = reviewItemsTable.itemId.count();
-    final mastered = reviewItemsTable.fsrsState.equals('review');
+    final mastered =
+        reviewItemsTable.isExcluded.equals(false) &
+        reviewItemsTable.fsrsState.equals('review');
     final query = selectOnly(reviewItemsTable)
       ..addColumns([count])
       ..where(
@@ -202,6 +211,12 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
 
   Future<void> deleteItem(String itemId) =>
       (delete(reviewItemsTable)..where((t) => t.itemId.equals(itemId))).go();
+
+  /// Keeps scheduling and the exclusion together so repair cannot re-add it.
+  Future<void> excludeItem(String itemId) =>
+      (update(reviewItemsTable)..where((t) => t.itemId.equals(itemId))).write(
+        const ReviewItemsTableCompanion(isExcluded: Value(true)),
+      );
 
   /// Bulk-removes review items by their source. Used when a source is deleted
   /// with the "delete everything" scope so removed content does not linger
@@ -263,8 +278,9 @@ class ReviewItemsDao extends DatabaseAccessor<AppDatabase>
     Set<String>? states,
   }) {
     var dueCondition =
-        reviewItemsTable.nextReviewAt.isNull() |
-        reviewItemsTable.nextReviewAt.isSmallerOrEqual(Variable(now));
+        reviewItemsTable.isExcluded.equals(false) &
+        (reviewItemsTable.nextReviewAt.isNull() |
+            reviewItemsTable.nextReviewAt.isSmallerOrEqual(Variable(now)));
     if (type != null) {
       dueCondition = reviewItemsTable.itemType.equals(type) & dueCondition;
     }

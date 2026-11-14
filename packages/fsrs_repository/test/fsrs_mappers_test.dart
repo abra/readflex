@@ -16,6 +16,7 @@ void main() {
         itemId: 'f1',
         itemType: 'flashcard',
         sourceId: 'book-1',
+        isExcluded: true,
         fsrsState: 'review',
         stability: 5.5,
         difficulty: 3.2,
@@ -33,6 +34,7 @@ void main() {
       expect(item.itemId, 'f1');
       expect(item.itemType, ReviewableType.flashcard);
       expect(item.sourceId, 'book-1');
+      expect(item.isExcluded, isTrue);
       expect(item.fsrs.state, FsrsState.review);
       expect(item.fsrs.stability, 5.5);
       expect(item.fsrs.difficulty, 3.2);
@@ -50,6 +52,7 @@ void main() {
         itemId: 'f2',
         itemType: 'highlight',
         sourceId: null,
+        isExcluded: false,
         fsrsState: 'new',
         stability: 0.0,
         difficulty: 0.0,
@@ -65,6 +68,7 @@ void main() {
       final item = row.toDomainModel();
 
       expect(item.sourceId, isNull);
+      expect(item.isExcluded, isFalse);
       expect(item.fsrs.lastReviewAt, isNull);
       expect(item.fsrs.nextReviewAt, isNull);
       expect(item.fsrs.state, FsrsState.newCard);
@@ -113,6 +117,7 @@ void main() {
         itemId: 'f1',
         itemType: ReviewableType.flashcard,
         sourceId: 'book-1',
+        isExcluded: true,
         fsrs: FsrsCardData(
           state: FsrsState.review,
           stability: 5.5,
@@ -132,6 +137,7 @@ void main() {
         itemId: companion.itemId.value,
         itemType: companion.itemType.value,
         sourceId: companion.sourceId.value,
+        isExcluded: companion.isExcluded.value,
         fsrsState: companion.fsrsState.value,
         stability: companion.stability.value,
         difficulty: companion.difficulty.value,

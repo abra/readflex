@@ -6,6 +6,7 @@ extension ReviewItemToDomain on ReviewItemsTableData {
     itemId: itemId,
     itemType: ReviewableType.from(itemType),
     sourceId: sourceId,
+    isExcluded: isExcluded,
     fsrs: FsrsCardData(
       state: FsrsState.from(fsrsState),
       stability: stability,

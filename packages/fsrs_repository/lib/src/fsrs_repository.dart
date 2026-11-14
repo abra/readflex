@@ -75,7 +75,17 @@ class FsrsRepository {
     }
   }
 
-  /// Removes review tracking for an item (e.g. when item is deleted).
+  /// Excludes a tracked item from review, preserving its schedule and history.
+  /// Missing tracking is left absent; excluding a stale card cannot recreate it.
+  Future<void> excludeReviewItem(String itemId) async {
+    try {
+      await _dao.excludeItem(itemId);
+    } catch (e, st) {
+      Error.throwWithStackTrace(StorageException(cause: e), st);
+    }
+  }
+
+  /// Physically removes tracking. User exclusion uses [excludeReviewItem].
   Future<void> deleteReviewItem(String itemId) async {
     try {
       await _dao.deleteItem(itemId);
@@ -86,11 +96,11 @@ class FsrsRepository {
 
   // ─── Query ───
 
-  /// Gets the FSRS state for a single item. Returns null if not tracked.
+  /// Gets the active FSRS state; absent or excluded tracking returns null.
   Future<FsrsCardData?> getReviewState(String itemId) async {
     try {
       final row = await _dao.byItemId(itemId);
-      return row?.toDomainModel().fsrs;
+      return row == null || row.isExcluded ? null : row.toDomainModel().fsrs;
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
@@ -103,13 +113,16 @@ class FsrsRepository {
     if (itemIds.isEmpty) return {};
     try {
       final rows = await _dao.byItemIds(itemIds);
-      return {for (final r in rows) r.itemId: r.toDomainModel().fsrs};
+      return {
+        for (final row in rows)
+          if (!row.isExcluded) row.itemId: row.toDomainModel().fsrs,
+      };
     } catch (e, st) {
       Error.throwWithStackTrace(StorageException(cause: e), st);
     }
   }
 
-  /// Every tracked item of [type], in storage order.
+  /// Every active tracked item of [type], in storage order.
   Future<List<ReviewItem>> getReviewItems(ReviewableType type) async {
     try {
       final rows = await _dao.byType(type.toStorageString());
@@ -305,8 +318,8 @@ class FsrsRepository {
   /// Records a review for an item. Returns the updated FSRS state.
   ///
   /// Creates missing tracking only while the saved word or text highlight
-  /// still exists. Throws [NotFoundException] for unavailable content so a
-  /// late rating cannot recreate tracking after deletion. Legacy flashcard
+  /// still exists. Throws [NotFoundException] for unavailable or excluded content
+  /// so a late rating cannot undo deletion or exclusion. Legacy flashcard
   /// rows retain their compatibility behavior outside active Practice flows.
   Future<FsrsCardData> recordReview({
     required String itemId,
@@ -333,6 +346,9 @@ class FsrsRepository {
         if (!exists) throw NotFoundException(itemId, itemType.name);
 
         final row = await _dao.byItemId(itemId);
+        if (row?.isExcluded ?? false) {
+          throw NotFoundException(itemId, itemType.name);
+        }
         final currentFsrs = row?.toDomainModel().fsrs ?? const FsrsCardData();
 
         final result = _reviewScheduler.computeReview(

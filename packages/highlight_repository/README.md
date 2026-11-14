@@ -49,7 +49,8 @@ silently reporting success or recreating a deleted highlight.
 
 Reader Undo keeps the `HighlightDeletion` snapshot in memory until Contents
 closes. Deletion captures the highlight and its optional review row in one
-transaction; restoration preserves the ID, date, anchors and full FSRS state.
+transaction; restoration preserves the ID, date, anchors, full FSRS state and
+review exclusion.
 Append-only review logs keep the same item ID. An absent review row stays
 absent, and image-area highlights do not enter the review queue. Restoration
 refuses a deleted source and never overwrites an already restored highlight

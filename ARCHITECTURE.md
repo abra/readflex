@@ -456,8 +456,10 @@ Saved words and highlights share one review store. `dictionary_repository`
 and `highlight_repository` register a `review_items` row when content is
 saved (`insertOrIgnore`, so re-saving never resets scheduling);
 `fsrs_repository` serves the due queue and stats and records ratings through
-`review_scheduler`. The Dictionary feature's lookup is monolingual; its Save
-writes the word with the definition as its meaning. Legacy flashcard tables
+`review_scheduler`. User exclusion is stored on the review row separately from
+its FSRS schedule; active queries omit it, while content deletion and Undo
+preserve or remove the complete snapshot. The Dictionary feature's lookup is
+monolingual; its Save writes the word with the definition as its meaning. Legacy flashcard tables
 remain for migration compatibility only (last revision `189e2cc1`).
 
 Review actions carry the displayed item's ID and presentation revision. One
@@ -912,10 +914,11 @@ delete committed files. Completion is reported outside the file-cleanup boundary
 after the book row is inserted. Actual copy/cover/database failures still clean
 the incomplete directory and return a storage error.
 
-`FsrsRepository.recordReview` checks saved-word/text-highlight existence inside
-the transaction that reads the schedule, updates it and appends the log. Deleted
-content produces `NotFoundException` without recreating tracking; Practice drops
-the unavailable item without counting a rating. Legacy flashcard storage remains
+`FsrsRepository.recordReview` checks saved-word/text-highlight existence and
+stored exclusion inside the transaction that reads the schedule, updates it and
+appends the log. Deleted or excluded content produces `NotFoundException`
+without recreating tracking; Practice drops the unavailable item without
+counting a rating. Legacy flashcard storage remains
 compatible and is excluded from active Practice queues.
 
 Composition awaits a missing-only SQL repair of legacy text-highlight review
@@ -925,9 +928,12 @@ keeps global and per-source due counts consistent with its session queues;
 repository queries apply type/state selection before pagination. Sessions load
 bounded new and already-reviewed candidates separately, so daily new-card limits
 cannot hide due learning/review/relearning items. Saved-content totals
-still include highlights when highlight review is disabled. Removing highlight
-tracking is not a persistent opt-out: startup repair can register saved text
-again until participation has its own stored flag.
+still include highlights when highlight review is disabled. Remove from review
+uses `excludeReviewItem`, retaining the schedule and history with `isExcluded`
+in schema v28. Backfill and insert-or-ignore saves cannot reactivate that row;
+normal/ahead queues, state lookups, counts and deadlines exclude it. Physical
+tracking deletion remains a separate cleanup operation. Previously deleted
+tracking cannot reveal whether it represented a user exclusion or legacy data.
 
 When adding a new persistence-backed domain concept, prefer:
 

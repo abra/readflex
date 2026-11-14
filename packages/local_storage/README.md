@@ -48,7 +48,8 @@ queue. It reads no review history and requires no schema change.
 FSRS states, applied before SQL pagination. `backfillTextHighlights` inserts only
 missing text-highlight review rows in one SQL statement using the review table's item-ID
 primary key. App composition awaits this compatibility repair once at startup;
-screen loading performs no repair writes. Existing schedules remain unchanged.
+screen loading performs no repair writes. Existing schedules and exclusions
+remain unchanged.
 `DictionaryDao.entryExists` and `HighlightsDao.textHighlightExists` select only
 the ID so transactional review validation never loads translation or quotation
 bodies.
@@ -58,6 +59,14 @@ requested entry, with insertion order breaking equal timestamps. It deduplicates
 IDs and binds at most 500 per statement, below SQLite's 999-parameter baseline.
 Vocabulary and review loading use this bounded lookup rather than individual
 anchor reads; it uses the existing entry index and requires no schema change.
+
+Schema v28 adds `review_items_table.is_excluded`, defaulting to false for
+existing rows. Exclusion updates only this flag and keeps scheduling/history;
+active queue, deadline, type, total and mastered queries filter it before
+pagination. Raw ID lookups include excluded rows for transactional validation
+and delete/Undo snapshots. Review indexes include the participation flag to
+keep excluded entries out of active queue ranges, while source cleanup still
+removes both active and excluded rows.
 
 Schema v27 adds the indexed `dictionary_table.word_key`. `DictionaryDao`
 normalizes both saved words and lookup terms with Dart's Unicode lowercase

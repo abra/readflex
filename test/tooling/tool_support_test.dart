@@ -111,14 +111,25 @@ void main() {
     );
   });
 
+  test('preserves explicitly configured Dart commands and arguments', () {
+    expect(
+      dartCommand(
+        environment: {'DART': 'dart --enable-asserts'},
+        root: temporary.path,
+      ),
+      ['dart', '--enable-asserts'],
+    );
+  });
+
   test(
     'configured Dart runs outside a project without FVM',
     () async {
+      final sdk = dartCommand(environment: const {}, root: root).first;
       final configured = dartCommand(
-        environment: {'DART': 'dart --enable-asserts'},
+        environment: {'DART': '"$sdk" --enable-asserts'},
         root: temporary.path,
       );
-      expect(configured, ['dart', '--enable-asserts']);
+      expect(configured, [sdk, '--enable-asserts']);
       final result = await runCommand(
         [...configured, child, 'echo'],
         workingDirectory: temporary.path,

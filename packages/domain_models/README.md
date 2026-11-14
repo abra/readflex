@@ -27,7 +27,7 @@ where a storage or wire boundary needs one.
 | `Flashcard`       | Flashcard with front/back and creation source             |
 | `DictionaryEntry` | Saved word or phrase with translation and usage examples  |
 | `DictionaryAnchor` | Source-scoped anchor attached to a dictionary entry       |
-| `ReviewItem`      | FSRS state for a reviewable item (flashcard/highlight/…)  |
+| `ReviewItem`      | FSRS state and persistent review exclusion for a reviewable item |
 | `ReviewLog`       | Single review event, persisted for history and statistics |
 | `ReviewQueueStatus` | Due count and next future review deadline from one queue snapshot |
 | `ReviewStats`     | Due/mastered counts and study-day activity for Practice and Library |

@@ -28,10 +28,11 @@ missing IDs and source IDs; it neither loads quotations into Dart nor rewrites
 existing schedules. Practice loads and session loads do not run this repair.
 `ensureReviewItems` remains available for explicit batch registration.
 
-`recordReview` checks that the saved word or text highlight still exists inside
-the same transaction as reading its schedule, updating it and appending the
-review log. A late rating for deleted content throws `NotFoundException` and
-writes nothing; Practice skips that unavailable item without counting a review.
+`recordReview` checks that the saved word or text highlight still exists and is
+not excluded inside the same transaction as reading its schedule, updating it
+and appending the review log. A late rating for deleted or excluded content
+throws `NotFoundException` and writes nothing; Practice skips that unavailable
+item without counting a review.
 Valid content with missing tracking can still be registered by its first rating.
 The dormant `flashcard` type retains its historical registration behavior.
 
@@ -40,10 +41,16 @@ Current Practice sessions load saved words and text highlights. The legacy
 highlights do not enter the review queue. Content IDs are globally unique
 because the review table is keyed by `itemId`, not by type plus ID.
 
-Removing a highlight from review is not a persistent opt-out: its content
-remains saved, so initialization repair can register it again at the next app
-start. Ordinary screen refreshes do not register it again. Persistent exclusion
-would need a separate participation flag.
+`excludeReviewItem` persists `isExcluded` on the existing review row without
+changing its schedule or history. Active state lookups, queues (including Review
+ahead), counts and deadlines omit excluded rows. Backfill and insert-or-ignore
+registration leave them excluded after restart. Deleting and undoing a highlight
+preserves the exclusion with its review snapshot. Excluding missing tracking is
+a no-op, so a stale removal cannot recreate deleted content.
+
+`deleteReviewItem` remains physical tracking deletion for cleanup. It does not
+express user exclusion. Earlier removals that physically deleted tracking cannot
+be distinguished from legacy content that was never registered.
 
 Removing review tracking or deleting content does not erase append-only review
 logs. Activity totals can therefore include reviews of content that is no
@@ -56,9 +63,10 @@ longer saved; current due/total/mastered counts come from review items instead.
 | `createReviewItem({itemId, itemType, sourceId})` | Explicit creation |
 | `ensureReviewItems(items)` | Insert-or-ignore backfill |
 | `backfillTextHighlights()` | Missing-only legacy text-highlight repair, awaited by app initialization |
-| `deleteReviewItem(itemId)` | Remove tracking |
-| `getReviewState(itemId)` / `getReviewStates(ids)` | FSRS state lookup |
-| `getReviewItems(type)` | Every tracked item of a type |
+| `excludeReviewItem(itemId)` | Persist user exclusion while retaining scheduling/history |
+| `deleteReviewItem(itemId)` | Physically remove tracking |
+| `getReviewState(itemId)` / `getReviewStates(ids)` | Active FSRS state lookup; excluded items are omitted |
+| `getReviewItems(type)` | Every active tracked item of a type |
 | `getMasteredItemIds({type})` | Items that reached the `review` phase |
 | `getDueItems({type, types, states, limit, offset})` | Due now, oldest due first; type and state selection happen before pagination |
 | `getDueItemsBySource(sourceId, {type, types, states, limit, offset})` | Due items from one source, with the same filtering rules |

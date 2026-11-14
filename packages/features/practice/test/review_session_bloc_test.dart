@@ -148,7 +148,7 @@ void main() {
     );
   }
 
-  test('removing the current card deletes its review row', () async {
+  test('removing the current card excludes it from review', () async {
     await h.addBook('b1');
     final word = await h.addWord('a', sourceId: 'b1');
     await h.addWord('b', sourceId: 'b1');
@@ -165,6 +165,40 @@ void main() {
     expect(b.state.current?.itemId, isNot(word.id));
     expect(await h.fsrs.getReviewState(word.id), isNull);
   });
+
+  for (final highlight in [false, true]) {
+    test('session removal persists through repair and restart: '
+        'highlight=$highlight', () async {
+      await h.addBook('b1');
+      final id = highlight
+          ? (await h.addHighlight('b1', 'A saved passage')).id
+          : (await h.addWord('saved', sourceId: 'b1')).id;
+      final session = bloc();
+      addTearDown(session.close);
+      expect((await start(session)).current?.itemId, id);
+
+      session.add(ReviewSessionCardRemoved(session.state.cardIdentity!));
+      await session.stream.firstWhere(
+        (state) => state.status == ReviewSessionStatus.empty,
+      );
+      await h.fsrs.backfillTextHighlights();
+      expect(await h.fsrs.getReviewState(id), isNull);
+      expect(await h.fsrs.getDueItemCount(), 0);
+      expect(
+        highlight
+            ? await h.highlights.getHighlightById(id)
+            : await h.dictionary.getEntryById(id),
+        isNotNull,
+      );
+
+      final restarted = bloc();
+      final ahead = bloc(ahead: true);
+      addTearDown(restarted.close);
+      addTearDown(ahead.close);
+      expect((await start(restarted)).status, ReviewSessionStatus.empty);
+      expect((await start(ahead)).status, ReviewSessionStatus.empty);
+    });
+  }
 
   test(
     'removing the final unreviewed card completes without showing a rated card',
@@ -493,9 +527,9 @@ void main() {
         b.add(ReviewSessionAnswerRevealed(first));
         await b.stream.firstWhere((state) => state.revealed);
         if (removeFirst) {
-          repository.deleteGate = repository.gate;
+          repository.excludeGate = repository.gate;
           b.add(ReviewSessionCardRemoved(first));
-          await repository.deleteStarted.future;
+          await repository.excludeStarted.future;
           b.add(ReviewSessionCardRated(first, Rating.good));
         } else {
           repository.recordGate = repository.gate;
@@ -518,7 +552,7 @@ void main() {
           repository.persistedRatings,
           removeFirst ? isEmpty : [(first.itemId, Rating.good)],
         );
-        expect(repository.deletedIds, removeFirst ? [first.itemId] : isEmpty);
+        expect(repository.excludedIds, removeFirst ? [first.itemId] : isEmpty);
         expect((await h.fsrs.getReviewState(second.itemId))!.reps, 0);
       },
     );
@@ -543,7 +577,7 @@ void main() {
     await b.stream.firstWhere(
       (state) => state.status == ReviewSessionStatus.completed,
     );
-    expect(repository.deletedIds, isEmpty);
+    expect(repository.excludedIds, isEmpty);
     expect(repository.persistedRatings, [(current.itemId, Rating.good)]);
   });
 
@@ -628,7 +662,7 @@ void main() {
       // A second start is a barrier behind the stale Remove action.
       await start(b);
       expect(b.state.items.single.itemId, isNot(first.itemId));
-      expect(repository.deletedIds, isEmpty);
+      expect(repository.excludedIds, isEmpty);
       expect(repository.persistedRatings, [(first.itemId, Rating.good)]);
     },
   );
@@ -640,7 +674,7 @@ void main() {
         await h.addHighlight('source', 'A passage');
         final repository = ControlledReviewRepository(h)
           ..failRecord = !removing
-          ..failDelete = removing;
+          ..failExclude = removing;
         final b = bloc(fsrs: repository);
         addTearDown(b.close);
         await start(b);
@@ -656,7 +690,7 @@ void main() {
         expect(b.state.isSaving, isFalse);
         expect(b.state.cardIdentity, card);
         expect((await h.fsrs.getReviewState(card.itemId))!.reps, 0);
-        expect(repository.deletedIds, isEmpty);
+        expect(repository.excludedIds, isEmpty);
         expect(repository.persistedRatings, isEmpty);
       },
     );
