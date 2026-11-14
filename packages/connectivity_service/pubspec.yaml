@@ -3,6 +3,8 @@ description: "Reactive Stream<ConnectivityStatus> for offline detection."
 publish_to: none
 version: 0.1.0
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.1
 

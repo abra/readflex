@@ -21,6 +21,21 @@ scripts that made them are in that revision too. Those JavaScript filenames
 record historical fixture provenance, not commands required by the current
 Dart/Flutter tests.
 
+## Development resolution
+
+In Readflex, Pagecraft is a Pub workspace member: `make get` at the repository
+root restores its dependencies and dev tools through the shared root lockfile.
+Tests can still run from this package directory with `fvm flutter test`.
+The native hook locates Rust and DjVu sources relative to its package root,
+independently of the shared package configuration.
+
+A consumer outside the workspace resolves Pagecraft in that consumer's graph,
+as the isolated native benchmark packages do. Extracting this package as its
+own development checkout requires resetting `resolution` (for example,
+`resolution:` in `pubspec_overrides.yaml`) and retaining the declared sibling
+`native_text_selection` dependency. Sharing dependency resolution adds no
+dependency on Readflex's models, services or feature packages.
+
 ## Libraries
 
 An app imports the formats it reads; release builds can drop unreachable

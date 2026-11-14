@@ -20,6 +20,13 @@ left out.
    floors only Good and Easy, so a Hard within a day of the last review
    shrank stability by up to 40 % and shortened every interval after it.
 
+## Workspace metadata
+
+The vendored package joins Readflex's Pub workspace. Its SDK minimum is raised
+to Dart 3.6 for workspace support, and its development `lints` constraint uses
+the same 6.x line as the other packages. These metadata changes do not change
+the scheduling algorithm or the reference expectations.
+
 ## Rechecking on update
 
 `packages/review_scheduler/test/fsrs6_reference_test.dart` replays 118

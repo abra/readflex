@@ -3,6 +3,8 @@ description: "Monitoring contracts, logging infrastructure, and GlitchTip error 
 publish_to: 'none'
 version: 0.1.0
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.0
 

@@ -34,6 +34,8 @@ To choose a device or run mode:
 
 Keep the committed SDK and dependency lockfiles; restore iOS dependencies with
 `pod install`. Private defines, signing keys and build outputs stay untracked.
+`make get` resolves the app and production packages as one Pub workspace with
+the root lockfile. Native benchmark experiments keep their own dependency pins.
 
 ## Checks
 

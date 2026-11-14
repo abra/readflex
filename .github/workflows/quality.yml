@@ -61,8 +61,8 @@ jobs:
 
       - name: Resolve dependencies
         run: |
-          make get ROOT_PUB_GET_FLAGS=--enforce-lockfile 2>&1 | tee .local/ci/dependencies.log
-          git diff --exit-code -- pubspec.lock packages/pagecraft/pubspec.lock
+          make get PUB_GET_FLAGS=--enforce-lockfile 2>&1 | tee .local/ci/dependencies.log
+          git diff --exit-code -- pubspec.lock
 
       - name: Check formatting
         run: make format-check 2>&1 | tee .local/ci/format.log

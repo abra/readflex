@@ -3,6 +3,8 @@ description: Pagecraft, the native reader engine for Flutter — containers, for
 publish_to: none
 version: 0.1.0
 
+resolution: workspace
+
 environment:
   sdk: ^3.14.0
   flutter: ">=3.50.0"

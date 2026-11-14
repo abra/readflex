@@ -175,9 +175,21 @@ fvm flutter devices
 ### Какие файлы версий сохраняются
 
 В version control находятся `.fvmrc`, корневой `pubspec.lock`, iOS Podfile.lock,
-существующие SwiftPM `Package.resolved`, lockfiles окружения Pagecraft и Cargo.
-У большинства библиотек самостоятельный test-environment lockfile локальный:
-app lockfile фиксирует граф приложения, а не все dev dependencies каждого пакета.
+существующие SwiftPM `Package.resolved` и Cargo locks. Приложение, 32 пакета
+в `packages/` и два vendored-пакета входят в один Pub workspace: корневой
+`pubspec.lock` фиксирует их dependencies и dev dependencies. В manifests членов
+указано `resolution: workspace`; отдельного Pub lockfile у Pagecraft больше нет.
+
+`make get` выполняет один `flutter pub get`; первая команда после миграции
+удаляет старые member lockfiles и package configs. Для восстановления без
+изменения версий используйте `make get PUB_GET_FLAGS=--enforce-lockfile`.
+Тесты конкретного пакета можно запускать из его каталога: разрешение будет
+общим, а относительные пути fixtures и native assets сохраняются.
+
+`benchmarks/mobi_rust` и `benchmarks/reader_native` не входят в workspace.
+У них собственные Pub/Cargo locks и opt-in команды `make get-mobi-rust` и
+`make get-reader-native`. Зависимость на Pagecraft не переводит эксперименты
+на общий граф. Cargo toolchains и native build hooks остаются в своих пакетах.
 
 Не передавайте через репозиторий `.local/run-defines.json`, `.env`, keystore,
 `android/key.properties`, машинные SDK paths и caches. Наличие исходников
@@ -288,8 +300,8 @@ UI-классы без суффикса `View` всё ещё требуют revi
 
 Среда goldens в CI: `macos-15` arm64, точная версия SDK из `.fvmrc`, UTC,
 `en_US.UTF-8` и шрифты из репозитория. Application lockfile проверяется через
-`--enforce-lockfile`; tracked Pagecraft lockfile не должен изменяться. Остальные
-package test contexts по-прежнему имеют собственное разрешение зависимостей.
+`--enforce-lockfile` для всего workspace и не должен изменяться. Собственное
+разрешение зависимостей осталось у изолированных benchmark-пакетов.
 Rust использует существующий pin Pagecraft. Версии среды и логи сохраняются
 вместе с golden differences на семь дней; expected PNG автоматически не
 обновляются. GitHub может обновлять образ внутри `macos-15`, поэтому при

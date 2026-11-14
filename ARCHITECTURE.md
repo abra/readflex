@@ -56,6 +56,41 @@ presentation statuses such as `WordSaveStatus`. Domain entities stay in
 `domain_models`, and service interfaces stay with their owning service packages.
 Do not add unrelated helpers, widgets, or business logic there.
 
+## Dependency Workspace
+
+The root `pubspec.yaml` explicitly lists 34 workspace members: the 32 packages
+under `packages/` and the two maintained vendored forks under `third_party/`.
+Together with the app, they share one root `pubspec.lock` and
+`.dart_tool/package_config.json`. Member manifests use `resolution: workspace`.
+Production and development dependencies resolve together, so incompatible
+constraints must be reconciled when changing a package.
+
+`make get` runs one `flutter pub get`. Use
+`make get PUB_GET_FLAGS=--enforce-lockfile` for a locked restore, as CI does.
+Running Pub or tests from a member directory uses the same workspace resolution;
+it does not require a separate package lockfile. Pub removes old member lockfiles
+and package configurations on the first restore after migration.
+
+Dependency sharing does not grant import access: every package still declares
+its own dependencies and follows the production rules checked by
+`check_architecture.dart`. Keep local path declarations explicit. Package tests
+still run from their owning directories, preserving fixtures, fonts, native
+manifests and coverage labels. `make analyze` checks all active roots in one
+invocation while respecting their analysis options.
+
+`benchmarks/mobi_rust` and `benchmarks/reader_native` are outside the workspace,
+with independent Pub/Cargo locks and package configurations. Their path
+dependencies may consume Pagecraft without joining its development workspace.
+Keep their opt-in setup/check commands separate. Benchmark fingerprints use the
+root workspace lock for repository provenance and the experiment's own lock for
+its actual resolution; there is no Pagecraft-specific Pub lockfile now.
+Rust/Cargo toolchain pins and build hooks stay owned by their native packages.
+`test/tooling/workspace_test.dart` guards membership, shared resolution and the
+experiments' independent pins. It also keeps Drift's generator on the runtime's
+API family. This metadata guard does not run generation; regenerate and compile
+the outputs when changing the schema or generator pins, as the storage README
+describes.
+
 ## Root App Package
 
 The root package (`readflex`) is the composition and integration layer.
@@ -1141,9 +1176,9 @@ screen-reader, or live-backend checks. Coverage and limitations live in
 
 CI keeps the golden host on `macos-15` arm64, installs the exact Flutter version
 from `.fvmrc`, and uses UTC/`en_US.UTF-8` with the committed test fonts. The root
-application lockfile is enforced during dependency resolution; the tracked
-Pagecraft lockfile must also remain unchanged. Independent package test contexts
-still resolve their own ignored lockfiles; this is not a Pub Workspaces migration.
+workspace lockfile is enforced during dependency resolution and must remain
+unchanged. This covers dependencies and dev dependencies of every workspace
+member. Isolated benchmarks retain their own locked restores outside that graph.
 Rust uses Pagecraft's existing `rust-toolchain.toml` and locked Cargo commands.
 GitHub can update its macOS image within that label, so each run records the OS,
 SDK and compiler versions and retains verification logs and golden differences

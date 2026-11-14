@@ -36,7 +36,7 @@ migrate_working_dir/
 **/node_modules/
 build/
 coverage/
-# Independent library test environments; the application lockfile is tracked.
+# Workspace members share the root lockfile; experiments keep their own pins.
 /packages/**/pubspec.lock
 /third_party/**/pubspec.lock
 lib/src/l10n/
@@ -74,7 +74,6 @@ tools/
 !/benchmarks/reader_native/pubspec.lock
 !/benchmarks/reader_native/rust/Cargo.lock
 /packages/**/rust/target/
-!/packages/pagecraft/pubspec.lock
 !/packages/pagecraft/rust/Cargo.lock
 
 # FVM Version Cache

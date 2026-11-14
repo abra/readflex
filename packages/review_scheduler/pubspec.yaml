@@ -3,6 +3,8 @@ description: "FSRS v6 scheduling for saved words and highlights."
 publish_to: none
 version: 0.1.0
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.1
 

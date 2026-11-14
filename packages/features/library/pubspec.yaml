@@ -5,6 +5,8 @@ description: Library with books, articles, search, Collections scopes, and list/
 version: 0.1.0
 publish_to: 'none'
 
+resolution: workspace
+
 environment:
   sdk: ^3.14.0
   flutter: ">=3.50.0"

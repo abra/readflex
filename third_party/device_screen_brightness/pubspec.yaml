@@ -14,6 +14,8 @@ topics:
   - ffi
   - platform
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.3
   flutter: ">=3.3.0"

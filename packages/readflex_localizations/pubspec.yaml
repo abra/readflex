@@ -3,6 +3,8 @@ description: Localized UI copy and supported locale metadata for Readflex.
 version: 0.1.0
 publish_to: 'none'
 
+resolution: workspace
+
 environment:
   sdk: ^3.14.0
   flutter: ">=3.50.0"

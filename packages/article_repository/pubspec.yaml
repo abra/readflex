@@ -3,6 +3,8 @@ description: "Article domain logic. Stores extracted articles and reader adapter
 publish_to: none
 version: 0.1.0
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.1
 

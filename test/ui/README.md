@@ -487,8 +487,8 @@ UI changes need their own baseline review. Keep the pinned SDK and host for
 automated comparisons until another environment has been explicitly validated.
 
 The `Quality` GitHub Actions workflow uses `macos-15` arm64, the exact SDK from
-`.fvmrc`, UTC and `en_US.UTF-8`. The root `pubspec.lock` is enforced and the
-tracked Pagecraft lockfile must stay unchanged; fonts come from the repository.
+`.fvmrc`, UTC and `en_US.UTF-8`. The shared root `pubspec.lock` is enforced for
+the app and all workspace packages; fonts come from the repository.
 The same host settings can be used locally:
 
 ```sh

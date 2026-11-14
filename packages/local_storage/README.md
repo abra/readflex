@@ -205,6 +205,23 @@ through a repository.
 
 ---
 
+## Code generation
+
+Dependencies and generator versions are pinned by the repository's shared
+workspace lockfile. `drift_dev` stays on the locked runtime's 2.34 API family;
+update the runtime and generator together. Workspace tests guard this pairing,
+since a newer generator can reference manager APIs absent from an older runtime.
+After editing tables or DAOs, run from this package:
+
+```sh
+fvm dart run build_runner build
+```
+
+Generation stays scoped to `local_storage`; the experimental multi-package
+`--workspace` builder mode is not required. Review generated Dart changes with
+the schema/migration change, then run this package's tests. A normal checkout
+already contains the generated files and does not need regeneration to run.
+
 ## Rules
 
 - One database, one file, one schema version. Never spin up a second

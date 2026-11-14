@@ -3,6 +3,8 @@ description: Native iOS and Android selection controls for Flutter text geometry
 version: 0.1.0
 publish_to: none
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.1
   flutter: '>=3.44.0'

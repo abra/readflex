@@ -3,6 +3,8 @@ description: Validation policy for application-initiated remote content fetches.
 version: 0.1.0
 publish_to: 'none'
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.1
 

@@ -185,7 +185,12 @@ runtime and generator to `flutter_rust_bridge` 2.13.0. Its generated bridge uses
 comparing against the serialization-only SSE/MOI configuration. FRB's
 [codec documentation](https://cjycode.com/flutter_rust_bridge/guides/miscellaneous/codec)
 describes the copy/allocation tradeoff for byte buffers. It has its own Pub/Cargo
-lockfiles and is not a runtime dependency. The app uses Pagecraft's internal
+lockfiles and is not a runtime dependency. Both `mobi_rust/` and `reader_native/`
+stay outside the app's Pub workspace: use their dedicated `get-*` targets,
+which enforce their own locks. They consume Pagecraft as a path dependency
+without inheriting the workspace's development resolution. Reader-parts reports
+fingerprint the shared root workspace lock and the experiment's own lock;
+there is no separate Pagecraft Pub lockfile. The app uses Pagecraft's internal
 production backend in `packages/pagecraft/rust`. Requirements for this experiment:
 Rust/Cargo with edition 2024 support and the pinned Flutter SDK. Install
 dependencies, check parity and measure:

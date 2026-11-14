@@ -7681,7 +7681,16 @@ class $$ArticlesTableTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$ArticlesTableTable, ArticlesTableData>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $ArticlesTableTable,
+                    ArticlesTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -8068,7 +8077,16 @@ class $$BooksTableTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$BooksTableTable, BooksTableData>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $BooksTableTable,
+                    BooksTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -8541,7 +8559,18 @@ class $$HighlightsTableTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$HighlightsTableTable, HighlightsTableData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $HighlightsTableTable,
+                    HighlightsTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -8812,7 +8841,18 @@ class $$FlashcardsTableTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$FlashcardsTableTable, FlashcardsTableData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $FlashcardsTableTable,
+                    FlashcardsTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -9207,7 +9247,18 @@ class $$DictionaryTableTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$DictionaryTableTable, DictionaryTableData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $DictionaryTableTable,
+                    DictionaryTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -9506,7 +9557,19 @@ class $$DictionaryAnchorsTableTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<
+                    $DictionaryAnchorsTableTable,
+                    DictionaryAnchorsTableData
+                  >(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $DictionaryAnchorsTableTable,
+                    DictionaryAnchorsTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -9880,7 +9943,18 @@ class $$ReviewItemsTableTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$ReviewItemsTableTable, ReviewItemsTableData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $ReviewItemsTableTable,
+                    ReviewItemsTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -10239,7 +10313,18 @@ class $$ReviewLogsTableTableTableManager
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$ReviewLogsTableTable, ReviewLogsTableData>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $ReviewLogsTableTable,
+                    ReviewLogsTableData
+                  >(db, table, e),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -10517,7 +10602,9 @@ class $$CollectionsTableTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$CollectionsTableTable, CollectionsTableData>(
+                    table,
+                  ),
                   $$CollectionsTableTableReferences(db, table, e),
                 ),
               )
@@ -10811,7 +10898,10 @@ class $$CollectionSourcesTableTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<
+                    $CollectionSourcesTableTable,
+                    CollectionSourcesTableData
+                  >(table),
                   $$CollectionSourcesTableTableReferences(db, table, e),
                 ),
               )

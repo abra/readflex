@@ -33,20 +33,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.7.0"
-  article_extraction_service:
-    dependency: "direct main"
-    description:
-      path: "packages/article_extraction_service"
-      relative: true
-    source: path
-    version: "0.1.0"
-  article_repository:
-    dependency: "direct main"
-    description:
-      path: "packages/article_repository"
-      relative: true
-    source: path
-    version: "0.1.0"
   async:
     dependency: transitive
     description:
@@ -71,13 +57,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "10.0.0"
-  book_repository:
-    dependency: "direct main"
-    description:
-      path: "packages/book_repository"
-      relative: true
-    source: path
-    version: "0.1.0"
   boolean_selector:
     dependency: transitive
     description:
@@ -86,13 +65,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
-  bounded_http:
+  build:
     dependency: transitive
     description:
-      path: "packages/bounded_http"
-      relative: true
-    source: path
-    version: "0.1.0"
+      name: build
+      sha256: "8a5c5761af8e31748bba3c82f68925ace40f3225c3eea25be9beb57eca7cd7a8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.11"
   build_cli_annotations:
     dependency: transitive
     description:
@@ -101,6 +81,46 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  build_config:
+    dependency: transitive
+    description:
+      name: build_config
+      sha256: d466ed2dc9c6cd1d169948879b84ee061eb5e22c64a7c6089879c6296d272a8d
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.3"
+  build_daemon:
+    dependency: transitive
+    description:
+      name: build_daemon
+      sha256: "39ab65f7c60c19af64b9ef96e6a5d3ab48355f7dddfd98a9079d55a8cb6628fc"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.7"
+  build_runner:
+    dependency: transitive
+    description:
+      name: build_runner
+      sha256: "6feadd32d90a68253c1f7b4fcff76adb4b41ad32a53f8bad835dc65f01ac9dc5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.16.2"
+  built_collection:
+    dependency: transitive
+    description:
+      name: built_collection
+      sha256: "44922ecebd8e3d0cef743dadd3b54df4e87e2a4c52a29465a1872aa9e192caa8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.1.2"
+  built_value:
+    dependency: transitive
+    description:
+      name: built_value
+      sha256: f87ea98192116f7093cb214551ce1929caae0681fdba282b3d8b4462adee7bb7
+      url: "https://pub.dev"
+    source: hosted
+    version: "8.13.0"
   characters:
     dependency: transitive
     description:
@@ -109,6 +129,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  charcode:
+    dependency: transitive
+    description:
+      name: charcode
+      sha256: fb0f1107cac15a5ea6ef0a6ef71a807b9e4267c713bb93e00e92d737cc8dbd8a
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.4.0"
   checked_yaml:
     dependency: transitive
     description:
@@ -157,20 +185,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.1"
-  collection_repository:
-    dependency: "direct main"
-    description:
-      path: "packages/collection_repository"
-      relative: true
-    source: path
-    version: "0.1.0"
-  component_library:
-    dependency: "direct main"
-    description:
-      path: "packages/component_library"
-      relative: true
-    source: path
-    version: "0.1.0"
   connectivity_plus:
     dependency: transitive
     description:
@@ -187,20 +201,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
-  connectivity_service:
-    dependency: "direct main"
-    description:
-      path: "packages/connectivity_service"
-      relative: true
-    source: path
-    version: "0.1.0"
-  contextual_translation_service:
-    dependency: "direct main"
-    description:
-      path: "packages/contextual_translation_service"
-      relative: true
-    source: path
-    version: "0.1.0"
   convert:
     dependency: transitive
     description:
@@ -257,6 +257,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.6"
+  dart_style:
+    dependency: transitive
+    description:
+      name: dart_style
+      sha256: a0e4f65339b31eb6a9e6a12e14b4682a48d46fbc54a82f4a702396fbdbac63a7
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.14"
   dbus:
     dependency: transitive
     description:
@@ -265,34 +273,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.12"
-  device_screen_brightness:
-    dependency: transitive
-    description:
-      path: "third_party/device_screen_brightness"
-      relative: true
-    source: path
-    version: "0.3.1"
-  dictionary:
-    dependency: "direct main"
-    description:
-      path: "packages/features/dictionary"
-      relative: true
-    source: path
-    version: "0.1.0"
-  dictionary_repository:
-    dependency: "direct main"
-    description:
-      path: "packages/dictionary_repository"
-      relative: true
-    source: path
-    version: "0.1.0"
-  dictionary_service:
-    dependency: "direct main"
-    description:
-      path: "packages/dictionary_service"
-      relative: true
-    source: path
-    version: "0.1.0"
   diff_match_patch:
     dependency: transitive
     description:
@@ -301,13 +281,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.4.1"
-  domain_models:
-    dependency: "direct main"
-    description:
-      path: "packages/domain_models"
-      relative: true
-    source: path
-    version: "0.1.0"
   drift:
     dependency: "direct dev"
     description:
@@ -316,6 +289,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.34.1"
+  drift_dev:
+    dependency: transitive
+    description:
+      name: drift_dev
+      sha256: aa824b21ac7c43e417e1e481d114c60546ec4b585dcc0f98e7a556d1d0adb476
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.34.6"
   equatable:
     dependency: transitive
     description:
@@ -340,6 +321,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  ffigen:
+    dependency: transitive
+    description:
+      name: ffigen
+      sha256: b7803707faeec4ce3c1b0c2274906504b796e3b70ad573577e72333bd1c9b3ba
+      url: "https://pub.dev"
+    source: hosted
+    version: "20.1.1"
   file:
     dependency: transitive
     description:
@@ -453,20 +442,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.0"
-  fsrs:
-    dependency: transitive
-    description:
-      path: "third_party/fsrs"
-      relative: true
-    source: path
-    version: "2.0.1"
-  fsrs_repository:
-    dependency: "direct main"
-    description:
-      path: "packages/fsrs_repository"
-      relative: true
-    source: path
-    version: "0.1.0"
   fuchsia_remote_debug_protocol:
     dependency: transitive
     description: flutter
@@ -504,20 +479,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.14.0"
-  highlight:
-    dependency: "direct main"
+  graphs:
+    dependency: transitive
     description:
-      path: "packages/features/highlight"
-      relative: true
-    source: path
-    version: "0.1.0"
-  highlight_repository:
-    dependency: "direct main"
-    description:
-      path: "packages/highlight_repository"
-      relative: true
-    source: path
-    version: "0.1.0"
+      name: graphs
+      sha256: "741bbf84165310a68ff28fe9e727332eef1407342fca52759cb21ad8177bb8d0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.3.2"
   hooks:
     dependency: transitive
     description:
@@ -566,13 +535,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.12.0"
-  import_flow:
-    dependency: "direct main"
-    description:
-      path: "packages/features/import_flow"
-      relative: true
-    source: path
-    version: "0.1.0"
   integration_test:
     dependency: "direct dev"
     description: flutter
@@ -634,13 +596,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
-  library_feature:
-    dependency: "direct main"
-    description:
-      path: "packages/features/library"
-      relative: true
-    source: path
-    version: "0.1.0"
   lints:
     dependency: transitive
     description:
@@ -657,13 +612,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.1"
-  local_storage:
-    dependency: "direct main"
-    description:
-      path: "packages/local_storage"
-      relative: true
-    source: path
-    version: "0.1.0"
   logging:
     dependency: transitive
     description:
@@ -728,20 +676,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.5"
-  monitoring:
-    dependency: "direct main"
-    description:
-      path: "packages/monitoring"
-      relative: true
-    source: path
-    version: "0.1.0"
-  native_text_selection:
-    dependency: "direct dev"
-    description:
-      path: "packages/native_text_selection"
-      relative: true
-    source: path
-    version: "0.1.0"
   native_toolchain_c:
     dependency: transitive
     description:
@@ -790,13 +724,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.5.0"
-  onboarding:
-    dependency: "direct main"
-    description:
-      path: "packages/features/onboarding"
-      relative: true
-    source: path
-    version: "0.1.0"
   package_config:
     dependency: transitive
     description:
@@ -821,13 +748,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.2.1"
-  pagecraft:
-    dependency: "direct dev"
-    description:
-      path: "packages/pagecraft"
-      relative: true
-    source: path
-    version: "0.1.0"
   path:
     dependency: "direct main"
     description:
@@ -972,20 +892,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.4"
-  practice:
-    dependency: "direct main"
-    description:
-      path: "packages/features/practice"
-      relative: true
-    source: path
-    version: "0.1.0"
-  preferences_service:
-    dependency: "direct main"
-    description:
-      path: "packages/preferences_service"
-      relative: true
-    source: path
-    version: "0.1.0"
   process:
     dependency: transitive
     description:
@@ -1010,20 +916,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
-  reader:
-    dependency: "direct main"
+  pubspec_parse:
+    dependency: transitive
     description:
-      path: "packages/features/reader"
-      relative: true
-    source: path
-    version: "0.1.0"
-  readflex_localizations:
-    dependency: "direct main"
+      name: pubspec_parse
+      sha256: "9ac81c01ffd6a9cf9b2713288834fbaaf6aebde05ffdf02d380e68b8e06f27d8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.7.0"
+  quiver:
+    dependency: transitive
     description:
-      path: "packages/readflex_localizations"
-      relative: true
-    source: path
-    version: "0.1.0"
+      name: quiver
+      sha256: ea0b925899e64ecdfbf9c7becb60d5b50e706ade44a85b2363be2a22d88117d2
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.2"
+  recase:
+    dependency: transitive
+    description:
+      name: recase
+      sha256: e4eb4ec2dcdee52dcf99cb4ceabaffc631d7424ee55e56f280bc039737f89213
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.0"
   record_use:
     dependency: transitive
     description:
@@ -1032,20 +948,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.0"
-  remote_content_policy:
-    dependency: transitive
-    description:
-      path: "packages/remote_content_policy"
-      relative: true
-    source: path
-    version: "0.1.0"
-  review_scheduler:
-    dependency: transitive
-    description:
-      path: "packages/review_scheduler"
-      relative: true
-    source: path
-    version: "0.1.0"
   rxdart:
     dependency: transitive
     description:
@@ -1054,13 +956,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.28.0"
-  screen_control_service:
-    dependency: "direct main"
-    description:
-      path: "packages/screen_control_service"
-      relative: true
-    source: path
-    version: "0.1.0"
   sentry:
     dependency: transitive
     description:
@@ -1069,13 +964,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "9.26.0"
-  shared:
-    dependency: "direct main"
-    description:
-      path: "packages/shared"
-      relative: true
-    source: path
-    version: "0.1.0"
   shared_preferences:
     dependency: transitive
     description:
@@ -1169,6 +1057,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  source_gen:
+    dependency: transitive
+    description:
+      name: source_gen
+      sha256: "833ea7d15b5be79949d3d6c077da0267a0bd93c16897b36a771395a91e63086e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.3.1"
   source_map_stack_trace:
     dependency: transitive
     description:
@@ -1225,6 +1121,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.0+eol"
+  sqlparser:
+    dependency: transitive
+    description:
+      name: sqlparser
+      sha256: "8121dae2c5de4a1e39153d95c55f7fd1816e32d1232fe270bc415a4a370d6e47"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.45.1"
   stack_trace:
     dependency: transitive
     description:
@@ -1305,13 +1209,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.20"
-  toast_service:
-    dependency: "direct main"
-    description:
-      path: "packages/toast_service"
-      relative: true
-    source: path
-    version: "0.1.0"
   toastification:
     dependency: transitive
     description:
@@ -1328,13 +1225,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.18.0"
-  translate:
-    dependency: "direct main"
-    description:
-      path: "packages/features/translate"
-      relative: true
-    source: path
-    version: "0.1.0"
   typed_data:
     dependency: transitive
     description:
@@ -1551,6 +1441,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.3"
+  yaml_edit:
+    dependency: transitive
+    description:
+      name: yaml_edit
+      sha256: "07c9e63ba42519745182b88ca12264a7ba2484d8239958778dfe4d44fe760488"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.4"
 sdks:
   dart: ">=3.14.0 <4.0.0"
   flutter: ">=3.50.0"

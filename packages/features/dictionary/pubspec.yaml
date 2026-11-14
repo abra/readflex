@@ -3,6 +3,8 @@ description: Reader action and sheet for monolingual dictionary definitions.
 version: 0.1.0
 publish_to: 'none'
 
+resolution: workspace
+
 environment:
   sdk: ^3.14.0
   flutter: ">=3.50.0"

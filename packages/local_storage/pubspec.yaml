@@ -3,6 +3,8 @@ description: "Single Drift database shared by all repositories."
 publish_to: none
 version: 0.1.0
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.1
 
@@ -19,5 +21,6 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
-  drift_dev: ^2.34.2+1
+  # Newer generator minors can emit APIs absent from the locked runtime.
+  drift_dev: 2.34.6
   build_runner: ^2.15.0

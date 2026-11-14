@@ -24,7 +24,6 @@ const readerPartsSourceFiles = [
   'benchmarks/reader_native/rust/Cargo.toml',
   'benchmarks/reader_native/rust/Cargo.lock',
   'packages/pagecraft/pubspec.yaml',
-  'packages/pagecraft/pubspec.lock',
   'packages/pagecraft/rust/Cargo.toml',
   'packages/pagecraft/rust/Cargo.lock',
   'packages/pagecraft/rust/rust-toolchain.toml',

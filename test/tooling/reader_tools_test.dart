@@ -21,6 +21,12 @@ void main() {
     await temporary.delete(recursive: true);
   });
 
+  test('benchmark fingerprints reference existing source and lock files', () {
+    for (final file in readerPartsSourceFiles) {
+      expect(File(file).existsSync(), isTrue, reason: file);
+    }
+  });
+
   group('reader corpus', () {
     test('selects default size quantiles with stable IDs and hashes', () async {
       for (var size = 1; size <= 20; size++) {

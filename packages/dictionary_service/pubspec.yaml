@@ -3,6 +3,8 @@ description: System and remote dictionary lookup services for Readflex.
 version: 0.1.0
 publish_to: 'none'
 
+resolution: workspace
+
 environment:
   sdk: ^3.11.1
 

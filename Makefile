@@ -8,7 +8,7 @@
 
 FLUTTER ?= fvm flutter
 DART ?= fvm dart
-ROOT_PUB_GET_FLAGS ?=
+PUB_GET_FLAGS ?=
 MOBI_RUST_ENV = PATH="$$(dirname "$$(rustup which rustc)"):$$PATH"
 
 ifndef ANDROID_SYMBOLS_DIR
@@ -69,13 +69,9 @@ analyze-pagecraft-mobi-rust:
 test-pagecraft-mobi-rust:
 	cd packages/pagecraft/rust && $(MOBI_RUST_ENV) cargo test --locked
 
-## Install dependencies for root and all packages
+## Resolve the app and all workspace packages with one shared lockfile
 get:
-	$(FLUTTER) pub get $(ROOT_PUB_GET_FLAGS)
-	@set -e; for pkg in $(PACKAGES); do \
-		echo "▶ pub get $$pkg"; \
-		(cd $$pkg && $(FLUTTER) pub get); \
-	done
+	$(FLUTTER) pub get $(PUB_GET_FLAGS)
 
 ## Format all Dart code
 format:
@@ -87,11 +83,7 @@ format-check:
 
 ## Analyze all Dart code and check production architecture boundaries
 analyze: analyze-pagecraft-mobi-rust
-	$(FLUTTER) analyze $(ROOT_ANALYZE_PATHS)
-	@set -e; for pkg in $(PACKAGES); do \
-		echo "▶ analyze $$pkg"; \
-		(cd $$pkg && $(FLUTTER) analyze); \
-	done
+	$(FLUTTER) analyze $(ROOT_ANALYZE_PATHS) $(PACKAGES)
 	@$(MAKE) --no-print-directory check-architecture
 
 ## Check package dependencies, widget helpers and named View dependencies

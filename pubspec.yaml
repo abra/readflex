@@ -7,6 +7,42 @@ environment:
   sdk: ^3.14.0
   flutter: ">=3.50.0"
 
+workspace:
+  - packages/domain_models
+  - packages/shared
+  - packages/readflex_localizations
+  - packages/monitoring
+  - packages/native_text_selection
+  - packages/component_library
+  - packages/local_storage
+  - packages/book_repository
+  - packages/collection_repository
+  - packages/bounded_http
+  - packages/article_extraction_service
+  - packages/remote_content_policy
+  - packages/article_repository
+  - packages/highlight_repository
+  - third_party/fsrs
+  - packages/review_scheduler
+  - packages/fsrs_repository
+  - packages/dictionary_repository
+  - packages/preferences_service
+  - packages/connectivity_service
+  - packages/contextual_translation_service
+  - packages/dictionary_service
+  - third_party/device_screen_brightness
+  - packages/screen_control_service
+  - packages/pagecraft
+  - packages/toast_service
+  - packages/features/library
+  - packages/features/import_flow
+  - packages/features/highlight
+  - packages/features/translate
+  - packages/features/dictionary
+  - packages/features/reader
+  - packages/features/onboarding
+  - packages/features/practice
+
 dependencies:
   cupertino_ui: ^1.1.6
   material_ui: ^1.11.0
